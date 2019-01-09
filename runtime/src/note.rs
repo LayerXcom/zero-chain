@@ -1,6 +1,7 @@
 extern crate substrate_primitives as primitives;
 extern crate parity_crypto as crypto;
 extern crate rust_crypto as rcrypto;
+extern crate subtle;
 
 use rand::OsRng;
 use primitives::{hashing::blake2_256, ed25519::{Pair, Public, PKCS_LEN}};
