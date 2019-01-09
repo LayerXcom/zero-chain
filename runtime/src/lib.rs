@@ -56,6 +56,8 @@ pub use runtime_primitives::{Permill, Perbill};
 pub use timestamp::BlockPeriod;
 pub use srml_support::{StorageValue, RuntimeMetadata};
 
+mod zero_chain;
+
 /// Alias to Ed25519 pubkey that identifies an account on the chain.
 pub type AccountId = primitives::H256;
 
@@ -179,6 +181,10 @@ impl upgrade_key::Trait for Runtime {
 	type Event = Event;
 }
 
+impl zero_chain::Trait for Runtime {
+	type Event = Event;
+}
+
 construct_runtime!(
 	pub enum Runtime with Log(InternalLog: DigestItem<Hash, Ed25519AuthorityId>) where
 		Block = Block,
@@ -191,6 +197,7 @@ construct_runtime!(
 		Aura: aura::{Module},
 		Balances: balances,
 		UpgradeKey: upgrade_key,
+		ZeroChain: zero_chain::{Module, Call, Storage, Event<T>},
 	}
 );
 
