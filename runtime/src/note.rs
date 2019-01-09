@@ -12,6 +12,31 @@ pub type SecretKey = [u8; PKCS_LEN];
 // pub type Publickey = primitives::H256;
 pub type Publickey = Public;
 
+fn vec_as_u8_32_array(vector: Vec<u8>) -> [u8; 32] {
+    let mut arr = [0u8; 32];
+    for (place, element) in arr.iter_mut().zip(vector.iter()) {
+        *place = *element;
+    }
+    arr
+}
+
+fn concat_kdf(key_material: [u8; 32]) -> ([u8; 16], [u8; 16]) {
+    const SHA256BlockSize: usize = 64;
+    const reps: usize = (32 + 7) * 8 / (SHA256BlockSize * 8);
+
+    let mut buffers: Vec<u8> = Vec::new();
+    for counter in 0..(reps+1) {
+        let mut sha256 = Sha256::new();
+        let mut tmp: Vec<u8> = Vec::new();
+        tmp.write_u32::<BigEndian>((counter + 1) as u32).unwrap();
+        sha256.input(&tmp);
+        sha256.input(&key_material);
+        buffers.append(&mut sha256.result().as_ref().into());
+    }
+
+    vec_as_u8_32_array(buffers).split_at(16)
+    // [u8; 32]::from(&buffers[0..32])
+}
 
 pub struct Note {
     pub value: u64,
@@ -46,9 +71,8 @@ impl EncryptedNote {
         // let salt: [u8; 32] = rng.gen();
         let shared_secret = exchange(&public_key.0, &ephemeral_secret);
         
-		// [ DK[0..15] DK[16..31] ] = [derived_left_bits, derived_right_bits]
-        let (derived_left_bits, derived_right_bits) 
-            = crypto::derive_key_iterations(shared_secret, &public_key.0, KEY_ITERATIONS); // TODO: fix the type of public_key
+		// [ DK[0..15] DK[16..31] ] = [derived_left_bits, derived_right_bits]        
+        let (derived_left_bits, derived_right_bits) = concat_kdf(shared_secret);            
 
         // an initialisation vector
         let iv: [u8; 16] = rng.gen();
