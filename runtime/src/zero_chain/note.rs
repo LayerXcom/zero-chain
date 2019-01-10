@@ -9,9 +9,6 @@ use primitives::{hashing::blake2_256, ed25519::{Pair, Public, PKCS_LEN}};
 use self::rcrypto::ed25519::exchange;
 // use {untrusted, pkcs8, error, der};
 
-pub type SecretKey = [u8; PKCS_LEN];
-pub type Publickey = Public;
-
 
 fn to_array(slice: &[u8]) -> [u8; 16] {
     let mut array = [0u8; 16];
@@ -151,9 +148,7 @@ impl EncryptedNote {
             mac,
             ephemeral_public,
         }
-
-    }    
-    
+    }        
 
     /// Decrypt a Note with secret key
     pub fn decrypt_note(&self, secret_key: &[u8; 32]) -> Result<[u8; PKCS_LEN], ()> {
