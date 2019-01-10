@@ -102,7 +102,7 @@ fn concat_kdf(key_material: [u8; 32]) -> ([u8; 16], [u8; 16]) {
 
 pub struct Note {
     pub value: u64,
-    pub public_key: Publickey,
+    pub public_key: [u8; 32],
     // pub E::Fs, // the commitment randomness
 }
 
