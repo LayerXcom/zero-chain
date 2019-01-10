@@ -16,7 +16,7 @@ pub trait Trait: balances::Trait {
 
 decl_module! {
     pub struct Module<T: Trait> for enum Call where origin: T::Origin {
-        fn deposit_event() = default;
+        fn deposit_event<T>() = default;
 
         fn buy_apple(origin, nums: T::Balance) -> Result {
             let sender = ensure_signed(origin)?;  

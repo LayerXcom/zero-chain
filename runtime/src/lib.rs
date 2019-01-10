@@ -31,6 +31,9 @@ extern crate srml_upgrade_key as upgrade_key;
 extern crate srml_aura as aura;
 extern crate substrate_consensus_aura_primitives as consensus_aura;
 
+// #[macro_use]
+// extern crate arrayref;
+
 use rstd::prelude::*;
 #[cfg(feature = "std")]
 use primitives::bytes;
