@@ -5,7 +5,7 @@ extern crate sr_std as rstd;
 use rstd::prelude::*;
 extern crate sr_primitives as primitives;
 extern crate substrate_primitives;
-use self::primitives::traits::CheckedAdd;
+use self::primitives::traits::{CheckedAdd, Hash};
 
 pub mod note;
 
@@ -87,6 +87,10 @@ decl_module! {
             Ok(())
         }
 
+
+        fn confidential_transfer(_origin) -> Result {
+            Ok(())
+        }
     }
 }
 
@@ -96,6 +100,11 @@ decl_storage! {
         pub AppleOf get(apple_of): map T::AccountId => T::Balance;
         pub ApplePrice get(apple_price): T::Balance;
         pub AppleStockAmount get(apple_stock_amount): Option<T::Balance>;
+
+        // Mapping of Hash(Note) => Nullifier
+        pub NullifierMap get(nullifier_map): map T::Hash => T::Hash;
+        // Mapping of Hash(T::Acount) => Encrypted Note
+        pub EncNoteMap get(enc_note_map): map T::Hash => note::EncryptedNote;
     }
 }
 

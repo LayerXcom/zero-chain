@@ -5,7 +5,7 @@ extern crate rand;
 extern crate substrate_keystore;
 
 use self::rand::{Rng, OsRng};
-use primitives::{hashing::blake2_256, ed25519::{Pair, Public, PKCS_LEN}};
+use primitives::{hashing::blake2_256, ed25519::{Pair, PKCS_LEN}};
 use self::rcrypto::ed25519::exchange;
 // use {untrusted, pkcs8, error, der};
 // use failure::{Error, err_msg};
@@ -61,11 +61,12 @@ pub struct Note {
     // pub E::Fs, // the commitment randomness
 }
 
+#[derive(Encode, Decode, Clone, PartialEq, Eq, Default)]
 pub struct EncryptedNote {
     ciphertext: Vec<u8>,
     iv: [u8; 16],
     mac: [u8; 32],
-    ephemeral_public: Public, 
+    ephemeral_public: [u8; 32], 
 }
 
 impl EncryptedNote {  
@@ -80,7 +81,7 @@ impl EncryptedNote {
 	    // NOTE: prefer pkcs#8 unless security doesn't matter -- this is used primarily for tests. 
         // https://github.com/paritytech/substrate/issues/1063
         let pair = Pair::from_seed(&ephemeral_private);                    
-        let ephemeral_public = pair.public();
+        let ephemeral_public = pair.public().0;
             
         let shared_secret = exchange(&public_key, &ephemeral_private);
                 
@@ -107,7 +108,7 @@ impl EncryptedNote {
 
     /// Decrypt a Note with private key
     pub fn decrypt_note(&self, private_key: &[u8; 32]) -> [u8; PKCS_LEN] {
-        let shared_secret = exchange(&self.ephemeral_public.0, private_key);
+        let shared_secret = exchange(&self.ephemeral_public, private_key);
 
         // [ DK[0..15] DK[16..31] ] = [derived_left_bits, derived_right_bits]        
         let (derived_left_bits, derived_right_bits) = concat_kdf(shared_secret); 

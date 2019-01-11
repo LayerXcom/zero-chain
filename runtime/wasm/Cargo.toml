@@ -26,6 +26,10 @@ srml-timestamp = { git = "https://github.com/paritytech/substrate", default-feat
 srml-upgrade-key = { git = "https://github.com/paritytech/substrate", default-features = false }
 sr-version = { git = "https://github.com/paritytech/substrate", default-features = false }
 substrate-consensus-aura-primitives = { git = "https://github.com/paritytech/substrate", default-features = false }
+parity-crypto = "0.2.0"
+rust-crypto = "0.2.36"
+rand = "0.4"
+substrate-keystore = { git = "https://github.com/paritytech/substrate" }
 
 [features]
 default = []
