@@ -3,10 +3,12 @@ extern crate parity_crypto as crypto;
 extern crate crypto as rcrypto;
 extern crate rand;
 extern crate substrate_keystore;
+extern crate blake2_rfc;
 
 use self::rand::{Rng, OsRng};
 use primitives::{hashing::blake2_256, ed25519::{Pair, PKCS_LEN}};
 use self::rcrypto::ed25519::exchange;
+use self::blake2_rfc::blake2s::Blake2s;
 // use {untrusted, pkcs8, error, der};
 // use failure::{Error, err_msg};
 
@@ -55,11 +57,22 @@ fn concat_kdf(key_material: [u8; 32]) -> ([u8; 16], [u8; 16]) {
 //     Ok((private_key, public_key))
 // }
 
+#[derive(Encode, Decode, Clone, PartialEq, Eq, Default)]
 pub struct Note {
     pub value: u64,
     pub public_key: [u8; 32],
     // pub E::Fs, // the commitment randomness
 }
+
+impl Note {
+    pub fn nf(&self) -> Vec<u8> {
+        let nf_preimage = [0u8; 64];
+        let mut hash = Blake2s::with_key(32, &self.public_key);
+        hash.update(&nf_preimage);
+        hash.finalize().as_ref().to_vec()
+    }
+}
+
 
 #[derive(Encode, Decode, Clone, PartialEq, Eq, Default)]
 pub struct EncryptedNote {

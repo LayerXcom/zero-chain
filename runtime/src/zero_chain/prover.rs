@@ -23,8 +23,45 @@ use sapling_crypto::{
     redjubjub::{PrivateKey, PublicKey, Signature},
 };
 
+mod note;
+
 pub struct ProvingContext {
     bsk: Fs,
     bvk: edwards::Point<Bls12, Unknown>,
 }
 
+// impl ProvingContext {
+//     pub fn new() -> Self {
+//         ProvingContext {
+//             bsk: Fs::zero(),
+//             bvk: edwards::Point::zero(),
+//         }
+//     }
+
+//     pub fn spend_proof(
+//         &mut self, 
+//         value: u64, 
+//         proving_key: &Parameters<Bls12>, 
+//         verifying_key: &PreparedVerifyingKey<Bls12>,
+//         params: &JubjubBls12,
+//         public_key: [u8; 32],
+//     ) -> Result<
+//         (
+//             Proof<Bls12>,
+//             edwards::Point<Bls12, Unknown>,
+//             PublicKey<Bls12>,
+//         ),
+//         (),    
+//     >{
+//         let mut rng = OsRng::new().expect("should be able to construct RNG");
+//         let note = Note {
+//             value,
+//             public_key,
+//         };
+//         let nullifier = 
+//     }
+
+//     pub fn output_proof() {
+
+//     }
+// }
