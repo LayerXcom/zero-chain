@@ -33,7 +33,6 @@ rand = "0.4"
 subtle = "^0.5"
 substrate-keystore = { git = "https://github.com/paritytech/substrate" }
 
-
 [features]
 default = ["std"]
 std = [
