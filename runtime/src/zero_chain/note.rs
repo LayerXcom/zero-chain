@@ -8,7 +8,7 @@ use self::rand::{Rng, OsRng};
 use primitives::{hashing::blake2_256, ed25519::{Pair, Public, PKCS_LEN}};
 use self::rcrypto::ed25519::exchange;
 // use {untrusted, pkcs8, error, der};
-
+// use failure::{Error, err_msg};
 
 fn to_array(slice: &[u8]) -> [u8; 16] {
     let mut array = [0u8; 16];
@@ -44,51 +44,6 @@ fn concat_kdf(key_material: [u8; 32]) -> ([u8; 16], [u8; 16]) {
 //     fn get_private_scalar(&self) -> [u8; 32];
 // }
 
-// struct LinkPair(Pair);
-// struct LinkKeyPair(Ed25519KeyPair);
-
-// trait LinkPair {
-//     fn get_ed25519_pair(&self) -> Ed25519KeyPair;
-// }
-
-// trait LinkKeyPair {
-//     fn get_private_scalar(&self) -> [u8; 32];
-// }
-
-// impl LinkPair for Pair {
-//     fn get_ed25519_pair(&self) -> &Ed25519KeyPair {
-//         &self.0
-//     }
-// }
-
-// impl LinkKeyPair for Ed25519KeyPair {
-//     fn get_private_scalar(&self) -> [u8; 32] {
-//         &self.private_scalar
-//     }
-// }
-
-// impl LinkPair {
-//     fn get_private_scalar(&self) -> [u8; 32] {
-//         LinkKeyPair.get_ed25519_private_scalar()
-//     }
-// }
-
-// impl LinkKeyPair {
-//     fn get_ed25519_private_scalar(&self) -> [u8; 32] {
-//         self.private_scalar
-//     }
-// }
-
-// impl GetPrivateScalar for Pair {
-//     // fn new(pair: Pair) -> LinkPair {
-//     //     LinkPair(pair)
-//     // }
-
-//     fn get_private_scalar(&self) -> [u8; 32] {
-//         self.0.private_scalar
-//     }
-// }
-
 // fn unwrap_pkcs8(version: pkcs8::Version, input: untrusted::Input)
 //         -> Result<(untrusted::Input, Option<untrusted::Input>),
 //                   error::Unspecified> {
@@ -116,7 +71,7 @@ pub struct EncryptedNote {
 impl EncryptedNote {  
     // TODO: fix type of plain_note 
     /// Encrypt a Note with public key
-    pub fn encrypt_note(&self, plain_note: &[u8; PKCS_LEN], public_key: [u8; 32]) -> Self {
+    pub fn encrypt_note(plain_note: &[u8; PKCS_LEN], public_key: [u8; 32]) -> Self {
         let mut rng = OsRng::new().expect("OS Randomness available on all supported platforms; qed");        
 
         let ephemeral_secret: [u8; 32] = rng.gen();       
@@ -151,7 +106,7 @@ impl EncryptedNote {
     }        
 
     /// Decrypt a Note with secret key
-    pub fn decrypt_note(&self, secret_key: &[u8; 32]) -> Result<[u8; PKCS_LEN], ()> {
+    pub fn decrypt_note(&self, secret_key: &[u8; 32]) -> [u8; PKCS_LEN] {
         let shared_secret = exchange(&self.ephemeral_public.0, secret_key);
 
         // [ DK[0..15] DK[16..31] ] = [derived_left_bits, derived_right_bits]        
@@ -169,7 +124,7 @@ impl EncryptedNote {
         let mut plain = [0; PKCS_LEN];
         crypto::aes::decrypt_128_ctr(&derived_left_bits, &self.iv, &self.ciphertext, &mut plain[..])
             .expect("input lengths of key and iv are both 16; qed");
-        Ok(plain)
+        plain
     }
 }
 
@@ -177,6 +132,16 @@ impl EncryptedNote {
     use super::*;
 
     #[test]
-    fn ok() {
-        assert_eq!(4, 2+2);
+    fn encrypt_and_decrypt() {
+        let mut rng = OsRng::new().expect("OS Randomness available on all supported platforms; qed");        
+        let private_key: [u8; 32] = rng.gen(); 
+        let pair = Pair::from_seed(&private_key);                    
+        let public_key = pair.public();
+
+        let plain_note = [1; PKCS_LEN];
+
+        let encrypted_note = EncryptedNote::encrypt_note(&plain_note, public_key.0);
+        let decrypt_note = encrypted_note.decrypt_note(&private_key);
+
+        assert_eq!(&plain_note[..], &decrypt_note[..]);
     }
