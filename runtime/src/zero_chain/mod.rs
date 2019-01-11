@@ -87,6 +87,10 @@ decl_module! {
             Ok(())
         }
 
+
+        fn confidential_transfer(_origin) -> Result {
+            Ok(())
+        }
     }
 }
 
