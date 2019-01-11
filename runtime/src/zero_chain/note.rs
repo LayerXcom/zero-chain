@@ -65,6 +65,7 @@ pub struct Note {
 }
 
 impl Note {
+    // TODO: Add more parameters for generating a nullifier
     pub fn nf(&self) -> Vec<u8> {
         let nf_preimage = [0u8; 64];
         let mut hash = Blake2s::with_key(32, &self.public_key);
