@@ -74,15 +74,15 @@ impl EncryptedNote {
     pub fn encrypt_note(plain_note: &[u8; PKCS_LEN], public_key: [u8; 32]) -> Self {
         let mut rng = OsRng::new().expect("OS Randomness available on all supported platforms; qed");        
 
-        let ephemeral_secret: [u8; 32] = rng.gen();       
+        let ephemeral_private: [u8; 32] = rng.gen();       
 
         // Make a new key pair from a seed phrase.
 	    // NOTE: prefer pkcs#8 unless security doesn't matter -- this is used primarily for tests. 
         // https://github.com/paritytech/substrate/issues/1063
-        let pair = Pair::from_seed(&ephemeral_secret);                    
+        let pair = Pair::from_seed(&ephemeral_private);                    
         let ephemeral_public = pair.public();
             
-        let shared_secret = exchange(&public_key, &ephemeral_secret);
+        let shared_secret = exchange(&public_key, &ephemeral_private);
                 
 		// [ DK[0..15] DK[16..31] ] = [derived_left_bits, derived_right_bits]        
         let (derived_left_bits, derived_right_bits) = concat_kdf(shared_secret);            
@@ -105,9 +105,9 @@ impl EncryptedNote {
         }
     }        
 
-    /// Decrypt a Note with secret key
-    pub fn decrypt_note(&self, secret_key: &[u8; 32]) -> [u8; PKCS_LEN] {
-        let shared_secret = exchange(&self.ephemeral_public.0, secret_key);
+    /// Decrypt a Note with private key
+    pub fn decrypt_note(&self, private_key: &[u8; 32]) -> [u8; PKCS_LEN] {
+        let shared_secret = exchange(&self.ephemeral_public.0, private_key);
 
         // [ DK[0..15] DK[16..31] ] = [derived_left_bits, derived_right_bits]        
         let (derived_left_bits, derived_right_bits) = concat_kdf(shared_secret); 
