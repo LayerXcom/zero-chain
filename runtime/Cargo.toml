@@ -27,10 +27,16 @@ srml-upgrade-key = { git = "https://github.com/paritytech/substrate" }
 substrate-client = { git = "https://github.com/paritytech/substrate", optional = true }
 sr-version = { git = "https://github.com/paritytech/substrate" }
 substrate-consensus-aura-primitives = { git = "https://github.com/paritytech/substrate" }
+
 parity-crypto = "0.2.0"
 rust-crypto = "0.2.36"
 rand = "0.4"
 substrate-keystore = { git = "https://github.com/paritytech/substrate" }
+
+bellman = "0.1.0"
+byteorder = "1"
+pairing = "0.14.2"
+sapling-crypto = { git = "https://github.com/zcash/librustzcash" }
 
 [features]
 default = ["std"]
