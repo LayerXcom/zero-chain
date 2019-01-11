@@ -145,3 +145,19 @@ impl EncryptedNote {
 
         assert_eq!(&plain_note[..], &decrypt_note[..]);
     }
+
+    #[test]
+    #[should_panic]
+    fn decrypt_wrong_private_key() {
+        let mut rng = OsRng::new().expect("OS Randomness available on all supported platforms; qed");        
+        let private_key: [u8; 32] = rng.gen(); 
+        let pair = Pair::from_seed(&private_key);                    
+        let public_key = pair.public();
+
+        let plain_note = [1; PKCS_LEN];
+
+        let encrypted_note = EncryptedNote::encrypt_note(&plain_note, public_key.0);
+
+        let wrong_private_key = [3; 32];
+        let _ = encrypted_note.decrypt_note(&wrong_private_key);        
+    }
