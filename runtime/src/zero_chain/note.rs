@@ -149,7 +149,7 @@ impl EncryptedNote {
     #[test]
     fn encrypt_and_decrypt() {
         let mut rng = OsRng::new().expect("OS Randomness available on all supported platforms; qed");        
-        let viewing_key: [u8; 32] = rng.gen(); 
+        let viewing_key: [u8; 32] = rng.gen(); // TODO: test from generating private_key, then kdf to viewing_key
         let pair = Pair::from_seed(&viewing_key);                    
         let public_key = pair.public();
 
