@@ -120,9 +120,9 @@ impl EncryptedNote {
         }
     }        
 
-    /// Decrypt a Note with private key
-    pub fn decrypt_note(&self, private_key: &[u8; 32]) -> [u8; PKCS_LEN] {
-        let shared_secret = exchange(&self.ephemeral_public, private_key);
+    /// Decrypt a Note with viewing key
+    pub fn decrypt_note(&self, viewing_key: &[u8; 32]) -> [u8; PKCS_LEN] {
+        let shared_secret = exchange(&self.ephemeral_public, viewing_key);
 
         // [ DK[0..15] DK[16..31] ] = [derived_left_bits, derived_right_bits]        
         let (derived_left_bits, derived_right_bits) = concat_kdf(shared_secret); 
@@ -149,30 +149,30 @@ impl EncryptedNote {
     #[test]
     fn encrypt_and_decrypt() {
         let mut rng = OsRng::new().expect("OS Randomness available on all supported platforms; qed");        
-        let private_key: [u8; 32] = rng.gen(); 
-        let pair = Pair::from_seed(&private_key);                    
+        let viewing_key: [u8; 32] = rng.gen(); 
+        let pair = Pair::from_seed(&viewing_key);                    
         let public_key = pair.public();
 
         let plain_note = [1; PKCS_LEN];
 
         let encrypted_note = EncryptedNote::encrypt_note(&plain_note, public_key.0);
-        let decrypt_note = encrypted_note.decrypt_note(&private_key);
+        let decrypt_note = encrypted_note.decrypt_note(&viewing_key);
 
         assert_eq!(&plain_note[..], &decrypt_note[..]);
     }
 
     #[test]
     #[should_panic]
-    fn decrypt_wrong_private_key() {
+    fn decrypt_wrong_viewing_key() {
         let mut rng = OsRng::new().expect("OS Randomness available on all supported platforms; qed");        
-        let private_key: [u8; 32] = rng.gen(); 
-        let pair = Pair::from_seed(&private_key);                    
+        let viewing_key: [u8; 32] = rng.gen(); 
+        let pair = Pair::from_seed(&viewing_key);                    
         let public_key = pair.public();
 
         let plain_note = [1; PKCS_LEN];
 
         let encrypted_note = EncryptedNote::encrypt_note(&plain_note, public_key.0);
 
-        let wrong_private_key = [3; 32];
-        let _ = encrypted_note.decrypt_note(&wrong_private_key);        
+        let wrong_viewing_key = [3; 32];
+        let _ = encrypted_note.decrypt_note(&wrong_viewing_key);        
     }
