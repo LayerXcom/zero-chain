@@ -3,10 +3,12 @@ extern crate parity_crypto as crypto;
 extern crate crypto as rcrypto;
 extern crate rand;
 extern crate substrate_keystore;
+extern crate blake2_rfc;
 
 use self::rand::{Rng, OsRng};
 use primitives::{hashing::blake2_256, ed25519::{Pair, PKCS_LEN}};
 use self::rcrypto::ed25519::exchange;
+use self::blake2_rfc::blake2s::Blake2s;
 // use {untrusted, pkcs8, error, der};
 // use failure::{Error, err_msg};
 
@@ -55,11 +57,23 @@ fn concat_kdf(key_material: [u8; 32]) -> ([u8; 16], [u8; 16]) {
 //     Ok((private_key, public_key))
 // }
 
+#[derive(Encode, Decode, Clone, PartialEq, Eq, Default)]
 pub struct Note {
     pub value: u64,
     pub public_key: [u8; 32],
     // pub E::Fs, // the commitment randomness
 }
+
+impl Note {
+    // TODO: Add more parameters for generating a nullifier
+    pub fn nf(&self) -> Vec<u8> {
+        let nf_preimage = [0u8; 64];
+        let mut hash = Blake2s::with_key(32, &self.public_key);
+        hash.update(&nf_preimage);
+        hash.finalize().as_ref().to_vec()
+    }
+}
+
 
 #[derive(Encode, Decode, Clone, PartialEq, Eq, Default)]
 pub struct EncryptedNote {
@@ -71,7 +85,7 @@ pub struct EncryptedNote {
 
 impl EncryptedNote {  
     // TODO: fix type of plain_note 
-    /// Encrypt a Note with public key
+    /// Encrypt a Note with a receiver's public key
     pub fn encrypt_note(plain_note: &[u8; PKCS_LEN], public_key: [u8; 32]) -> Self {
         let mut rng = OsRng::new().expect("OS Randomness available on all supported platforms; qed");        
 
@@ -106,9 +120,9 @@ impl EncryptedNote {
         }
     }        
 
-    /// Decrypt a Note with private key
-    pub fn decrypt_note(&self, private_key: &[u8; 32]) -> [u8; PKCS_LEN] {
-        let shared_secret = exchange(&self.ephemeral_public, private_key);
+    /// Decrypt a Note with a receiver's viewing key
+    pub fn decrypt_note(&self, viewing_key: &[u8; 32]) -> [u8; PKCS_LEN] {
+        let shared_secret = exchange(&self.ephemeral_public, viewing_key);
 
         // [ DK[0..15] DK[16..31] ] = [derived_left_bits, derived_right_bits]        
         let (derived_left_bits, derived_right_bits) = concat_kdf(shared_secret); 
@@ -135,30 +149,30 @@ impl EncryptedNote {
     #[test]
     fn encrypt_and_decrypt() {
         let mut rng = OsRng::new().expect("OS Randomness available on all supported platforms; qed");        
-        let private_key: [u8; 32] = rng.gen(); 
-        let pair = Pair::from_seed(&private_key);                    
+        let viewing_key: [u8; 32] = rng.gen(); // TODO: test from generating private_key, then kdf to viewing_key
+        let pair = Pair::from_seed(&viewing_key);                    
         let public_key = pair.public();
 
         let plain_note = [1; PKCS_LEN];
 
         let encrypted_note = EncryptedNote::encrypt_note(&plain_note, public_key.0);
-        let decrypt_note = encrypted_note.decrypt_note(&private_key);
+        let decrypt_note = encrypted_note.decrypt_note(&viewing_key);
 
         assert_eq!(&plain_note[..], &decrypt_note[..]);
     }
 
     #[test]
     #[should_panic]
-    fn decrypt_wrong_private_key() {
+    fn decrypt_wrong_viewing_key() {
         let mut rng = OsRng::new().expect("OS Randomness available on all supported platforms; qed");        
-        let private_key: [u8; 32] = rng.gen(); 
-        let pair = Pair::from_seed(&private_key);                    
+        let viewing_key: [u8; 32] = rng.gen(); 
+        let pair = Pair::from_seed(&viewing_key);                    
         let public_key = pair.public();
 
         let plain_note = [1; PKCS_LEN];
 
         let encrypted_note = EncryptedNote::encrypt_note(&plain_note, public_key.0);
 
-        let wrong_private_key = [3; 32];
-        let _ = encrypted_note.decrypt_note(&wrong_private_key);        
+        let wrong_viewing_key = [3; 32];
+        let _ = encrypted_note.decrypt_note(&wrong_viewing_key);        
     }
