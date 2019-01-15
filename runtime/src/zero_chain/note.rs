@@ -85,7 +85,7 @@ pub struct EncryptedNote {
 
 impl EncryptedNote {  
     // TODO: fix type of plain_note 
-    /// Encrypt a Note with public key
+    /// Encrypt a Note with a receiver's public key
     pub fn encrypt_note(plain_note: &[u8; PKCS_LEN], public_key: [u8; 32]) -> Self {
         let mut rng = OsRng::new().expect("OS Randomness available on all supported platforms; qed");        
 
@@ -120,7 +120,7 @@ impl EncryptedNote {
         }
     }        
 
-    /// Decrypt a Note with viewing key
+    /// Decrypt a Note with a receiver's viewing key
     pub fn decrypt_note(&self, viewing_key: &[u8; 32]) -> [u8; PKCS_LEN] {
         let shared_secret = exchange(&self.ephemeral_public, viewing_key);
 
