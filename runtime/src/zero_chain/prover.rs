@@ -1,42 +1,42 @@
-extern crate bellman;
-extern crate byteorder;
-extern crate pairing;
-extern crate rand;
-extern crate sapling_crypto;
+// extern crate bellman;
+// extern crate byteorder;
+// extern crate pairing;
+// extern crate rand;
+// extern crate sapling_crypto;
 
-use bellman::groth16::{
-    crate_random_proof, verify_proof, Parameters, PreparedVerifyingKey, Proof,
-};
-use byteorder::{LittleEndian, ReadBytesExt};
-use pairing::{
-    bls12_381::{Bls12, Fr, FrRepr},
-    Field, PrimeField, PrimeFieldRepr,
-};
-use rand::{OsRng, Rand};
-use sapling_crypto::{
-    circuit::{
-        multipack,
-        sapling::{Output, Spend, TREE_DEPTH},
-    },
-    jubjub::{edwards, fs::Fs, FixedGenerators, JubjubBls12, Unknown},
-    primitives::{Diversifier, Note, PaymentAddress, ProofGenerationKey, ValueCommitment},
-    redjubjub::{PrivateKey, PublicKey, Signature},
-};
+// use bellman::groth16::{
+//     crate_random_proof, verify_proof, Parameters, PreparedVerifyingKey, Proof,
+// };
+// use byteorder::{LittleEndian, ReadBytesExt};
+// use pairing::{
+//     bls12_381::{Bls12, Fr, FrRepr},
+//     Field, PrimeField, PrimeFieldRepr,
+// };
+// use rand::{OsRng, Rand};
+// use sapling_crypto::{
+//     circuit::{
+//         multipack,
+//         sapling::{Output, Spend, TREE_DEPTH},
+//     },
+//     jubjub::{edwards, fs::Fs, FixedGenerators, JubjubBls12, Unknown},
+//     primitives::{Diversifier, Note, PaymentAddress, ProofGenerationKey, ValueCommitment},
+//     redjubjub::{PrivateKey, PublicKey, Signature},
+// };
 
-mod note;
+// mod note;
 
-pub struct ProvingContext {
-    bsk: Fs,
-    bvk: edwards::Point<Bls12, Unknown>,
-}
+// pub struct ProvingContext {
+//     bsk: Fs,
+//     bvk: edwards::Point<Bls12, Unknown>,
+// }
 
-impl ProvingContext {
-    pub fn new() -> Self {
-        ProvingContext {
-            bsk: Fs::zero(),
-            bvk: edwards::Point::zero(),
-        }
-    }
+// impl ProvingContext {
+//     pub fn new() -> Self {
+//         ProvingContext {
+//             bsk: Fs::zero(),
+//             bvk: edwards::Point::zero(),
+//         }
+//     }
 
     // pub fn spend_proof(
     //     &mut self, 

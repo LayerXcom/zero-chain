@@ -30,14 +30,12 @@ substrate-consensus-aura-primitives = { git = "https://github.com/paritytech/sub
 
 parity-crypto = "0.2.0"
 rust-crypto = "0.2.36"
-rand = "0.4"
+rand = { version = "0.4", default-features = false}
 substrate-keystore = { git = "https://github.com/paritytech/substrate" }
 
-bellman = "0.1.0"
-byteorder = "1"
-pairing = "0.14.2"
-sapling-crypto = { git = "https://github.com/zcash/librustzcash" }
-blake2-rfc = "0.2.18"
+byteorder = { version = "1", default-features = false }
+pairing = { git = "https://github.com/sorpaas/pairing", default-features = false }
+blake2-rfc = { version = "0.2.18", default-features = false }
 
 [features]
 default = ["std"]
@@ -61,4 +59,9 @@ std = [
 	"safe-mix/std",
 	"substrate-client",
 	"substrate-consensus-aura-primitives/std",
+	"rand/std",
+	"substrate-keystore/std",
+	"byteorder/std",
+	"pairing/std",
+	"blake2-rfc/std",
 ]

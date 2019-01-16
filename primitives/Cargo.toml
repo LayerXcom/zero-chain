@@ -2,8 +2,32 @@
 name = "primitives"
 version = "0.1.0"
 authors = ["osuke <dish230@gmail.com>"]
-edition = "2018"
 
 [dependencies]
-zero-crypto = { path = "../crypto" }
+parity-codec-derive = { version = "2.0" }
+parity-codec = { version = "2.0", default-features = false }
+fixed-hash = { version = "0.3.0", default-features = false }
+sr-primitives = { git = "https://github.com/paritytech/substrate", default-features = false }
+substrate-primitives = { git = "https://github.com/paritytech/substrate", default-features = false }
+sr-std = { git = "https://github.com/paritytech/substrate", default-features = false }
+serde = { version = "1.0", optional = true, default-features = false }
+serde_derive = { version = "1.0", optional = true }
+shasper-crypto = { path = "https://github.com/paritytech/shasper", default-features = false }
+hash-db = { git = "https://github.com/paritytech/trie", default-features = false }
+byteorder = { version = "1.2", default-features = false }
 
+[features]
+default = ["std"]
+std = [
+	"fixed-hash/std",
+	"substrate-primitives/std",
+	"parity-codec/std",
+	"sr-primitives/std",
+	"sr-std/std",
+	"serde",
+	"serde/std",
+	"serde_derive",
+	"shasper-crypto/std",	
+	"hash-db/std",	
+	"byteorder/std",
+]
