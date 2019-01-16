@@ -5,3 +5,5 @@ authors = ["osuke <dish230@gmail.com>"]
 edition = "2018"
 
 [dependencies]
+zero-crypto = { path = "../crypto" }
+

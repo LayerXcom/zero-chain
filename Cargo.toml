@@ -40,8 +40,8 @@ structopt = "0.2.13"
 vergen = "2"
 
 [workspace]
-members = [ "runtime" ]
-exclude = [ "runtime/wasm" ]
+members = [ "runtime", "primitives", "crypto", ]
+exclude = [ "runtime/wasm", ]
 
 [profile.release]
 # Substrate runtime requires unwinding.
