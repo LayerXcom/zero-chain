@@ -1,0 +1,7 @@
+[package]
+name = "proofs"
+version = "0.1.0"
+authors = ["osuke <arget-fee.free.dgm@hotmail.co.jp>"]
+edition = "2018"
+
+[dependencies]
