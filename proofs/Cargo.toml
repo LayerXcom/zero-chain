@@ -1,7 +1,8 @@
 [package]
 name = "proofs"
 version = "0.1.0"
-authors = ["osuke <arget-fee.free.dgm@hotmail.co.jp>"]
-edition = "2018"
+authors = ["osuke <dish230@gmail.com>"]
 
 [dependencies]
+bellman = { git = "https://github.com/osuketh/bellman", branch = "wasm" }
+pairing = { git = "https://github.com/sorpaas/pairing", default-features = false }
