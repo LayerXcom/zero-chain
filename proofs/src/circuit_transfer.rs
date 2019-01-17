@@ -43,8 +43,15 @@ impl<'a, E: Engine> Circuit<E> for Transfer<'a, E> {
         // Prover witnesses g_d, ensuring it's on the curve.
         let g_d = ecc::EdwardsPoint::witnesses(
             cs.namespace(|| "witness g_d"),
+            self.payment_address.as_ref().and_then(|a| a.g_d(params)),
+            self.params
+        )?;
 
-        )
+        // Ensure g_d is large order.
+        g_d.assert_not_small_order(
+            cs.namespace(|| "g_d not small order"),
+            self.params
+        )?;
 
         // Create the ephemeral public key from g_d.
         let epk = g_d.mul(
