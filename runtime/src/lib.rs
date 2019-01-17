@@ -27,7 +27,7 @@ extern crate srml_executive as executive;
 extern crate srml_consensus as consensus;
 extern crate srml_timestamp as timestamp;
 extern crate srml_balances as balances;
-extern crate srml_upgrade_key as upgrade_key;
+extern crate srml_sudo as sudo;
 extern crate srml_aura as aura;
 extern crate substrate_consensus_aura_primitives as consensus_aura;
 
@@ -55,8 +55,6 @@ pub use balances::Call as BalancesCall;
 pub use runtime_primitives::{Permill, Perbill};
 pub use timestamp::BlockPeriod;
 pub use srml_support::{StorageValue, RuntimeMetadata};
-
-mod zero_chain;
 
 /// Alias to Ed25519 pubkey that identifies an account on the chain.
 pub type AccountId = primitives::H256;
@@ -100,8 +98,8 @@ pub mod opaque {
 pub const VERSION: RuntimeVersion = RuntimeVersion {
 	spec_name: create_runtime_str!("zero-chain"),
 	impl_name: create_runtime_str!("zero-chain"),
-	authoring_version: 1,
-	spec_version: 1,
+	authoring_version: 2,
+	spec_version: 2,
 	impl_version: 0,
 	apis: RUNTIME_API_VERSIONS,
 };
@@ -176,13 +174,10 @@ impl balances::Trait for Runtime {
 	type Event = Event;
 }
 
-impl upgrade_key::Trait for Runtime {
+impl sudo::Trait for Runtime {
 	/// The uniquitous event type.
 	type Event = Event;
-}
-
-impl zero_chain::Trait for Runtime {
-	type Event = Event;
+	type Proposal = Call;
 }
 
 construct_runtime!(
@@ -196,8 +191,7 @@ construct_runtime!(
 		Consensus: consensus::{Module, Call, Storage, Config<T>, Log(AuthoritiesChange), Inherent},
 		Aura: aura::{Module},
 		Balances: balances,
-		UpgradeKey: upgrade_key,
-		ZeroChain: zero_chain::{Module, Call, Storage, Event<T>},
+		Sudo: sudo,
 	}
 );
 
@@ -212,7 +206,7 @@ pub type Block = generic::Block<Header, UncheckedExtrinsic>;
 /// BlockId type as expected by this runtime.
 pub type BlockId = generic::BlockId<Block>;
 /// Unchecked extrinsic type as expected by this runtime.
-pub type UncheckedExtrinsic = generic::UncheckedMortalExtrinsic<Address, Nonce, Call, Ed25519Signature>;
+pub type UncheckedExtrinsic = generic::UncheckedMortalCompactExtrinsic<Address, Nonce, Call, Ed25519Signature>;
 /// Extrinsic type that has already been checked.
 pub type CheckedExtrinsic = generic::CheckedExtrinsic<AccountId, Nonce, Call>;
 /// Executive: handles dispatch to the various modules.
