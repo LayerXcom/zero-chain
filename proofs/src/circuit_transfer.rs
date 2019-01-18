@@ -42,7 +42,7 @@ pub struct Transfer<'a, E: JubjubEngine> {
     pub recipient_payment_address: Option<PaymentAddress<E>>,
     pub old_value: Option<u64>, 
     pub prover_value: Option<u64>,
-    pub receiver_value: Option<u64>,
+    pub recipient_value: Option<u64>,
     pub esk: Option<E::Fs>,
     // Re-randomization of the public key
     pub ar: Option<E::Fs>,
@@ -140,7 +140,11 @@ impl<'a, E: JubjubEngine> Circuit<E> for Transfer<'a, E> {
         ivk_preimage.extend(
             ak.repr(cs.namespace(|| "representation of ak"))?
         );
-
+        
+        ivk_preimage.extend(
+            nk.repr(cs.namespace(|| "representation of nk"))?
+        );
+        
         assert_eq!(ivk_preimage.len(), 512);
     
         let mut ivk = blake2s::blake2s(
@@ -176,7 +180,7 @@ impl<'a, E: JubjubEngine> Circuit<E> for Transfer<'a, E> {
         // value (in big endian) followed by g_d and pk_d
         let mut old_note_contents = vec![];
         // let mut prover_note_contents = vec![];
-        // let mut receiver_note_contents = vec![];
+        // let mut recipient_note_contents = vec![];
 
         let mut value_num: num::Num<E> = num::Num::zero();
 
@@ -234,7 +238,95 @@ impl<'a, E: JubjubEngine> Circuit<E> for Transfer<'a, E> {
 
 // }
 
-#[test]
-fn test_transfer_circuit() {
-    assert_eq!(4, 2+2);
-}
+#[cfg(test)]
+    use pairing::bls12_381::*;
+    use rand::{SeedableRng, Rng, XorShiftRng};    
+    use super::test::TestConstraintSystem;
+    use scrypto::jubjub::{JubjubBls12, fs, edwards};
+    use scrypto::primitives::Diversifier;
+
+    
+    #[test]
+    fn test_transfer_circuit() {        
+        let params = &JubjubBls12::new();
+        let rng = &mut XorShiftRng::from_seed([0x3dbe6258, 0x8d313d76, 0x3237db17, 0xe5bc0654]);
+
+        let nsk: fs::Fs = rng.gen();
+        let ak = edwards::Point::rand(rng, params).mul_by_cofactor(params);
+
+        let proof_generation_key = ProofGenerationKey {
+            ak: ak.clone(),
+            nsk: nsk.clone()
+        };
+
+        let viewing_key = proof_generation_key.into_viewing_key(params);
+        let prover_payment_address;
+
+        loop {
+            let diversifier = Diversifier(rng.gen());
+
+            if let Some(p) = viewing_key.into_payment_address(
+                diversifier, 
+                params
+            )
+            {
+                prover_payment_address = p;
+                break;
+            }
+        }
+
+        let recipient_payment_address;        
+        let nsk_r: fs::Fs = rng.gen();
+        let ak_r = edwards::Point::rand(rng, params).mul_by_cofactor(params);
+
+        let proof_generation_key_r = ProofGenerationKey {
+            ak: ak_r.clone(),
+            nsk: nsk_r.clone()
+        };
+
+        let viewing_key_r = proof_generation_key_r.into_viewing_key(params);
+        loop {
+            let diversifier_r = Diversifier(rng.gen());
+
+            if let Some(p) = viewing_key_r.into_payment_address(
+                diversifier_r, 
+                params
+            )
+            {
+                recipient_payment_address = p;
+                break;
+            }
+        }                        
+
+        let esk: fs::Fs = rng.gen();
+        let ar: fs::Fs = rng.gen();
+        let old_value = 5 as u64;
+        let prover_value = 2 as u64;
+        let recipient_value = 3 as u64;
+
+        let mut cs = TestConstraintSystem::<Bls12>::new();
+
+        let instance = Transfer {
+            params: params,
+            proof_generation_key: Some(proof_generation_key.clone()),
+            prover_payment_address: Some(prover_payment_address.clone()),
+            recipient_payment_address: Some(recipient_payment_address.clone()),
+            old_value: Some(old_value),
+            prover_value: Some(prover_value),
+            recipient_value: Some(recipient_value),
+            esk: Some(esk.clone()),
+            ar: Some(ar)
+        };
+
+        instance.synthesize(&mut cs).unwrap();
+
+        // let expected_epk
+        // let expected_epk_xy
+        
+        assert!(cs.is_satisfied());
+        assert_eq!(cs.num_constraints(), 75415);
+        assert_eq!(cs.hash(), "3ff9338cc95b878a20b0974490633219e032003ced1d3d917cde4f50bc902a12");
+        
+        assert_eq!(cs.get_input(0, "ONE"), Fr::one());
+    }
+

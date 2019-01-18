@@ -4102,6 +4102,7 @@ name = "zero-chain-proofs"
 version = "0.1.0"
 dependencies = [
  "bellman 0.1.0 (git+https://github.com/zcash/librustzcash)",
+ "blake2-rfc 0.2.18 (git+https://github.com/gtank/blake2-rfc?rev=7a5b5fc99ae483a0043db7547fb79a6fa44b88a9)",
  "byteorder 1.2.7 (registry+https://github.com/rust-lang/crates.io-index)",
  "pairing 0.14.2 (git+https://github.com/zcash/librustzcash)",
  "rand 0.4.3 (registry+https://github.com/rust-lang/crates.io-index)",

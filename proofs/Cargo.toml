@@ -10,6 +10,10 @@ rand = { version = "0.4", default-features = false}
 byteorder = { version = "1", default-features = false }
 sapling-crypto = { git = "https://github.com/zcash/librustzcash" }
 
+[dependencies.blake2-rfc]
+git = "https://github.com/gtank/blake2-rfc"
+rev = "7a5b5fc99ae483a0043db7547fb79a6fa44b88a9"
+
 [feature]
 default = ["std"]
 std = [
