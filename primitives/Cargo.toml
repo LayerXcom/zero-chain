@@ -1,5 +1,5 @@
 [package]
-name = "primitives"
+name = "zero-chain-primitives"
 version = "0.1.0"
 authors = ["osuke <dish230@gmail.com>"]
 

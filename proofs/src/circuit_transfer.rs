@@ -1,8 +1,7 @@
 use pairing::{
     PrimeField,
     PrimeFieldRepr,
-    Field,
-    Engine,
+    Field,    
 };
 
 use bellman::{
@@ -11,16 +10,29 @@ use bellman::{
     Circuit,
 };
 
-use jubjub::{
+use scrypto::jubjub::{
     JubjubEngine,
     FixedGenerators
 };
 
-use sapling_crypt::{
-    ecc,
-    pedersen_hash
+use scrypto::constants;
+
+use scrypto::primitives::{
+    ValueCommitment,
+    ProofGenerationKey,
+    PaymentAddress
 };
 
+use scrypto::circuit::{    
+    boolean,
+    ecc,
+    pedersen_hash,
+    blake2s,
+    num,
+    multipack
+};
+
+// An instance of the Transfer circuit.
 pub struct Transfer<'a, E: JubjubEngine> {
     pub params: &'a E::Params, 
     pub proof_generation_key: Option<ProofGenerationKey<E>>,
@@ -31,12 +43,12 @@ pub struct Transfer<'a, E: JubjubEngine> {
     pub old_value: Option<u64>, 
     pub prover_value: Option<u64>,
     pub receiver_value: Option<u64>,
-    pub ephmeral_secret_key: Option<E::Fs>,
+    pub esk: Option<E::Fs>,
     // Re-randomization of the public key
     pub ar: Option<E::Fs>,
 }
 
-impl<'a, E: Engine> Circuit<E> for Transfer<'a, E> {
+impl<'a, E: JubjubEngine> Circuit<E> for Transfer<'a, E> {
     fn synthesize<CS: ConstraintSystem<E>>(
         self,
         cs: &mut CS
@@ -45,7 +57,7 @@ impl<'a, E: Engine> Circuit<E> for Transfer<'a, E> {
         let params = self.params;
 
         // Prover witnesses recipient_g_d, ensuring it's on the curve.
-        let recipient_g_d = ecc::EdwardsPoint::witnesses(
+        let recipient_g_d = ecc::EdwardsPoint::witness(
             cs.namespace(|| "witness recipient_g_d"),
             self.recipient_payment_address.as_ref().and_then(|a| a.g_d(params)),
             self.params
@@ -141,7 +153,7 @@ impl<'a, E: Engine> Circuit<E> for Transfer<'a, E> {
 
         // Ensure prover_g_d on the curve.
         let prover_g_d = {
-            let params = self.pramas;
+            let params = self.params;
             ecc::EdwardsPoint::witness(
                 cs.namespace(|| "witness prover_g_d"),
                 self.prover_payment_address.as_ref().and_then(|a| a.g_d(params)),
@@ -163,27 +175,29 @@ impl<'a, E: Engine> Circuit<E> for Transfer<'a, E> {
         // compute note contents:
         // value (in big endian) followed by g_d and pk_d
         let mut old_note_contents = vec![];
-        let mut prover_note_contents = vec![];
-        let mut receiver_note_contents = vec![];
+        // let mut prover_note_contents = vec![];
+        // let mut receiver_note_contents = vec![];
 
-        let mut value_num = num::Num::zero();
+        let mut value_num: num::Num<E> = num::Num::zero();
 
-        let old_value_bits = boolean::u64_into_boolean_vec_le(
-            cs.namespace(|| "value"),
-            self.old_value
-        )?;
+        {
+            let old_value_bits = boolean::u64_into_boolean_vec_le(
+                cs.namespace(|| "value"),
+                self.old_value
+            )?;
 
-        let mut coeff = E::Fr::one();
-        for bit in &old_value_bits {
-            value_num = value_num.add_bool_with_coeff(
-                CS::one(),
-                bit,
-                coeff
-            );
-            coeff.double();
-        }
+            let mut coeff = E::Fr::one();
+            for bit in &old_value_bits {
+                value_num = value_num.add_bool_with_coeff(
+                    CS::one(),
+                    bit,
+                    coeff
+                );
+                coeff.double();
+            }
 
-        old_note_contents.extend(old_value_bits);
+            old_note_contents.extend(old_value_bits);
+        }        
 
         old_note_contents.extend(
             prover_g_d.repr(cs.namespace(|| "representation of prover_g_d"))?
@@ -201,16 +215,26 @@ impl<'a, E: Engine> Circuit<E> for Transfer<'a, E> {
         );
 
         // Compute and expose H(old_note_contents) publicly.
-        
+        let hash_old_note = blake2s::blake2s(
+            cs.namespace(|| "hash_old_note computation"),
+            &old_note_contents,
+            constants::PRF_NF_PERSONALIZATION
+        )?;
+
+        multipack::pack_into_inputs(cs.namespace(|| "pack nullifier"), &hash_old_note)
     }
 }
 
-fn expose_nullifier<E, CS>(
-    mut cs: CS,
-    mut 
-)
+// fn expose_hash_note<E, CS>(
+//     mut cs: CS,
+//     value: Option<u64>,
+// ) -> Result<(), SynthesisError>
+//     where E: JubjubEngine, CS: ConstraintSystem<E>
+// {
+
+// }
 
 #[test]
-fn name() {
-    unimplemented!();
+fn test_transfer_circuit() {
+    assert_eq!(4, 2+2);
 }

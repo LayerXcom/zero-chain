@@ -35,6 +35,8 @@ substrate-basic-authorship = { git = "https://github.com/paritytech/substrate" }
 zero-chain-runtime = { path = "runtime" }
 node-executor = { git = "https://github.com/paritytech/substrate" }
 structopt = "0.2.13"
+zero-chain-proofs = { path = "proofs" }
+zero-chain-primitives = { path = "primitives" }
 
 [build-dependencies]
 vergen = "2"
