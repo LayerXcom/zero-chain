@@ -155,8 +155,10 @@ impl<'a, E: Engine> Circuit<E> for Transfer<'a, E> {
         )?;
 
         let prover_pk_d = prover_g_d.mul(
-            
-        )
+            cs.namespace(|| "compute prover_pk_d"),
+            &ivk,
+            self.params
+        )?;
 
         // compute note contents:
         // value (in big endian) followed by g_d and pk_d
@@ -184,8 +186,22 @@ impl<'a, E: Engine> Circuit<E> for Transfer<'a, E> {
         old_note_contents.extend(old_value_bits);
 
         old_note_contents.extend(
-            
-        )
+            prover_g_d.repr(cs.namespace(|| "representation of prover_g_d"))?
+        );
+
+        old_note_contents.extend(
+            prover_pk_d.repr(cs.namespace(|| "representation of prover_pk_d"))?
+        );
+
+        assert_eq!(
+            old_note_contents.len(), 
+            64 + // old_value_bits
+            256 + // prover_g_d
+            256 // prover_pk_d
+        );
+
+        // Compute and expose H(old_note_contents) publicly.
+        
     }
 }
 
