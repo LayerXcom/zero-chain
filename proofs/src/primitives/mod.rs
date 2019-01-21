@@ -111,22 +111,22 @@ impl<E: JubjubEngine> PaymentAddress<E> {
         self.diversifier.g_d(params)
     }
 
-    pub fn create_note(
-        &self,
-        value: u64,
-        randomness: E::Fs,
-        params: &E::Params
-    ) -> Option<Note<E>>
-    {
-        Some(Note{
-            value: value,
-            r: randomness,
-        })
-    }
+    // pub fn create_note(
+    //     &self,
+    //     value: u64,
+    //     randomness: E::Fs,
+    //     params: &E::Params
+    // ) -> Option<Note<E>>
+    // {
+    //     Some(Note{
+    //         value: value,
+    //         r: randomness,
+    //     })
+    // }
 }
 
-pub struct Note<E: JubjubEngine> {
-    pub value: u64,
-    // The commitment randomness
-    pub r: E::Fs,
-}
+// pub struct Note<E: JubjubEngine> {
+//     pub value: u64,
+//     // The commitment randomness
+//     pub r: E::Fs,
+// }
