@@ -1,14 +1,18 @@
 [package]
-name = "proofs"
+name = "zero-chain-proofs"
 version = "0.1.0"
 authors = ["osuke <dish230@gmail.com>"]
 
 [dependencies]
-bellman = { git = "https://github.com/osuketh/bellman", branch = "wasm" }
-pairing = { git = "https://github.com/sorpaas/pairing", default-features = false }
+bellman = { git = "https://github.com/zcash/librustzcash" }
+pairing = { git = "https://github.com/zcash/librustzcash" }
 rand = { version = "0.4", default-features = false}
 byteorder = { version = "1", default-features = false }
 sapling-crypto = { git = "https://github.com/zcash/librustzcash" }
+
+[dependencies.blake2-rfc]
+git = "https://github.com/gtank/blake2-rfc"
+rev = "7a5b5fc99ae483a0043db7547fb79a6fa44b88a9"
 
 [feature]
 default = ["std"]
