@@ -4,7 +4,7 @@ use pairing::{
     Field,    
 };
 
-use scrypto::{constants, group_hash};
+use scrypto::{constants, group_hash::group_hash};
 
 use scrypto::jubjub::{
     JubjubEngine,
@@ -50,8 +50,8 @@ impl<E: JubjubEngine> ViewingKey<E> {
 
     pub fn ivk(&self) -> E::Fs {
         let mut preimage = [0; 64];
-        self.ak.write(&mut preimage[0..32].unwrap());
-        self.nk.write(&mut preimage[32..64].unwrap());
+        self.ak.write(&mut preimage[0..32]).unwrap();
+        self.nk.write(&mut preimage[32..64]).unwrap();
 
         let mut h = Blake2s::with_params(32, &[], &[], constants::CRH_IVK_PERSONALIZATION);
         h.update(&preimage);
@@ -61,7 +61,7 @@ impl<E: JubjubEngine> ViewingKey<E> {
         let mut e = <E::Fs as PrimeField>::Repr::default();
 
         // Reads a little endian integer into this representation.
-        e.read_le(&h[..]).unwarap();
+        e.read_le(&h[..]).unwrap();
         E::Fs::from_repr(e).expect("should be a vaild scalar")
     }
 
