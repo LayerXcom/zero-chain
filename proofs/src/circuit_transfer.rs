@@ -106,6 +106,39 @@ fn expose_value_commitment<E, CS>(
     Ok(())  
 }
 
+fn u64_into_alloc<E, CS>(
+    mut cs: CS,
+    value: Option<u64>
+) -> Result<(), SynthesisError>
+    where E: JubjubEngine, CS: ConstraintSystem<E>
+{
+    let values = match value {
+        Some(ref value) => {
+            let mut tmp = Vec::with_capacity(64);
+            for i in 0..64 {
+                tmp.push(Some(*value >> i & 1 == 1));
+            }
+            tmp
+        },
+
+        None => {
+            vec![None; 64]
+        }
+    };
+
+    let _bits = values.into_iter()
+            .enumerate()
+            .map(|(i, v)| {
+                Ok(boolean::Boolean::from(boolean::AllocatedBit::alloc(
+                    cs.namespace(|| format!("bit {}", i)),
+                    v
+                )?))
+            })
+            .collect::<Result<Vec<_>, SynthesisError>>()?;
+    
+    Ok(())
+}
+
 impl<'a, E: JubjubEngine> Circuit<E> for Transfer<'a, E> {
     fn synthesize<CS: ConstraintSystem<E>>(
         self,
@@ -129,6 +162,13 @@ impl<'a, E: JubjubEngine> Circuit<E> for Transfer<'a, E> {
             self.transfer_value_commitment, 
             "transfer", 
             self.params
+        )?;
+
+        // Ensure transferring amount is not over the sender's balance
+        if let self.balance_value_commitment =
+        u64_into_alloc(
+            cs.namespace(|| "range proof of balance"),
+            Some(self.balance_value_commitment.value - self.transfer_value_commitment.value)
         )?;
 
         // Prover witnesses recipient_g_d, ensuring it's on the curve.
@@ -375,7 +415,7 @@ impl<'a, E: JubjubEngine> Circuit<E> for Transfer<'a, E> {
         };
 
         let balance_value_commitment = ValueCommitment {
-            value: rng.gen(), // TODO: Ensure that balace value is over transfer value.
+            value: transfer_value_commitment.value + (5 as u64), 
             randomness: rng.gen()
         };
 
