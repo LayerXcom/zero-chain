@@ -41,7 +41,10 @@ pub struct Transfer<'a, E: JubjubEngine> {
     pub ar: Option<E::Fs>,
     pub proof_generation_key: Option<ProofGenerationKey<E>>, // ak and nsk
     pub esk: Option<E::Fs>,
-            
+    // The payment address associated with the note
+    pub prover_payment_address: Option<PaymentAddress<E>>,
+    // The payment address  of the recipient
+    pub recipient_payment_address: Option<PaymentAddress<E>>,
 }
 
 // pub struct Transfer<'a, E: JubjubEngine> {
@@ -59,55 +62,48 @@ pub struct Transfer<'a, E: JubjubEngine> {
 //     pub ar: Option<E::Fs>,
 // }
 
-fn expose_balance_commitment<E, CS>(
-    mut cs: CS,
-    value_commitment: Option<ValueCommitment<E>>,
-    params: &E::Params
-) -> Result<Vec<boolean::Boolean>, SynthesisError>
-    where E: JubjubEngine, CS: ConstraintSystem<E>
-{
-    
-}
 
-fn expose_transfer_commitment<E, CS>(
+
+fn expose_value_commitment<E, CS>(
     mut cs: CS,
     value_commitment: Option<ValueCommitment<E>>,
+    transfer_or_balance: &str,
     params: &E::Params
-) -> Result<Vec<boolean::Boolean>, SynthesisError>
+) -> Result<(), SynthesisError>
     where E: JubjubEngine, CS: ConstraintSystem<E>
 {
     let value_bits = boolean::u64_into_boolean_vec_le(
-        cs.namespace(|| "transfer value"), 
+        cs.namespace(|| format!("{} value", transfer_or_balance)), 
         value_commitment.as_ref().map(|c| c.value)
     )?;
 
     let value = ecc::fixed_base_multiplication(
-        cs.namespace(|| "compute the transfer value in the exponent"), 
+        cs.namespace(|| format!("compute the {} value in the exponent", transfer_or_balance)), 
         FixedGenerators::ValueCommitmentValue, 
         &value_bits, 
         params
     )?;
 
     let rcv = boolean::field_into_boolean_vec_le(
-        cs.namespace(|| "transfer rcv"), 
+        cs.namespace(|| format!("{} rcv", transfer_or_balance)), 
         value_commitment.as_ref().map(|c| c.randomness)
     )?;
 
     let rcv = ecc::fixed_base_multiplication(
-        cs.namespace(|| "computation of transfer rcv"), 
+        cs.namespace(|| format!("computation of {} rcv", transfer_or_balance)), 
         FixedGenerators::ValueCommitmentRandomness, 
         &rcv, 
         params
     )?;
 
     let cv = value.add(
-        cs.namespace(|| "computation of transfer cv"),
+        cs.namespace(|| format!("computation of {} cv", transfer_or_balance)),
         &rcv,
         params
     )?;
 
-    cv.inputize(cs.namespace(|| "tranfer commitment point"))?;
-
+    cv.inputize(cs.namespace(|| format!("{} commitment point", transfer_or_balance)))?;  
+    Ok(())  
 }
 
 impl<'a, E: JubjubEngine> Circuit<E> for Transfer<'a, E> {
@@ -117,6 +113,23 @@ impl<'a, E: JubjubEngine> Circuit<E> for Transfer<'a, E> {
     ) -> Result<(), SynthesisError>
     {
         let params = self.params;
+        // todo expose payment_address
+
+        // value commitment integrity of sender's balance and expose the commitment publicly.   
+        expose_value_commitment(
+                cs.namespace(|| "balance commitment"), 
+                self.balance_value_commitment, 
+                "balance", 
+                self.params
+        )?;        
+
+        // value commitment integrity of transferring amount and expose the commitment publicly.        
+        expose_value_commitment(
+            cs.namespace(|| "transfer commitment"), 
+            self.transfer_value_commitment, 
+            "transfer", 
+            self.params
+        )?;
 
         // Prover witnesses recipient_g_d, ensuring it's on the curve.
         let recipient_g_d = ecc::EdwardsPoint::witness(
@@ -238,67 +251,60 @@ impl<'a, E: JubjubEngine> Circuit<E> for Transfer<'a, E> {
             self.params
         )?;
 
+        Ok(())
+
         // compute note contents:
         // value (in big endian) followed by g_d and pk_d
-        let mut old_note_contents = vec![];
+        // let mut old_note_contents = vec![];
         // let mut prover_note_contents = vec![];
         // let mut recipient_note_contents = vec![];
 
-        let mut value_num: num::Num<E> = num::Num::zero();
+        // let mut value_num: num::Num<E> = num::Num::zero();
 
-        {
-            let old_value_bits = boolean::u64_into_boolean_vec_le(
-                cs.namespace(|| "value"),
-                self.old_value
-            )?;
+        // {
+        //     let old_value_bits = boolean::u64_into_boolean_vec_le(
+        //         cs.namespace(|| "value"),
+        //         self.old_value
+        //     )?;
 
-            let mut coeff = E::Fr::one();
-            for bit in &old_value_bits {
-                value_num = value_num.add_bool_with_coeff(
-                    CS::one(),
-                    bit,
-                    coeff
-                );
-                coeff.double();
-            }
+        //     let mut coeff = E::Fr::one();
+        //     for bit in &old_value_bits {
+        //         value_num = value_num.add_bool_with_coeff(
+        //             CS::one(),
+        //             bit,
+        //             coeff
+        //         );
+        //         coeff.double();
+        //     }
 
-            old_note_contents.extend(old_value_bits);
-        }        
+        //     old_note_contents.extend(old_value_bits);
+        // }        
 
-        old_note_contents.extend(
-            prover_g_d.repr(cs.namespace(|| "representation of prover_g_d"))?
-        );
+        // old_note_contents.extend(
+        //     prover_g_d.repr(cs.namespace(|| "representation of prover_g_d"))?
+        // );
 
-        old_note_contents.extend(
-            prover_pk_d.repr(cs.namespace(|| "representation of prover_pk_d"))?
-        );
+        // old_note_contents.extend(
+        //     prover_pk_d.repr(cs.namespace(|| "representation of prover_pk_d"))?
+        // );
 
-        assert_eq!(
-            old_note_contents.len(), 
-            64 + // old_value_bits
-            256 + // prover_g_d
-            256 // prover_pk_d
-        );
+        // assert_eq!(
+        //     old_note_contents.len(), 
+        //     64 + // old_value_bits
+        //     256 + // prover_g_d
+        //     256 // prover_pk_d
+        // );
 
-        // Compute and expose H(old_note_contents) publicly.
-        let hash_old_note = blake2s::blake2s(
-            cs.namespace(|| "hash_old_note computation"),
-            &old_note_contents,
-            constants::PRF_NF_PERSONALIZATION
-        )?;
+        // // Compute and expose H(old_note_contents) publicly.
+        // let hash_old_note = blake2s::blake2s(
+        //     cs.namespace(|| "hash_old_note computation"),
+        //     &old_note_contents,
+        //     constants::PRF_NF_PERSONALIZATION
+        // )?;
 
-        multipack::pack_into_inputs(cs.namespace(|| "pack nullifier"), &hash_old_note)
+        // multipack::pack_into_inputs(cs.namespace(|| "pack nullifier"), &hash_old_note)
     }
 }
-
-// fn expose_hash_note<E, CS>(
-//     mut cs: CS,
-//     value: Option<u64>,
-// ) -> Result<(), SynthesisError>
-//     where E: JubjubEngine, CS: ConstraintSystem<E>
-// {
-
-// }
 
 #[cfg(test)]
     use pairing::bls12_381::*;
@@ -362,29 +368,36 @@ impl<'a, E: JubjubEngine> Circuit<E> for Transfer<'a, E> {
 
         let esk: fs::Fs = rng.gen();
         let ar: fs::Fs = rng.gen();
-        let old_value = 5 as u64;
-        let prover_value = 2 as u64;
-        let recipient_value = 3 as u64;
+
+        let transfer_value_commitment = ValueCommitment {
+            value: rng.gen(),
+            randomness: rng.gen()
+        };
+
+        let balance_value_commitment = ValueCommitment {
+            value: rng.gen(), // TODO: Ensure that balace value is over transfer value.
+            randomness: rng.gen()
+        };
 
         let mut cs = TestConstraintSystem::<Bls12>::new();
 
         let instance = Transfer {
             params: params,
+            transfer_value_commitment: Some(transfer_value_commitment.clone()),
+            balance_value_commitment: Some(balance_value_commitment.clone()),
             proof_generation_key: Some(proof_generation_key.clone()),
             prover_payment_address: Some(prover_payment_address.clone()),
-            recipient_payment_address: Some(recipient_payment_address.clone()),
-            old_value: Some(old_value),
-            prover_value: Some(prover_value),
-            recipient_value: Some(recipient_value),
+            recipient_payment_address: Some(recipient_payment_address.clone()),                                
             esk: Some(esk.clone()),
             ar: Some(ar)
-        };
+        };        
 
         instance.synthesize(&mut cs).unwrap();
 
         // let expected_epk
         // let expected_epk_xy
         
+        println!("transfer_constraints: {:?}", cs.num_constraints());
         assert!(cs.is_satisfied());
         // assert_eq!(cs.num_constraints(), 75415);
         // assert_eq!(cs.hash(), "3ff9338cc95b878a20b0974490633219e032003ced1d3d917cde4f50bc902a12");
