@@ -34,18 +34,80 @@ use scrypto::circuit::{
 
 // An instance of the Transfer circuit.
 pub struct Transfer<'a, E: JubjubEngine> {
-    pub params: &'a E::Params, 
-    pub proof_generation_key: Option<ProofGenerationKey<E>>,
-    // The payment address associated with the note
-    pub prover_payment_address: Option<PaymentAddress<E>>,
-    // The payment address  of the recipient
-    pub recipient_payment_address: Option<PaymentAddress<E>>,
-    pub old_value: Option<u64>, 
-    pub prover_value: Option<u64>,
-    pub recipient_value: Option<u64>,
-    pub esk: Option<E::Fs>,
+    pub params: &'a E::Params,     
+    pub transfer_value_commitment: Option<ValueCommitment<E>>,
+    pub balance_value_commitment: Option<ValueCommitment<E>>,            
     // Re-randomization of the public key
     pub ar: Option<E::Fs>,
+    pub proof_generation_key: Option<ProofGenerationKey<E>>, // ak and nsk
+    pub esk: Option<E::Fs>,
+            
+}
+
+// pub struct Transfer<'a, E: JubjubEngine> {
+//     pub params: &'a E::Params, 
+//     pub proof_generation_key: Option<ProofGenerationKey<E>>,
+//     // The payment address associated with the note
+//     pub prover_payment_address: Option<PaymentAddress<E>>,
+//     // The payment address  of the recipient
+//     pub recipient_payment_address: Option<PaymentAddress<E>>,
+//     pub old_value: Option<u64>, 
+//     pub prover_value: Option<u64>,
+//     pub recipient_value: Option<u64>,
+//     pub esk: Option<E::Fs>,
+//     // Re-randomization of the public key
+//     pub ar: Option<E::Fs>,
+// }
+
+fn expose_balance_commitment<E, CS>(
+    mut cs: CS,
+    value_commitment: Option<ValueCommitment<E>>,
+    params: &E::Params
+) -> Result<Vec<boolean::Boolean>, SynthesisError>
+    where E: JubjubEngine, CS: ConstraintSystem<E>
+{
+    
+}
+
+fn expose_transfer_commitment<E, CS>(
+    mut cs: CS,
+    value_commitment: Option<ValueCommitment<E>>,
+    params: &E::Params
+) -> Result<Vec<boolean::Boolean>, SynthesisError>
+    where E: JubjubEngine, CS: ConstraintSystem<E>
+{
+    let value_bits = boolean::u64_into_boolean_vec_le(
+        cs.namespace(|| "transfer value"), 
+        value_commitment.as_ref().map(|c| c.value)
+    )?;
+
+    let value = ecc::fixed_base_multiplication(
+        cs.namespace(|| "compute the transfer value in the exponent"), 
+        FixedGenerators::ValueCommitmentValue, 
+        &value_bits, 
+        params
+    )?;
+
+    let rcv = boolean::field_into_boolean_vec_le(
+        cs.namespace(|| "transfer rcv"), 
+        value_commitment.as_ref().map(|c| c.randomness)
+    )?;
+
+    let rcv = ecc::fixed_base_multiplication(
+        cs.namespace(|| "computation of transfer rcv"), 
+        FixedGenerators::ValueCommitmentRandomness, 
+        &rcv, 
+        params
+    )?;
+
+    let cv = value.add(
+        cs.namespace(|| "computation of transfer cv"),
+        &rcv,
+        params
+    )?;
+
+    cv.inputize(cs.namespace(|| "tranfer commitment point"))?;
+
 }
 
 impl<'a, E: JubjubEngine> Circuit<E> for Transfer<'a, E> {
