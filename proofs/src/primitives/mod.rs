@@ -17,7 +17,7 @@ use scrypto::jubjub::{
 use blake2_rfc::blake2s::Blake2s;
 
 #[derive(Clone)]
-pub struct ValueCommitment<E: jubjubEngine> {
+pub struct ValueCommitment<E: JubjubEngine> {
     pub value: u64,
     pub randomness: E::Fs,
 }

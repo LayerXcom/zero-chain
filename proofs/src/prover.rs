@@ -15,17 +15,18 @@ use scrypto::{
         multipack,
         sapling::{Output, Spend},
     },
-    jubjub::{edwards, fs::Fs, FixedGenerators, JubjubBls12, Unknown},
-    primitives::{Diversifier, Note, PaymentAddress, ProofGenerationKey, ValueCommitment},
+    jubjub::{edwards, fs::Fs, FixedGenerators, JubjubBls12, Unknown},    
     redjubjub::{PrivateKey, PublicKey, Signature},
 };
 use circuit_transfer::Transfer;
-use primitives;
+// TODO: remove scrypto::
+use scrypto::primitives::{Diversifier, PaymentAddress, ProofGenerationKey, ValueCommitment};
 
 
 pub struct TransferProof {
     proof: Proof<Bls12>,
     value_commitment: edwards::Point<Bls12, Unknown>,
+    rk: PublicKey<Bls12>, // rk, re-randomization sig-verifying key
 }
 
 impl TransferProof {    
@@ -37,16 +38,12 @@ impl TransferProof {
         esk: Fs, 
         proving_key: &Parameters<Bls12>, 
         verifying_key: &PreparedVerifyingKey<Bls12>,
-        proof_generation_key: ProofGenerationKey<Bls21>,
+        proof_generation_key: ProofGenerationKey<Bls12>,
         recipient_payment_address: PaymentAddress<Bls12>,
+        diversifier: Diversifier,
         params: &JubjubBls12,        
-    ) -> Result<
-        (
-            Self, 
-            PublicKey<Bls12>, // rk, re-randomization sig-verifying key
-        ),
-        (),
-    > {
+    ) -> Result<Self, ()>
+    {
         // TODO: Change OsRng for wasm
         let mut rng = OsRng::new().expect("should be able to construct RNG");        
 
@@ -63,7 +60,19 @@ impl TransferProof {
             randomness: balance_rcm,
         };
 
-        let 
+        let viewing_key = proof_generation_key.into_viewing_key(params);
+
+        let prover_payment_address = match viewing_key.into_payment_address(diversifier, params) {
+            Some(p) => p,
+            None => return Err(()),
+        };
+
+        let rk = PublicKey::<Bls12>(proof_generation_key.ak.clone().into())
+            .randomize(
+                ar,
+                FixedGenerators::SpendingKeyGenerator,
+                params,
+        );
 
         let instance = Transfer {
             params: params,     
@@ -72,14 +81,14 @@ impl TransferProof {
             ar: Some(ar),
             proof_generation_key: Some(proof_generation_key), 
             esk: Some(esk),
-            prover_payment_address: Option<PaymentAddress<E>>,
+            prover_payment_address: Some(prover_payment_address),
             recipient_payment_address: Some(recipient_payment_address),
         };
 
         // Crate proof
         let proof = create_random_proof(instance, proving_key, &mut rng)
             .expect("proving should not fail");
-    }
-
-
+        
+        Err(())
+    }    
 }
