@@ -15,21 +15,21 @@ use blake2_rfc::blake2s::Blake2s;
 use primitives;
 
 
-pub struct Note<E: JubjubEngine> {
+pub struct ValueCommitment<E: JubjubEngine> {
     pub value: u64,
     // The commitment randomness
     pub r: E::Fs,
 }
 
-pub struct SerializedNote(&[u8; z_constants::PLAINTEXT_SIZE]);
+pub struct SerializedCommitment(&[u8; z_constants::PLAINTEXT_SIZE]);
 
-impl<E: JubjubEngine> SerializedNote<E> {
-    pub fn encrypt_note_to_recipient(
+impl<E: JubjubEngine> SerializedCommitment<E> {
+    pub fn encrypt_cm_to_recipient(
         &self,
         pk_d: edwards::Point<E, PrimeOrder>,         
         diversifier: Diversifier,
         params: &E::Params
-    ) -> SerializedEncNote
+    ) -> SerializedEncCommitment
     {
         let mut rng = OsRng::new().expect("should be able to construct RNG"); // TODO: replace OsRng
         let mut buffer = [0u8; 64];
@@ -62,13 +62,13 @@ impl<E: JubjubEngine> SerializedNote<E> {
 }
 
 
-pub struct EncryptedNote<E: JubjubEngine> {
+pub struct EncryptedCommitment<E: JubjubEngine> {
     pub cipher_text: Vec<u8>,
     pub epk: 
 }
 
-pub struct SerializedEncNote(&[u8; z_constants::CIPHERTEXT_SIZE]);
+pub struct SerializedEncCommitment(&[u8; z_constants::CIPHERTEXT_SIZE]);
 
-impl<E: JubjubEngine> SerializedEncNote<E> {
+impl<E: JubjubEngine> SerializedEncCommitment<E> {
     pub fn 
 }
