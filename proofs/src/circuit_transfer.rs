@@ -192,7 +192,7 @@ impl<'a, E: JubjubEngine> Circuit<E> for Transfer<'a, E> {
             self.params
         )?;
 
-        // Re-randomize ak        
+        // Re-randomize ak    
         let ar = boolean::field_into_boolean_vec_le(
             cs.namespace(|| "ar"),
             self.ar
@@ -350,7 +350,7 @@ impl<'a, E: JubjubEngine> Circuit<E> for Transfer<'a, E> {
         let expected_balance_cm = balance_value_commitment.cm(params).into_xy();
         let expected_transfer_cm = transfer_value_commitment.cm(params).into_xy();
 
-        let rk = viewing_key_r.rk(ar, params).into_xy();
+        let rk = viewing_key_s.rk(ar, params).into_xy();
 
         let mut cs = TestConstraintSystem::<Bls12>::new();
 
