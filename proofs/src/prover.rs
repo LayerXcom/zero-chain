@@ -9,64 +9,72 @@ use pairing::{
     bls12_381::{Bls12, Fr, FrRepr},
     Field, PrimeField, PrimeFieldRepr, Engine,
 };
-use rand::{thread_rng, Rng, ChaChaRng};
+use rand::{OsRng, Rand};
 use scrypto::{
     circuit::{
         multipack,
-        sapling::{Output, Spend, TREE_DEPTH},
+        sapling::{Output, Spend},
     },
     jubjub::{edwards, fs::Fs, FixedGenerators, JubjubBls12, Unknown},
     primitives::{Diversifier, Note, PaymentAddress, ProofGenerationKey, ValueCommitment},
     redjubjub::{PrivateKey, PublicKey, Signature},
 };
 use circuit_transfer::Transfer;
+use primitives;
 
 
-pub struct ProvingContext {
-    bsk: Fs,
-    bvk: edwards::Point<Bls12, Unknown>,
+pub struct TransferProof {
+    proof: Proof<Bls12>,
+    value_commitment: edwards::Point<Bls12, Unknown>,
 }
 
-impl ProvingContext {
-    pub fn new() -> Self {
-        ProvingContext {
-            bsk: Fs::zero(),
-            bvk: edwards::Point::zero(),
-        }
-    }
-
+impl TransferProof {    
     pub fn gen_proof(
         &mut self, 
-        transfer_value: u64, 
-        transfer_rcm: Fs,
-        balance_value: u64,
-        balance_rcm: Fs,
+        transfer_value: u64,         
+        balance_value: u64,        
         ar: Fs,
         esk: Fs, 
         proving_key: &Parameters<Bls12>, 
         verifying_key: &PreparedVerifyingKey<Bls12>,
         proof_generation_key: ProofGenerationKey<Bls21>,
+        recipient_payment_address: PaymentAddress<Bls12>,
         params: &JubjubBls12,        
     ) -> Result<
         (
-            Proof<Bls12>,
-            edwards::Point<Bls12, Unknown>, // value commitment       
+            Self, 
+            PublicKey<Bls12>, // rk, re-randomization sig-verifying key
         ),
-        (),    
-    >{
+        (),
+    > {
+        // TODO: Change OsRng for wasm
         let mut rng = OsRng::new().expect("should be able to construct RNG");        
 
+        let transfer_rcm = Fs::rand(&mut rng);
+        let balance_rcm = Fs::rand(&mut rng);
+
+        let transfer_value_commitment = ValueCommitment::<Bls12> {
+            value: transfer_value,
+            randomness: transfer_rcm,
+        };
+
+        let balance_value_commitment = ValueCommitment::<Bls12> {
+            value: balance_value,
+            randomness: balance_rcm,
+        };
+
+        let 
 
         let instance = Transfer {
             params: params,     
-            transfer_value_commitment: Option<ValueCommitment<E>>,
-            balance_value_commitment: Option<ValueCommitment<E>>,            
-            ar: Option<E::Fs>,
-            proof_generation_key: Option<ProofGenerationKey<E>>, 
-            esk: Option<E::Fs>,
+            transfer_value_commitment: Some(transfer_value_commitment),
+            balance_value_commitment: Some(balance_value_commitment),            
+            ar: Some(ar),
+            proof_generation_key: Some(proof_generation_key), 
+            esk: Some(esk),
             prover_payment_address: Option<PaymentAddress<E>>,
-            recipient_payment_address: Option<PaymentAddress<E>>,
-        }
+            recipient_payment_address: Some(recipient_payment_address),
+        };
 
         // Crate proof
         let proof = create_random_proof(instance, proving_key, &mut rng)

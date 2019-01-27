@@ -17,6 +17,28 @@ use scrypto::jubjub::{
 use blake2_rfc::blake2s::Blake2s;
 
 #[derive(Clone)]
+pub struct ValueCommitment<E: jubjubEngine> {
+    pub value: u64,
+    pub randomness: E::Fs,
+}
+
+impl<E: JubjubEngine> ValueCommitment<E> {
+    pub fn cm(
+        &self,
+        params: &E::Params,        
+    ) -> edwards::Point<E, PrimeOrder>
+    {
+        params.generator(FixedGenerators::ValueCommitmentValue)
+            .mul(self.value, params)
+            .add(
+                &params.generator(FixedGenerators::ValueCommitmentRandomness)
+                .mul(self.randomness, params),
+                params
+            )
+    }
+}
+
+#[derive(Clone)]
 pub struct ProofGenerationKey<E: JubjubEngine> {
     pub ak: edwards::Point<E, PrimeOrder>,
     pub nsk: E::Fs
@@ -110,23 +132,4 @@ impl<E: JubjubEngine> PaymentAddress<E> {
     {
         self.diversifier.g_d(params)
     }
-
-    // pub fn create_note(
-    //     &self,
-    //     value: u64,
-    //     randomness: E::Fs,
-    //     params: &E::Params
-    // ) -> Option<Note<E>>
-    // {
-    //     Some(Note{
-    //         value: value,
-    //         r: randomness,
-    //     })
-    // }
 }
-
-// pub struct Note<E: JubjubEngine> {
-//     pub value: u64,
-//     // The commitment randomness
-//     pub r: E::Fs,
-// }

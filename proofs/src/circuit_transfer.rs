@@ -25,11 +25,8 @@ use scrypto::primitives::{
 
 use scrypto::circuit::{    
     boolean,
-    ecc,
-    pedersen_hash,
-    blake2s,
-    num,
-    multipack
+    ecc,    
+    blake2s,    
 };
 
 // An instance of the Transfer circuit.
@@ -46,23 +43,6 @@ pub struct Transfer<'a, E: JubjubEngine> {
     // The payment address  of the recipient
     pub recipient_payment_address: Option<PaymentAddress<E>>,
 }
-
-// pub struct Transfer<'a, E: JubjubEngine> {
-//     pub params: &'a E::Params, 
-//     pub proof_generation_key: Option<ProofGenerationKey<E>>,
-//     // The payment address associated with the note
-//     pub prover_payment_address: Option<PaymentAddress<E>>,
-//     // The payment address  of the recipient
-//     pub recipient_payment_address: Option<PaymentAddress<E>>,
-//     pub old_value: Option<u64>, 
-//     pub prover_value: Option<u64>,
-//     pub recipient_value: Option<u64>,
-//     pub esk: Option<E::Fs>,
-//     // Re-randomization of the public key
-//     pub ar: Option<E::Fs>,
-// }
-
-
 
 fn expose_value_commitment<E, CS>(
     mut cs: CS,
