@@ -19,8 +19,7 @@ use scrypto::{
     redjubjub::{PrivateKey, PublicKey, Signature},
 };
 use circuit_transfer::Transfer;
-// TODO: remove scrypto::
-use scrypto::primitives::{Diversifier, PaymentAddress, ProofGenerationKey, ValueCommitment};
+use primitives::{Diversifier, PaymentAddress, ProofGenerationKey, ValueCommitment};
 
 
 pub struct TransferProof {

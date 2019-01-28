@@ -17,8 +17,7 @@ use scrypto::jubjub::{
 
 use scrypto::constants;
 
-// TODO: remove scrypto::
-use scrypto::primitives::{
+use primitives::{
     ValueCommitment,
     ProofGenerationKey,
     PaymentAddress
@@ -276,7 +275,7 @@ impl<'a, E: JubjubEngine> Circuit<E> for Transfer<'a, E> {
 #[cfg(test)]
     use pairing::bls12_381::*;
     use rand::{SeedableRng, Rng, XorShiftRng};    
-    use super::test::TestConstraintSystem;
+    use super::circuit_test::TestConstraintSystem;
     use scrypto::jubjub::{JubjubBls12, fs, edwards};
     use scrypto::primitives::Diversifier;
 

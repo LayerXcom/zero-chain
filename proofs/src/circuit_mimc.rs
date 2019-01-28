@@ -184,7 +184,7 @@ impl<'a, E: JubjubEngine> Circuit<E> for MiMCDemo<'a, E> {
 #[cfg(test)]
     use pairing::bls12_381::*;
     // use rand::{SeedableRng, Rng, XorShiftRng};    
-    use super::test::TestConstraintSystem;
+    use super::circuit_test::TestConstraintSystem;
     use scrypto::jubjub::{JubjubBls12, fs, edwards};
     use scrypto::primitives::Diversifier;
     
