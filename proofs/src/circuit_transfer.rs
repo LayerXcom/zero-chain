@@ -15,12 +15,12 @@ use scrypto::jubjub::{
     FixedGenerators
 };
 
-use scrypto::constants;
+use zcrypto::constants;
 
 use primitives::{
     ValueCommitment,
     ProofGenerationKey,
-    PaymentAddress
+    PaymentAddress,    
 };
 
 use scrypto::circuit::{    

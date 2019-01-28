@@ -8,5 +8,7 @@ pub const PLAINTEXT_SIZE: i32 = V_SIZE + R_SIZE;
 pub const CIPHERTEXT_SIZE: i32 = V_SIZE + R_SIZE;
 // BLAKE2s invocation personalizations
 /// BLAKE2s Personalization for CRH^ivk = BLAKE2s(ak | nk)
-pub const KDF_PERSONALIZATION: &'static [u8; 8]
-          = b"zech_KDF";
+pub const KDF_PERSONALIZATION: &'static [u8; 8] = b"zech_KDF";     
+pub const KEY_DIVERSIFICATION_PERSONALIZATION: &'static [u8; 8] = b"zech_div";
+pub const CRH_IVK_PERSONALIZATION: &'static [u8; 8] = b"zech_ivk";
+pub const MIMC_PERSONALIATION: &'static [u8; 8] = b"zechMIMC";

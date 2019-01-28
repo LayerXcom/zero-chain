@@ -4,7 +4,7 @@ use pairing::{
     Field,    
 };
 
-use scrypto::{constants, group_hash::group_hash};
+use scrypto::group_hash::group_hash;
 
 use scrypto::jubjub::{
     JubjubEngine,
@@ -15,6 +15,8 @@ use scrypto::jubjub::{
 };
 
 use blake2_rfc::blake2s::Blake2s;
+
+use zcrypto::constants;
 
 #[derive(Clone)]
 pub struct ValueCommitment<E: JubjubEngine> {
@@ -35,6 +37,14 @@ impl<E: JubjubEngine> ValueCommitment<E> {
                 .mul(self.randomness, params),
                 params
             )
+    }
+
+    pub fn mimc(
+        &self,
+        key:,
+    ) -> 
+    {
+
     }
 }
 

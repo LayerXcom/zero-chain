@@ -1,5 +1,5 @@
 [package]
-name = "zero-crypto"
+name = "zero-chain-crypto"
 version = "0.1.0"
 authors = ["osuke <dish230@gmail.com>"]
 edition = "2018"
