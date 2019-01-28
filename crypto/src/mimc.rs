@@ -1,29 +1,36 @@
-
-use proofs::{
-    ValueCommitment,
-}
-
 use scrypto::jubjub::{
     JubjubEngine,
-    FixedGenerators
+    ToUniform
 };
 
 use blake2_rfc::blake2s::Blake2s;
 
-pub const DEFAULT_SEED: &'static [u8; 4] = b"mimc";
-pub const DEFAULT_ROUND: u64 = 97;
-pub const DEFAULT_EXPONENT: u64 = 7;
+use super::constants::{DEFAULT_ROUND, DEFAULT_SEED, MIMC_PERSONALIZATION};
 
-pub fn mimc_constants<E>(
-    seed: &str,
+pub fn mimc_constants<'a, E>(
+    seed: &'a[u8],
     scalar_field: E::Fs,
     rounds: u64 
-) -> &[u8; DEFAULT_ROUND]
+) -> Vec<E::Fs>
     where E: JubjubEngine
 {
-    let mut res;
-    let mut h = Blake2s::with_params(32, &[], &[], constants::MIMC_PERSONALIZATION)
-    for i in 0..rounds {
+    let mut res = Vec::with_capacity(DEFAULT_ROUND);
+    let mut preimage = seed;        
+
+    // let mut h = Blake2s::with_params(32, &[], &[], MIMC_PERSONALIZATION);
+    // h.update(&preimage);
+    // let mut tmp = &mut *(h.finalize().as_bytes());
+    // res.push(tmp);
+    
+    for _ in 0..rounds {
+        let mut h = Blake2s::with_params(32, &[], &[], MIMC_PERSONALIZATION);    
+        // tmp = &mut *tmp;
+        h.update(preimage);                     
+        preimage = h.finalize(); 
         
+        res.push(E::Fs::to_uniform(preimage.as_ref()));    
     }
+
+    assert_eq!(res.len(), 91);
+    res
 }

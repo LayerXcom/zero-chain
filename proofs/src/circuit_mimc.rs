@@ -89,16 +89,16 @@ fn mimc<E: JubjubEngine>(
 
 /// This is our demo circuit for proving knowledge of the
 /// preimage of a MiMC hash invocation.
-struct MiMCDemo<'a, E: JubjubEngine> {
-    xl: Option<E::Fr>,
-    xr: Option<E::Fr>,
+struct MiMC<'a, E: JubjubEngine> {
+    x: Option<E::Fr>, // plaintext
+    k: Option<E::Fr>, // key
     constants: &'a [E::Fr]
 }
 
 /// Our demo circuit implements this `Circuit` trait which
 /// is used during paramgen and proving in order to
 /// synthesize the constraint system.
-impl<'a, E: JubjubEngine> Circuit<E> for MiMCDemo<'a, E> {
+impl<'a, E: JubjubEngine> Circuit<E> for MiMC<'a, E> {
     fn synthesize<CS: ConstraintSystem<E>>(
         self,
         cs: &mut CS
@@ -106,38 +106,91 @@ impl<'a, E: JubjubEngine> Circuit<E> for MiMCDemo<'a, E> {
     {
         assert_eq!(self.constants.len(), MIMC_ROUNDS);
 
-        // Allocate the first component of the preimage.
-        let mut xl_value = self.xl;
-        let mut xl = cs.alloc(|| "preimage xl", || {
-            xl_value.ok_or(SynthesisError::AssignmentMissing)
+        // Allocate the first component of the plaintext.
+        let mut x_value = self.x;
+        let mut x = cs.alloc(|| "plaintext x", || {
+            x_value.ok_or(SynthesisError::AssignmentMissing)
         })?;
 
         // Allocate the second component of the preimage.
-        let mut xr_value = self.xr;
-        let mut xr = cs.alloc(|| "preimage xr", || {
-            xr_value.ok_or(SynthesisError::AssignmentMissing)
+        let mut k_value = self.k;
+        let mut k = cs.alloc(|| "key k", || {
+            k_value.ok_or(SynthesisError::AssignmentMissing)
         })?;
 
         for i in 0..MIMC_ROUNDS {
-            // xL, xR := xR + (xL + Ci)^3, xL
+            // x, k := (x + k + Ci)^7
             let cs = &mut cs.namespace(|| format!("round {}", i));
 
-            // tmp = (xL + Ci)^2
-            let mut tmp_value = xl_value.map(|mut e| {
+            // tmp2 = (x + k + Ci)^2
+            let mut tmp2_value = x_value.map(|mut e| {
+                e.add_assign(k_value);
                 e.add_assign(&self.constants[i]);
                 e.square();
                 e
             });
-            let mut tmp = cs.alloc(|| "tmp", || {
-                tmp_value.ok_or(SynthesisError::AssignmentMissing)
+            let mut tmp2 = cs.alloc(|| "tmp2", || {
+                tmp2_value.ok_or(SynthesisError::AssignmentMissing)
             })?;
 
             cs.enforce(
-                || "tmp = (xL + Ci)^2",
-                |lc| lc + xl + (self.constants[i], CS::one()),
-                |lc| lc + xl + (self.constants[i], CS::one()),
-                |lc| lc + tmp
+                || "tmp2 = (x + k + Ci)^2",
+                |lc| lc + x + k + (self.constants[i], CS::one()),
+                |lc| lc + x + k + (self.constants[i], CS::one()),
+                |lc| lc + tmp2
             );
+
+            // tmp4 = (x + k + Ci)^4
+            let mut tmp4_value = tmp2_value.map(|mut e| {
+                e.square();
+                e
+            }); 
+
+            let mut tmp4 = cs.alloc(|| "tmp4", || {
+                tmp4_value.ok_or(SynthesisError::AssignmentMissing)
+            })?;
+
+            cs.enforce(
+                || "tmp4 = (x + k + Ci)^4",
+                |lc| lc + tmp2,
+                |lc| lc + tmp2,
+                |lc| lc + tmp4
+            );
+
+            // tmp6 = (x + k + Ci)^6
+            let mut tmp6_value = tmp4_value.map(|mut e| {
+                e.mul_assign(tmp2_value);
+                e
+            });
+
+            let mut tmp6 = cs.alloc(|| "tmp6", || {
+                tmp6_value.ok_or(SynthesisError::AssignmentMissing)
+            })?;
+
+            cs.enforce(
+                || "tmp6 = (x + k + Ci)^6",
+                |lc| lc + tmp4,
+                |lc| lc + tmp2,
+                |lc| lc + tmp6
+            );            
+
+            // tmp7 = (x + k + Ci)^7
+            let mut tmp7_value = tmp6_value.map(|mut e| {
+                e.mul_assign(x_value.add_assign(k_value).add_assign(&self.constants[i]));
+                e
+            })
+
+            let mut tmp7 = cs.alloc(|| "tmp7", || {
+                tmp7_value.ok_or(SynthesisError::AssignmentMissing)
+            })?;
+
+            cs.enforce(
+                || "tmp7 = (x + k + Ci)^7",
+                |lc| lc + tmp6,
+                |lc| lc + x + k + (self.constants[i], CS::one()),
+                |lc| lc + tmp7
+            );
+
 
             // new_xL = xR + (xL + Ci)^3
             // new_xL = xR + tmp * (xL + Ci)
@@ -176,6 +229,8 @@ impl<'a, E: JubjubEngine> Circuit<E> for MiMCDemo<'a, E> {
             xl = new_xl;
             xl_value = new_xl_value;
         }
+
+
 
         Ok(())
     }

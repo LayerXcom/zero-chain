@@ -16,7 +16,7 @@ use scrypto::jubjub::{
 
 use blake2_rfc::blake2s::Blake2s;
 
-use zcrypto::constants;
+use zcrypto::{constants, mimc};
 
 #[derive(Clone)]
 pub struct ValueCommitment<E: JubjubEngine> {
@@ -39,13 +39,13 @@ impl<E: JubjubEngine> ValueCommitment<E> {
             )
     }
 
-    pub fn mimc(
-        &self,
-        key:,
-    ) -> 
-    {
+    // pub fn mimc(
+    //     &self,
+    //     key:,
+    // ) -> 
+    // {
 
-    }
+    // }
 }
 
 #[derive(Clone)]

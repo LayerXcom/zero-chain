@@ -20,7 +20,7 @@ use zcrypto::constants;
 use primitives::{
     ValueCommitment,
     ProofGenerationKey,
-    PaymentAddress,    
+    PaymentAddress,        
 };
 
 use scrypto::circuit::{    
@@ -277,11 +277,11 @@ impl<'a, E: JubjubEngine> Circuit<E> for Transfer<'a, E> {
     use rand::{SeedableRng, Rng, XorShiftRng};    
     use super::circuit_test::TestConstraintSystem;
     use scrypto::jubjub::{JubjubBls12, fs, edwards};
-    use scrypto::primitives::Diversifier;
+    use primitives::Diversifier;
 
     
     #[test]
-    fn test_transfer_circuit() {        
+    fn test_circuit_transfer() {        
         let params = &JubjubBls12::new();
         let rng = &mut XorShiftRng::from_seed([0x3dbe6258, 0x8d313d76, 0x3237db17, 0xe5bc0654]);
 
@@ -297,10 +297,10 @@ impl<'a, E: JubjubEngine> Circuit<E> for Transfer<'a, E> {
         let prover_payment_address;
 
         loop {
-            let diversifier = Diversifier(rng.gen());
+            let diversifier_s = Diversifier(rng.gen());
 
             if let Some(p) = viewing_key_s.into_payment_address(
-                diversifier, 
+                diversifier_s, 
                 params
             )
             {
