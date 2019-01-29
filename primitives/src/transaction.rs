@@ -17,3 +17,6 @@ pub struct Transaction {
 }
 
 
+impl Transaction {
+	pub 
+}

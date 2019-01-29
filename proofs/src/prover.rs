@@ -8,7 +8,7 @@ use pairing::{
 };
 use rand::{OsRng, Rand};
 use scrypto::{    
-    jubjub::{edwards, fs::Fs, FixedGenerators, JubjubBls12, Unknown},    
+    jubjub::{edwards, fs::Fs, FixedGenerators, JubjubBls12, Unknown, PrimeOrder},    
     redjubjub::{PrivateKey, PublicKey, Signature},
 };
 use circuit_transfer::Transfer;
@@ -17,10 +17,10 @@ use primitives::{Diversifier, PaymentAddress, ProofGenerationKey, ValueCommitmen
 
 pub struct TransferProof {
     proof: Proof<Bls12>,
-    balance_value_commitment: edwards::Point<Bls12, Unknown>,
-    transfer_value_commitment: edwards::Point<Bls12, Unknown>,
+    balance_value_commitment: ValueCommitment<Bls12>,
+    transfer_value_commitment: ValueCommitment<Bls12>,
     rk: PublicKey<Bls12>, // rk, re-randomization sig-verifying key
-    epk: PublicKey<Bls12>,
+    epk: edwards::Point<Bls12, PrimeOrder>,
 }
 
 impl TransferProof {    
@@ -75,8 +75,8 @@ impl TransferProof {
 
         let instance = Transfer {
             params: params,     
-            transfer_value_commitment: Some(transfer_value_commitment),
-            balance_value_commitment: Some(balance_value_commitment),            
+            transfer_value_commitment: Some(transfer_value_commitment.clone()),
+            balance_value_commitment: Some(balance_value_commitment.clone()),            
             ar: Some(ar),
             proof_generation_key: Some(proof_generation_key), 
             esk: Some(esk),
@@ -90,12 +90,12 @@ impl TransferProof {
         
         let mut public_input = [Fr::zero(); 8];
         {
-            let (x, y) = balance_value_commitment.cm(params).into_xy();
+            let (x, y) = (&balance_value_commitment).cm(params).into_xy();
             public_input[0] = x;
             public_input[1] = y;
         }
         {
-            let (x, y) = transfer_value_commitment.cm(params).into_xy();
+            let (x, y) = (&transfer_value_commitment).cm(params).into_xy();
             public_input[2] = x;
             public_input[3] = y;
         }
@@ -111,7 +111,7 @@ impl TransferProof {
         }
 
         match verify_proof(verifying_key, &proof, &public_input[..]) {
-            Ok(true) => {}
+            Ok(true) => {},
             _ => {
                 return Err(());
             }
@@ -123,7 +123,7 @@ impl TransferProof {
             transfer_value_commitment: transfer_value_commitment,
             rk: rk, 
             epk: epk,
-        }
+        };
 
         Ok(transfer_proof)
     }    
