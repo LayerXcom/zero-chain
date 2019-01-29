@@ -1,9 +1,6 @@
 // For randomness (during paramgen and proof generation)
 use rand::{thread_rng, Rng};
 
-// For benchmarking
-use std::time::{Duration, Instant};
-
 // Bring in some tools for using pairing-friendly curves
 // use pairing::{
 //     Engine,
@@ -33,9 +30,7 @@ use scrypto::jubjub::{
     FixedGenerators
 };
 
-use scrypto::constants;
-
-use scrypto::primitives::{
+use primitives::{
     ValueCommitment,
     ProofGenerationKey,
     PaymentAddress
@@ -50,41 +45,33 @@ use bellman::groth16::{
     verify_proof,
 };
 
-const MIMC_ROUNDS: usize = 322;
+use zcrypto::constants::DEFAULT_MIMC_ROUND;
 
-/// This is an implementation of MiMC, specifically a
-/// variant named `LongsightF322p3` for BLS12-381.
+/// This is an implementation of MiMC.
 /// See http://eprint.iacr.org/2016/492 for more 
 /// information about this construction.
-///
-/// ```
-/// function LongsightF322p3(xL ⦂ Fp, xR ⦂ Fp) {
-///     for i from 0 up to 321 {
-///         xL, xR := xR + (xL + Ci)^3, xL
-///     }
-///     return xL
-/// }
-/// ```
 fn mimc<E: JubjubEngine>(
-    mut xl: E::Fr,
-    mut xr: E::Fr,
+    mut x: E::Fr,
+    k: E::Fr,
     constants: &[E::Fr]
 ) -> E::Fr
 {
-    assert_eq!(constants.len(), MIMC_ROUNDS);
+    assert_eq!(constants.len(), DEFAULT_MIMC_ROUND);
 
-    for i in 0..MIMC_ROUNDS {
-        let mut tmp1 = xl;
-        tmp1.add_assign(&constants[i]);
+    for i in 0..DEFAULT_MIMC_ROUND {
+        let mut tmp1 = x;
+        tmp1.add_assign(&k);
+        tmp1.add_assign(&constants[i]);    
         let mut tmp2 = tmp1;
-        tmp2.square();
-        tmp2.mul_assign(&tmp1);
-        tmp2.add_assign(&xr);
-        xr = xl;
-        xl = tmp2;
+        tmp1.square();
+        tmp1.square();
+        tmp1.square();
+        
+        tmp1.mul_assign(&tmp2);                        
+        x = tmp1;
     }
-
-    xl
+    x.add_assign(&k);
+    x
 }
 
 /// This is our demo circuit for proving knowledge of the
@@ -104,7 +91,7 @@ impl<'a, E: JubjubEngine> Circuit<E> for MiMC<'a, E> {
         cs: &mut CS
     ) -> Result<(), SynthesisError>
     {
-        assert_eq!(self.constants.len(), MIMC_ROUNDS);
+        assert_eq!(self.constants.len(), DEFAULT_MIMC_ROUND);
 
         // Allocate the first component of the plaintext.
         let mut x_value = self.x;
@@ -113,18 +100,18 @@ impl<'a, E: JubjubEngine> Circuit<E> for MiMC<'a, E> {
         })?;
 
         // Allocate the second component of the preimage.
-        let mut k_value = self.k;
-        let mut k = cs.alloc(|| "key k", || {
+        let k_value = self.k;
+        let k = cs.alloc(|| "key k", || {
             k_value.ok_or(SynthesisError::AssignmentMissing)
         })?;
 
-        for i in 0..MIMC_ROUNDS {
+        for i in 0..DEFAULT_MIMC_ROUND {
             // x, k := (x + k + Ci)^7
             let cs = &mut cs.namespace(|| format!("round {}", i));
 
             // tmp2 = (x + k + Ci)^2
             let mut tmp2_value = x_value.map(|mut e| {
-                e.add_assign(k_value);
+                e.add_assign(&k_value.unwrap());
                 e.add_assign(&self.constants[i]);
                 e.square();
                 e
@@ -159,7 +146,7 @@ impl<'a, E: JubjubEngine> Circuit<E> for MiMC<'a, E> {
 
             // tmp6 = (x + k + Ci)^6
             let mut tmp6_value = tmp4_value.map(|mut e| {
-                e.mul_assign(tmp2_value);
+                e.mul_assign(&tmp2_value.unwrap());
                 e
             });
 
@@ -172,13 +159,23 @@ impl<'a, E: JubjubEngine> Circuit<E> for MiMC<'a, E> {
                 |lc| lc + tmp4,
                 |lc| lc + tmp2,
                 |lc| lc + tmp6
-            );            
+            );
+
+            let mut tmp1_value = x_value.map(|mut e| {
+                e.add_assign(&k_value.unwrap());
+                e.add_assign(&self.constants[i]);
+                e
+            });
+
+            let mut tmp1 = cs.alloc(|| "tmp1", || {
+                tmp1_value.ok_or(SynthesisError::AssignmentMissing)
+            })?;            
 
             // tmp7 = (x + k + Ci)^7
             let mut tmp7_value = tmp6_value.map(|mut e| {
-                e.mul_assign(x_value.add_assign(k_value).add_assign(&self.constants[i]));
+                e.mul_assign(&tmp1_value.unwrap());
                 e
-            })
+            });
 
             let mut tmp7 = cs.alloc(|| "tmp7", || {
                 tmp7_value.ok_or(SynthesisError::AssignmentMissing)
@@ -189,48 +186,29 @@ impl<'a, E: JubjubEngine> Circuit<E> for MiMC<'a, E> {
                 |lc| lc + tmp6,
                 |lc| lc + x + k + (self.constants[i], CS::one()),
                 |lc| lc + tmp7
-            );
+            );      
 
+            if i == DEFAULT_MIMC_ROUND - 1 {
+                let mut res_value = tmp7_value.map(|mut e| {
+                    e.add_assign(&k_value.unwrap());
+                    e
+                });
 
-            // new_xL = xR + (xL + Ci)^3
-            // new_xL = xR + tmp * (xL + Ci)
-            // new_xL - xR = tmp * (xL + Ci)
-            let mut new_xl_value = xl_value.map(|mut e| {
-                e.add_assign(&self.constants[i]);
-                e.mul_assign(&tmp_value.unwrap());
-                e.add_assign(&xr_value.unwrap());
-                e
-            });
-
-            let mut new_xl = if i == (MIMC_ROUNDS-1) {
-                // This is the last round, xL is our image and so
-                // we allocate a public input.
-                cs.alloc_input(|| "image", || {
-                    new_xl_value.ok_or(SynthesisError::AssignmentMissing)
-                })?
+                let mut res = cs.alloc_input(|| "res", || {
+                    res_value.ok_or(SynthesisError::AssignmentMissing)
+                })?;
+                
+                cs.enforce(
+                    || "res = k + tmp7",
+                    |lc| lc + tmp7,
+                    |lc| lc + CS::one(),
+                    |lc| lc + res - k
+                );    
             } else {
-                cs.alloc(|| "new_xl", || {
-                    new_xl_value.ok_or(SynthesisError::AssignmentMissing)
-                })?
-            };
-
-            cs.enforce(
-                || "new_xL = xR + (xL + Ci)^3",
-                |lc| lc + tmp,
-                |lc| lc + xl + (self.constants[i], CS::one()),
-                |lc| lc + new_xl - xr
-            );
-
-            // xR = xL
-            xr = xl;
-            xr_value = xl_value;
-
-            // xL = new_xL
-            xl = new_xl;
-            xl_value = new_xl_value;
-        }
-
-
+                x = tmp7;
+                x_value = tmp7_value;
+            }            
+        }           
 
         Ok(())
     }
@@ -240,8 +218,7 @@ impl<'a, E: JubjubEngine> Circuit<E> for MiMC<'a, E> {
     use pairing::bls12_381::*;
     // use rand::{SeedableRng, Rng, XorShiftRng};    
     use super::circuit_test::TestConstraintSystem;
-    use scrypto::jubjub::{JubjubBls12, fs, edwards};
-    use scrypto::primitives::Diversifier;
+    use scrypto::jubjub::{JubjubBls12, fs, edwards};    
     
 
     #[test]
@@ -251,15 +228,15 @@ impl<'a, E: JubjubEngine> Circuit<E> for MiMC<'a, E> {
         let rng = &mut thread_rng();
 
         // Generate the MiMC round constants
-        let constants = (0..MIMC_ROUNDS).map(|_| rng.gen()).collect::<Vec<_>>();
+        let constants = (0..DEFAULT_MIMC_ROUND).map(|_| rng.gen()).collect::<Vec<_>>();
 
         println!("Creating parameters...");
 
         // Create parameters for our circuit
         let params = {
-            let c = MiMCDemo::<Bls12> {
-                xl: None,
-                xr: None,
+            let c = MiMC::<Bls12> {
+                x: None,
+                k: None,
                 constants: &constants
             };
 
@@ -270,35 +247,28 @@ impl<'a, E: JubjubEngine> Circuit<E> for MiMC<'a, E> {
         let pvk = prepare_verifying_key(&params.vk);
 
         println!("Creating proofs...");
-
-        // Let's benchmark stuff!
-        const SAMPLES: u32 = 50;
-        let mut total_proving = Duration::new(0, 0);
-        let mut total_verifying = Duration::new(0, 0);
+       
 
         // Just a place to put the proof data, so we can
         // benchmark deserialization.
         // let mut proof_vec = vec![];
+        
+        // Generate a random preimage and compute the image
+        let x = rng.gen();
+        let k = rng.gen();
+        let image = mimc::<Bls12>(x, k, &constants);        
 
-        // for _ in 0..SAMPLES {
-            // Generate a random preimage and compute the image
-            let xl = rng.gen();
-            let xr = rng.gen();
-            let image = mimc::<Bls12>(xl, xr, &constants);
+        let c = MiMC {
+            x: Some(x),
+            k: Some(k),
+            constants: &constants
+        };
 
-            // proof_vec.truncate(0);
+        let mut cs = TestConstraintSystem::<Bls12>::new();
 
-            let c = MiMCDemo {
-                xl: Some(xl),
-                xr: Some(xr),
-                constants: &constants
-            };
-
-            let mut cs = TestConstraintSystem::<Bls12>::new();
-
-            c.synthesize(&mut cs).unwrap();
-            assert!(cs.is_satisfied());
-            println!("{:?}", cs.num_constraints());
+        c.synthesize(&mut cs).unwrap();
+        assert!(cs.is_satisfied());
+        println!("{:?}", cs.num_constraints());
 
 
         //     let start = Instant::now();
