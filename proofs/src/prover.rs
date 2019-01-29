@@ -1,20 +1,13 @@
-
-
 use bellman::groth16::{
     create_random_proof, verify_proof, Parameters, PreparedVerifyingKey, Proof,
     prepare_verifying_key, generate_random_parameters,
 };
-use byteorder::{LittleEndian, ReadBytesExt};
 use pairing::{
     bls12_381::{Bls12, Fr, FrRepr},
     Field, PrimeField, PrimeFieldRepr, Engine,
 };
 use rand::{OsRng, Rand};
-use scrypto::{
-    circuit::{
-        multipack,
-        sapling::{Output, Spend},
-    },
+use scrypto::{    
     jubjub::{edwards, fs::Fs, FixedGenerators, JubjubBls12, Unknown},    
     redjubjub::{PrivateKey, PublicKey, Signature},
 };
@@ -24,8 +17,10 @@ use primitives::{Diversifier, PaymentAddress, ProofGenerationKey, ValueCommitmen
 
 pub struct TransferProof {
     proof: Proof<Bls12>,
-    value_commitment: edwards::Point<Bls12, Unknown>,
+    balance_value_commitment: edwards::Point<Bls12, Unknown>,
+    transfer_value_commitment: edwards::Point<Bls12, Unknown>,
     rk: PublicKey<Bls12>, // rk, re-randomization sig-verifying key
+    epk: PublicKey<Bls12>,
 }
 
 impl TransferProof {    
@@ -73,6 +68,11 @@ impl TransferProof {
                 params,
         );
 
+        let epk = recipient_payment_address
+            .g_d(params)
+            .expect("should be valid")
+            .mul(esk, params);
+
         let instance = Transfer {
             params: params,     
             transfer_value_commitment: Some(transfer_value_commitment),
@@ -88,6 +88,43 @@ impl TransferProof {
         let proof = create_random_proof(instance, proving_key, &mut rng)
             .expect("proving should not fail");
         
-        Err(())
+        let mut public_input = [Fr::zero(); 8];
+        {
+            let (x, y) = balance_value_commitment.cm(params).into_xy();
+            public_input[0] = x;
+            public_input[1] = y;
+        }
+        {
+            let (x, y) = transfer_value_commitment.cm(params).into_xy();
+            public_input[2] = x;
+            public_input[3] = y;
+        }
+        {
+            let (x, y) = epk.into_xy();
+            public_input[4] = x;
+            public_input[5] = y;
+        }
+        {
+            let (x, y) = rk.0.into_xy();
+            public_input[6] = x;
+            public_input[7] = y;
+        }
+
+        match verify_proof(verifying_key, &proof, &public_input[..]) {
+            Ok(true) => {}
+            _ => {
+                return Err(());
+            }
+        }
+
+        let transfer_proof = TransferProof {
+            proof: proof,
+            balance_value_commitment: balance_value_commitment,
+            transfer_value_commitment: transfer_value_commitment,
+            rk: rk, 
+            epk: epk,
+        }
+
+        Ok(transfer_proof)
     }    
 }
