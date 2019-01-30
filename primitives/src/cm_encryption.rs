@@ -3,31 +3,25 @@ use scrypto::jubjub::{
     JubjubParams,
     edwards,
     PrimeOrder,
-    FixedGenerators
+    FixedGenerators,
+    ToUniform,
+    Unknown,
 };
-
 use rand::{OsRng, Rng};
-use z_constants::{PLAINTEXT_SIZE, CIPHERTEXT_SIZE, KDF_PERSONALIZATION};
+use zcrypto::constants::{PLAINTEXT_SIZE, CIPHERTEXT_SIZE, KDF_PERSONALIZATION};
 use blake2_rfc::blake2s::Blake2s;
-use primitives;
 // Temporary use for enc/dec
 use pcrypto::aes::{encrypt_128_ctr, decrypt_128_ctr};
+use proofs::primitives::Diversifier;
 
+pub struct SerializedCommitment<'a>(&'a [u8; PLAINTEXT_SIZE]);
 
-pub struct ValueCommitment<E: JubjubEngine> {
-    pub value: u64,
-    // The commitment randomness
-    pub r: E::Fs,
-}
-
-pub struct SerializedCommitment(&[u8; PLAINTEXT_SIZE]);
-
-impl<E: JubjubEngine> SerializedCommitment<E> {
-    pub fn encrypt_cm_to_recipient(
+impl<'a> SerializedCommitment<'a> {
+    pub fn encrypt_cm_to_recipient<E: JubjubEngine>(
         &self,
-        pk_d: edwards::Point<E, PrimeOrder>,         
+        pk_d: edwards::Point<E, Unknown>,         
         diversifier: Diversifier,
-        params: &E::Params
+        params: &'a E::Params
     ) -> EncryptedCommitment
     {
         let mut rng = OsRng::new().expect("should be able to construct RNG"); // TODO: replace OsRng
@@ -48,28 +42,26 @@ impl<E: JubjubEngine> SerializedCommitment<E> {
         let epk = g_d.mul(esk, params);
 
         let mut preimage = [0; 64];
-        shared_secret.write(&mut preimage[0..32].unwrap());
-        self.nk.write(&mut preimage[32..64].unwrap());
+        shared_secret.write(&mut preimage[0..32]);
+        epk.write(&mut preimage[32..64]);
 
         let mut h = Blake2s::with_params(32, &[], &[], KDF_PERSONALIZATION);
         h.update(&preimage);
-        let mut h = h.finalize().as_ref();
+        let h = h.finalize();
         
-        let mut ciphertext = vec![0; CIPHERTEXT_SIZE];
-        let iv: [u8; 16] = rng.gen()
+        let mut ciphertext = [0; CIPHERTEXT_SIZE];
+        let iv: [u8; 16] = rng.gen();
 
-        encrypt_128_ctr(h[0..16], &iv, self.0, &mut *ciphertext)
+        encrypt_128_ctr(&h.as_ref()[0..16], &iv, self.0, &mut ciphertext)
             .expect("input lengths of key and iv are both 16; qed");
 
-        EncryptedCommitment {
-            ciphertext
-        }
+        EncryptedCommitment(ciphertext)
     }
 }
 
 
-pub struct EncryptedCommitment(&[u8; CIPHERTEXT_SIZE]);
+pub struct EncryptedCommitment([u8; CIPHERTEXT_SIZE]);
 
-impl<E: JubjubEngine> EncryptedCommitment<E> {
-    pub fn decrypt
-}
+// impl<E: JubjubEngine> EncryptedCommitment<E> {
+//     pub fn decrypt
+// }

@@ -11,7 +11,7 @@ use scrypto::{
     redjubjub::{PrivateKey, PublicKey, Signature},
 };
 use proofs::primitives::{Diversifier, PaymentAddress, ProofGenerationKey, ValueCommitment};
-
+use super::cm_encryption::EncryptedCommitment;
 
 #[derive(Clone, Encode, Decode, Default)]
 pub struct Transaction {
@@ -21,8 +21,8 @@ pub struct Transaction {
  	pub sig: Signature, // 64 bytes
  	pub sig_verifying_key: PublicKey<Bls12>, // rk 32bytes
  	pub proof: Proof<Bls12>, // 192 bytes
- 	pub balance_commitment: ValueCommiement<Bls12>, // 32 bytes
- 	pub transfer_commitment: ValueCommiement<Bls12>, // 32bytes
+ 	pub balance_commitment: ValueCommitment<Bls12>, // 32 bytes
+ 	pub transfer_commitment: ValueCommitment<Bls12>, // 32bytes
  	pub epk: edwards::Point<Bls12, PrimeOrder>, // 32 bytes
  	pub payment_address_s: PaymentAddress<Bls12>, // 11 + 32 bytes
  	pub payment_address_r: PaymentAddress<Bls12>, // 11 + 32 bytes

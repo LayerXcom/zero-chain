@@ -4075,6 +4075,7 @@ dependencies = [
  "tokio 0.1.13 (registry+https://github.com/rust-lang/crates.io-index)",
  "trie-root 0.9.0 (git+https://github.com/paritytech/trie)",
  "vergen 2.1.3 (registry+https://github.com/rust-lang/crates.io-index)",
+ "zero-chain-crypto 0.1.0",
  "zero-chain-primitives 0.1.0",
  "zero-chain-proofs 0.1.0",
  "zero-chain-runtime 0.9.0",
@@ -4095,6 +4096,7 @@ name = "zero-chain-primitives"
 version = "0.1.0"
 dependencies = [
  "bellman 0.1.0 (git+https://github.com/zcash/librustzcash)",
+ "blake2-rfc 0.2.18 (git+https://github.com/gtank/blake2-rfc?rev=7a5b5fc99ae483a0043db7547fb79a6fa44b88a9)",
  "byteorder 1.2.7 (registry+https://github.com/rust-lang/crates.io-index)",
  "fixed-hash 0.3.0 (registry+https://github.com/rust-lang/crates.io-index)",
  "hash-db 0.9.0 (git+https://github.com/paritytech/trie)",
@@ -4102,12 +4104,15 @@ dependencies = [
  "parity-codec 2.1.5 (registry+https://github.com/rust-lang/crates.io-index)",
  "parity-codec-derive 2.1.0 (registry+https://github.com/rust-lang/crates.io-index)",
  "parity-crypto 0.2.0 (registry+https://github.com/rust-lang/crates.io-index)",
+ "rand 0.4.3 (registry+https://github.com/rust-lang/crates.io-index)",
+ "sapling-crypto 0.0.1 (git+https://github.com/zcash/librustzcash)",
  "serde 1.0.82 (registry+https://github.com/rust-lang/crates.io-index)",
  "serde_derive 1.0.82 (registry+https://github.com/rust-lang/crates.io-index)",
  "shasper-crypto 0.1.0 (git+https://github.com/paritytech/shasper)",
  "sr-primitives 0.1.0 (git+https://github.com/paritytech/substrate)",
  "sr-std 0.1.0 (git+https://github.com/paritytech/substrate)",
  "substrate-primitives 0.1.0 (git+https://github.com/paritytech/substrate)",
+ "zero-chain-crypto 0.1.0",
  "zero-chain-proofs 0.1.0",
 ]
 
@@ -4119,8 +4124,12 @@ dependencies = [
  "blake2-rfc 0.2.18 (git+https://github.com/gtank/blake2-rfc?rev=7a5b5fc99ae483a0043db7547fb79a6fa44b88a9)",
  "byteorder 1.2.7 (registry+https://github.com/rust-lang/crates.io-index)",
  "pairing 0.14.2 (git+https://github.com/zcash/librustzcash)",
+ "parity-codec 2.1.5 (registry+https://github.com/rust-lang/crates.io-index)",
+ "parity-codec-derive 2.1.0 (registry+https://github.com/rust-lang/crates.io-index)",
  "rand 0.4.3 (registry+https://github.com/rust-lang/crates.io-index)",
  "sapling-crypto 0.0.1 (git+https://github.com/zcash/librustzcash)",
+ "serde 1.0.82 (registry+https://github.com/rust-lang/crates.io-index)",
+ "serde_derive 1.0.82 (registry+https://github.com/rust-lang/crates.io-index)",
  "zero-chain-crypto 0.1.0",
 ]
 

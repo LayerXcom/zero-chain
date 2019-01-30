@@ -15,10 +15,10 @@ use scrypto::jubjub::{
 };
 
 use blake2_rfc::blake2s::Blake2s;
-
 use zcrypto::{constants, mimc};
+use parity_codec::{Encode, Decode};
 
-#[derive(Clone)]
+#[derive(Clone, Encode, Decode, Default)]
 pub struct ValueCommitment<E: JubjubEngine> {
     pub value: u64,
     pub randomness: E::Fs,
@@ -40,7 +40,7 @@ impl<E: JubjubEngine> ValueCommitment<E> {
     }   
 }
 
-#[derive(Clone)]
+#[derive(Clone, Encode, Decode, Default)]
 pub struct ProofGenerationKey<E: JubjubEngine> {
     pub ak: edwards::Point<E, PrimeOrder>,
     pub nsk: E::Fs
@@ -55,6 +55,7 @@ impl<E: JubjubEngine> ProofGenerationKey<E> {
     }
 }
 
+#[derive(Clone, Encode, Decode, Default)]
 pub struct ViewingKey<E: JubjubEngine> {
     pub ak: edwards::Point<E, PrimeOrder>,
     pub nk: edwards::Point<E, PrimeOrder>
@@ -106,7 +107,7 @@ impl<E: JubjubEngine> ViewingKey<E> {
     }
 }
 
-#[derive(Copy, Clone)]
+#[derive(Clone, Encode, Decode, Default)]
 pub struct Diversifier(pub [u8; 11]);
 
 impl Diversifier {
@@ -120,7 +121,7 @@ impl Diversifier {
 }
 
 
-#[derive(Clone)]
+#[derive(Clone, Encode, Decode, Default)]
 pub struct PaymentAddress<E: JubjubEngine> {
     pub pk_d: edwards::Point<E, PrimeOrder>,
     pub diversifier: Diversifier
@@ -134,4 +135,8 @@ impl<E: JubjubEngine> PaymentAddress<E> {
     {
         self.diversifier.g_d(params)
     }
+}
+
+impl Encode for edwards::Point<E, PrimeOrder> {
+
 }
