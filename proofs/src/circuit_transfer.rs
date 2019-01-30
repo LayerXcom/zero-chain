@@ -15,21 +15,18 @@ use scrypto::jubjub::{
     FixedGenerators
 };
 
-use scrypto::constants;
+use zcrypto::constants;
 
-use scrypto::primitives::{
+use primitives::{
     ValueCommitment,
     ProofGenerationKey,
-    PaymentAddress
+    PaymentAddress,        
 };
 
 use scrypto::circuit::{    
     boolean,
-    ecc,
-    pedersen_hash,
-    blake2s,
-    num,
-    multipack
+    ecc,    
+    blake2s,    
 };
 
 // An instance of the Transfer circuit.
@@ -46,23 +43,6 @@ pub struct Transfer<'a, E: JubjubEngine> {
     // The payment address  of the recipient
     pub recipient_payment_address: Option<PaymentAddress<E>>,
 }
-
-// pub struct Transfer<'a, E: JubjubEngine> {
-//     pub params: &'a E::Params, 
-//     pub proof_generation_key: Option<ProofGenerationKey<E>>,
-//     // The payment address associated with the note
-//     pub prover_payment_address: Option<PaymentAddress<E>>,
-//     // The payment address  of the recipient
-//     pub recipient_payment_address: Option<PaymentAddress<E>>,
-//     pub old_value: Option<u64>, 
-//     pub prover_value: Option<u64>,
-//     pub recipient_value: Option<u64>,
-//     pub esk: Option<E::Fs>,
-//     // Re-randomization of the public key
-//     pub ar: Option<E::Fs>,
-// }
-
-
 
 fn expose_value_commitment<E, CS>(
     mut cs: CS,
@@ -144,9 +124,7 @@ impl<'a, E: JubjubEngine> Circuit<E> for Transfer<'a, E> {
         self,
         cs: &mut CS
     ) -> Result<(), SynthesisError>
-    {        
-        // todo expose payment_address
-
+    {                
         // value commitment integrity of sender's balance and expose the commitment publicly.   
         expose_value_commitment(
             cs.namespace(|| "balance commitment"), 
@@ -213,28 +191,26 @@ impl<'a, E: JubjubEngine> Circuit<E> for Transfer<'a, E> {
             self.params
         )?;
 
-        // Re-randomize ak
-        {
-            let ar = boolean::field_into_boolean_vec_le(
-                cs.namespace(|| "ar"),
-                self.ar
-            )?;
+        // Re-randomize ak    
+        let ar = boolean::field_into_boolean_vec_le(
+            cs.namespace(|| "ar"),
+            self.ar
+        )?;
 
-            let ar = ecc::fixed_base_multiplication(
-                cs.namespace(|| "computation of randomiation for the signing key"),
-                FixedGenerators::SpendingKeyGenerator,
-                &ar,
-                self.params
-            )?;
+        let ar = ecc::fixed_base_multiplication(
+            cs.namespace(|| "computation of randomiation for the signing key"),
+            FixedGenerators::SpendingKeyGenerator,
+            &ar,
+            self.params
+        )?;
 
-            let rk = ak.add(
-                cs.namespace(|| "computation of rk"),
-                &ar,
-                self.params
-            )?;
+        let rk = ak.add(
+            cs.namespace(|| "computation of rk"),
+            &ar,
+            self.params
+        )?;
 
-            rk.inputize(cs.namespace(|| "rk"))?;
-        }
+        rk.inputize(cs.namespace(|| "rk"))?;        
         
         // Compute proof generation key
         let nk;
@@ -299,32 +275,32 @@ impl<'a, E: JubjubEngine> Circuit<E> for Transfer<'a, E> {
 #[cfg(test)]
     use pairing::bls12_381::*;
     use rand::{SeedableRng, Rng, XorShiftRng};    
-    use super::test::TestConstraintSystem;
+    use super::circuit_test::TestConstraintSystem;
     use scrypto::jubjub::{JubjubBls12, fs, edwards};
-    use scrypto::primitives::Diversifier;
+    use primitives::Diversifier;
 
     
     #[test]
-    fn test_transfer_circuit() {        
+    fn test_circuit_transfer() {        
         let params = &JubjubBls12::new();
         let rng = &mut XorShiftRng::from_seed([0x3dbe6258, 0x8d313d76, 0x3237db17, 0xe5bc0654]);
 
-        let nsk: fs::Fs = rng.gen();
-        let ak = edwards::Point::rand(rng, params).mul_by_cofactor(params);
+        let nsk_s: fs::Fs = rng.gen();
+        let ak_s = edwards::Point::rand(rng, params).mul_by_cofactor(params);
 
-        let proof_generation_key = ProofGenerationKey {
-            ak: ak.clone(),
-            nsk: nsk.clone()
+        let proof_generation_key_s = ProofGenerationKey {
+            ak: ak_s.clone(),
+            nsk: nsk_s.clone()
         };
 
-        let viewing_key = proof_generation_key.into_viewing_key(params);
+        let viewing_key_s = proof_generation_key_s.into_viewing_key(params);
         let prover_payment_address;
 
         loop {
-            let diversifier = Diversifier(rng.gen());
+            let diversifier_s = Diversifier(rng.gen());
 
-            if let Some(p) = viewing_key.into_payment_address(
-                diversifier, 
+            if let Some(p) = viewing_key_s.into_payment_address(
+                diversifier_s, 
                 params
             )
             {
@@ -335,6 +311,7 @@ impl<'a, E: JubjubEngine> Circuit<E> for Transfer<'a, E> {
 
         let recipient_payment_address;        
         let nsk_r: fs::Fs = rng.gen();
+        
         let ak_r = edwards::Point::rand(rng, params).mul_by_cofactor(params);
 
         let proof_generation_key_r = ProofGenerationKey {
@@ -369,30 +346,46 @@ impl<'a, E: JubjubEngine> Circuit<E> for Transfer<'a, E> {
             randomness: rng.gen()
         };
 
+        let expected_balance_cm = balance_value_commitment.cm(params).into_xy();
+        let expected_transfer_cm = transfer_value_commitment.cm(params).into_xy();
+
+        let rk = viewing_key_s.rk(ar, params).into_xy();
+
         let mut cs = TestConstraintSystem::<Bls12>::new();
 
         let instance = Transfer {
             params: params,
             transfer_value_commitment: Some(transfer_value_commitment.clone()),
             balance_value_commitment: Some(balance_value_commitment.clone()),
-            proof_generation_key: Some(proof_generation_key.clone()),
+            proof_generation_key: Some(proof_generation_key_s.clone()),
             prover_payment_address: Some(prover_payment_address.clone()),
             recipient_payment_address: Some(recipient_payment_address.clone()),                                
             esk: Some(esk.clone()),
-            ar: Some(ar)
+            ar: Some(ar.clone())
         };        
 
         instance.synthesize(&mut cs).unwrap();
 
-        // let expected_epk
-        // let expected_epk_xy
+        let expected_epk = recipient_payment_address
+            .g_d(params)
+            .expect("should be valid")
+            .mul(esk, params);
+
+        let expected_epk_xy = expected_epk.into_xy();
         
         println!("transfer_constraints: {:?}", cs.num_constraints());
         assert!(cs.is_satisfied());
         // assert_eq!(cs.num_constraints(), 75415);
         // assert_eq!(cs.hash(), "3ff9338cc95b878a20b0974490633219e032003ced1d3d917cde4f50bc902a12");
         
-        println!("num_inputs: {:?}", cs.num_inputs());
+        assert_eq!(cs.num_inputs(), 9);
         assert_eq!(cs.get_input(0, "ONE"), Fr::one());
+        assert_eq!(cs.get_input(1, "balance commitment/balance commitment point/x/input variable"), expected_balance_cm.0);
+        assert_eq!(cs.get_input(2, "balance commitment/balance commitment point/y/input variable"), expected_balance_cm.1);
+        assert_eq!(cs.get_input(3, "transfer commitment/transfer commitment point/x/input variable"), expected_transfer_cm.0);
+        assert_eq!(cs.get_input(4, "transfer commitment/transfer commitment point/y/input variable"), expected_transfer_cm.1);
+        assert_eq!(cs.get_input(5, "epk/x/input variable"), expected_epk_xy.0);
+        assert_eq!(cs.get_input(6, "epk/y/input variable"), expected_epk_xy.1);
+        assert_eq!(cs.get_input(7, "rk/x/input variable"), rk.0);
+        assert_eq!(cs.get_input(8, "rk/y/input variable"), rk.1);        
     }
-

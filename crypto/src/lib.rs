@@ -1,7 +1,9 @@
 // #![cfg_attr(not(feature = "std"), no_std)]
 
-extern crate sapling_crypto;
+extern crate sapling_crypto as scrypto;
+extern crate pairing;
+extern crate rand;
+extern crate blake2_rfc;
 
-pub mod zcrypto {
-    use sapling_crypto;
-}
+pub mod constants;
+pub mod mimc;

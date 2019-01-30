@@ -15,6 +15,17 @@ serde_derive = { version = "1.0", optional = true }
 shasper-crypto = { git = "https://github.com/paritytech/shasper", default-features = false }
 hash-db = { git = "https://github.com/paritytech/trie", default-features = false }
 byteorder = { version = "1.2", default-features = false }
+parity-crypto = "0.2.0"
+zero-chain-proofs = { path = "../proofs" }
+zero-chain-crypto = { path = "../crypto" }
+pairing = { git = "https://github.com/zcash/librustzcash" }
+bellman = { git = "https://github.com/zcash/librustzcash" }
+sapling-crypto = { git = "https://github.com/zcash/librustzcash" }
+rand = { version = "0.4", default-features = false}
+
+[dependencies.blake2-rfc]
+git = "https://github.com/gtank/blake2-rfc"
+rev = "7a5b5fc99ae483a0043db7547fb79a6fa44b88a9"
 
 [features]
 default = ["std"]

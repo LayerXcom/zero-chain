@@ -37,12 +37,13 @@ node-executor = { git = "https://github.com/paritytech/substrate" }
 structopt = "0.2.13"
 zero-chain-proofs = { path = "proofs" }
 zero-chain-primitives = { path = "primitives" }
+zero-chain-crypto = { path = "crypto" }
 
 [build-dependencies]
 vergen = "2"
 
 [workspace]
-members = [ "runtime", "primitives", "proofs",]
+members = [ "runtime", "primitives", "proofs", "crypto" ]
 exclude = [ "runtime/wasm", ]
 
 [profile.release]
