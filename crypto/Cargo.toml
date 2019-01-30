@@ -2,7 +2,6 @@
 name = "zero-chain-crypto"
 version = "0.1.0"
 authors = ["osuke <dish230@gmail.com>"]
-edition = "2018"
 
 [dependencies]
 sapling-crypto = { git = "https://github.com/zcash/librustzcash" }

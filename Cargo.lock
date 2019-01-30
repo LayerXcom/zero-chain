@@ -4094,17 +4094,21 @@ dependencies = [
 name = "zero-chain-primitives"
 version = "0.1.0"
 dependencies = [
+ "bellman 0.1.0 (git+https://github.com/zcash/librustzcash)",
  "byteorder 1.2.7 (registry+https://github.com/rust-lang/crates.io-index)",
  "fixed-hash 0.3.0 (registry+https://github.com/rust-lang/crates.io-index)",
  "hash-db 0.9.0 (git+https://github.com/paritytech/trie)",
+ "pairing 0.14.2 (git+https://github.com/zcash/librustzcash)",
  "parity-codec 2.1.5 (registry+https://github.com/rust-lang/crates.io-index)",
  "parity-codec-derive 2.1.0 (registry+https://github.com/rust-lang/crates.io-index)",
+ "parity-crypto 0.2.0 (registry+https://github.com/rust-lang/crates.io-index)",
  "serde 1.0.82 (registry+https://github.com/rust-lang/crates.io-index)",
  "serde_derive 1.0.82 (registry+https://github.com/rust-lang/crates.io-index)",
  "shasper-crypto 0.1.0 (git+https://github.com/paritytech/shasper)",
  "sr-primitives 0.1.0 (git+https://github.com/paritytech/substrate)",
  "sr-std 0.1.0 (git+https://github.com/paritytech/substrate)",
  "substrate-primitives 0.1.0 (git+https://github.com/paritytech/substrate)",
+ "zero-chain-proofs 0.1.0",
 ]
 
 [[package]]

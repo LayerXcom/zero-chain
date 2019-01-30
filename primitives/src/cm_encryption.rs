@@ -7,12 +7,11 @@ use scrypto::jubjub::{
 };
 
 use rand::{OsRng, Rng};
-
-use z_constants;
-
+use z_constants::{PLAINTEXT_SIZE, CIPHERTEXT_SIZE, KDF_PERSONALIZATION};
 use blake2_rfc::blake2s::Blake2s;
-
 use primitives;
+// Temporary use for enc/dec
+use pcrypto::aes::{encrypt_128_ctr, decrypt_128_ctr};
 
 
 pub struct ValueCommitment<E: JubjubEngine> {
@@ -21,7 +20,7 @@ pub struct ValueCommitment<E: JubjubEngine> {
     pub r: E::Fs,
 }
 
-pub struct SerializedCommitment(&[u8; z_constants::PLAINTEXT_SIZE]);
+pub struct SerializedCommitment(&[u8; PLAINTEXT_SIZE]);
 
 impl<E: JubjubEngine> SerializedCommitment<E> {
     pub fn encrypt_cm_to_recipient(
@@ -29,7 +28,7 @@ impl<E: JubjubEngine> SerializedCommitment<E> {
         pk_d: edwards::Point<E, PrimeOrder>,         
         diversifier: Diversifier,
         params: &E::Params
-    ) -> SerializedEncCommitment
+    ) -> EncryptedCommitment
     {
         let mut rng = OsRng::new().expect("should be able to construct RNG"); // TODO: replace OsRng
         let mut buffer = [0u8; 64];
@@ -52,23 +51,25 @@ impl<E: JubjubEngine> SerializedCommitment<E> {
         shared_secret.write(&mut preimage[0..32].unwrap());
         self.nk.write(&mut preimage[32..64].unwrap());
 
-        let mut h = Blake2s::with_params(32, &[], &[], z_constants::KDF_PERSONALIZATION);
+        let mut h = Blake2s::with_params(32, &[], &[], KDF_PERSONALIZATION);
         h.update(&preimage);
-        let mut h = h.finalize().as_ref().to_vec();
+        let mut h = h.finalize().as_ref();
         
+        let mut ciphertext = vec![0; CIPHERTEXT_SIZE];
+        let iv: [u8; 16] = rng.gen()
 
+        encrypt_128_ctr(h[0..16], &iv, self.0, &mut *ciphertext)
+            .expect("input lengths of key and iv are both 16; qed");
 
+        EncryptedCommitment {
+            ciphertext
+        }
     }
 }
 
 
-pub struct EncryptedCommitment<E: JubjubEngine> {
-    pub cipher_text: Vec<u8>,
-    pub epk: 
-}
+pub struct EncryptedCommitment(&[u8; CIPHERTEXT_SIZE]);
 
-pub struct SerializedEncCommitment(&[u8; z_constants::CIPHERTEXT_SIZE]);
-
-impl<E: JubjubEngine> SerializedEncCommitment<E> {
-    pub fn 
+impl<E: JubjubEngine> EncryptedCommitment<E> {
+    pub fn decrypt
 }
