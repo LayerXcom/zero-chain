@@ -6,6 +6,8 @@ edition = "2018"
 
 [dependencies]
 sapling-crypto = { git = "https://github.com/zcash/librustzcash" }
+pairing = { git = "https://github.com/zcash/librustzcash" }
+rand = { version = "0.4", default-features = false}
 
 [dependencies.blake2-rfc]
 git = "https://github.com/gtank/blake2-rfc"

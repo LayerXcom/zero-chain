@@ -37,15 +37,7 @@ impl<E: JubjubEngine> ValueCommitment<E> {
                 .mul(self.randomness, params),
                 params
             )
-    }
-
-    // pub fn mimc(
-    //     &self,
-    //     key:,
-    // ) -> 
-    // {
-
-    // }
+    }   
 }
 
 #[derive(Clone)]
