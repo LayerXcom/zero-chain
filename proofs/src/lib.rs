@@ -7,8 +7,10 @@ extern crate blake2_rfc;
 extern crate zero_chain_crypto as zcrypto;
 #[macro_use]
 extern crate parity_codec_derive;
-extern crate parity_codec;
-
+extern crate parity_codec as codec;
+// #[macro_use]
+// extern crate serde_derive;
+// extern crate serde;
 
 
 pub mod circuit_transfer;
