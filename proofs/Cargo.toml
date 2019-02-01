@@ -7,9 +7,9 @@ authors = ["osuke <dish230@gmail.com>"]
 # pairing = { git = "https://github.com/zcash/librustzcash" }
 # bellman = { git = "https://github.com/zcash/librustzcash" }
 # sapling-crypto = { git = "https://github.com/zcash/librustzcash" }
-pairing = { git = "https://github.com/osuketh/librustzcash", branch = "zero-chain" }
-bellman = { git = "https://github.com/osuketh/librustzcash", branch = "zero-chain" }
-sapling-crypto = { git = "https://github.com/osuketh/librustzcash", branch = "zero-chain" }
+pairing = { git = "https://github.com/osuketh/zcash-to-substrate" }
+bellman = { git = "https://github.com/osuketh/zcash-to-substrate" }
+sapling-crypto = { git = "https://github.com/osuketh/zcash-to-substrate" }
 
 rand = { version = "0.4", default-features = false}
 byteorder = { version = "1", default-features = false }

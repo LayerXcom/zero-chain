@@ -157,6 +157,21 @@ dependencies = [
 [[package]]
 name = "bellman"
 version = "0.1.0"
+source = "git+https://github.com/osuketh/zcash-to-substrate#160f7782740d6b427fa7818d74a9afd639608311"
+dependencies = [
+ "bit-vec 0.4.4 (registry+https://github.com/rust-lang/crates.io-index)",
+ "byteorder 1.3.1 (registry+https://github.com/rust-lang/crates.io-index)",
+ "crossbeam 0.3.2 (registry+https://github.com/rust-lang/crates.io-index)",
+ "futures 0.1.25 (registry+https://github.com/rust-lang/crates.io-index)",
+ "futures-cpupool 0.1.8 (registry+https://github.com/rust-lang/crates.io-index)",
+ "num_cpus 1.9.0 (registry+https://github.com/rust-lang/crates.io-index)",
+ "pairing 0.14.2 (git+https://github.com/osuketh/zcash-to-substrate)",
+ "rand 0.4.6 (registry+https://github.com/rust-lang/crates.io-index)",
+]
+
+[[package]]
+name = "bellman"
+version = "0.1.0"
 source = "git+https://github.com/zcash/librustzcash#f65c37ea0131a4a6d2de326fc6d70ecc469c6ebc"
 dependencies = [
  "bit-vec 0.4.4 (registry+https://github.com/rust-lang/crates.io-index)",
@@ -166,21 +181,6 @@ dependencies = [
  "futures-cpupool 0.1.8 (registry+https://github.com/rust-lang/crates.io-index)",
  "num_cpus 1.9.0 (registry+https://github.com/rust-lang/crates.io-index)",
  "pairing 0.14.2 (git+https://github.com/zcash/librustzcash)",
- "rand 0.4.6 (registry+https://github.com/rust-lang/crates.io-index)",
-]
-
-[[package]]
-name = "bellman"
-version = "0.1.0"
-source = "git+https://github.com/osuketh/librustzcash?branch=zero-chain#8f7d0dc2580328f3ba1d45a6b2c4d6a56c6dc5c5"
-dependencies = [
- "bit-vec 0.4.4 (registry+https://github.com/rust-lang/crates.io-index)",
- "byteorder 1.3.1 (registry+https://github.com/rust-lang/crates.io-index)",
- "crossbeam 0.3.2 (registry+https://github.com/rust-lang/crates.io-index)",
- "futures 0.1.25 (registry+https://github.com/rust-lang/crates.io-index)",
- "futures-cpupool 0.1.8 (registry+https://github.com/rust-lang/crates.io-index)",
- "num_cpus 1.9.0 (registry+https://github.com/rust-lang/crates.io-index)",
- "pairing 0.14.2 (git+https://github.com/osuketh/librustzcash?branch=zero-chain)",
  "rand 0.4.6 (registry+https://github.com/rust-lang/crates.io-index)",
 ]
 
@@ -2004,20 +2004,20 @@ dependencies = [
 [[package]]
 name = "pairing"
 version = "0.14.2"
-source = "git+https://github.com/zcash/librustzcash#f65c37ea0131a4a6d2de326fc6d70ecc469c6ebc"
+source = "git+https://github.com/osuketh/zcash-to-substrate#160f7782740d6b427fa7818d74a9afd639608311"
 dependencies = [
  "byteorder 1.3.1 (registry+https://github.com/rust-lang/crates.io-index)",
+ "parity-codec 2.2.0 (registry+https://github.com/rust-lang/crates.io-index)",
+ "parity-codec-derive 2.2.0 (registry+https://github.com/rust-lang/crates.io-index)",
  "rand 0.4.6 (registry+https://github.com/rust-lang/crates.io-index)",
 ]
 
 [[package]]
 name = "pairing"
 version = "0.14.2"
-source = "git+https://github.com/osuketh/librustzcash?branch=zero-chain#8f7d0dc2580328f3ba1d45a6b2c4d6a56c6dc5c5"
+source = "git+https://github.com/zcash/librustzcash#f65c37ea0131a4a6d2de326fc6d70ecc469c6ebc"
 dependencies = [
  "byteorder 1.3.1 (registry+https://github.com/rust-lang/crates.io-index)",
- "parity-codec 2.2.0 (registry+https://github.com/rust-lang/crates.io-index)",
- "parity-codec-derive 2.2.0 (registry+https://github.com/rust-lang/crates.io-index)",
  "rand 0.4.6 (registry+https://github.com/rust-lang/crates.io-index)",
 ]
 
@@ -2614,6 +2614,21 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 [[package]]
 name = "sapling-crypto"
 version = "0.0.1"
+source = "git+https://github.com/osuketh/zcash-to-substrate#160f7782740d6b427fa7818d74a9afd639608311"
+dependencies = [
+ "bellman 0.1.0 (git+https://github.com/osuketh/zcash-to-substrate)",
+ "blake2-rfc 0.2.18 (git+https://github.com/gtank/blake2-rfc?rev=7a5b5fc99ae483a0043db7547fb79a6fa44b88a9)",
+ "byteorder 1.3.1 (registry+https://github.com/rust-lang/crates.io-index)",
+ "digest 0.7.6 (registry+https://github.com/rust-lang/crates.io-index)",
+ "pairing 0.14.2 (git+https://github.com/osuketh/zcash-to-substrate)",
+ "parity-codec 2.2.0 (registry+https://github.com/rust-lang/crates.io-index)",
+ "parity-codec-derive 2.2.0 (registry+https://github.com/rust-lang/crates.io-index)",
+ "rand 0.4.6 (registry+https://github.com/rust-lang/crates.io-index)",
+]
+
+[[package]]
+name = "sapling-crypto"
+version = "0.0.1"
 source = "git+https://github.com/zcash/librustzcash#f65c37ea0131a4a6d2de326fc6d70ecc469c6ebc"
 dependencies = [
  "bellman 0.1.0 (git+https://github.com/zcash/librustzcash)",
@@ -2621,21 +2636,6 @@ dependencies = [
  "byteorder 1.3.1 (registry+https://github.com/rust-lang/crates.io-index)",
  "digest 0.7.6 (registry+https://github.com/rust-lang/crates.io-index)",
  "pairing 0.14.2 (git+https://github.com/zcash/librustzcash)",
- "rand 0.4.6 (registry+https://github.com/rust-lang/crates.io-index)",
-]
-
-[[package]]
-name = "sapling-crypto"
-version = "0.0.1"
-source = "git+https://github.com/osuketh/librustzcash?branch=zero-chain#8f7d0dc2580328f3ba1d45a6b2c4d6a56c6dc5c5"
-dependencies = [
- "bellman 0.1.0 (git+https://github.com/osuketh/librustzcash?branch=zero-chain)",
- "blake2-rfc 0.2.18 (git+https://github.com/gtank/blake2-rfc?rev=7a5b5fc99ae483a0043db7547fb79a6fa44b88a9)",
- "byteorder 1.3.1 (registry+https://github.com/rust-lang/crates.io-index)",
- "digest 0.7.6 (registry+https://github.com/rust-lang/crates.io-index)",
- "pairing 0.14.2 (git+https://github.com/osuketh/librustzcash?branch=zero-chain)",
- "parity-codec 2.2.0 (registry+https://github.com/rust-lang/crates.io-index)",
- "parity-codec-derive 2.2.0 (registry+https://github.com/rust-lang/crates.io-index)",
  "rand 0.4.6 (registry+https://github.com/rust-lang/crates.io-index)",
 ]
 
@@ -4591,17 +4591,17 @@ dependencies = [
 name = "zero-chain-primitives"
 version = "0.1.0"
 dependencies = [
- "bellman 0.1.0 (git+https://github.com/osuketh/librustzcash?branch=zero-chain)",
+ "bellman 0.1.0 (git+https://github.com/osuketh/zcash-to-substrate)",
  "blake2-rfc 0.2.18 (git+https://github.com/gtank/blake2-rfc?rev=7a5b5fc99ae483a0043db7547fb79a6fa44b88a9)",
  "byteorder 1.3.1 (registry+https://github.com/rust-lang/crates.io-index)",
  "fixed-hash 0.3.0 (registry+https://github.com/rust-lang/crates.io-index)",
  "hash-db 0.9.0 (git+https://github.com/paritytech/trie)",
- "pairing 0.14.2 (git+https://github.com/osuketh/librustzcash?branch=zero-chain)",
+ "pairing 0.14.2 (git+https://github.com/osuketh/zcash-to-substrate)",
  "parity-codec 2.2.0 (registry+https://github.com/rust-lang/crates.io-index)",
  "parity-codec-derive 2.2.0 (registry+https://github.com/rust-lang/crates.io-index)",
  "parity-crypto 0.2.0 (registry+https://github.com/rust-lang/crates.io-index)",
  "rand 0.4.6 (registry+https://github.com/rust-lang/crates.io-index)",
- "sapling-crypto 0.0.1 (git+https://github.com/osuketh/librustzcash?branch=zero-chain)",
+ "sapling-crypto 0.0.1 (git+https://github.com/osuketh/zcash-to-substrate)",
  "serde 1.0.85 (registry+https://github.com/rust-lang/crates.io-index)",
  "serde_derive 1.0.85 (registry+https://github.com/rust-lang/crates.io-index)",
  "shasper-crypto 0.1.0 (git+https://github.com/paritytech/shasper)",
@@ -4616,14 +4616,14 @@ dependencies = [
 name = "zero-chain-proofs"
 version = "0.1.0"
 dependencies = [
- "bellman 0.1.0 (git+https://github.com/osuketh/librustzcash?branch=zero-chain)",
+ "bellman 0.1.0 (git+https://github.com/osuketh/zcash-to-substrate)",
  "blake2-rfc 0.2.18 (git+https://github.com/gtank/blake2-rfc?rev=7a5b5fc99ae483a0043db7547fb79a6fa44b88a9)",
  "byteorder 1.3.1 (registry+https://github.com/rust-lang/crates.io-index)",
- "pairing 0.14.2 (git+https://github.com/osuketh/librustzcash?branch=zero-chain)",
+ "pairing 0.14.2 (git+https://github.com/osuketh/zcash-to-substrate)",
  "parity-codec 2.2.0 (registry+https://github.com/rust-lang/crates.io-index)",
  "parity-codec-derive 2.2.0 (registry+https://github.com/rust-lang/crates.io-index)",
  "rand 0.4.6 (registry+https://github.com/rust-lang/crates.io-index)",
- "sapling-crypto 0.0.1 (git+https://github.com/osuketh/librustzcash?branch=zero-chain)",
+ "sapling-crypto 0.0.1 (git+https://github.com/osuketh/zcash-to-substrate)",
  "serde 1.0.85 (registry+https://github.com/rust-lang/crates.io-index)",
  "serde_derive 1.0.85 (registry+https://github.com/rust-lang/crates.io-index)",
  "zero-chain-crypto 0.1.0",
@@ -4684,7 +4684,7 @@ dependencies = [
 "checksum base-x 0.2.4 (registry+https://github.com/rust-lang/crates.io-index)" = "d55aa264e822dbafa12db4d54767aff17c6ba55ea2d8559b3e17392c7d000e5d"
 "checksum base58 0.1.0 (registry+https://github.com/rust-lang/crates.io-index)" = "5024ee8015f02155eee35c711107ddd9a9bf3cb689cf2a9089c97e79b6e1ae83"
 "checksum base64 0.9.3 (registry+https://github.com/rust-lang/crates.io-index)" = "489d6c0ed21b11d038c31b6ceccca973e65d73ba3bd8ecb9a2babf5546164643"
-"checksum bellman 0.1.0 (git+https://github.com/osuketh/librustzcash?branch=zero-chain)" = "<none>"
+"checksum bellman 0.1.0 (git+https://github.com/osuketh/zcash-to-substrate)" = "<none>"
 "checksum bellman 0.1.0 (git+https://github.com/zcash/librustzcash)" = "<none>"
 "checksum bigint 4.4.1 (registry+https://github.com/rust-lang/crates.io-index)" = "ebecac13b3c745150d7b6c3ea7572d372f09d627c2077e893bf26c5c7f70d282"
 "checksum bindgen 0.43.2 (registry+https://github.com/rust-lang/crates.io-index)" = "6d52d263eacd15d26cbcf215d254b410bd58212aaa2d3c453a04b2d3b3adcf41"
@@ -4874,7 +4874,7 @@ dependencies = [
 "checksum owning_ref 0.3.3 (registry+https://github.com/rust-lang/crates.io-index)" = "cdf84f41639e037b484f93433aa3897863b561ed65c6e59c7073d7c561710f37"
 "checksum owning_ref 0.4.0 (registry+https://github.com/rust-lang/crates.io-index)" = "49a4b8ea2179e6a2e27411d3bca09ca6dd630821cf6894c6c7c8467a8ee7ef13"
 "checksum pairing 0.14.0 (git+https://github.com/sorpaas/pairing)" = "<none>"
-"checksum pairing 0.14.2 (git+https://github.com/osuketh/librustzcash?branch=zero-chain)" = "<none>"
+"checksum pairing 0.14.2 (git+https://github.com/osuketh/zcash-to-substrate)" = "<none>"
 "checksum pairing 0.14.2 (git+https://github.com/zcash/librustzcash)" = "<none>"
 "checksum parity-bytes 0.1.0 (git+https://github.com/paritytech/parity-common?rev=b0317f649ab2c665b7987b8475878fc4d2e1f81d)" = "<none>"
 "checksum parity-codec 2.2.0 (registry+https://github.com/rust-lang/crates.io-index)" = "e7b6a1290fe78aa6bbb5f3338ecede3062687a98b9e40cd1dbcaa47261d44097"
@@ -4943,7 +4943,7 @@ dependencies = [
 "checksum ryu 0.2.7 (registry+https://github.com/rust-lang/crates.io-index)" = "eb9e9b8cde282a9fe6a42dd4681319bfb63f121b8a8ee9439c6f4107e58a46f7"
 "checksum safe-mix 1.0.0 (registry+https://github.com/rust-lang/crates.io-index)" = "7f7bf422d23a88c16d5090d455f182bc99c60af4df6a345c63428acf5129e347"
 "checksum safemem 0.3.0 (registry+https://github.com/rust-lang/crates.io-index)" = "8dca453248a96cb0749e36ccdfe2b0b4e54a61bfef89fb97ec621eb8e0a93dd9"
-"checksum sapling-crypto 0.0.1 (git+https://github.com/osuketh/librustzcash?branch=zero-chain)" = "<none>"
+"checksum sapling-crypto 0.0.1 (git+https://github.com/osuketh/zcash-to-substrate)" = "<none>"
 "checksum sapling-crypto 0.0.1 (git+https://github.com/zcash/librustzcash)" = "<none>"
 "checksum schannel 0.1.14 (registry+https://github.com/rust-lang/crates.io-index)" = "0e1a231dc10abf6749cfa5d7767f25888d484201accbd919b66ab5413c502d56"
 "checksum scoped-tls 0.1.2 (registry+https://github.com/rust-lang/crates.io-index)" = "332ffa32bf586782a3efaeb58f127980944bbc8c4d6913a86107ac2a5ab24b28"

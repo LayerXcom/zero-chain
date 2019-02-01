@@ -42,12 +42,6 @@ zero-chain-crypto = { path = "crypto" }
 [build-dependencies]
 vergen = "2"
 
-[patch.crates-io]
-pairing = { git = "https://github.com/osuketh/librustzcash", branch = "zero-chain" }
-bellman = { git = "https://github.com/osuketh/librustzcash", branch = "zero-chain" }
-sapling-crypto = { git = "https://github.com/osuketh/librustzcash", branch = "zero-chain" }
-
-
 [workspace]
 members = [ "runtime", "primitives", "proofs", "crypto" ]
 exclude = [ "runtime/wasm", ]

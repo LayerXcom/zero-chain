@@ -17,7 +17,7 @@ use super::cm_encryption::EncryptedCommitment;
 pub struct Transaction {
     // Length of the rest of the extrinsic, // 1-5 bytes
  	// Version information, // 1 byte
- 	// pub nonce: u32,
+ 	pub nonce: u32,
  	// pub sig: Signature, // 64 bytes
  	// pub sig_verifying_key: PublicKey<Bls12>, // rk 32bytes
  	// pub proof: Proof<Bls12>, // 192 bytes
