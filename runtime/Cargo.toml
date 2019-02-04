@@ -4,29 +4,30 @@ version = "0.9.0"
 authors = ["Parity Technologies <admin@parity.io>"]
 
 [dependencies]
-rustc-hex = "1.0"
-hex-literal = "0.1.0"
-serde = { version = "1.0", default-features = false }
+rustc-hex = { version = "1.0", optional = true }
+hex-literal = { version = "0.1.0", optional = true }
+serde = { version = "1.0", optional = true }
 serde_derive = { version = "1.0", optional = true }
 safe-mix = { version = "1.0", default-features = false }
-parity-codec = "2.0"
-parity-codec-derive = "2.0"
-sr-std = { git = "https://github.com/paritytech/substrate" }
-sr-io = { git = "https://github.com/paritytech/substrate" }
-srml-support = { git = "https://github.com/paritytech/substrate" }
-substrate-primitives = { git = "https://github.com/paritytech/substrate" }
-substrate-keyring = { git = "https://github.com/paritytech/substrate" }
-srml-balances = { git = "https://github.com/paritytech/substrate" }
-srml-consensus = { git = "https://github.com/paritytech/substrate" }
-srml-aura = { git = "https://github.com/paritytech/substrate" }
-srml-executive = { git = "https://github.com/paritytech/substrate" }
-sr-primitives = { git = "https://github.com/paritytech/substrate" }
-srml-system = { git = "https://github.com/paritytech/substrate" }
-srml-timestamp = { git = "https://github.com/paritytech/substrate" }
-srml-sudo = { git = "https://github.com/paritytech/substrate" }
-substrate-client = { git = "https://github.com/paritytech/substrate", optional = true }
-sr-version = { git = "https://github.com/paritytech/substrate" }
-substrate-consensus-aura-primitives = { git = "https://github.com/paritytech/substrate" }
+parity-codec = { version = "3.0", default-features = false }
+parity-codec-derive = { version = "3.0", default-features = false }
+sr-std = { git = "https://github.com/paritytech/substrate", default-features = false }
+sr-io = { git = "https://github.com/paritytech/substrate", default-features = false }
+srml-support = { git = "https://github.com/paritytech/substrate", default-features = false }
+substrate-primitives = { git = "https://github.com/paritytech/substrate", default-features = false }
+substrate-keyring = { git = "https://github.com/paritytech/substrate", optional = true }
+srml-balances = { git = "https://github.com/paritytech/substrate", default-features = false }
+srml-consensus = { git = "https://github.com/paritytech/substrate", default-features = false }
+srml-aura = { git = "https://github.com/paritytech/substrate", default-features = false }
+srml-executive = { git = "https://github.com/paritytech/substrate", default-features = false }
+srml-indices = { git = "https://github.com/paritytech/substrate", default-features = false }
+sr-primitives = { git = "https://github.com/paritytech/substrate", default-features = false }
+srml-system = { git = "https://github.com/paritytech/substrate", default-features = false }
+srml-timestamp = { git = "https://github.com/paritytech/substrate", default-features = false }
+srml-sudo = { git = "https://github.com/paritytech/substrate", default-features = false }
+substrate-client = { git = "https://github.com/paritytech/substrate", default-features = false }
+sr-version = { git = "https://github.com/paritytech/substrate", default-features = false }
+substrate-consensus-aura-primitives = { git = "https://github.com/paritytech/substrate", default-features = false }
 
 parity-crypto = "0.2.0"
 rust-crypto = "0.2.36"
@@ -49,6 +50,7 @@ std = [
 	"srml-balances/std",
 	"srml-executive/std",
 	"srml-aura/std",
+	"srml-indices/std",
 	"sr-primitives/std",
 	"srml-system/std",
 	"srml-timestamp/std",
@@ -57,7 +59,6 @@ std = [
 	"serde_derive",
 	"serde/std",
 	"safe-mix/std",
-	"substrate-client",
 	"substrate-consensus-aura-primitives/std",
 	"rand/std",	
 	"byteorder/std",
