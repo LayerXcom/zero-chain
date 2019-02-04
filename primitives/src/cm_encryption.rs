@@ -59,8 +59,14 @@ impl<'a> SerializedCommitment<'a> {
     }
 }
 
-
+#[derive(Clone, Encode, Decode)]
 pub struct EncryptedCommitment([u8; CIPHERTEXT_SIZE]);
+
+impl Default for EncryptedCommitment {
+    fn default() -> Self {
+        EncryptedCommitment([0; CIPHERTEXT_SIZE])
+    }
+}
 
 // impl<E: JubjubEngine> EncryptedCommitment<E> {
 //     pub fn decrypt

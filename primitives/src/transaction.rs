@@ -26,6 +26,6 @@ pub struct Transaction {
  	pub epk: edwards::Point<Bls12, PrimeOrder>, // 32 bytes
  	pub payment_address_s: PaymentAddress<Bls12>, // 11 + 32 bytes
  	pub payment_address_r: PaymentAddress<Bls12>, // 11 + 32 bytes
-//  	pub ciphertext: EncryptedCommitment, // 32 bytes?
+ 	pub ciphertext: EncryptedCommitment, // 32 bytes?
 }
 
