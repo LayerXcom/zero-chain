@@ -18,22 +18,21 @@ exit-future = "0.1"
 parking_lot = "0.4"
 hex-literal = "0.1"
 slog = "^2"
-parity-codec = { version = "2.1" }
+parity-codec = { version = "3.0" }
 trie-root = { git = "https://github.com/paritytech/trie" }
 sr-io = { git = "https://github.com/paritytech/substrate" }
-sr-primitives = { git = "https://github.com/paritytech/substrate" }
 substrate-cli = { git = "https://github.com/paritytech/substrate" }
 substrate-primitives = { git = "https://github.com/paritytech/substrate" }
 substrate-executor = { git = "https://github.com/paritytech/substrate" }
 substrate-service = { git = "https://github.com/paritytech/substrate" }
+substrate-inherents = { git = "https://github.com/paritytech/substrate" }
 substrate-transaction-pool = { git = "https://github.com/paritytech/substrate" }
 substrate-network = { git = "https://github.com/paritytech/substrate" }
 substrate-consensus-aura = { git = "https://github.com/paritytech/substrate" }
 substrate-client = { git = "https://github.com/paritytech/substrate", default-features = false }
-substrate-finality-grandpa = { git = "https://github.com/paritytech/substrate" }
 substrate-basic-authorship = { git = "https://github.com/paritytech/substrate" }
-zero-chain-runtime = { path = "runtime" }
 node-executor = { git = "https://github.com/paritytech/substrate" }
+zero-chain-runtime = { path = "runtime" }
 structopt = "0.2.13"
 zero-chain-proofs = { path = "proofs" }
 zero-chain-primitives = { path = "primitives" }

@@ -22,10 +22,8 @@ extern crate substrate_basic_authorship as basic_authorship;
 #[macro_use]
 extern crate substrate_service;
 extern crate zero_chain_runtime;
-#[macro_use]
-extern crate structopt;
 extern crate node_executor;
-extern crate sr_primitives as runtime_primitives;
+extern crate substrate_inherents as inherents;
 
 mod chain_spec;
 mod service;
@@ -35,11 +33,12 @@ pub use substrate_cli::{VersionInfo, IntoExit, error};
 
 fn run() -> cli::error::Result<()> {
 	let version = VersionInfo {
+		name: "Substrate Node",
 		commit: env!("VERGEN_SHA_SHORT"),
 		version: env!("CARGO_PKG_VERSION"),
-		executable_name: "zero-chain",
-		author: "osuke",
-		description: "zero-chain",
+		executable_name: "template-node",
+		author: "Anonymous",
+		description: "Template Node",
 	};
 	cli::run(::std::env::args(), cli::Exit, version)
 }

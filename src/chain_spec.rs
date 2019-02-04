@@ -1,6 +1,7 @@
 use primitives::{Ed25519AuthorityId, ed25519};
-use zero_chain_runtime::{
-	AccountId, GenesisConfig, ConsensusConfig, TimestampConfig, BalancesConfig, SudoConfig,
+use template_node_runtime::{
+	AccountId, GenesisConfig, ConsensusConfig, TimestampConfig, BalancesConfig,
+	SudoConfig, IndicesConfig
 };
 use substrate_service;
 
@@ -69,7 +70,7 @@ impl Alternative {
 	pub(crate) fn from(s: &str) -> Option<Self> {
 		match s {
 			"dev" => Some(Alternative::Development),
-			"local" => Some(Alternative::LocalTestnet),
+			"" | "local" => Some(Alternative::LocalTestnet),
 			_ => None,
 		}
 	}
@@ -78,12 +79,15 @@ impl Alternative {
 fn testnet_genesis(initial_authorities: Vec<Ed25519AuthorityId>, endowed_accounts: Vec<AccountId>, root_key: AccountId) -> GenesisConfig {
 	GenesisConfig {
 		consensus: Some(ConsensusConfig {
-			code: include_bytes!("../runtime/wasm/target/wasm32-unknown-unknown/release/zero_chain_runtime.compact.wasm").to_vec(),
+			code: include_bytes!("../runtime/wasm/target/wasm32-unknown-unknown/release/template_node_runtime.compact.wasm").to_vec(),
 			authorities: initial_authorities.clone(),
 		}),
 		system: None,
 		timestamp: Some(TimestampConfig {
 			period: 5,					// 5 second block time.
+		}),
+		indices: Some(IndicesConfig {
+			ids: endowed_accounts.clone(),
 		}),
 		balances: Some(BalancesConfig {
 			transaction_base_fee: 1,
@@ -91,7 +95,6 @@ fn testnet_genesis(initial_authorities: Vec<Ed25519AuthorityId>, endowed_account
 			existential_deposit: 500,
 			transfer_fee: 0,
 			creation_fee: 0,
-			reclaim_rebate: 0,
 			balances: endowed_accounts.iter().map(|&k|(k, (1 << 60))).collect(),
 		}),
 		sudo: Some(SudoConfig {

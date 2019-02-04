@@ -760,19 +760,6 @@ dependencies = [
 ]
 
 [[package]]
-name = "finality-grandpa"
-version = "0.6.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-dependencies = [
- "futures 0.1.25 (registry+https://github.com/rust-lang/crates.io-index)",
- "log 0.4.6 (registry+https://github.com/rust-lang/crates.io-index)",
- "num-traits 0.2.6 (registry+https://github.com/rust-lang/crates.io-index)",
- "parity-codec 3.0.0 (registry+https://github.com/rust-lang/crates.io-index)",
- "parity-codec-derive 3.0.0 (registry+https://github.com/rust-lang/crates.io-index)",
- "parking_lot 0.6.4 (registry+https://github.com/rust-lang/crates.io-index)",
-]
-
-[[package]]
 name = "fixed-hash"
 version = "0.3.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -3560,28 +3547,6 @@ dependencies = [
 ]
 
 [[package]]
-name = "substrate-finality-grandpa"
-version = "0.1.0"
-source = "git+https://github.com/paritytech/substrate#7850647fb683496a6ebc9308f20aaa7ee27d0658"
-dependencies = [
- "finality-grandpa 0.6.0 (registry+https://github.com/rust-lang/crates.io-index)",
- "futures 0.1.25 (registry+https://github.com/rust-lang/crates.io-index)",
- "log 0.4.6 (registry+https://github.com/rust-lang/crates.io-index)",
- "parity-codec 3.0.0 (registry+https://github.com/rust-lang/crates.io-index)",
- "parity-codec-derive 3.0.0 (registry+https://github.com/rust-lang/crates.io-index)",
- "parking_lot 0.7.1 (registry+https://github.com/rust-lang/crates.io-index)",
- "rand 0.6.5 (registry+https://github.com/rust-lang/crates.io-index)",
- "sr-primitives 0.1.0 (git+https://github.com/paritytech/substrate)",
- "substrate-client 0.1.0 (git+https://github.com/paritytech/substrate)",
- "substrate-consensus-common 0.1.0 (git+https://github.com/paritytech/substrate)",
- "substrate-finality-grandpa-primitives 0.1.0 (git+https://github.com/paritytech/substrate)",
- "substrate-network 0.1.0 (git+https://github.com/paritytech/substrate)",
- "substrate-primitives 0.1.0 (git+https://github.com/paritytech/substrate)",
- "substrate-service 0.3.0 (git+https://github.com/paritytech/substrate)",
- "tokio 0.1.15 (registry+https://github.com/rust-lang/crates.io-index)",
-]
-
-[[package]]
 name = "substrate-finality-grandpa-primitives"
 version = "0.1.0"
 source = "git+https://github.com/paritytech/substrate#7850647fb683496a6ebc9308f20aaa7ee27d0658"
@@ -4556,18 +4521,17 @@ dependencies = [
  "hex-literal 0.1.2 (registry+https://github.com/rust-lang/crates.io-index)",
  "log 0.4.6 (registry+https://github.com/rust-lang/crates.io-index)",
  "node-executor 0.1.0 (git+https://github.com/paritytech/substrate)",
- "parity-codec 2.2.0 (registry+https://github.com/rust-lang/crates.io-index)",
+ "parity-codec 3.0.0 (registry+https://github.com/rust-lang/crates.io-index)",
  "parking_lot 0.4.8 (registry+https://github.com/rust-lang/crates.io-index)",
  "slog 2.4.1 (registry+https://github.com/rust-lang/crates.io-index)",
  "sr-io 0.1.0 (git+https://github.com/paritytech/substrate)",
- "sr-primitives 0.1.0 (git+https://github.com/paritytech/substrate)",
  "structopt 0.2.14 (registry+https://github.com/rust-lang/crates.io-index)",
  "substrate-basic-authorship 0.1.0 (git+https://github.com/paritytech/substrate)",
  "substrate-cli 0.3.0 (git+https://github.com/paritytech/substrate)",
  "substrate-client 0.1.0 (git+https://github.com/paritytech/substrate)",
  "substrate-consensus-aura 0.1.0 (git+https://github.com/paritytech/substrate)",
  "substrate-executor 0.1.0 (git+https://github.com/paritytech/substrate)",
- "substrate-finality-grandpa 0.1.0 (git+https://github.com/paritytech/substrate)",
+ "substrate-inherents 0.1.0 (git+https://github.com/paritytech/substrate)",
  "substrate-network 0.1.0 (git+https://github.com/paritytech/substrate)",
  "substrate-primitives 0.1.0 (git+https://github.com/paritytech/substrate)",
  "substrate-service 0.3.0 (git+https://github.com/paritytech/substrate)",
@@ -4760,7 +4724,6 @@ dependencies = [
 "checksum failure 0.1.5 (registry+https://github.com/rust-lang/crates.io-index)" = "795bd83d3abeb9220f257e597aa0080a508b27533824adf336529648f6abf7e2"
 "checksum fake-simd 0.1.2 (registry+https://github.com/rust-lang/crates.io-index)" = "e88a8acf291dafb59c2d96e8f59828f3838bb1a70398823ade51a84de6a6deed"
 "checksum fdlimit 0.1.1 (registry+https://github.com/rust-lang/crates.io-index)" = "b1ee15a7050e5580b3712877157068ea713b245b080ff302ae2ca973cfcd9baa"
-"checksum finality-grandpa 0.6.0 (registry+https://github.com/rust-lang/crates.io-index)" = "d415e902db2b87bd5a7df7a2b2de97a4566727a23b95ff39e1bfec25a66d4d1c"
 "checksum fixed-hash 0.3.0 (registry+https://github.com/rust-lang/crates.io-index)" = "a557e80084b05c32b455963ff565a9de6f2866da023d6671705c6aff6f65e01c"
 "checksum fnv 1.0.6 (registry+https://github.com/rust-lang/crates.io-index)" = "2fad85553e09a6f881f739c29f0b00b0f01357c743266d478b68951ce23285f3"
 "checksum foreign-types 0.3.2 (registry+https://github.com/rust-lang/crates.io-index)" = "f6f339eb8adc052cd2ca78910fda869aefa38d22d5cb648e6485e4d3fc06f3b1"
@@ -5019,7 +4982,6 @@ dependencies = [
 "checksum substrate-consensus-aura-primitives 0.1.0 (git+https://github.com/paritytech/substrate)" = "<none>"
 "checksum substrate-consensus-common 0.1.0 (git+https://github.com/paritytech/substrate)" = "<none>"
 "checksum substrate-executor 0.1.0 (git+https://github.com/paritytech/substrate)" = "<none>"
-"checksum substrate-finality-grandpa 0.1.0 (git+https://github.com/paritytech/substrate)" = "<none>"
 "checksum substrate-finality-grandpa-primitives 0.1.0 (git+https://github.com/paritytech/substrate)" = "<none>"
 "checksum substrate-inherents 0.1.0 (git+https://github.com/paritytech/substrate)" = "<none>"
 "checksum substrate-keyring 0.1.0 (git+https://github.com/paritytech/substrate)" = "<none>"
