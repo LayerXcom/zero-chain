@@ -840,6 +840,17 @@ version = "0.3.55"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 
 [[package]]
+name = "gen_key"
+version = "0.1.0"
+dependencies = [
+ "pairing 0.14.2 (git+https://github.com/osuketh/zcash-to-substrate)",
+ "rand 0.6.5 (registry+https://github.com/rust-lang/crates.io-index)",
+ "structopt 0.2.14 (registry+https://github.com/rust-lang/crates.io-index)",
+ "substrate-primitives 0.1.0 (git+https://github.com/paritytech/substrate)",
+ "zero-chain-proofs 0.1.0",
+]
+
+[[package]]
 name = "generic-array"
 version = "0.8.3"
 source = "registry+https://github.com/rust-lang/crates.io-index"

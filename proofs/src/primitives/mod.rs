@@ -21,6 +21,8 @@ use blake2_rfc::{
 };
 use zcrypto::{constants, mimc};
 use codec::{Encode, Decode};
+// TODO: Change to sr-std for adopting wasm
+use std::io::{self, Read, Write};
 
 fn prf_expand(sk: &[u8], t: &[u8]) -> Blake2bResult {
     prf_expand_vec(sk, &vec![t])
@@ -41,13 +43,35 @@ pub struct ExpandedSpendingKey<E: JubjubEngine> {
 }
 
 impl<E: JubjubEngine> ExpandedSpendingKey<E> {
-    fn from_spending_key(sk: &[u8]) -> Self {
+    pub fn from_spending_key(sk: &[u8]) -> Self {
         let ask = E::Fs::to_uniform(prf_expand(sk, &[0x00]).as_bytes());
         let nsk = E::Fs::to_uniform(prf_expand(sk, &[0x01]).as_bytes());
         ExpandedSpendingKey { ask, nsk }
     }
-} 
 
+    pub fn write<W: Write>(&self, mut writer: W) -> io::Result<()> {
+        self.ask.into_repr().write_le(&mut writer)?;
+        self.nsk.into_repr().write_le(&mut writer)?;
+        Ok(())
+    }
+
+    pub fn read<R: Read>(mut reader: R) -> io::Result<Self> {
+        let mut ask_repr = <E::Fs as PrimeField>::Repr::default();
+        ask_repr.read_le(&mut reader)?;
+        let ask = E::Fs::from_repr(ask_repr)
+            .map_err(|e| io::Error::new(io::ErrorKind::InvalidData, e))?;
+
+        let mut nsk_repr = <E::Fs as PrimeField>::Repr::default();
+        nsk_repr.read_le(&mut reader)?;
+        let nsk = E::Fs::from_repr(nsk_repr)
+            .map_err(|e| io::Error::new(io::ErrorKind::InvalidData, e))?;
+
+        Ok(ExpandedSpendingKey {
+            ask,
+            nsk,
+        })
+    }
+} 
 
 #[derive(Clone, Copy, Default, Encode, Decode)]
 pub struct ValueCommitment<E: JubjubEngine> {
