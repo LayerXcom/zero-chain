@@ -11,12 +11,43 @@ use scrypto::jubjub::{
     JubjubParams,
     edwards,
     PrimeOrder,
-    FixedGenerators
+    FixedGenerators,
+    ToUniform,
 };
 
-use blake2_rfc::blake2s::Blake2s;
+use blake2_rfc::{
+    blake2s::Blake2s, 
+    blake2b::{Blake2b, Blake2bResult}
+};
 use zcrypto::{constants, mimc};
 use codec::{Encode, Decode};
+
+fn prf_expand(sk: &[u8], t: &[u8]) -> Blake2bResult {
+    prf_expand_vec(sk, &vec![t])
+}
+
+fn prf_expand_vec(sk: &[u8], ts: &[&[u8]]) -> Blake2bResult {
+    let mut h = Blake2b::with_params(64, &[], &[], constants::PRF_EXPAND_PERSONALIZATION);
+    h.update(sk);
+    for t in ts {
+        h.update(t);
+    }
+    h.finalize()
+}
+
+pub struct ExpandedSpendingKey<E: JubjubEngine> {
+    ask: E::Fs,
+    nsk: E::Fs,
+}
+
+impl<E: JubjubEngine> ExpandedSpendingKey<E> {
+    fn from_spending_key(sk: &[u8]) -> Self {
+        let ask = E::Fs::to_uniform(prf_expand(sk, &[0x00]).as_bytes());
+        let nsk = E::Fs::to_uniform(prf_expand(sk, &[0x01]).as_bytes());
+        ExpandedSpendingKey { ask, nsk }
+    }
+} 
+
 
 #[derive(Clone, Copy, Default, Encode, Decode)]
 pub struct ValueCommitment<E: JubjubEngine> {
@@ -63,6 +94,21 @@ pub struct ViewingKey<E: JubjubEngine> {
 }
 
 impl<E: JubjubEngine> ViewingKey<E> {
+    pub fn from_expanded_spending_key(
+        expsk: &ExpandedSpendingKey<E>, 
+        params: &E::Params
+    ) -> Self 
+    {
+        ViewingKey {
+            ak: params
+                .generator(FixedGenerators::SpendingKeyGenerator)
+                .mul(expsk.ask, params),
+            nk: params
+                .generator(FixedGenerators::SpendingKeyGenerator)
+                .mul(expsk.nsk, params),
+        }
+    }
+
     pub fn rk(
         &self,
         ar: E::Fs,

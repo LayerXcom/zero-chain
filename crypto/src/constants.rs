@@ -15,3 +15,4 @@ pub const MIMC_PERSONALIZATION: &'static [u8; 8] = b"zechMIMC";
 pub const DEFAULT_MIMC_SEED: &[u8] = b"mimc";
 pub const DEFAULT_MIMC_ROUND: usize = 97;
 pub const DEFAULT_MIMC_EXPONENT: u64 = 7;
+pub const PRF_EXPAND_PERSONALIZATION: &'static [u8; 16] = b"zech_ExpandSeed_";
