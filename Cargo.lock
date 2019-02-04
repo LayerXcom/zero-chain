@@ -157,7 +157,7 @@ dependencies = [
 [[package]]
 name = "bellman"
 version = "0.1.0"
-source = "git+https://github.com/osuketh/zcash-to-substrate#c9c4c3e75e64851313c1eede40279c0c88c75b86"
+source = "git+https://github.com/osuketh/zcash-to-substrate#ffa4559928fd38190222167e68373eadb697a7d8"
 dependencies = [
  "bit-vec 0.4.4 (registry+https://github.com/rust-lang/crates.io-index)",
  "byteorder 1.3.1 (registry+https://github.com/rust-lang/crates.io-index)",
@@ -166,6 +166,8 @@ dependencies = [
  "futures-cpupool 0.1.8 (registry+https://github.com/rust-lang/crates.io-index)",
  "num_cpus 1.9.0 (registry+https://github.com/rust-lang/crates.io-index)",
  "pairing 0.14.2 (git+https://github.com/osuketh/zcash-to-substrate)",
+ "parity-codec 2.2.0 (registry+https://github.com/rust-lang/crates.io-index)",
+ "parity-codec-derive 2.2.0 (registry+https://github.com/rust-lang/crates.io-index)",
  "rand 0.4.6 (registry+https://github.com/rust-lang/crates.io-index)",
 ]
 
@@ -2004,7 +2006,7 @@ dependencies = [
 [[package]]
 name = "pairing"
 version = "0.14.2"
-source = "git+https://github.com/osuketh/zcash-to-substrate#c9c4c3e75e64851313c1eede40279c0c88c75b86"
+source = "git+https://github.com/osuketh/zcash-to-substrate#ffa4559928fd38190222167e68373eadb697a7d8"
 dependencies = [
  "byteorder 1.3.1 (registry+https://github.com/rust-lang/crates.io-index)",
  "parity-codec 2.2.0 (registry+https://github.com/rust-lang/crates.io-index)",
@@ -2614,7 +2616,7 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 [[package]]
 name = "sapling-crypto"
 version = "0.0.1"
-source = "git+https://github.com/osuketh/zcash-to-substrate#c9c4c3e75e64851313c1eede40279c0c88c75b86"
+source = "git+https://github.com/osuketh/zcash-to-substrate#ffa4559928fd38190222167e68373eadb697a7d8"
 dependencies = [
  "bellman 0.1.0 (git+https://github.com/osuketh/zcash-to-substrate)",
  "blake2-rfc 0.2.18 (git+https://github.com/gtank/blake2-rfc?rev=7a5b5fc99ae483a0043db7547fb79a6fa44b88a9)",
