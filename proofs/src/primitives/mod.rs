@@ -16,15 +16,16 @@ use scrypto::jubjub::{
 
 use blake2_rfc::blake2s::Blake2s;
 use zcrypto::{constants, mimc};
-use parity_codec::{Encode, Decode};
+use codec::{Encode, Decode};
 
-#[derive(Clone, Encode, Decode, Default)]
+#[derive(Clone, Copy, Default, Encode, Decode)]
 pub struct ValueCommitment<E: JubjubEngine> {
     pub value: u64,
     pub randomness: E::Fs,
 }
 
-impl<E: JubjubEngine> ValueCommitment<E> {
+impl<E: JubjubEngine> ValueCommitment<E> 
+where <E as JubjubEngine>::Fs: Encode + Decode {
     pub fn cm(
         &self,
         params: &E::Params,        
@@ -40,7 +41,7 @@ impl<E: JubjubEngine> ValueCommitment<E> {
     }   
 }
 
-#[derive(Clone, Encode, Decode, Default)]
+// #[derive(Clone, Encode, Decode, Default)]
 pub struct ProofGenerationKey<E: JubjubEngine> {
     pub ak: edwards::Point<E, PrimeOrder>,
     pub nsk: E::Fs
@@ -55,7 +56,7 @@ impl<E: JubjubEngine> ProofGenerationKey<E> {
     }
 }
 
-#[derive(Clone, Encode, Decode, Default)]
+// #[derive(Clone, Encode, Decode, Default)]
 pub struct ViewingKey<E: JubjubEngine> {
     pub ak: edwards::Point<E, PrimeOrder>,
     pub nk: edwards::Point<E, PrimeOrder>
@@ -107,8 +108,9 @@ impl<E: JubjubEngine> ViewingKey<E> {
     }
 }
 
+// pub struct Diversifier(pub [u8; 11]);
 #[derive(Clone, Encode, Decode, Default)]
-pub struct Diversifier(pub [u8; 11]);
+pub struct Diversifier;
 
 impl Diversifier {
     pub fn g_d<E: JubjubEngine>(
@@ -116,7 +118,7 @@ impl Diversifier {
         params: &E::Params
     ) -> Option<edwards::Point<E, PrimeOrder>>
     {
-        group_hash::<E>(&self.0, constants::KEY_DIVERSIFICATION_PERSONALIZATION, params)
+        group_hash::<E>(&self.encode(), constants::KEY_DIVERSIFICATION_PERSONALIZATION, params)
     }
 }
 
@@ -135,8 +137,4 @@ impl<E: JubjubEngine> PaymentAddress<E> {
     {
         self.diversifier.g_d(params)
     }
-}
-
-impl Encode for edwards::Point<E, PrimeOrder> {
-
 }
