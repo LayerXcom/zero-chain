@@ -4621,6 +4621,7 @@ dependencies = [
  "substrate-keystore 0.1.0 (git+https://github.com/paritytech/substrate)",
  "substrate-primitives 0.1.0 (git+https://github.com/paritytech/substrate)",
  "zero-chain-crypto 0.1.0",
+ "zero-chain-primitives 0.1.0",
  "zero-chain-proofs 0.1.0",
 ]
 

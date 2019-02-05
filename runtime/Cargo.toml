@@ -42,6 +42,7 @@ zero-chain-proofs = { path = "../proofs" }
 sapling-crypto = { git = "https://github.com/osuketh/zcash-to-substrate" }
 pairing = { git = "https://github.com/osuketh/zcash-to-substrate" }
 zero-chain-crypto = { path = "../crypto" }
+zero-chain-primitives = { path = "../primitives" }
 
 [features]
 default = ["std"]

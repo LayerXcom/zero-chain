@@ -39,6 +39,7 @@ fn prf_expand_vec(sk: &[u8], ts: &[&[u8]]) -> Blake2bResult {
     h.finalize()
 }
 
+#[derive(Debug, Clone, PartialEq)]
 pub struct ExpandedSpendingKey<E: JubjubEngine> {
     ask: E::Fs,
     nsk: E::Fs,
@@ -98,7 +99,7 @@ where <E as JubjubEngine>::Fs: Encode + Decode {
     }   
 }
 
-// #[derive(Clone, Encode, Decode, Default)]
+#[derive(Clone)]
 pub struct ProofGenerationKey<E: JubjubEngine> {
     pub ak: edwards::Point<E, PrimeOrder>,
     pub nsk: E::Fs

@@ -1,6 +1,7 @@
 use rstd::prelude::*;
 use scrypto::jubjub::{edwards, JubjubEngine, PrimeOrder, Unknown};
 use zcrypto::constants;
+use zprimitives::cm_encryption::Ciphertext;
 
 #[derive(Encode, Decode, Default)]
 // #[cfg_attr(feature = "std", derive(Debug))]
@@ -10,6 +11,6 @@ pub struct CommittedBalanceMap<E: JubjubEngine> (
 
 #[derive(Encode, Decode, Default)]
 // #[cfg_attr(feature = "std", derive(Debug))]
-pub struct TxoMap(
-    pub Vec<[u8; constants::CIPHERTEXT_SIZE]>
+pub struct TxoMap<E: JubjubEngine>(
+    pub Vec<Ciphertext<E>>
 );

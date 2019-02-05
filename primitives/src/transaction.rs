@@ -29,3 +29,6 @@ pub struct Transaction {
  	pub ciphertext: Ciphertext<Bls12>, // 16 + 64 bytes?
 }
 
+// impl Transaction {
+// 	pub fn 
+// }

@@ -36,6 +36,7 @@ extern crate zero_chain_proofs as proofs;
 extern crate sapling_crypto as scrypto;
 extern crate pairing;
 extern crate zero_chain_crypto as zcrypto;
+extern crate zero_chain_primitives as zprimitives;
 
 use rstd::prelude::*;
 #[cfg(feature = "std")]

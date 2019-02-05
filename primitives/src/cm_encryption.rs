@@ -1,3 +1,9 @@
+use pairing::{
+    PrimeField,
+    PrimeFieldRepr,
+    Field,    
+};
+
 use scrypto::jubjub::{
     JubjubEngine,
     JubjubParams,
@@ -19,20 +25,22 @@ use pcrypto::aes::{
     encrypt_128_ctr, 
     decrypt_128_ctr
 };
-use proofs::primitives::Diversifier;
+use proofs::primitives::{Diversifier, ValueCommitment};
 use byteorder::{
     LittleEndian,
     WriteBytesExt
 };
 
 // pub struct Commitments<'a>(&'a [u8; PLAINTEXT_SIZE]);
-pub struct Commitments {
-    value: u64,
-    randomness: u64,
-}
+// pub struct Commitments {
+//     value: u64,
+//     randomness: u64,
+// }
 
-impl Commitments {
-    pub fn encrypt_cm_to_recipient<E: JubjubEngine>(
+pub struct Commitments<E: JubjubEngine> (ValueCommitment<E>);
+
+impl<E: JubjubEngine> Commitments<E> {
+    pub fn encrypt_cm_to_recipient(
         &self,
         pk_d: edwards::Point<E, Unknown>,         
         diversifier: Diversifier,
@@ -69,8 +77,8 @@ impl Commitments {
 
         let mut plaintext = vec![];
         // TODO: Ensure the byteorder is correct
-        (&mut plaintext).write_u64::<LittleEndian>(self.value).unwrap();
-        (&mut plaintext).write_u64::<LittleEndian>(self.randomness).unwrap();    
+        (&mut plaintext).write_u64::<LittleEndian>(self.0.value).unwrap();
+        self.0.randomness.into_repr().write_le(&mut plaintext).unwrap();        
 
         encrypt_128_ctr(&h.as_ref()[0..16], &iv, &plaintext, &mut ciphertext_bytes)
             .expect("input lengths of key and iv are both 16; qed");
@@ -91,3 +99,12 @@ pub struct Ciphertext<E: JubjubEngine> {
     epk: edwards::Point<E, PrimeOrder>,
 }
 
+// impl<E: JubjubEngine> Ciphertext<E> {
+//     pub fn decrypt(
+//         &self,
+//         params: &E::Params
+//     ) -> Commitments 
+//     {
+
+//     }
+// }
