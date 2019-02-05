@@ -8,21 +8,36 @@ use scrypto::jubjub::{
     Unknown,
 };
 use rand::{OsRng, Rng};
-use zcrypto::constants::{PLAINTEXT_SIZE, CIPHERTEXT_SIZE, KDF_PERSONALIZATION};
+use zcrypto::constants::{
+        PLAINTEXT_SIZE, 
+        CIPHERTEXT_SIZE, 
+        KDF_PERSONALIZATION
+};
 use blake2_rfc::blake2s::Blake2s;
 // Temporary use for enc/dec
-use pcrypto::aes::{encrypt_128_ctr, decrypt_128_ctr};
+use pcrypto::aes::{
+    encrypt_128_ctr, 
+    decrypt_128_ctr
+};
 use proofs::primitives::Diversifier;
+use byteorder::{
+    LittleEndian,
+    WriteBytesExt
+};
 
-pub struct SerializedCommitment<'a>(&'a [u8; PLAINTEXT_SIZE]);
+// pub struct Commitments<'a>(&'a [u8; PLAINTEXT_SIZE]);
+pub struct Commitments {
+    value: u64,
+    randomness: u64,
+}
 
-impl<'a> SerializedCommitment<'a> {
+impl Commitments {
     pub fn encrypt_cm_to_recipient<E: JubjubEngine>(
         &self,
         pk_d: edwards::Point<E, Unknown>,         
         diversifier: Diversifier,
-        params: &'a E::Params
-    ) -> EncryptedCommitment
+        params: &E::Params
+    ) -> Ciphertext<E>
     {
         let mut rng = OsRng::new().expect("should be able to construct RNG"); // TODO: replace OsRng
         let mut buffer = [0u8; 64];
@@ -49,25 +64,30 @@ impl<'a> SerializedCommitment<'a> {
         h.update(&preimage);
         let h = h.finalize();
         
-        let mut ciphertext = [0; CIPHERTEXT_SIZE];
+        let mut ciphertext_bytes = [0; CIPHERTEXT_SIZE];
         let iv: [u8; 16] = rng.gen();
 
-        encrypt_128_ctr(&h.as_ref()[0..16], &iv, self.0, &mut ciphertext)
+        let mut plaintext = vec![];
+        // TODO: Ensure the byteorder is correct
+        (&mut plaintext).write_u64::<LittleEndian>(self.value).unwrap();
+        (&mut plaintext).write_u64::<LittleEndian>(self.randomness).unwrap();    
+
+        encrypt_128_ctr(&h.as_ref()[0..16], &iv, &plaintext, &mut ciphertext_bytes)
             .expect("input lengths of key and iv are both 16; qed");
 
-        EncryptedCommitment(ciphertext)
+        Ciphertext {
+            encrypted_commitment: ciphertext_bytes,
+            epk: epk
+        }
     }
 }
 
-#[derive(Clone, Encode, Decode)]
-pub struct EncryptedCommitment([u8; CIPHERTEXT_SIZE]);
+// #[derive(Clone, Encode, Decode)]
+// pub struct EncryptedCommitment([u8; CIPHERTEXT_SIZE]);
 
-impl Default for EncryptedCommitment {
-    fn default() -> Self {
-        EncryptedCommitment([0; CIPHERTEXT_SIZE])
-    }
+#[derive(Clone, Encode, Decode, Default)]
+pub struct Ciphertext<E: JubjubEngine> {
+    encrypted_commitment: [u8; CIPHERTEXT_SIZE],    
+    epk: edwards::Point<E, PrimeOrder>,
 }
 
-// impl<E: JubjubEngine> EncryptedCommitment<E> {
-//     pub fn decrypt
-// }

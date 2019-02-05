@@ -35,6 +35,7 @@ extern crate substrate_consensus_aura_primitives as consensus_aura;
 extern crate zero_chain_proofs as proofs;
 extern crate sapling_crypto as scrypto;
 extern crate pairing;
+extern crate zero_chain_crypto as zcrypto;
 
 use rstd::prelude::*;
 #[cfg(feature = "std")]

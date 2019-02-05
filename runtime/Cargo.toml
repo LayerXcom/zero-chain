@@ -41,6 +41,7 @@ blake2-rfc = { version = "0.2.18", default-features = false }
 zero-chain-proofs = { path = "../proofs" }
 sapling-crypto = { git = "https://github.com/osuketh/zcash-to-substrate" }
 pairing = { git = "https://github.com/osuketh/zcash-to-substrate" }
+zero-chain-crypto = { path = "../crypto" }
 
 [features]
 default = ["std"]
