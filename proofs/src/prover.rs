@@ -16,11 +16,12 @@ use primitives::{Diversifier, PaymentAddress, ProofGenerationKey, ValueCommitmen
 
 
 pub struct TransferProof {
-    proof: Proof<Bls12>,
-    balance_value_commitment: ValueCommitment<Bls12>,
-    transfer_value_commitment: ValueCommitment<Bls12>,
-    rk: PublicKey<Bls12>, // rk, re-randomization sig-verifying key
-    epk: edwards::Point<Bls12, PrimeOrder>,
+    pub proof: Proof<Bls12>,
+    pub balance_value_commitment: ValueCommitment<Bls12>,
+    pub transfer_value_commitment: ValueCommitment<Bls12>,
+    pub rk: PublicKey<Bls12>, // rk, re-randomization sig-verifying key
+    pub epk: edwards::Point<Bls12, PrimeOrder>,
+    pub payment_address_sender: PaymentAddress<Bls12>,
 }
 
 impl TransferProof {    
@@ -80,7 +81,7 @@ impl TransferProof {
             ar: Some(ar),
             proof_generation_key: Some(proof_generation_key), 
             esk: Some(esk),
-            prover_payment_address: Some(prover_payment_address),
+            prover_payment_address: Some(prover_payment_address.clone()),
             recipient_payment_address: Some(recipient_payment_address),
         };
 
@@ -123,6 +124,7 @@ impl TransferProof {
             transfer_value_commitment: transfer_value_commitment,
             rk: rk, 
             epk: epk,
+            payment_address_sender: prover_payment_address,
         };
 
         Ok(transfer_proof)

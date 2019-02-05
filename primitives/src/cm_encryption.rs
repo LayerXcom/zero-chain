@@ -31,12 +31,6 @@ use byteorder::{
     WriteBytesExt
 };
 
-// pub struct Commitments<'a>(&'a [u8; PLAINTEXT_SIZE]);
-// pub struct Commitments {
-//     value: u64,
-//     randomness: u64,
-// }
-
 pub struct Commitments<E: JubjubEngine> (ValueCommitment<E>);
 
 impl<E: JubjubEngine> Commitments<E> {
