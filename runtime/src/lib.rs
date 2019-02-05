@@ -32,6 +32,10 @@ extern crate srml_aura as aura;
 extern crate srml_indices as indices;
 extern crate substrate_consensus_aura_primitives as consensus_aura;
 
+extern crate zero_chain_proofs as proofs;
+extern crate sapling_crypto as scrypto;
+extern crate pairing;
+
 use rstd::prelude::*;
 #[cfg(feature = "std")]
 use primitives::bytes;
@@ -57,6 +61,9 @@ pub use balances::Call as BalancesCall;
 pub use runtime_primitives::{Permill, Perbill};
 pub use timestamp::BlockPeriod;
 pub use srml_support::StorageValue;
+
+pub mod state;
+pub mod storage;
 
 /// Alias to Ed25519 pubkey that identifies an account on the chain.
 pub type AccountId = primitives::H256;

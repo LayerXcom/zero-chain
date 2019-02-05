@@ -4,8 +4,8 @@ version = "0.1.0"
 authors = ["osuke <dish230@gmail.com>"]
 
 [dependencies]
-parity-codec-derive = { version = "2.0" }
-parity-codec = { version = "2.0" }
+parity-codec-derive = { version = "3.0" }
+parity-codec = { version = "3.0" }
 fixed-hash = { version = "0.3.0", default-features = false }
 sr-primitives = { git = "https://github.com/paritytech/substrate", default-features = false }
 substrate-primitives = { git = "https://github.com/paritytech/substrate", default-features = false }
