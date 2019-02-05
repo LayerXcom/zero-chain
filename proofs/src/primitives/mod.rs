@@ -20,9 +20,11 @@ use blake2_rfc::{
     blake2b::{Blake2b, Blake2bResult}
 };
 use zcrypto::{constants, mimc};
-use codec::{Encode, Decode};
+use codec::{Encode, Decode, Input, Output};
 // TODO: Change to sr-std for adopting wasm
 use std::io::{self, Read, Write};
+use rand::{OsRng, Rand, Rng};
+use pairing::bls12_381::Bls12;
 
 fn prf_expand(sk: &[u8], t: &[u8]) -> Blake2bResult {
     prf_expand_vec(sk, &vec![t])
@@ -178,17 +180,51 @@ impl<E: JubjubEngine> ViewingKey<E> {
     }
 }
 
-// pub struct Diversifier(pub [u8; 11]);
-#[derive(Clone, Encode, Decode, Default)]
-pub struct Diversifier;
+const DIVERSIFIER_SIZE: usize = 11;
 
-impl Diversifier {
+#[derive(Clone, Default)]
+pub struct Diversifier(pub [u8; DIVERSIFIER_SIZE]);
+
+impl Diversifier {    
+    pub fn new<E: JubjubEngine>(params: &E::Params) 
+        -> Result<Diversifier, ()> 
+    { 
+        loop {
+            let mut d_j = [0u8; 11];
+            OsRng::new().unwrap().fill_bytes(&mut d_j[..]);
+            let d_j = Diversifier(d_j);
+
+            match d_j.g_d::<E>(params) {
+                Some(_) => return Ok(d_j),
+                None => {}
+            }   
+        }                      
+    }
+
     pub fn g_d<E: JubjubEngine>(
         &self,
         params: &E::Params
     ) -> Option<edwards::Point<E, PrimeOrder>>
     {
         group_hash::<E>(&self.encode(), constants::KEY_DIVERSIFICATION_PERSONALIZATION, params)
+    }
+
+    pub fn write<W: Write>(&self, mut writer: W) -> io::Result<()> {
+        writer.write_all(&self.0)?;
+        Ok(())
+    }
+}
+
+impl Encode for Diversifier {
+    fn using_encoded<R, F: FnOnce(&[u8]) -> R>(&self, f: F) -> R {
+		self.0.using_encoded(f)
+	}
+}
+
+// TODO: Implement Decode
+impl Decode for Diversifier {
+    fn decode<I: Input>(input: &mut I) -> Option<Self> {
+        None
     }
 }
 
@@ -206,5 +242,11 @@ impl<E: JubjubEngine> PaymentAddress<E> {
     ) -> Option<edwards::Point<E, PrimeOrder>>
     {
         self.diversifier.g_d(params)
+    }
+
+    pub fn write<W: Write>(&self, mut writer: W) -> io::Result<()> {
+        self.pk_d.write(&mut writer)?;
+        self.diversifier.write(&mut writer)?;
+        Ok(())
     }
 }

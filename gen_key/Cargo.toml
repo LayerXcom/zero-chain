@@ -10,3 +10,5 @@ zero-chain-proofs = { path = "../proofs" }
 structopt = "0.2"
 substrate-primitives = { git = "https://github.com/paritytech/substrate" }
 pairing = { git = "https://github.com/osuketh/zcash-to-substrate" }
+sapling-crypto = { git = "https://github.com/osuketh/zcash-to-substrate" }
+lazy_static = "1.0"
