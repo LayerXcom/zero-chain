@@ -31,13 +31,28 @@ use byteorder::{
     WriteBytesExt
 };
 
-pub struct Commitments<E: JubjubEngine> (ValueCommitment<E>);
+pub struct Commitments<E: JubjubEngine> (pub ValueCommitment<E>);
 
-impl<E: JubjubEngine> Commitments<E> {
+impl<E: JubjubEngine> Commitments<E> {    
+    pub fn new (
+        value: u64,
+        randomness: E::Fs,
+        is_negative: bool
+    ) -> Self 
+    {
+        Commitments (
+            ValueCommitment {
+                value,
+                randomness,
+                is_negative
+            }
+        )
+    }   
+
     pub fn encrypt_cm_to_recipient(
         &self,
-        pk_d: edwards::Point<E, Unknown>,         
-        diversifier: Diversifier,
+        pk_d: &edwards::Point<E, PrimeOrder>,         
+        diversifier: &Diversifier,
         params: &E::Params
     ) -> Ciphertext<E>
     {
@@ -50,9 +65,9 @@ impl<E: JubjubEngine> Commitments<E> {
         // Generate uniformed random value as ephemeral secret key
         let esk = E::Fs::to_uniform(&buffer[..]);
 
-        let p = pk_d.mul_by_cofactor(params); // needs lazy_static for params(JUBJUB)?
+        // let p = pk_d.mul_by_cofactor(params); // needs lazy_static for params(JUBJUB)?
         // Generate shared secret
-        let shared_secret = p.mul(esk, params);
+        let shared_secret = pk_d.mul(esk, params);
 
         // Derive ephemeral public key
         let g_d = diversifier.g_d::<E>(params).unwrap();

@@ -1,20 +1,48 @@
 use bellman::groth16::{
-    create_random_proof, verify_proof, Parameters, PreparedVerifyingKey, Proof,
-    prepare_verifying_key, generate_random_parameters,
+    create_random_proof, 
+    verify_proof, 
+    Parameters, 
+    PreparedVerifyingKey, 
+    Proof,
+    prepare_verifying_key, 
+    generate_random_parameters,
 };
 use pairing::{
-    bls12_381::{Bls12, Fr, FrRepr},
-    Field, PrimeField, PrimeFieldRepr, Engine,
+    bls12_381::{
+        Bls12, 
+        Fr, 
+        FrRepr
+    },
+    Field, 
+    PrimeField, 
+    PrimeFieldRepr, 
+    Engine,
 };
 use rand::{OsRng, Rand};
 use scrypto::{    
-    jubjub::{edwards, fs::Fs, FixedGenerators, JubjubBls12, Unknown, PrimeOrder},    
-    redjubjub::{PrivateKey, PublicKey, Signature},
+    jubjub::{
+        edwards, 
+        fs::Fs, 
+        FixedGenerators, 
+        JubjubBls12, 
+        Unknown, 
+        PrimeOrder
+    },    
+    redjubjub::{
+        PrivateKey, 
+        PublicKey, 
+        Signature
+    },
 };
 use circuit_transfer::Transfer;
-use primitives::{Diversifier, PaymentAddress, ProofGenerationKey, ValueCommitment};
+use primitives::{
+    Diversifier, 
+    PaymentAddress, 
+    ProofGenerationKey, 
+    ValueCommitment
+};
 
-
+#[derive(Default)]
 pub struct TransferProof {
     pub proof: Proof<Bls12>,
     pub balance_value_commitment: ValueCommitment<Bls12>,
@@ -25,8 +53,7 @@ pub struct TransferProof {
 }
 
 impl TransferProof {    
-    pub fn gen_proof(
-        &mut self, 
+    pub fn gen_proof(        
         transfer_value: u64,         
         balance_value: u64,        
         ar: Fs,
@@ -48,11 +75,13 @@ impl TransferProof {
         let transfer_value_commitment = ValueCommitment::<Bls12> {
             value: transfer_value,
             randomness: transfer_rcm,
+            is_negative: false,
         };
 
         let balance_value_commitment = ValueCommitment::<Bls12> {
             value: balance_value,
             randomness: balance_rcm,
+            is_negative: false,
         };
 
         let viewing_key = proof_generation_key.into_viewing_key(params);

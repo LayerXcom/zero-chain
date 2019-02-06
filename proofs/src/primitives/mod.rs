@@ -80,6 +80,7 @@ impl<E: JubjubEngine> ExpandedSpendingKey<E> {
 pub struct ValueCommitment<E: JubjubEngine> {
     pub value: u64,
     pub randomness: E::Fs,
+    pub is_negative: bool,
 }
 
 impl<E: JubjubEngine> ValueCommitment<E> 
@@ -97,6 +98,14 @@ where <E as JubjubEngine>::Fs: Encode + Decode {
                 params
             )
     }   
+
+    pub fn change_sign(&self) -> Self {
+        ValueCommitment {
+            value: self.value,
+            randomness: self.randomness,
+            is_negative: !self.is_negative,
+        }
+    }
 }
 
 #[derive(Clone)]
