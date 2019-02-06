@@ -74,8 +74,8 @@ impl<E: JubjubEngine> Commitments<E> {
         let epk = g_d.mul(esk, params);
 
         let mut preimage = [0; 64];
-        shared_secret.write(&mut preimage[0..32]);
-        epk.write(&mut preimage[32..64]);
+        shared_secret.write(&mut preimage[0..32]).unwrap();
+        epk.write(&mut preimage[32..64]).unwrap();
 
         let mut h = Blake2s::with_params(32, &[], &[], KDF_PERSONALIZATION);
         h.update(&preimage);

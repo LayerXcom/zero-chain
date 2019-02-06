@@ -37,9 +37,7 @@ pub struct Transaction {
 impl Transaction {
 	pub fn gen_tx(
 		transfer_value: u64,         
-        balance_value: u64,  
-		transfer_rcm: Fs,
-		balance_rcm: Fs,      
+        balance_value: u64, 				
         ar: Fs,
         esk: Fs, 
         proving_key: &Parameters<Bls12>, 

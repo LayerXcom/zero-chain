@@ -17,7 +17,7 @@ extern crate sr_primitives as runtime_primitives;
 #[macro_use]
 extern crate serde_derive;
 extern crate substrate_primitives as primitives;
-extern crate parity_codec;
+extern crate parity_codec as codec;
 #[macro_use]
 extern crate parity_codec_derive;
 #[macro_use]
@@ -37,6 +37,9 @@ extern crate sapling_crypto as scrypto;
 extern crate pairing;
 extern crate zero_chain_crypto as zcrypto;
 extern crate zero_chain_primitives as zprimitives;
+
+mod storage;
+mod state;
 
 use rstd::prelude::*;
 #[cfg(feature = "std")]
@@ -63,9 +66,6 @@ pub use balances::Call as BalancesCall;
 pub use runtime_primitives::{Permill, Perbill};
 pub use timestamp::BlockPeriod;
 pub use srml_support::StorageValue;
-
-pub mod state;
-pub mod storage;
 
 /// Alias to Ed25519 pubkey that identifies an account on the chain.
 pub type AccountId = primitives::H256;
