@@ -17,7 +17,7 @@ extern crate sr_primitives as runtime_primitives;
 #[macro_use]
 extern crate serde_derive;
 extern crate substrate_primitives as primitives;
-extern crate parity_codec;
+extern crate parity_codec as codec;
 #[macro_use]
 extern crate parity_codec_derive;
 #[macro_use]
@@ -31,6 +31,15 @@ extern crate srml_sudo as sudo;
 extern crate srml_aura as aura;
 extern crate srml_indices as indices;
 extern crate substrate_consensus_aura_primitives as consensus_aura;
+
+extern crate zero_chain_proofs as proofs;
+extern crate sapling_crypto as scrypto;
+extern crate pairing;
+extern crate zero_chain_crypto as zcrypto;
+extern crate zero_chain_primitives as zprimitives;
+
+mod storage;
+mod state;
 
 use rstd::prelude::*;
 #[cfg(feature = "std")]

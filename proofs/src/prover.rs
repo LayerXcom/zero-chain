@@ -1,31 +1,59 @@
 use bellman::groth16::{
-    create_random_proof, verify_proof, Parameters, PreparedVerifyingKey, Proof,
-    prepare_verifying_key, generate_random_parameters,
+    create_random_proof, 
+    verify_proof, 
+    Parameters, 
+    PreparedVerifyingKey, 
+    Proof,
+    prepare_verifying_key, 
+    generate_random_parameters,
 };
 use pairing::{
-    bls12_381::{Bls12, Fr, FrRepr},
-    Field, PrimeField, PrimeFieldRepr, Engine,
+    bls12_381::{
+        Bls12, 
+        Fr, 
+        FrRepr
+    },
+    Field, 
+    PrimeField, 
+    PrimeFieldRepr, 
+    Engine,
 };
 use rand::{OsRng, Rand};
 use scrypto::{    
-    jubjub::{edwards, fs::Fs, FixedGenerators, JubjubBls12, Unknown, PrimeOrder},    
-    redjubjub::{PrivateKey, PublicKey, Signature},
+    jubjub::{
+        edwards, 
+        fs::Fs, 
+        FixedGenerators, 
+        JubjubBls12, 
+        Unknown, 
+        PrimeOrder
+    },    
+    redjubjub::{
+        PrivateKey, 
+        PublicKey, 
+        Signature
+    },
 };
 use circuit_transfer::Transfer;
-use primitives::{Diversifier, PaymentAddress, ProofGenerationKey, ValueCommitment};
+use primitives::{
+    Diversifier, 
+    PaymentAddress, 
+    ProofGenerationKey, 
+    ValueCommitment
+};
 
-
+#[derive(Default)]
 pub struct TransferProof {
-    proof: Proof<Bls12>,
-    balance_value_commitment: ValueCommitment<Bls12>,
-    transfer_value_commitment: ValueCommitment<Bls12>,
-    rk: PublicKey<Bls12>, // rk, re-randomization sig-verifying key
-    epk: edwards::Point<Bls12, PrimeOrder>,
+    pub proof: Proof<Bls12>,
+    pub balance_value_commitment: ValueCommitment<Bls12>,
+    pub transfer_value_commitment: ValueCommitment<Bls12>,
+    pub rk: PublicKey<Bls12>, // rk, re-randomization sig-verifying key
+    pub epk: edwards::Point<Bls12, PrimeOrder>,
+    pub payment_address_sender: PaymentAddress<Bls12>,
 }
 
 impl TransferProof {    
-    pub fn gen_proof(
-        &mut self, 
+    pub fn gen_proof(        
         transfer_value: u64,         
         balance_value: u64,        
         ar: Fs,
@@ -47,11 +75,13 @@ impl TransferProof {
         let transfer_value_commitment = ValueCommitment::<Bls12> {
             value: transfer_value,
             randomness: transfer_rcm,
+            is_negative: false,
         };
 
         let balance_value_commitment = ValueCommitment::<Bls12> {
             value: balance_value,
             randomness: balance_rcm,
+            is_negative: false,
         };
 
         let viewing_key = proof_generation_key.into_viewing_key(params);
@@ -80,7 +110,7 @@ impl TransferProof {
             ar: Some(ar),
             proof_generation_key: Some(proof_generation_key), 
             esk: Some(esk),
-            prover_payment_address: Some(prover_payment_address),
+            prover_payment_address: Some(prover_payment_address.clone()),
             recipient_payment_address: Some(recipient_payment_address),
         };
 
@@ -123,6 +153,7 @@ impl TransferProof {
             transfer_value_commitment: transfer_value_commitment,
             rk: rk, 
             epk: epk,
+            payment_address_sender: prover_payment_address,
         };
 
         Ok(transfer_proof)

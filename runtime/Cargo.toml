@@ -35,8 +35,14 @@ rand = { version = "0.4", default-features = false}
 substrate-keystore = { git = "https://github.com/paritytech/substrate" }
 
 byteorder = { version = "1", default-features = false }
-pairing = { git = "https://github.com/sorpaas/pairing", default-features = false }
+# pairing = { git = "https://github.com/sorpaas/pairing", default-features = false }
 blake2-rfc = { version = "0.2.18", default-features = false }
+
+zero-chain-proofs = { path = "../proofs" }
+sapling-crypto = { git = "https://github.com/osuketh/zcash-to-substrate" }
+pairing = { git = "https://github.com/osuketh/zcash-to-substrate" }
+zero-chain-crypto = { path = "../crypto" }
+zero-chain-primitives = { path = "../primitives" }
 
 [features]
 default = ["std"]
@@ -62,6 +68,6 @@ std = [
 	"substrate-consensus-aura-primitives/std",
 	"rand/std",	
 	"byteorder/std",
-	"pairing/std",
+	# "pairing/std",
 	"blake2-rfc/std",
 ]

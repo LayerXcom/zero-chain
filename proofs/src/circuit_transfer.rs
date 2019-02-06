@@ -338,12 +338,14 @@ impl<'a, E: JubjubEngine> Circuit<E> for Transfer<'a, E> {
 
         let transfer_value_commitment = ValueCommitment {
             value: rng.gen(),
-            randomness: rng.gen()
+            randomness: rng.gen(),
+            is_negative: false,
         };
 
         let balance_value_commitment = ValueCommitment {
             value: transfer_value_commitment.value + (5 as u64), 
-            randomness: rng.gen()
+            randomness: rng.gen(),
+            is_negative: false,
         };
 
         let expected_balance_cm = balance_value_commitment.cm(params).into_xy();

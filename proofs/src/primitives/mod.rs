@@ -11,17 +11,76 @@ use scrypto::jubjub::{
     JubjubParams,
     edwards,
     PrimeOrder,
-    FixedGenerators
+    FixedGenerators,
+    ToUniform,
 };
 
-use blake2_rfc::blake2s::Blake2s;
+use blake2_rfc::{
+    blake2s::Blake2s, 
+    blake2b::{Blake2b, Blake2bResult}
+};
 use zcrypto::{constants, mimc};
-use codec::{Encode, Decode};
+use codec::{Encode, Decode, Input, Output};
+// TODO: Change to sr-std for adopting wasm
+use std::io::{self, Read, Write};
+use rand::{OsRng, Rand, Rng};
+use pairing::bls12_381::Bls12;
+
+fn prf_expand(sk: &[u8], t: &[u8]) -> Blake2bResult {
+    prf_expand_vec(sk, &vec![t])
+}
+
+fn prf_expand_vec(sk: &[u8], ts: &[&[u8]]) -> Blake2bResult {
+    let mut h = Blake2b::with_params(64, &[], &[], constants::PRF_EXPAND_PERSONALIZATION);
+    h.update(sk);
+    for t in ts {
+        h.update(t);
+    }
+    h.finalize()
+}
+
+#[derive(Debug, Clone, PartialEq)]
+pub struct ExpandedSpendingKey<E: JubjubEngine> {
+    ask: E::Fs,
+    nsk: E::Fs,
+}
+
+impl<E: JubjubEngine> ExpandedSpendingKey<E> {
+    pub fn from_spending_key(sk: &[u8]) -> Self {
+        let ask = E::Fs::to_uniform(prf_expand(sk, &[0x00]).as_bytes());
+        let nsk = E::Fs::to_uniform(prf_expand(sk, &[0x01]).as_bytes());
+        ExpandedSpendingKey { ask, nsk }
+    }
+
+    pub fn write<W: Write>(&self, mut writer: W) -> io::Result<()> {
+        self.ask.into_repr().write_le(&mut writer)?;
+        self.nsk.into_repr().write_le(&mut writer)?;
+        Ok(())
+    }
+
+    pub fn read<R: Read>(mut reader: R) -> io::Result<Self> {
+        let mut ask_repr = <E::Fs as PrimeField>::Repr::default();
+        ask_repr.read_le(&mut reader)?;
+        let ask = E::Fs::from_repr(ask_repr)
+            .map_err(|e| io::Error::new(io::ErrorKind::InvalidData, e))?;
+
+        let mut nsk_repr = <E::Fs as PrimeField>::Repr::default();
+        nsk_repr.read_le(&mut reader)?;
+        let nsk = E::Fs::from_repr(nsk_repr)
+            .map_err(|e| io::Error::new(io::ErrorKind::InvalidData, e))?;
+
+        Ok(ExpandedSpendingKey {
+            ask,
+            nsk,
+        })
+    }
+} 
 
 #[derive(Clone, Copy, Default, Encode, Decode)]
 pub struct ValueCommitment<E: JubjubEngine> {
     pub value: u64,
     pub randomness: E::Fs,
+    pub is_negative: bool,
 }
 
 impl<E: JubjubEngine> ValueCommitment<E> 
@@ -39,9 +98,17 @@ where <E as JubjubEngine>::Fs: Encode + Decode {
                 params
             )
     }   
+
+    pub fn change_sign(&self) -> Self {
+        ValueCommitment {
+            value: self.value,
+            randomness: self.randomness,
+            is_negative: !self.is_negative,
+        }
+    }
 }
 
-// #[derive(Clone, Encode, Decode, Default)]
+#[derive(Clone)]
 pub struct ProofGenerationKey<E: JubjubEngine> {
     pub ak: edwards::Point<E, PrimeOrder>,
     pub nsk: E::Fs
@@ -63,6 +130,21 @@ pub struct ViewingKey<E: JubjubEngine> {
 }
 
 impl<E: JubjubEngine> ViewingKey<E> {
+    pub fn from_expanded_spending_key(
+        expsk: &ExpandedSpendingKey<E>, 
+        params: &E::Params
+    ) -> Self 
+    {
+        ViewingKey {
+            ak: params
+                .generator(FixedGenerators::SpendingKeyGenerator)
+                .mul(expsk.ask, params),
+            nk: params
+                .generator(FixedGenerators::SpendingKeyGenerator)
+                .mul(expsk.nsk, params),
+        }
+    }
+
     pub fn rk(
         &self,
         ar: E::Fs,
@@ -108,17 +190,51 @@ impl<E: JubjubEngine> ViewingKey<E> {
     }
 }
 
-// pub struct Diversifier(pub [u8; 11]);
-#[derive(Clone, Encode, Decode, Default)]
-pub struct Diversifier;
+const DIVERSIFIER_SIZE: usize = 11;
 
-impl Diversifier {
+#[derive(Clone, Default)]
+pub struct Diversifier(pub [u8; DIVERSIFIER_SIZE]);
+
+impl Diversifier {    
+    pub fn new<E: JubjubEngine>(params: &E::Params) 
+        -> Result<Diversifier, ()> 
+    { 
+        loop {
+            let mut d_j = [0u8; 11];
+            OsRng::new().unwrap().fill_bytes(&mut d_j[..]);
+            let d_j = Diversifier(d_j);
+
+            match d_j.g_d::<E>(params) {
+                Some(_) => return Ok(d_j),
+                None => {}
+            }   
+        }                      
+    }
+
     pub fn g_d<E: JubjubEngine>(
         &self,
         params: &E::Params
     ) -> Option<edwards::Point<E, PrimeOrder>>
     {
         group_hash::<E>(&self.encode(), constants::KEY_DIVERSIFICATION_PERSONALIZATION, params)
+    }
+
+    pub fn write<W: Write>(&self, mut writer: W) -> io::Result<()> {
+        writer.write_all(&self.0)?;
+        Ok(())
+    }
+}
+
+impl Encode for Diversifier {
+    fn using_encoded<R, F: FnOnce(&[u8]) -> R>(&self, f: F) -> R {
+		self.0.using_encoded(f)
+	}
+}
+
+// TODO: Implement Decode
+impl Decode for Diversifier {
+    fn decode<I: Input>(input: &mut I) -> Option<Self> {
+        None
     }
 }
 
@@ -136,5 +252,11 @@ impl<E: JubjubEngine> PaymentAddress<E> {
     ) -> Option<edwards::Point<E, PrimeOrder>>
     {
         self.diversifier.g_d(params)
+    }
+
+    pub fn write<W: Write>(&self, mut writer: W) -> io::Result<()> {
+        self.pk_d.write(&mut writer)?;
+        self.diversifier.write(&mut writer)?;
+        Ok(())
     }
 }

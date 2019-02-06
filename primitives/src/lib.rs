@@ -15,6 +15,7 @@ extern crate serde;
 #[macro_use]
 extern crate parity_codec_derive;
 extern crate parity_codec as codec;
+extern crate byteorder;
 
 pub mod cm_encryption;
 pub mod transaction;
