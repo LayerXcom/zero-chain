@@ -8,7 +8,7 @@ use pairing::{
 };
 use scrypto::{    
     jubjub::{edwards, fs::Fs, FixedGenerators, JubjubBls12, Unknown, PrimeOrder},    
-    redjubjub::{PrivateKey, PublicKey, Signature},
+    redjubjub::{PrivateKey, PublicKey, Signature as RedjubjubSignature},
 };
 use proofs::{
 	primitives::{Diversifier, PaymentAddress, ProofGenerationKey, ValueCommitment},
@@ -22,7 +22,7 @@ pub struct Transaction {
     // Length of the rest of the extrinsic, // 1-5 bytes
  	// Version information, // 1 byte
  	pub nonce: u32,
- 	pub sig: Signature, // 64 bytes
+ 	pub sig: RedjubjubSignature, // 64 bytes
  	pub sig_verifying_key: PublicKey<Bls12>, // rk 32bytes
  	pub proof: Proof<Bls12>, // 192 bytes
  	pub balance_commitment: ValueCommitment<Bls12>, // 32 bytes

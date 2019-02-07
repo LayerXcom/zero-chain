@@ -29,7 +29,7 @@ substrate-client = { git = "https://github.com/paritytech/substrate", default-fe
 sr-version = { git = "https://github.com/paritytech/substrate", default-features = false }
 substrate-consensus-aura-primitives = { git = "https://github.com/paritytech/substrate", default-features = false }
 
-parity-crypto = "0.2.0"
+parity-crypto = "0.3.0"
 rust-crypto = "0.2.36"
 rand = { version = "0.4", default-features = false}
 substrate-keystore = { git = "https://github.com/paritytech/substrate" }
