@@ -14,7 +14,9 @@ use proofs::{
 	primitives::{Diversifier, PaymentAddress, ProofGenerationKey, ValueCommitment},
 	prover::TransferProof,
 };
+use blake2_rfc::blake2b::Blake2b;
 use super::cm_encryption::{Ciphertext, Commitments};
+use zcrypto::constants;
 use rand::{OsRng, Rand, Rng};
 
 #[derive(Clone, Encode, Decode, Default)]
@@ -23,6 +25,7 @@ pub struct Transaction {
  	// Version information, // 1 byte
  	// pub nonce: u32,
  	pub sig: RedjubjubSignature, // 64 bytes
+	pub sighash_value: Vec<u8>, // 32bytes
  	pub sig_verifying_key: PublicKey<Bls12>, // rk 32bytes
  	pub proof: Proof<Bls12>, // 192 bytes
  	pub balance_commitment: edwards::Point<Bls12, PrimeOrder>, // 32 bytes
@@ -69,6 +72,10 @@ impl Transaction {
 		
 		// FIXME
 		let msg = b"Foo bar";
+
+		let mut h = Blake2b::with_params(32, &[], &[], constants::SIGHASH_PERSONALIZATION);		
+		h.update(msg);
+		let sighash_value = h.finalize().as_ref().to_vec();
 		
 		let p_g = FixedGenerators::SpendingKeyGenerator;
 		let sig = sig_private_key.sign(msg, rng, p_g, params);
@@ -98,6 +105,7 @@ impl Transaction {
 
 		let tx = Transaction {			
 			sig: sig,
+			sighash_value: sighash_value,
 			sig_verifying_key: proof_output.rk,
 			proof: proof_output.proof,
 			balance_commitment: proof_output.balance_value_commitment.cm(params),

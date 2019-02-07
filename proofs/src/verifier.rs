@@ -52,7 +52,7 @@ pub fn check_proof (
     cv_balance: edwards::Point<Bls12, Unknown>,
     epk: edwards::Point<Bls12, Unknown>,
     rk: PublickKey<Bls12>,
-    verifying_key: &PreparedVerifyingKey<Bls12>,
+    sig_sig_verifying_key: &PreparedVerifyingKey<Bls12>,
     sighash_value: &[u8; 32],
     auth_sig: RedjubjubSignature,
     params: &JubjubBls12,
@@ -108,7 +108,7 @@ pub fn check_proof (
         }
 
         // Verify the proof
-        match verify_proof(verifying_key, &zkproof, &public_input[..]) {
+        match verify_proof(sig_verifying_key, &zkproof, &public_input[..]) {
             // No error, and proof verification successful
             Ok(true) => true,
             _ => false,                
