@@ -21,12 +21,12 @@ use rand::{OsRng, Rand, Rng};
 pub struct Transaction {
     // Length of the rest of the extrinsic, // 1-5 bytes
  	// Version information, // 1 byte
- 	pub nonce: u32,
+ 	// pub nonce: u32,
  	pub sig: RedjubjubSignature, // 64 bytes
  	pub sig_verifying_key: PublicKey<Bls12>, // rk 32bytes
  	pub proof: Proof<Bls12>, // 192 bytes
- 	pub balance_commitment: ValueCommitment<Bls12>, // 32 bytes
- 	pub transfer_commitment: ValueCommitment<Bls12>, // 32bytes
+ 	pub balance_commitment: edwards::Point<Bls12, PrimeOrder>, // 32 bytes
+ 	pub transfer_commitment: edwards::Point<Bls12, PrimeOrder>, // 32bytes
  	pub epk: edwards::Point<Bls12, PrimeOrder>, // 32 bytes
  	pub payment_address_s: PaymentAddress<Bls12>, // 11 + 32 bytes
  	pub payment_address_r: PaymentAddress<Bls12>, // 11 + 32 bytes
@@ -94,18 +94,14 @@ impl Transaction {
 			&payment_addr_sender.pk_d,
 			&payment_addr_sender.diversifier,
 			params
-		);
+		);		
 
-		// FIXME
-		let nonce = 1;
-
-		let tx = Transaction {
-			nonce: nonce,
+		let tx = Transaction {			
 			sig: sig,
 			sig_verifying_key: proof_output.rk,
 			proof: proof_output.proof,
-			balance_commitment: proof_output.balance_value_commitment,
-			transfer_commitment: transfer_cm,
+			balance_commitment: proof_output.balance_value_commitment.cm(params),
+			transfer_commitment: transfer_cm.cm(params),
 			epk: proof_output.epk,
 			payment_address_s: payment_addr_sender,
 			payment_address_r: payment_addr_recipient,
