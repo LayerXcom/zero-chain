@@ -1,45 +1,27 @@
-use bellman::groth16::{
-    create_random_proof, 
-    verify_proof, 
-    Parameters, 
+use bellman::groth16::{   
     PreparedVerifyingKey, 
-    Proof,
-    prepare_verifying_key, 
-    generate_random_parameters,
+    verify_proof, 
+    Proof,      
 };
 use pairing::{
     bls12_381::{
         Bls12, 
-        Fr, 
-        FrRepr
+        Fr,         
     },
-    Field, 
-    PrimeField, 
-    PrimeFieldRepr, 
-    Engine,
+    Field,    
 };
-use rand::{OsRng, Rand};
 use scrypto::{    
     jubjub::{
-        edwards, 
-        fs::Fs, 
+        edwards,         
         FixedGenerators, 
         JubjubBls12, 
         Unknown, 
         PrimeOrder
     },    
-    redjubjub::{
-        PrivateKey, 
+    redjubjub::{        
         PublicKey, 
         Signature as RedjubjubSignature,
     },
-};
-use circuit_transfer::Transfer;
-use primitives::{
-    Diversifier, 
-    PaymentAddress, 
-    ProofGenerationKey, 
-    ValueCommitment
 };
 
 fn is_small_order<Order>(p: &edwards::Point<Bls12, Order>, params: &JubjubBls12) -> bool {
@@ -48,11 +30,11 @@ fn is_small_order<Order>(p: &edwards::Point<Bls12, Order>, params: &JubjubBls12)
 
 pub fn check_proof (    
     zkproof: Proof<Bls12>,
-    cv_transfer: edwards::Point<Bls12, Unknown>,
-    cv_balance: edwards::Point<Bls12, Unknown>,
-    epk: edwards::Point<Bls12, Unknown>,
-    rk: PublickKey<Bls12>,
-    sig_sig_verifying_key: &PreparedVerifyingKey<Bls12>,
+    cv_transfer: edwards::Point<Bls12, PrimeOrder>,
+    cv_balance: edwards::Point<Bls12, PrimeOrder>,
+    epk: edwards::Point<Bls12, PrimeOrder>,
+    rk: PublicKey<Bls12>,
+    sig_verifying_key: &PreparedVerifyingKey<Bls12>,
     sighash_value: &[u8; 32],
     auth_sig: RedjubjubSignature,
     params: &JubjubBls12,
@@ -85,34 +67,33 @@ pub fn check_proof (
     }
 
     // Construct public input for circuit
-    let mut public_input = [Fr::zero(), 8];
+    let mut public_input = [Fr::zero(); 8];
     {
-            let (x, y) = (&cv_balance).cm(params).into_xy();
-            public_input[0] = x;
-            public_input[1] = y;
-        }
-        {
-            let (x, y) = (&cv_transfer).cm(params).into_xy();
-            public_input[2] = x;
-            public_input[3] = y;
-        }
-        {
-            let (x, y) = epk.into_xy();
-            public_input[4] = x;
-            public_input[5] = y;
-        }
-        {
-            let (x, y) = rk.0.into_xy();
-            public_input[6] = x;
-            public_input[7] = y;
-        }
-
-        // Verify the proof
-        match verify_proof(sig_verifying_key, &zkproof, &public_input[..]) {
-            // No error, and proof verification successful
-            Ok(true) => true,
-            _ => false,                
-        }
-
+        let (x, y) = (&cv_balance).into_xy();
+        public_input[0] = x;
+        public_input[1] = y;
     }
+    {
+        let (x, y) = (&cv_transfer).into_xy();
+        public_input[2] = x;
+        public_input[3] = y;
+    }
+    {
+        let (x, y) = epk.into_xy();
+        public_input[4] = x;
+        public_input[5] = y;
+    }
+    {
+        let (x, y) = rk.0.into_xy();
+        public_input[6] = x;
+        public_input[7] = y;
+    }
+
+    // Verify the proof
+    match verify_proof(sig_verifying_key, &zkproof, &public_input[..]) {
+        // No error, and proof verification successful
+        Ok(true) => true,
+        _ => false,                
+    }
+
 }

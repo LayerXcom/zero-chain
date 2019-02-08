@@ -1,6 +1,6 @@
 use rstd::prelude::*;
 use scrypto::jubjub::{edwards, JubjubEngine, PrimeOrder, Unknown};
-use zcrypto::constants;
+// use zcrypto::constants;
 use zprimitives::cm_encryption::Ciphertext;
 
 #[derive(Encode, Decode, Default)]
