@@ -29,7 +29,7 @@ use scrypto::{
     },    
     redjubjub::{        
         PublicKey, 
-        Signature as RedjubjubSignature,
+        Signature as RedjubjubSignature,        
     },
 };
 
@@ -57,6 +57,14 @@ decl_module! {
             params: JubjubBls12
         ) {
 			// let origin = ensure_signed(origin)?;
+
+            // Verify the auth_sig
+            ensure!(
+                Self::verify_auth_sig(rk, auth_sig, &sighash_value, &params),
+                "Invalid auth_sig"
+            );
+
+            // Verify the zk proof
             ensure!(
                 Self::check_proof(
                     zkproof,
@@ -70,15 +78,47 @@ decl_module! {
                     &params
                 ),
                 "Invalid zkproof"
-            );
-            
+            );                        
 			
+            // TODO: Add ensure!(find_group_hash() == g_d_sender);
+
+
 		}		
 	}
 }
 
+// decl_storage! {
+//     trait Store for Module<T: Trait> as ConfidentialTransfer {
+//         // The balances represented by pedersen commitment for hiding.
+//         pub CommittedBalance get(committed_balance) : map PaymentAddress<Bls12> => CommittedBalanceMap<Bls12>;    
+//         // Encrypted parameters of pedersen commitment to get thier own balances    
+//         pub Txo get(txo) : map PaymentAddress<Bls12> => TxoMap<Bls12>;           
+//     }
+// }
+
 impl<T: Trait> Module<T> {
     // Public immutables
+
+    pub fn verify_auth_sig (
+        rk: PublicKey<Bls12>, 
+        auth_sig: RedjubjubSignature,
+        sighash_value: &[u8; 32],
+        params: &JubjubBls12,
+    ) -> bool {        
+        // Compute the signature's message for rk/auth_sig
+        let mut data_to_be_signed = [0u8; 64];
+        rk.0.write(&mut data_to_be_signed[0..32])
+            .expect("message buffer should be 32 bytes");
+        (&mut data_to_be_signed[32..64]).copy_from_slice(&sighash_value[..]);
+
+        // Verify the auth_sig
+        rk.verify(
+            &data_to_be_signed,
+            &auth_sig,
+            FixedGenerators::SpendingKeyGenerator,
+            &params,
+        )
+    }
 
 	pub fn check_proof (    
         zkproof: Proof<Bls12>,
@@ -100,23 +140,7 @@ impl<T: Trait> Module<T> {
         }
         if Self::is_small_order(&rk.0, params) {
             return false;
-        }
-
-        // Compute the signature's message for rk/auth_sig
-        let mut data_to_be_signed = [0u8; 64];
-        rk.0.write(&mut data_to_be_signed[0..32])
-            .expect("message buffer should be 32 bytes");
-        (&mut data_to_be_signed[32..64]).copy_from_slice(&sighash_value[..]);
-
-        // Verify the auth_sig
-        if !rk.verify(
-            &data_to_be_signed,
-            &auth_sig,
-            FixedGenerators::SpendingKeyGenerator,
-            params,
-        ) {
-            return false;
-        }
+        }                
 
         // Construct public input for circuit
         let mut public_input = [Fr::zero(); 8];
