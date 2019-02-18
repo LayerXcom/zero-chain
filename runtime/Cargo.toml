@@ -36,9 +36,8 @@ substrate-keystore = { git = "https://github.com/paritytech/substrate" }
 # pairing = { git = "https://github.com/sorpaas/pairing", default-features = false }
 blake2-rfc = { version = "0.2.18", default-features = false }
 
-scrypto = { package = "sapling-crypto", git = "https://github.com/osuketh/zcash-to-substrate" }
-pairing = { git = "https://github.com/osuketh/zcash-to-substrate" }
-bellman = { git = "https://github.com/osuketh/zcash-to-substrate" }
+pairing = { git = "https://github.com/LayerXcom/bellman-substrate" }
+bellman-verifier = { git = "https://github.com/LayerXcom/bellman-substrate", default-features = false }
 zrypto = { package = "zero-chain-crypto", path = "../crypto" }
 zprimitives = { package = "zero-chain-primitives", path = "../primitives" }
 proofs = { package = "zero-chain-proofs", path = "../proofs" }
@@ -69,4 +68,5 @@ std = [
 	"rand/std",		
 	# "pairing/std",
 	"blake2-rfc/std",
+	"bellman-verifier/std",
 ]

@@ -4,8 +4,8 @@ version = "0.1.0"
 authors = ["osuke <dish230@gmail.com>"]
 
 [dependencies]
-sapling-crypto = { git = "https://github.com/osuketh/zcash-to-substrate" }
-pairing = { git = "https://github.com/osuketh/zcash-to-substrate" }
+sapling-crypto = { git = "https://github.com/LayerXcom/bellman-substrate" }
+pairing = { git = "https://github.com/LayerXcom/bellman-substrate" }
 rand = { version = "0.4", default-features = false}
 
 [dependencies.blake2-rfc]

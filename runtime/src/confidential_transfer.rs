@@ -1,13 +1,14 @@
 //! A simple module for dealing with confidential transfer of fungible assets.
 
 // Ensure we're `no_std` when compiling for Wasm.
-// #![cfg_attr(not(feature = "std"), no_std)]
+#![cfg_attr(not(feature = "std"), no_std)]
+#![cfg_attr(not(feature = "std"), feature(alloc))]
 
 use runtime_support::{StorageValue, StorageMap, Parameter};
 use runtime_primitives::traits::{Member, SimpleArithmetic, Zero, StaticLookup};
 use system::ensure_signed;
 
-use bellman::groth16::{   
+use bellman_verifier::groth16::{   
     PreparedVerifyingKey, 
     verify_proof, 
     Proof,      
