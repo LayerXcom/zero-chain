@@ -12,12 +12,13 @@ homepage = "https://github.com/ebfull/pairing"
 repository = "https://github.com/ebfull/pairing"
 
 [dependencies]
-rand = "0.4"
-byteorder = "1"
-clippy = { version = "0.0.200", optional = true }
+rand = { version = "0.4", default-features = false }
+byteorder = { version = "1", default-features = false }
+blake2 = "0.7"
 
 [features]
 unstable-features = ["expose-arith"]
 expose-arith = []
 u128-support = []
-default = []
+std = []
+default = ["std"]

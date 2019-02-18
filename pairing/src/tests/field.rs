@@ -1,7 +1,7 @@
 use rand::{Rng, SeedableRng, XorShiftRng};
 use {Field, LegendreSymbol, PrimeField, SqrtField};
 
-pub fn random_frobenius_tests<F: Field, C: AsRef<[u64]>>(characteristic: C, maxpower: usize) {
+pub fn random_frobenius_tests<F: Field + ::std::fmt::Debug, C: AsRef<[u64]>>(characteristic: C, maxpower: usize) {
     let mut rng = XorShiftRng::from_seed([0x5dbe6259, 0x8d313d76, 0x3237db17, 0xe5bc0654]);
 
     for _ in 0..100 {
@@ -19,7 +19,7 @@ pub fn random_frobenius_tests<F: Field, C: AsRef<[u64]>>(characteristic: C, maxp
     }
 }
 
-pub fn random_sqrt_tests<F: SqrtField>() {
+pub fn random_sqrt_tests<F: SqrtField + ::std::fmt::Debug>() {
     let mut rng = XorShiftRng::from_seed([0x5dbe6259, 0x8d313d76, 0x3237db17, 0xe5bc0654]);
 
     for _ in 0..10000 {
@@ -53,7 +53,7 @@ pub fn random_sqrt_tests<F: SqrtField>() {
     }
 }
 
-pub fn random_field_tests<F: Field>() {
+pub fn random_field_tests<F: Field + ::std::fmt::Debug>() {
     let mut rng = XorShiftRng::from_seed([0x5dbe6259, 0x8d313d76, 0x3237db17, 0xe5bc0654]);
 
     random_multiplication_tests::<F, _>(&mut rng);
@@ -90,7 +90,7 @@ pub fn random_field_tests<F: Field>() {
     }
 }
 
-pub fn from_str_tests<F: PrimeField>() {
+pub fn from_str_tests<F: PrimeField + ::std::fmt::Debug>() {
     {
         let a = "84395729384759238745923745892374598234705297301958723458712394587103249587213984572934750213947582345792304758273458972349582734958273495872304598234";
         let b = "38495729084572938457298347502349857029384609283450692834058293405982304598230458230495820394850293845098234059823049582309485203948502938452093482039";
@@ -124,7 +124,7 @@ pub fn from_str_tests<F: PrimeField>() {
     assert!(F::from_str("00000000000").is_none());
 }
 
-fn random_multiplication_tests<F: Field, R: Rng>(rng: &mut R) {
+fn random_multiplication_tests<F: Field + ::std::fmt::Debug, R: Rng>(rng: &mut R) {
     for _ in 0..10000 {
         let a = F::rand(rng);
         let b = F::rand(rng);
@@ -147,7 +147,7 @@ fn random_multiplication_tests<F: Field, R: Rng>(rng: &mut R) {
     }
 }
 
-fn random_addition_tests<F: Field, R: Rng>(rng: &mut R) {
+fn random_addition_tests<F: Field + ::std::fmt::Debug, R: Rng>(rng: &mut R) {
     for _ in 0..10000 {
         let a = F::rand(rng);
         let b = F::rand(rng);
@@ -170,7 +170,7 @@ fn random_addition_tests<F: Field, R: Rng>(rng: &mut R) {
     }
 }
 
-fn random_subtraction_tests<F: Field, R: Rng>(rng: &mut R) {
+fn random_subtraction_tests<F: Field + ::std::fmt::Debug, R: Rng>(rng: &mut R) {
     for _ in 0..10000 {
         let a = F::rand(rng);
         let b = F::rand(rng);
@@ -188,7 +188,7 @@ fn random_subtraction_tests<F: Field, R: Rng>(rng: &mut R) {
     }
 }
 
-fn random_negation_tests<F: Field, R: Rng>(rng: &mut R) {
+fn random_negation_tests<F: Field + ::std::fmt::Debug, R: Rng>(rng: &mut R) {
     for _ in 0..10000 {
         let a = F::rand(rng);
         let mut b = a;
@@ -199,7 +199,7 @@ fn random_negation_tests<F: Field, R: Rng>(rng: &mut R) {
     }
 }
 
-fn random_doubling_tests<F: Field, R: Rng>(rng: &mut R) {
+fn random_doubling_tests<F: Field + ::std::fmt::Debug, R: Rng>(rng: &mut R) {
     for _ in 0..10000 {
         let mut a = F::rand(rng);
         let mut b = a;
@@ -210,7 +210,7 @@ fn random_doubling_tests<F: Field, R: Rng>(rng: &mut R) {
     }
 }
 
-fn random_squaring_tests<F: Field, R: Rng>(rng: &mut R) {
+fn random_squaring_tests<F: Field + ::std::fmt::Debug, R: Rng>(rng: &mut R) {
     for _ in 0..10000 {
         let mut a = F::rand(rng);
         let mut b = a;
@@ -221,7 +221,7 @@ fn random_squaring_tests<F: Field, R: Rng>(rng: &mut R) {
     }
 }
 
-fn random_inversion_tests<F: Field, R: Rng>(rng: &mut R) {
+fn random_inversion_tests<F: Field + ::std::fmt::Debug, R: Rng>(rng: &mut R) {
     assert!(F::zero().inverse().is_none());
 
     for _ in 0..10000 {
@@ -233,7 +233,7 @@ fn random_inversion_tests<F: Field, R: Rng>(rng: &mut R) {
     }
 }
 
-fn random_expansion_tests<F: Field, R: Rng>(rng: &mut R) {
+fn random_expansion_tests<F: Field + ::std::fmt::Debug, R: Rng>(rng: &mut R) {
     for _ in 0..10000 {
         // Compare (a + b)(c + d) and (a*c + b*c + a*d + b*d)
 

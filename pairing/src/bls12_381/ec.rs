@@ -250,7 +250,7 @@ macro_rules! curve_impl {
                 // Section 3.2
 
                 // First pass: compute [a, ab, abc, ...]
-                let mut prod = Vec::with_capacity(v.len());
+                let mut prod = ::std::vec::Vec::with_capacity(v.len());
                 let mut tmp = $basefield::one();
                 for g in v.iter_mut()
                           // Ignore normalized elements
@@ -1614,7 +1614,7 @@ pub mod g2 {
 
     #[derive(Clone, Debug)]
     pub struct G2Prepared {
-        pub(crate) coeffs: Vec<(Fq2, Fq2, Fq2)>,
+        pub(crate) coeffs: ::std::vec::Vec<(Fq2, Fq2, Fq2)>,
         pub(crate) infinity: bool,
     }
 
