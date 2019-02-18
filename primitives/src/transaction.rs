@@ -8,25 +8,28 @@ use pairing::{
 };
 use scrypto::{    
     jubjub::{edwards, fs::Fs, FixedGenerators, JubjubBls12, Unknown, PrimeOrder},    
-    redjubjub::{PrivateKey, PublicKey, Signature},
+    redjubjub::{PrivateKey, PublicKey, Signature as RedjubjubSignature},
 };
 use proofs::{
 	primitives::{Diversifier, PaymentAddress, ProofGenerationKey, ValueCommitment},
 	prover::TransferProof,
 };
+use blake2_rfc::blake2b::Blake2b;
 use super::cm_encryption::{Ciphertext, Commitments};
+use zcrypto::constants;
 use rand::{OsRng, Rand, Rng};
 
 #[derive(Clone, Encode, Decode, Default)]
 pub struct Transaction {
     // Length of the rest of the extrinsic, // 1-5 bytes
  	// Version information, // 1 byte
- 	pub nonce: u32,
- 	pub sig: Signature, // 64 bytes
+ 	// pub nonce: u32,
+ 	pub sig: RedjubjubSignature, // 64 bytes
+	pub sighash_value: Vec<u8>, // 32bytes
  	pub sig_verifying_key: PublicKey<Bls12>, // rk 32bytes
  	pub proof: Proof<Bls12>, // 192 bytes
- 	pub balance_commitment: ValueCommitment<Bls12>, // 32 bytes
- 	pub transfer_commitment: ValueCommitment<Bls12>, // 32bytes
+ 	pub balance_commitment: edwards::Point<Bls12, PrimeOrder>, // 32 bytes
+ 	pub transfer_commitment: edwards::Point<Bls12, PrimeOrder>, // 32bytes
  	pub epk: edwards::Point<Bls12, PrimeOrder>, // 32 bytes
  	pub payment_address_s: PaymentAddress<Bls12>, // 11 + 32 bytes
  	pub payment_address_r: PaymentAddress<Bls12>, // 11 + 32 bytes
@@ -69,6 +72,10 @@ impl Transaction {
 		
 		// FIXME
 		let msg = b"Foo bar";
+
+		let mut h = Blake2b::with_params(32, &[], &[], constants::SIGHASH_PERSONALIZATION);		
+		h.update(msg);
+		let sighash_value = h.finalize().as_ref().to_vec();
 		
 		let p_g = FixedGenerators::SpendingKeyGenerator;
 		let sig = sig_private_key.sign(msg, rng, p_g, params);
@@ -94,18 +101,15 @@ impl Transaction {
 			&payment_addr_sender.pk_d,
 			&payment_addr_sender.diversifier,
 			params
-		);
+		);		
 
-		// FIXME
-		let nonce = 1;
-
-		let tx = Transaction {
-			nonce: nonce,
+		let tx = Transaction {			
 			sig: sig,
+			sighash_value: sighash_value,
 			sig_verifying_key: proof_output.rk,
 			proof: proof_output.proof,
-			balance_commitment: proof_output.balance_value_commitment,
-			transfer_commitment: transfer_cm,
+			balance_commitment: proof_output.balance_value_commitment.cm(params),
+			transfer_commitment: transfer_cm.cm(params),
 			epk: proof_output.epk,
 			payment_address_s: payment_addr_sender,
 			payment_address_r: payment_addr_recipient,

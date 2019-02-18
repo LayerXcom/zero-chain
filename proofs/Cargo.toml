@@ -4,12 +4,9 @@ version = "0.1.0"
 authors = ["osuke <dish230@gmail.com>"]
 
 [dependencies]
-# pairing = { git = "https://github.com/zcash/librustzcash" }
-# bellman = { git = "https://github.com/zcash/librustzcash" }
-# sapling-crypto = { git = "https://github.com/zcash/librustzcash" }
-pairing = { git = "https://github.com/osuketh/zcash-to-substrate" }
-bellman = { git = "https://github.com/osuketh/zcash-to-substrate" }
-sapling-crypto = { git = "https://github.com/osuketh/zcash-to-substrate" }
+pairing = { git = "https://github.com/LayerXcom/bellman-substrate" }
+bellman = { git = "https://github.com/LayerXcom/bellman-substrate" }
+sapling-crypto = { git = "https://github.com/LayerXcom/bellman-substrate" }
 
 rand = { version = "0.4", default-features = false}
 byteorder = { version = "1", default-features = false }
