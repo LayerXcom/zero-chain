@@ -463,7 +463,8 @@ pub enum LegendreSymbol {
 
 /// An error that may occur when trying to interpret a `PrimeFieldRepr` as a
 /// `PrimeField` element.
-#[cfg_attr(feature = "std", derive(Debug))]
+// #[cfg_attr(feature = "std", derive(Debug))]
+#[derive(Debug)]
 pub enum PrimeFieldDecodingError {
     /// The encoded value is not in the field
     NotInField(String),

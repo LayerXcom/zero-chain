@@ -12,10 +12,10 @@ use pairing::{
     EncodedPoint
 };
 
-use ::std::cmp::Ordering;
-use ::std::fmt;
+use crate::std::cmp::Ordering;
+use crate::std::fmt;
 use rand::{Rand, Rng};
-use ::std::num::Wrapping;
+use crate::std::num::Wrapping;
 
 const MODULUS_R: Wrapping<u32> = Wrapping(64513);
 

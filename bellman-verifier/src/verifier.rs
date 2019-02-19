@@ -66,7 +66,7 @@ pub fn verify_proof<'a, E: Engine>(
 mod tests {
     use super::*;    
     use crate::tests::dummy_engine::{Fr, DummyEngine};
-    use ::std::num::Wrapping;
+    use crate::std::num::Wrapping;
 
     #[test]
     fn test_verify() {
