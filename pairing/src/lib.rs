@@ -427,7 +427,7 @@ pub trait PrimeFieldRepr:
     }
 
     /// Writes this `PrimeFieldRepr` as a little endian integer.
-    fn write_le<W: io::Write>(&self, mut writer: W) -> io::Result<()> {
+    fn write_le<W: io::Write>(&self, writer: &mut W) -> io::Result<()> {
         use byteorder::LittleEndian;
 
  		let mut buf = [0u8; 8];
@@ -440,7 +440,7 @@ pub trait PrimeFieldRepr:
     }
 
         /// Reads a little endian integer into this representation.
-    fn read_le<R: io::Read>(&mut self, mut reader: R) -> io::Result<()> {
+    fn read_le<R: io::Read>(&mut self, reader: &mut R) -> io::Result<()> {
         use byteorder::LittleEndian;
 
  		let mut buf = [0u8; 8];
