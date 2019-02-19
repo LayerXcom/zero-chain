@@ -18,6 +18,9 @@ pub enum Error {
  	/// Failed to write whole buffer.
 	WriteZero,
 
+	/// point at infinity for reading the elliptic curve points
+	PointInfinity,
+
  	#[cfg(feature = "std")]
 	IoError(::std::io::Error),
 }
@@ -113,7 +116,7 @@ impl<'a> Read for &'a [u8] {
             buf.copy_from_slice(a);
         }
 
-         *self = b;
+        *self = b;
         Ok(())
 	}
 }

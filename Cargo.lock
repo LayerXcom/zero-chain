@@ -196,6 +196,14 @@ dependencies = [
 ]
 
 [[package]]
+name = "bellman-verifier"
+version = "0.1.0"
+dependencies = [
+ "pairing 0.14.2",
+ "rand 0.4.6 (registry+https://github.com/rust-lang/crates.io-index)",
+]
+
+[[package]]
 name = "bigint"
 version = "4.4.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
