@@ -8,6 +8,9 @@ extern crate alloc;
 #[cfg(not(feature = "std"))]
 extern crate core;
 
+#[cfg(feature = "std")]
+extern crate std;
+
 #[cfg(not(feature = "std"))]
 mod std {
     pub use crate::core::*;
@@ -19,9 +22,6 @@ mod std {
 
 use std::string::String;
 // use byteorder::ByteOrder;
-
-#[cfg(not(feature = "std"))]
-use crate::std::vec::Vec;
 
 use pairing::{
     Engine,

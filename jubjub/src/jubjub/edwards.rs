@@ -3,7 +3,8 @@ use pairing::{
     SqrtField,
     PrimeField,
     PrimeFieldRepr,
-    BitIterator
+    BitIterator,
+    io
 };
 
 use super::{
@@ -18,13 +19,8 @@ use rand::{
     Rng
 };
 
-use std::marker::PhantomData;
+use crate::std::marker::PhantomData;
 
-use std::io::{
-    self,
-    Write,
-    Read
-};
 
 // Represents the affine point (X/Z, Y/Z) via the extended
 // twisted Edwards coordinates.
@@ -90,13 +86,13 @@ impl<E: JubjubEngine, Subgroup> PartialEq for Point<E, Subgroup> {
 }
 
 impl<E: JubjubEngine> Point<E, Unknown> {
-    pub fn read<R: Read>(
-        reader: R,
+    pub fn read<R: io::Read>(
+        mut reader: R,
         params: &E::Params
     ) -> io::Result<Self>
     {
         let mut y_repr = <E::Fr as PrimeField>::Repr::default();
-        y_repr.read_le(reader)?;
+        y_repr.read_le(&mut reader)?;
 
         let x_sign = (y_repr.as_ref()[3] >> 63) == 1;
         y_repr.as_mut()[3] &= 0x7fffffffffffffff;
@@ -106,12 +102,12 @@ impl<E: JubjubEngine> Point<E, Unknown> {
                 match Self::get_for_y(y, x_sign, params) {
                     Some(p) => Ok(p),
                     None => {
-                        Err(io::Error::new(io::ErrorKind::InvalidInput, "not on curve"))
+                        Err(io::Error::NotOnCurve)
                     }
                 }
             },
             Err(_) => {
-                Err(io::Error::new(io::ErrorKind::InvalidInput, "y is not in field"))
+                Err(io::Error::NotInField)
             }
         }
     }
@@ -187,9 +183,9 @@ impl<E: JubjubEngine> Point<E, Unknown> {
 }
 
 impl<E: JubjubEngine, Subgroup> Point<E, Subgroup> {
-    pub fn write<W: Write>(
+    pub fn write<W: io::Write>(
         &self,
-        writer: W
+        mut writer: W
     ) -> io::Result<()>
     {
         let (x, y) = self.into_xy();
@@ -202,7 +198,7 @@ impl<E: JubjubEngine, Subgroup> Point<E, Subgroup> {
             y_repr.as_mut()[3] |= 0x8000000000000000u64;
         }
 
-        y_repr.write_le(writer)
+        y_repr.write_le(&mut writer)
     }
 
     /// Convert from a Montgomery point

@@ -24,9 +24,9 @@ use pairing::{
     SqrtField
 };
 
-use group_hash::group_hash;
+use crate::group_hash::group_hash;
 
-use constants;
+use crate::constants;
 
 use pairing::bls12_381::{
     Bls12,
@@ -127,7 +127,7 @@ pub trait JubjubParams<E: JubjubEngine>: Sized {
     fn generator(&self, base: FixedGenerators) -> &edwards::Point<E, PrimeOrder>;
     /// Returns a window table [0, 1, ..., 8] for different magnitudes of some
     /// fixed generator.
-    fn circuit_generators(&self, FixedGenerators) -> &[Vec<(E::Fr, E::Fr)>];
+    fn circuit_generators(&self, _: FixedGenerators) -> &[Vec<(E::Fr, E::Fr)>];
     /// Returns the window size for exponentiation of Pedersen hash generators
     /// outside the circuit
     fn pedersen_hash_exp_window_size() -> u32;
@@ -351,7 +351,7 @@ impl JubjubBls12 {
             let mut pedersen_circuit_generators = vec![];
 
             // Process each segment
-            for mut gen in tmp_params.pedersen_hash_generators.iter().cloned() {
+            for gen in tmp_params.pedersen_hash_generators.iter().cloned() {
                 let mut gen = montgomery::Point::from_edwards(&gen, &tmp_params);
                 let mut windows = vec![];
                 for _ in 0..tmp_params.pedersen_hash_chunks_per_generator() {

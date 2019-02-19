@@ -5,13 +5,16 @@
 #[macro_use]
 extern crate alloc;
 
+#[cfg(feature = "std")]
+extern crate std;
+
 #[cfg(not(feature = "std"))]
 mod std {
-    pub use self::core::*;
-    pub use self::alloc::vec;
-    pub use self::alloc::string;
-    pub use self::alloc::boxed;
-    pub use self::alloc::borrow;
+    pub use crate::core::*;
+    pub use crate::alloc::vec;
+    pub use crate::alloc::string;
+    pub use crate::alloc::boxed;
+    pub use crate::alloc::borrow;
 }
 
 #[cfg(test)]

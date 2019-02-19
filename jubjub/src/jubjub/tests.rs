@@ -15,8 +15,11 @@ use pairing::{
 };
 
 use rand::{XorShiftRng, SeedableRng, Rand};
+use crate::std::fmt::Debug;
 
-pub fn test_suite<E: JubjubEngine>(params: &E::Params) {
+pub fn test_suite<E: JubjubEngine>(params: &E::Params) 
+    where <E as pairing::Engine>::Fr: Debug
+{
     test_back_and_forth::<E>(params);
     test_jubjub_params::<E>(params);
     test_rand::<E>(params);
@@ -303,7 +306,9 @@ fn test_back_and_forth<E: JubjubEngine>(params: &E::Params) {
     }
 }
 
-fn test_jubjub_params<E: JubjubEngine>(params: &E::Params) {
+fn test_jubjub_params<E: JubjubEngine>(params: &E::Params) 
+    where <E as pairing::Engine>::Fr: Debug
+{
     // a = -1
     let mut a = E::Fr::one();
     a.negate();

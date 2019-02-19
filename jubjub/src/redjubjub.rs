@@ -1,28 +1,24 @@
 //! Implementation of RedJubjub, a specialization of RedDSA to the Jubjub curve.
 //! See section 5.4.6 of the Sapling protocol specification.
 
-use pairing::{Field, PrimeField, PrimeFieldRepr};
+use pairing::{Field, PrimeField, PrimeFieldRepr, io};
 use rand::{Rng, Rand};
-use ::std::io::{self, Read, Write};
 
-use jubjub::{FixedGenerators, JubjubEngine, JubjubParams, Unknown, edwards::Point};
-use util::{hash_to_scalar};
+use crate::jubjub::{FixedGenerators, JubjubEngine, JubjubParams, Unknown, edwards::Point};
+use crate::util::{hash_to_scalar};
 
-fn read_scalar<E: JubjubEngine, R: Read>(reader: R) -> io::Result<E::Fs> {
+fn read_scalar<E: JubjubEngine, R: io::Read>(mut reader: R) -> io::Result<E::Fs> {
     let mut s_repr = <E::Fs as PrimeField>::Repr::default();
-    s_repr.read_le(reader)?;
+    s_repr.read_le(&mut reader)?;
 
     match E::Fs::from_repr(s_repr) {
         Ok(s) => Ok(s),
-        Err(_) => Err(io::Error::new(
-            io::ErrorKind::InvalidInput,
-            "scalar is not in field",
-        )),
+        Err(_) => Err(io::Error::NotInField),
     }
 }
 
-fn write_scalar<E: JubjubEngine, W: Write>(s: &E::Fs, writer: W) -> io::Result<()> {
-    s.into_repr().write_le(writer)
+fn write_scalar<E: JubjubEngine, W: io::Write>(s: &E::Fs, mut writer: W) -> io::Result<()> {
+    s.into_repr().write_le(&mut writer)
 }
 
 fn h_star<E: JubjubEngine>(a: &[u8], b: &[u8]) -> E::Fs {
@@ -40,17 +36,17 @@ pub struct PrivateKey<E: JubjubEngine>(pub E::Fs);
 pub struct PublicKey<E: JubjubEngine>(pub Point<E, Unknown>);
 
 impl Signature {
-    pub fn read<R: Read>(mut reader: R) -> io::Result<Self> {
+    pub fn read<R: io::Read>(mut reader: R) -> io::Result<Self> {
         let mut rbar = [0u8; 32];
         let mut sbar = [0u8; 32];
-        reader.read_exact(&mut rbar)?;
-        reader.read_exact(&mut sbar)?;
+        reader.read(&mut rbar)?;
+        reader.read(&mut sbar)?;
         Ok(Signature { rbar, sbar })
     }
 
-    pub fn write<W: Write>(&self, mut writer: W) -> io::Result<()> {
-        writer.write_all(&self.rbar)?;
-        writer.write_all(&self.sbar)
+    pub fn write<W: io::Write>(&self, mut writer: W) -> io::Result<()> {
+        writer.write(&self.rbar)?;
+        writer.write(&self.sbar)
     }
 }
 
@@ -61,12 +57,12 @@ impl<E: JubjubEngine> PrivateKey<E> {
         PrivateKey(tmp)
     }
 
-    pub fn read<R: Read>(reader: R) -> io::Result<Self> {
+    pub fn read<R: io::Read>(reader: R) -> io::Result<Self> {
         let pk = read_scalar::<E, R>(reader)?;
         Ok(PrivateKey(pk))
     }
 
-    pub fn write<W: Write>(&self, writer: W) -> io::Result<()> {
+    pub fn write<W: io::Write>(&self, writer: W) -> io::Result<()> {
         write_scalar::<E, W>(&self.0, writer)
     }
 
@@ -115,12 +111,12 @@ impl<E: JubjubEngine> PublicKey<E> {
         PublicKey(res)
     }
 
-    pub fn read<R: Read>(reader: R, params: &E::Params) -> io::Result<Self> {
+    pub fn read<R: io::Read>(reader: R, params: &E::Params) -> io::Result<Self> {
         let p = Point::read(reader, params)?;
         Ok(PublicKey(p))
     }
 
-    pub fn write<W: Write>(&self, writer: W) -> io::Result<()> {
+    pub fn write<W: io::Write>(&self, writer: W) -> io::Result<()> {
         self.0.write(writer)
     }
 
@@ -207,7 +203,7 @@ mod tests {
     use pairing::bls12_381::Bls12;
     use rand::thread_rng;
 
-    use jubjub::{JubjubBls12, fs::Fs, edwards};
+    use crate::jubjub::{JubjubBls12, fs::Fs, edwards};
 
     use super::*;
 

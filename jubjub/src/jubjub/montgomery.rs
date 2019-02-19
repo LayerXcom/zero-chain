@@ -18,7 +18,7 @@ use rand::{
     Rng
 };
 
-use std::marker::PhantomData;
+use crate::std::marker::PhantomData;
 
 // Represents the affine point (X, Y)
 pub struct Point<E: JubjubEngine, Subgroup> {

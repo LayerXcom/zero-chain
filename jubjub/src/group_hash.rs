@@ -1,4 +1,4 @@
-use jubjub::{
+use crate::jubjub::{
     JubjubEngine,
     PrimeOrder,
     edwards
@@ -9,7 +9,7 @@ use pairing::{
 };
 
 use blake2_rfc::blake2s::Blake2s;
-use constants;
+use crate::constants;
 
 /// Produces a random point in the Jubjub curve.
 /// The point is guaranteed to be prime order

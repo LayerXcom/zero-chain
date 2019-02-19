@@ -617,10 +617,6 @@ fn test_bit_iterator() {
     assert!(a.next().is_none());
 }
 
-#[cfg(not(feature = "expose-arith"))]
-use self::arith_impl::*;
-
-#[cfg(feature = "expose-arith")]
 pub use self::arith_impl::*;
 
 #[cfg(feature = "u128-support")]
