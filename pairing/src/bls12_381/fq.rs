@@ -696,8 +696,13 @@ impl PrimeFieldRepr for FqRepr {
     }
 }
 
+// #[cfg(test)]
 #[derive(Copy, Clone, PartialEq, Eq, Debug)]
-pub struct Fq(FqRepr);
+pub struct Fq(pub FqRepr);
+
+// #[cfg(not(test))]
+// #[derive(Copy, Clone, PartialEq, Eq, Debug)]
+// pub struct Fq(FqRepr);
 
 /// `Fq` elements are ordered lexicographically.
 impl Ord for Fq {

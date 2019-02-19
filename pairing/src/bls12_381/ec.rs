@@ -12,9 +12,9 @@ macro_rules! curve_impl {
     ) => {
         #[derive(Copy, Clone, PartialEq, Eq, Debug)]
         pub struct $affine {
-            pub(crate) x: $basefield,
-            pub(crate) y: $basefield,
-            pub(crate) infinity: bool
+            pub x: $basefield,
+            pub y: $basefield,
+            pub infinity: bool
         }
 
         impl ::std::fmt::Display for $affine
