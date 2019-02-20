@@ -9,6 +9,9 @@ extern crate alloc;
 extern crate std;
 
 #[cfg(not(feature = "std"))]
+extern crate core;
+
+#[cfg(not(feature = "std"))]
 mod std {
     pub use crate::core::*;
     pub use crate::alloc::vec;
@@ -16,10 +19,6 @@ mod std {
     pub use crate::alloc::boxed;
     pub use crate::alloc::borrow;
 }
-
-#[cfg(test)]
-#[macro_use]
-extern crate hex_literal;
 
 pub mod jubjub;
 pub mod group_hash;

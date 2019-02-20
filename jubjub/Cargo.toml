@@ -21,6 +21,6 @@ default = ["std"]
 std = [    
     "pairing/std",
     "byteorder/std",
-    "rand/std",
+    "rand/std",  
     "hex-literal",
 ]

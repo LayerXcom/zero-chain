@@ -431,7 +431,7 @@ pub trait PrimeFieldRepr:
         use byteorder::LittleEndian;
 
  		let mut buf = [0u8; 8];
-		for digit in self.as_ref().iter().rev() {
+		for digit in self.as_ref().iter() {
 			LittleEndian::write_u64(&mut buf, *digit);
 			writer.write(&buf)?;
 		}
@@ -444,7 +444,7 @@ pub trait PrimeFieldRepr:
         use byteorder::LittleEndian;
 
  		let mut buf = [0u8; 8];
-        for digit in self.as_mut().iter_mut().rev() {
+        for digit in self.as_mut().iter_mut() {
 			reader.read(&mut buf)?;
 			*digit = LittleEndian::read_u64(&buf);
         }	        
@@ -453,8 +453,8 @@ pub trait PrimeFieldRepr:
     }
 }
 
-#[derive(PartialEq)]
-#[cfg_attr(feature = "std", derive(Debug))]
+#[derive(PartialEq, Debug)]
+// #[cfg_attr(feature = "std", derive(Debug))]
 pub enum LegendreSymbol {
     Zero = 0,
     QuadraticResidue = 1,
@@ -491,7 +491,7 @@ pub trait PrimeField: Field {
     /// representation.
     type Repr: PrimeFieldRepr + From<Self>;
 
-    #[cfg(feature = "std")]
+    // #[cfg(feature = "std")]
     /// Interpret a string of numbers as a (congruent) prime field element.
     /// Does not accept unnecessary leading zeroes or a blank string.
     fn from_str(s: &str) -> Option<Self> {

@@ -92,6 +92,7 @@ impl<E: JubjubEngine> Point<E, Unknown> {
     ) -> io::Result<Self>
     {
         let mut y_repr = <E::Fr as PrimeField>::Repr::default();
+        
         y_repr.read_le(&mut reader)?;
 
         let x_sign = (y_repr.as_ref()[3] >> 63) == 1;
@@ -185,7 +186,7 @@ impl<E: JubjubEngine> Point<E, Unknown> {
 impl<E: JubjubEngine, Subgroup> Point<E, Subgroup> {
     pub fn write<W: io::Write>(
         &self,
-        mut writer: W
+        writer: &mut W
     ) -> io::Result<()>
     {
         let (x, y) = self.into_xy();
@@ -198,7 +199,7 @@ impl<E: JubjubEngine, Subgroup> Point<E, Subgroup> {
             y_repr.as_mut()[3] |= 0x8000000000000000u64;
         }
 
-        y_repr.write_le(&mut writer)
+        y_repr.write_le(writer)
     }
 
     /// Convert from a Montgomery point

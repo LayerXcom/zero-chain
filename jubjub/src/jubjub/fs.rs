@@ -2,6 +2,7 @@ use byteorder::{ByteOrder, LittleEndian};
 use pairing::{BitIterator, Field, PrimeField, SqrtField, PrimeFieldRepr, PrimeFieldDecodingError, LegendreSymbol};
 use pairing::LegendreSymbol::*;
 use pairing::{adc, sbb, mac_with_carry};
+use crate::std;
 
 use super::ToUniform;
 
@@ -47,9 +48,9 @@ impl ::rand::Rand for FsRepr {
     }
 }
 
-impl ::std::fmt::Display for FsRepr
+impl std::fmt::Display for FsRepr
 {
-    fn fmt(&self, f: &mut ::std::fmt::Formatter) -> ::std::fmt::Result {
+    fn fmt(&self, f: &mut std::fmt::Formatter) -> std::fmt::Result {
         write!(f, "0x")?;
         for i in self.0.iter().rev() {
             write!(f, "{:016x}", *i)?;
@@ -84,22 +85,22 @@ impl From<u64> for FsRepr {
 
 impl Ord for FsRepr {
     #[inline(always)]
-    fn cmp(&self, other: &FsRepr) -> ::std::cmp::Ordering {
+    fn cmp(&self, other: &FsRepr) -> std::cmp::Ordering {
         for (a, b) in self.0.iter().rev().zip(other.0.iter().rev()) {
             if a < b {
-                return ::std::cmp::Ordering::Less
+                return std::cmp::Ordering::Less
             } else if a > b {
-                return ::std::cmp::Ordering::Greater
+                return std::cmp::Ordering::Greater
             }
         }
 
-        ::std::cmp::Ordering::Equal
+        std::cmp::Ordering::Equal
     }
 }
 
 impl PartialOrd for FsRepr {
     #[inline(always)]
-    fn partial_cmp(&self, other: &FsRepr) -> Option<::std::cmp::Ordering> {
+    fn partial_cmp(&self, other: &FsRepr) -> Option<std::cmp::Ordering> {
         Some(self.cmp(other))
     }
 }
@@ -130,7 +131,7 @@ impl PrimeFieldRepr for FsRepr {
         while n >= 64 {
             let mut t = 0;
             for i in self.0.iter_mut().rev() {
-                ::std::mem::swap(&mut t, i);
+                std::mem::swap(&mut t, i);
             }
             n -= 64;
         }
@@ -178,7 +179,7 @@ impl PrimeFieldRepr for FsRepr {
         while n >= 64 {
             let mut t = 0;
             for i in &mut self.0 {
-                ::std::mem::swap(&mut t, i);
+                std::mem::swap(&mut t, i);
             }
             n -= 64;
         }
@@ -231,9 +232,9 @@ impl PrimeFieldRepr for FsRepr {
 #[derive(Copy, Clone, PartialEq, Eq, Debug)]
 pub struct Fs(FsRepr);
 
-impl ::std::fmt::Display for Fs
+impl std::fmt::Display for Fs
 {
-    fn fmt(&self, f: &mut ::std::fmt::Formatter) -> ::std::fmt::Result {
+    fn fmt(&self, f: &mut std::fmt::Formatter) -> std::fmt::Result {
         write!(f, "Fs({})", self.into_repr())
     }
 }
@@ -626,7 +627,7 @@ use rand::{SeedableRng, XorShiftRng, Rand};
 fn test_fs_repr_ordering() {
     fn assert_equality(a: FsRepr, b: FsRepr) {
         assert_eq!(a, b);
-        assert!(a.cmp(&b) == ::std::cmp::Ordering::Equal);
+        assert!(a.cmp(&b) == std::cmp::Ordering::Equal);
     }
 
     fn assert_lt(a: FsRepr, b: FsRepr) {
@@ -1178,6 +1179,7 @@ fn test_fs_from_into_repr() {
     }
 }
 
+#[cfg(feature = "std")]
 #[test]
 fn test_fs_repr_display() {
     assert_eq!(
@@ -1198,6 +1200,7 @@ fn test_fs_repr_display() {
     );
 }
 
+#[cfg(feature = "std")]
 #[test]
 fn test_fs_display() {
     assert_eq!(

@@ -84,7 +84,7 @@ impl<E: JubjubEngine> PrivateKey<E> {
         // R = r . P_G
         let r_g = params.generator(p_g).mul(r, params);
         let mut rbar = [0u8; 32];
-        r_g.write(&mut rbar[..])
+        r_g.write(&mut &mut rbar[..])
             .expect("Jubjub points should serialize to 32 bytes");
 
         // S = r + H*(Rbar || M) . sk
@@ -116,7 +116,7 @@ impl<E: JubjubEngine> PublicKey<E> {
         Ok(PublicKey(p))
     }
 
-    pub fn write<W: io::Write>(&self, writer: W) -> io::Result<()> {
+    pub fn write<W: io::Write>(&self, writer: &mut W) -> io::Result<()> {
         self.0.write(writer)
     }
 
@@ -200,29 +200,30 @@ pub fn batch_verify<'a, E: JubjubEngine, R: Rng>(
 
 #[cfg(test)]
 mod tests {
-    use pairing::bls12_381::Bls12;
-    use rand::thread_rng;
+    use pairing::bls12_381::Bls12;    
+    use rand::{Rand, Rng, SeedableRng, XorShiftRng};
 
     use crate::jubjub::{JubjubBls12, fs::Fs, edwards};
 
     use super::*;
 
     #[test]
-    fn test_batch_verify() {
-        let rng = &mut thread_rng();
+    fn test_batch_verify() {        
+        let mut rng = XorShiftRng::from_seed([0xbc4f6d44, 0xd62f276c, 0xb963afd0, 0x5455863d]);
+
         let params = &JubjubBls12::new();
         let p_g = FixedGenerators::SpendingKeyGenerator;
 
         let sk1 = PrivateKey::<Bls12>(rng.gen());
         let vk1 = PublicKey::from_private(&sk1, p_g, params);
         let msg1 = b"Foo bar";
-        let sig1 = sk1.sign(msg1, rng, p_g, params);
+        let sig1 = sk1.sign(msg1, &mut rng, p_g, params);
         assert!(vk1.verify(msg1, &sig1, p_g, params));
 
         let sk2 = PrivateKey::<Bls12>(rng.gen());
         let vk2 = PublicKey::from_private(&sk2, p_g, params);
         let msg2 = b"Foo bar";
-        let sig2 = sk2.sign(msg2, rng, p_g, params);
+        let sig2 = sk2.sign(msg2, &mut rng, p_g, params);
         assert!(vk2.verify(msg2, &sig2, p_g, params));
 
         let mut batch = vec![
@@ -230,23 +231,23 @@ mod tests {
             BatchEntry { vk: vk2, msg: msg2, sig: sig2 }
         ];
 
-        assert!(batch_verify(rng, &batch, p_g, params));
+        assert!(batch_verify(&mut rng, &batch, p_g, params));
 
         batch[0].sig = sig2;
 
-        assert!(!batch_verify(rng, &batch, p_g, params));
+        assert!(!batch_verify(&mut rng, &batch, p_g, params));
     }
 
     #[test]
     fn cofactor_check() {
-        let rng = &mut thread_rng();
+        let mut rng = XorShiftRng::from_seed([0xbc4f6d44, 0xd62f276c, 0xb963afd0, 0x5455863d]);
         let params = &JubjubBls12::new();
         let zero = edwards::Point::zero();
         let p_g = FixedGenerators::SpendingKeyGenerator;
 
         // Get a point of order 8
         let p8 = loop {
-            let r = edwards::Point::<Bls12, _>::rand(rng, params).mul(Fs::char(), params);
+            let r = edwards::Point::<Bls12, _>::rand(&mut rng, params).mul(Fs::char(), params);
 
             let r2 = r.double(params);
             let r4 = r2.double(params);
@@ -262,7 +263,7 @@ mod tests {
 
         // TODO: This test will need to change when #77 is fixed
         let msg = b"Foo bar";
-        let sig = sk.sign(msg, rng, p_g, params);
+        let sig = sk.sign(msg, &mut rng, p_g, params);
         assert!(vk.verify(msg, &sig, p_g, params));
 
         let vktorsion = PublicKey(vk.0.add(&p8, params));
@@ -271,7 +272,7 @@ mod tests {
 
     #[test]
     fn round_trip_serialization() {
-        let rng = &mut thread_rng();
+        let mut rng = XorShiftRng::from_seed([0xbc4f6d44, 0xd62f276c, 0xb963afd0, 0x5455863d]);
         let p_g = FixedGenerators::SpendingKeyGenerator;
         let params = &JubjubBls12::new();
 
@@ -279,19 +280,19 @@ mod tests {
             let sk = PrivateKey::<Bls12>(rng.gen());
             let vk = PublicKey::from_private(&sk, p_g, params);
             let msg = b"Foo bar";
-            let sig = sk.sign(msg, rng, p_g, params);
+            let sig = sk.sign(msg, &mut rng, p_g, params);
 
             let mut sk_bytes = [0u8; 32];
             let mut vk_bytes = [0u8; 32];
             let mut sig_bytes = [0u8; 64];
             sk.write(&mut sk_bytes[..]).unwrap();
-            vk.write(&mut vk_bytes[..]).unwrap();
+            vk.write(&mut &mut vk_bytes[..]).unwrap();
             sig.write(&mut sig_bytes[..]).unwrap();
 
             let sk_2 = PrivateKey::<Bls12>::read(&sk_bytes[..]).unwrap();
             let vk_2 = PublicKey::from_private(&sk_2, p_g, params);
             let mut vk_2_bytes = [0u8; 32];
-            vk_2.write(&mut vk_2_bytes[..]).unwrap();
+            vk_2.write(&mut &mut vk_2_bytes[..]).unwrap();
             assert!(vk_bytes == vk_2_bytes);
 
             let vk_2 = PublicKey::<Bls12>::read(&vk_bytes[..], params).unwrap();
@@ -304,7 +305,7 @@ mod tests {
 
     #[test]
     fn random_signatures() {
-        let rng = &mut thread_rng();
+        let mut rng = XorShiftRng::from_seed([0xbc4f6d44, 0xd62f276c, 0xb963afd0, 0x5455863d]);
         let p_g = FixedGenerators::SpendingKeyGenerator;
         let params = &JubjubBls12::new();
 
@@ -315,8 +316,8 @@ mod tests {
             let msg1 = b"Foo bar";
             let msg2 = b"Spam eggs";
 
-            let sig1 = sk.sign(msg1, rng, p_g, params);
-            let sig2 = sk.sign(msg2, rng, p_g, params);
+            let sig1 = sk.sign(msg1, &mut rng, p_g, params);
+            let sig2 = sk.sign(msg2, &mut rng, p_g, params);
 
             assert!(vk.verify(msg1, &sig1, p_g, params));
             assert!(vk.verify(msg2, &sig2, p_g, params));
@@ -327,8 +328,8 @@ mod tests {
             let rsk = sk.randomize(alpha);
             let rvk = vk.randomize(alpha, p_g, params);
 
-            let sig1 = rsk.sign(msg1, rng, p_g, params);
-            let sig2 = rsk.sign(msg2, rng, p_g, params);
+            let sig1 = rsk.sign(msg1, &mut rng, p_g, params);
+            let sig2 = rsk.sign(msg2, &mut rng, p_g, params);
 
             assert!(rvk.verify(msg1, &sig1, p_g, params));
             assert!(rvk.verify(msg2, &sig2, p_g, params));

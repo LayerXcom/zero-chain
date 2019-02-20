@@ -25,13 +25,14 @@ use pairing::{
 };
 
 use crate::group_hash::group_hash;
-
 use crate::constants;
 
 use pairing::bls12_381::{
     Bls12,
     Fr
 };
+
+use byteorder::ByteOrder;
 
 /// This is an implementation of the twisted Edwards Jubjub curve.
 pub mod edwards;
@@ -241,10 +242,10 @@ impl JubjubBls12 {
             let mut pedersen_hash_generators = vec![];
 
             for m in 0..5 {
-                use byteorder::{WriteBytesExt, LittleEndian};
+                use byteorder::LittleEndian;
 
                 let mut segment_number = [0u8; 4];
-                (&mut segment_number[0..4]).write_u32::<LittleEndian>(m).unwrap();
+                LittleEndian::write_u32(&mut segment_number[0..4], m);
 
                 pedersen_hash_generators.push(
                     find_group_hash(
@@ -408,17 +409,19 @@ impl JubjubBls12 {
 
 #[test]
 fn test_jubjub_bls12() {
+    use hex_literal::{hex, hex_impl};
     let params = JubjubBls12::new();
 
     tests::test_suite::<Bls12>(&params);
 
-    let test_repr = hex!("9d12b88b08dcbef8a11ee0712d94cb236ee2f4ca17317075bfafc82ce3139d31");
-    let p = edwards::Point::<Bls12, _>::read(&test_repr[..], &params).unwrap();
+    let test_repr = hex!("9d12b88b08dcbef8a11ee0712d94cb236ee2f4ca17317075bfafc82ce3139d31");    
+    
+    let p = edwards::Point::<Bls12, _>::read(&test_repr[..], &params).unwrap();    
     let q = edwards::Point::<Bls12, _>::get_for_y(
         Fr::from_str("22440861827555040311190986994816762244378363690614952020532787748720529117853").unwrap(),
         false,
         &params
-    ).unwrap();
+    ).unwrap();    
 
     assert!(p == q);
 
