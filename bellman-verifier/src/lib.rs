@@ -6,12 +6,18 @@
 extern crate alloc;
 
 #[cfg(not(feature = "std"))]
+extern crate core;
+
+#[cfg(feature = "std")]
+extern crate std;
+
+#[cfg(not(feature = "std"))]
 mod std {
-    pub use core::*;
-    pub use alloc::vec;
-    pub use alloc::string;
-    pub use alloc::boxed;
-    pub use alloc::borrow;
+    pub use crate::core::*;
+    pub use crate::alloc::vec;
+    pub use crate::alloc::string;
+    pub use crate::alloc::boxed;
+    pub use crate::alloc::borrow;
 }
 
 use std::string::String;
@@ -261,9 +267,7 @@ impl From<io::Error> for SynthesisError {
 
 #[cfg(test)]
 mod test_proof_write_read {
-    use super::*;    
-
-    use rand::{Rand, thread_rng};
+    use super::*;        
     use pairing::{Field};
     use pairing::bls12_381::{G1Affine, G2Affine, Fq, FqRepr, Fq2, Fr, Bls12};
 

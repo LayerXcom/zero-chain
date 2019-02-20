@@ -21,6 +21,12 @@ pub enum Error {
 	/// point at infinity for reading the elliptic curve points
 	PointInfinity,
 
+	/// not on curve
+	NotOnCurve,
+
+	/// not in field
+	NotInField,
+
  	#[cfg(feature = "std")]
 	IoError(::std::io::Error),
 }

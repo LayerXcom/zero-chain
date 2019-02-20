@@ -42,7 +42,7 @@ zero-chain-crypto = { path = "crypto" }
 vergen = "2"
 
 [workspace]
-members = [ "runtime", "primitives", "proofs", "crypto", "gen_key", "pairing", "bellman-verifier" ]
+members = [ "runtime", "primitives", "proofs", "crypto", "gen_key", "pairing", "bellman-verifier", "jubjub" ]
 exclude = [ "runtime/wasm", ]
 
 [profile.release]
