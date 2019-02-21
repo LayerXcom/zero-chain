@@ -31,16 +31,16 @@ consensus-aura = { package = "substrate-consensus-aura-primitives", git = "https
 parity-crypto = "0.3.0"
 rust-crypto = "0.2.36"
 rand = { version = "0.4", default-features = false}
-substrate-keystore = { git = "https://github.com/paritytech/substrate" }
 
-# pairing = { git = "https://github.com/sorpaas/pairing", default-features = false }
-blake2-rfc = { version = "0.2.18", default-features = false }
-
-pairing = { git = "https://github.com/LayerXcom/bellman-substrate" }
-bellman-verifier = { git = "https://github.com/LayerXcom/bellman-substrate", default-features = false }
-zrypto = { package = "zero-chain-crypto", path = "../crypto" }
+pairing = { path = "../pairing", default-features = false }
+bellman-verifier = { path = "../bellman-verifier", default-features = false }
 zprimitives = { package = "zero-chain-primitives", path = "../primitives" }
-proofs = { package = "zero-chain-proofs", path = "../proofs" }
+jubjub = { path = "../jubjub", default-features = false }
+
+[dependencies.blake2-rfc]
+git = "https://github.com/gtank/blake2-rfc"
+rev = "7a5b5fc99ae483a0043db7547fb79a6fa44b88a9"
+default-features = false
 
 [features]
 default = ["std"]
@@ -66,7 +66,7 @@ std = [
 	"safe-mix/std",
 	"consensus-aura/std",
 	"rand/std",		
-	# "pairing/std",
+	"pairing/std",
 	"blake2-rfc/std",
 	"bellman-verifier/std",
 ]

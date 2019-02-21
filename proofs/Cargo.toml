@@ -4,26 +4,15 @@ version = "0.1.0"
 authors = ["osuke <dish230@gmail.com>"]
 
 [dependencies]
-pairing = { git = "https://github.com/LayerXcom/bellman-substrate" }
-bellman = { git = "https://github.com/LayerXcom/bellman-substrate" }
+pairing = { git = "https://github.com/zkcrypto/pairing", rev = "09b6e6f9212020f385218e5cf5287e381ccd312b" }
+bellman = { path = "../bellman"}
 sapling-crypto = { git = "https://github.com/LayerXcom/bellman-substrate" }
 
-rand = { version = "0.4", default-features = false}
-byteorder = { version = "1", default-features = false }
+rand = "0.4"
+byteorder = "1"
 zero-chain-crypto = { path = "../crypto"}
-parity-codec-derive = { version = "3.0" }
-parity-codec = { version = "3.0", default-features = false }
-serde = { version = "1.0", optional = true, default-features = false }
-serde_derive = { version = "1.0", optional = true }
 
 [dependencies.blake2-rfc]
 git = "https://github.com/gtank/blake2-rfc"
 rev = "7a5b5fc99ae483a0043db7547fb79a6fa44b88a9"
 
-[feature]
-default = ["std"]
-std = [
-    "pairing/std",
-    "rand/std",
-    "byteorder/std",
-]
