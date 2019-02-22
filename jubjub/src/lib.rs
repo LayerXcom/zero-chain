@@ -5,9 +5,6 @@
 #[macro_use]
 extern crate alloc;
 
-#[cfg(feature = "std")]
-extern crate std;
-
 #[cfg(not(feature = "std"))]
 extern crate core;
 
@@ -20,7 +17,7 @@ mod std {
     pub use crate::alloc::borrow;
 }
 
-pub mod jubjub;
+pub mod curve;
 pub mod group_hash;
 pub mod constants;
 pub mod redjubjub;

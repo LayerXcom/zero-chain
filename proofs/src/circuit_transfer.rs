@@ -17,7 +17,7 @@ use scrypto::jubjub::{
 
 use zcrypto::constants;
 
-use primitives::{
+use primitives::keys::{
     ValueCommitment,
     ProofGenerationKey,
     PaymentAddress,        

@@ -2,15 +2,17 @@
 name = "zero-chain-proofs"
 version = "0.1.0"
 authors = ["osuke <dish230@gmail.com>"]
+edition = "2018"
 
 [dependencies]
-pairing = { git = "https://github.com/zkcrypto/pairing", rev = "09b6e6f9212020f385218e5cf5287e381ccd312b" }
+# pairing = { git = "https://github.com/zkcrypto/pairing", rev = "09b6e6f9212020f385218e5cf5287e381ccd312b" }
+pairing = { git = "https://github.com/zcash/librustzcash" }
 bellman = { path = "../bellman"}
-sapling-crypto = { git = "https://github.com/LayerXcom/bellman-substrate" }
-
+scrypto = { package = "sapling-crypto", git = "https://github.com/zcash/librustzcash" }
 rand = "0.4"
 byteorder = "1"
-zero-chain-crypto = { path = "../crypto"}
+zcrypto = { package = "zero-chain-crypto", path = "../crypto" }
+primitives = { package = "zero-chain-primitives", path = "../primitives" }
 
 [dependencies.blake2-rfc]
 git = "https://github.com/gtank/blake2-rfc"

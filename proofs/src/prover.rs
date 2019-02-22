@@ -35,7 +35,7 @@ use scrypto::{
     },
 };
 use circuit_transfer::Transfer;
-use primitives::{
+use primitives::keys::{
     Diversifier, 
     PaymentAddress, 
     ProofGenerationKey, 

@@ -4,7 +4,7 @@
 use pairing::{Field, PrimeField, PrimeFieldRepr, io};
 use rand::{Rng, Rand};
 
-use crate::jubjub::{FixedGenerators, JubjubEngine, JubjubParams, Unknown, edwards::Point};
+use crate::curve::{FixedGenerators, JubjubEngine, JubjubParams, Unknown, edwards::Point};
 use crate::util::{hash_to_scalar};
 
 fn read_scalar<E: JubjubEngine, R: io::Read>(mut reader: R) -> io::Result<E::Fs> {

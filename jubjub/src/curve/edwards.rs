@@ -19,8 +19,10 @@ use rand::{
     Rng
 };
 
+#[cfg(feature = "std")]
+use ::std::marker::PhantomData;
+#[cfg(not(feature = "std"))]
 use crate::std::marker::PhantomData;
-
 
 // Represents the affine point (X/Z, Y/Z) via the extended
 // twisted Edwards coordinates.

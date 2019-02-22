@@ -1,4 +1,4 @@
-use crate::jubjub::{
+use crate::curve::{
     JubjubEngine,
     PrimeOrder,
     edwards
