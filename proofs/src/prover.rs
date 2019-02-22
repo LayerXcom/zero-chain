@@ -3,20 +3,14 @@ use bellman::groth16::{
     verify_proof, 
     Parameters, 
     PreparedVerifyingKey, 
-    Proof,
-    prepare_verifying_key, 
-    generate_random_parameters,
+    Proof,        
 };
 use pairing::{
     bls12_381::{
         Bls12, 
-        Fr, 
-        FrRepr
+        Fr,         
     },
-    Field, 
-    PrimeField, 
-    PrimeFieldRepr, 
-    Engine,
+    Field,    
 };
 use rand::{OsRng, Rand};
 use scrypto::{    
@@ -28,21 +22,18 @@ use scrypto::{
         Unknown, 
         PrimeOrder
     },    
-    redjubjub::{
-        PrivateKey, 
-        PublicKey, 
-        Signature
+    redjubjub::{        
+        PublicKey,        
     },
 };
-use circuit_transfer::Transfer;
-use primitives::{
+use crate::circuit_transfer::Transfer;
+use crate::primitives::{
     Diversifier, 
     PaymentAddress, 
     ProofGenerationKey, 
     ValueCommitment
 };
 
-#[derive(Default)]
 pub struct TransferProof {
     pub proof: Proof<Bls12>,
     pub balance_value_commitment: ValueCommitment<Bls12>,

@@ -8,7 +8,7 @@ use pairing::{
     PrimeField,
     PrimeFieldRepr,
     Field,    
-    bls12_381::{Bls12},
+    bls12_381::{Bls12},    
 };
 
 use blake2_rfc::blake2s::Blake2s;

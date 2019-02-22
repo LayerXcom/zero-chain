@@ -2,43 +2,33 @@
 name = "zero-chain-primitives"
 version = "0.1.0"
 authors = ["osuke <dish230@gmail.com>"]
+edition = "2018"
 
 [dependencies]
-parity-codec-derive = { version = "3.0" }
-parity-codec = { version = "3.0" }
-fixed-hash = { version = "0.3.0", default-features = false }
-sr-primitives = { git = "https://github.com/paritytech/substrate", default-features = false }
-substrate-primitives = { git = "https://github.com/paritytech/substrate", default-features = false }
-sr-std = { git = "https://github.com/paritytech/substrate", default-features = false }
-serde = { version = "1.0", optional = true }
-serde_derive = { version = "1.0", optional = true }
-shasper-crypto = { git = "https://github.com/paritytech/shasper", default-features = false }
-hash-db = { git = "https://github.com/paritytech/trie", default-features = false }
-byteorder = { version = "1.3", default-features = false }
-parity-crypto = "0.3.0"
-zero-chain-proofs = { path = "../proofs" }
-zero-chain-crypto = { path = "../crypto" }
-pairing = { git = "https://github.com/LayerXcom/bellman-substrate" }
-bellman = { git = "https://github.com/LayerXcom/bellman-substrate" }
-sapling-crypto = { git = "https://github.com/LayerXcom/bellman-substrate" }
+parity-codec-derive = { version = "3.0", default-features = false }
+parity-codec = { version = "3.0", default-features = false }
+byteorder = { version = "1", default-features = false }
+pairing = { package = "zero-chain-pairing", path = "../pairing", default-features = false }
+bellman-verifier = { path = "../bellman-verifier", default-features = false }
+jubjub = { path = "../jubjub", default-features = false }
 rand = { version = "0.4", default-features = false }
+fixed-hash = { version = "0.3.0", default-features = false }
 
 [dependencies.blake2-rfc]
 git = "https://github.com/gtank/blake2-rfc"
 rev = "7a5b5fc99ae483a0043db7547fb79a6fa44b88a9"
+default-features = false
 
 [features]
 default = ["std"]
-std = [
-	"fixed-hash/std",
-	"substrate-primitives/std",
+std = [	
 	"parity-codec/std",
-	"sr-primitives/std",
-	"sr-std/std",
-	"serde",
-	"serde/std",
-	"serde_derive",
-	"shasper-crypto/std",	
-	"hash-db/std",	
-	"byteorder/std",
+    "parity-codec-derive/std",	
+	"byteorder/std",	
+	"pairing/std",
+	"bellman-verifier/std",	
+	"jubjub/std",
+	"rand/std",
+	"blake2-rfc/std",	
+	"fixed-hash/std"	
 ]

@@ -1,21 +1,20 @@
 #![cfg_attr(not(feature = "std"), no_std)]
 #![cfg_attr(not(feature = "std"), feature(alloc))]
 
-extern crate sapling_crypto as scrypto;
-extern crate parity_crypto as pcrypto;
-extern crate zero_chain_proofs as proofs;
-extern crate zero_chain_crypto as zcrypto;
-extern crate bellman;
-extern crate pairing;
-extern crate rand;
-extern crate blake2_rfc;
+#[cfg(not(feature = "std"))]
 #[macro_use]
-extern crate serde_derive;
-extern crate serde;
-#[macro_use]
-extern crate parity_codec_derive;
-extern crate parity_codec as codec;
-extern crate byteorder;
+extern crate alloc;
 
-pub mod cm_encryption;
-pub mod transaction;
+#[cfg(not(feature = "std"))]
+extern crate core;
+
+#[cfg(not(feature = "std"))]
+mod std {
+    pub use crate::core::*;
+    pub use crate::alloc::vec;
+    pub use crate::alloc::string;
+    pub use crate::alloc::boxed;
+    pub use crate::alloc::borrow;
+}
+
+pub mod keys;

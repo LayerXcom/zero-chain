@@ -1,37 +1,39 @@
 use pairing::{
     PrimeField,
-    PrimeFieldRepr,
-    Field,    
-};
+    PrimeFieldRepr,       
+};    
 
-use scrypto::group_hash::group_hash;
-
-use scrypto::jubjub::{
-    JubjubEngine,
-    JubjubParams,
-    edwards,
-    PrimeOrder,
-    FixedGenerators,
-    ToUniform,
+use scrypto::{
+        jubjub::{
+            JubjubEngine,
+            JubjubParams,
+            edwards,
+            PrimeOrder,
+            FixedGenerators,
+            ToUniform,
+        },
+        group_hash::group_hash,
 };
+use std::io::{self, Read, Write};
 
 use blake2_rfc::{
     blake2s::Blake2s, 
     blake2b::{Blake2b, Blake2bResult}
 };
-use zcrypto::{constants, mimc};
-use codec::{Encode, Decode, Input, Output};
-// TODO: Change to sr-std for adopting wasm
-use std::io::{self, Read, Write};
+
+pub const PRF_EXPAND_PERSONALIZATION: &'static [u8; 16] = b"zech_ExpandSeed_";
+pub const CRH_IVK_PERSONALIZATION: &'static [u8; 8] = b"zech_ivk";
+pub const KEY_DIVERSIFICATION_PERSONALIZATION: &'static [u8; 8] = b"zech_div";
+
+// TODO: Change OsRng to ChachaRng
 use rand::{OsRng, Rand, Rng};
-use pairing::bls12_381::Bls12;
 
 fn prf_expand(sk: &[u8], t: &[u8]) -> Blake2bResult {
     prf_expand_vec(sk, &vec![t])
 }
 
 fn prf_expand_vec(sk: &[u8], ts: &[&[u8]]) -> Blake2bResult {
-    let mut h = Blake2b::with_params(64, &[], &[], constants::PRF_EXPAND_PERSONALIZATION);
+    let mut h = Blake2b::with_params(64, &[], &[], PRF_EXPAND_PERSONALIZATION);
     h.update(sk);
     for t in ts {
         h.update(t);
@@ -52,7 +54,7 @@ impl<E: JubjubEngine> ExpandedSpendingKey<E> {
         ExpandedSpendingKey { ask, nsk }
     }
 
-    pub fn write<W: Write>(&self, mut writer: W) -> io::Result<()> {
+     pub fn write<W: Write>(&self, mut writer: W) -> io::Result<()> {
         self.ask.into_repr().write_le(&mut writer)?;
         self.nsk.into_repr().write_le(&mut writer)?;
         Ok(())
@@ -76,15 +78,14 @@ impl<E: JubjubEngine> ExpandedSpendingKey<E> {
     }
 } 
 
-#[derive(Clone, Copy, Default, Encode, Decode)]
+#[derive(Clone)]
 pub struct ValueCommitment<E: JubjubEngine> {
     pub value: u64,
     pub randomness: E::Fs,
     pub is_negative: bool,
 }
 
-impl<E: JubjubEngine> ValueCommitment<E> 
-where <E as JubjubEngine>::Fs: Encode + Decode {
+impl<E: JubjubEngine> ValueCommitment<E> {
     pub fn cm(
         &self,
         params: &E::Params,        
@@ -123,7 +124,7 @@ impl<E: JubjubEngine> ProofGenerationKey<E> {
     }
 }
 
-// #[derive(Clone, Encode, Decode, Default)]
+#[derive(Clone)]
 pub struct ViewingKey<E: JubjubEngine> {
     pub ak: edwards::Point<E, PrimeOrder>,
     pub nk: edwards::Point<E, PrimeOrder>
@@ -158,10 +159,10 @@ impl<E: JubjubEngine> ViewingKey<E> {
 
     pub fn ivk(&self) -> E::Fs {
         let mut preimage = [0; 64];
-        self.ak.write(&mut preimage[0..32]).unwrap();
-        self.nk.write(&mut preimage[32..64]).unwrap();
+        self.ak.write(&mut &mut preimage[0..32]).unwrap();
+        self.nk.write(&mut &mut preimage[32..64]).unwrap();
 
-        let mut h = Blake2s::with_params(32, &[], &[], constants::CRH_IVK_PERSONALIZATION);
+        let mut h = Blake2s::with_params(32, &[], &[], CRH_IVK_PERSONALIZATION);
         h.update(&preimage);
         let mut h = h.finalize().as_ref().to_vec();
 
@@ -169,7 +170,7 @@ impl<E: JubjubEngine> ViewingKey<E> {
         let mut e = <E::Fs as PrimeField>::Repr::default();
 
         // Reads a little endian integer into this representation.
-        e.read_le(&h[..]).unwrap();
+        e.read_le(&mut &h[..]).unwrap();
         E::Fs::from_repr(e).expect("should be a vaild scalar")
     }
 
@@ -192,7 +193,7 @@ impl<E: JubjubEngine> ViewingKey<E> {
 
 const DIVERSIFIER_SIZE: usize = 11;
 
-#[derive(Clone, Default)]
+#[derive(Clone)]
 pub struct Diversifier(pub [u8; DIVERSIFIER_SIZE]);
 
 impl Diversifier {    
@@ -216,7 +217,7 @@ impl Diversifier {
         params: &E::Params
     ) -> Option<edwards::Point<E, PrimeOrder>>
     {
-        group_hash::<E>(&self.encode(), constants::KEY_DIVERSIFICATION_PERSONALIZATION, params)
+        group_hash::<E>(&self.0, KEY_DIVERSIFICATION_PERSONALIZATION, params)
     }
 
     pub fn write<W: Write>(&self, mut writer: W) -> io::Result<()> {
@@ -225,21 +226,8 @@ impl Diversifier {
     }
 }
 
-impl Encode for Diversifier {
-    fn using_encoded<R, F: FnOnce(&[u8]) -> R>(&self, f: F) -> R {
-		self.0.using_encoded(f)
-	}
-}
 
-// TODO: Implement Decode
-impl Decode for Diversifier {
-    fn decode<I: Input>(input: &mut I) -> Option<Self> {
-        None
-    }
-}
-
-
-#[derive(Clone, Encode, Decode, Default)]
+#[derive(Clone)]
 pub struct PaymentAddress<E: JubjubEngine> {
     pub pk_d: edwards::Point<E, PrimeOrder>,
     pub diversifier: Diversifier

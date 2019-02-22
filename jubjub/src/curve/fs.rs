@@ -2,6 +2,10 @@ use byteorder::{ByteOrder, LittleEndian};
 use pairing::{BitIterator, Field, PrimeField, SqrtField, PrimeFieldRepr, PrimeFieldDecodingError, LegendreSymbol};
 use pairing::LegendreSymbol::*;
 use pairing::{adc, sbb, mac_with_carry};
+
+#[cfg(feature = "std")]
+use ::std;
+#[cfg(not(feature = "std"))]
 use crate::std;
 
 use super::ToUniform;

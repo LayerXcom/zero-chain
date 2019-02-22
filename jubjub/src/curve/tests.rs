@@ -15,6 +15,10 @@ use pairing::{
 };
 
 use rand::{XorShiftRng, SeedableRng, Rand};
+
+#[cfg(feature = "std")]
+use ::std::fmt::Debug;
+#[cfg(not(feature = "std"))]
 use crate::std::fmt::Debug;
 
 pub fn test_suite<E: JubjubEngine>(params: &E::Params) 
