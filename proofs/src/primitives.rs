@@ -1,11 +1,10 @@
 use pairing::{
     PrimeField,
-    PrimeFieldRepr,    
-    io,    
+    PrimeFieldRepr,       
 };    
 
-use jubjub::{
-        curve::{
+use scrypto::{
+        jubjub::{
             JubjubEngine,
             JubjubParams,
             edwards,
@@ -15,6 +14,7 @@ use jubjub::{
         },
         group_hash::group_hash,
 };
+use std::io::{self, Read, Write};
 
 use blake2_rfc::{
     blake2s::Blake2s, 
@@ -54,22 +54,22 @@ impl<E: JubjubEngine> ExpandedSpendingKey<E> {
         ExpandedSpendingKey { ask, nsk }
     }
 
-    pub fn write<W: io::Write>(&self, mut writer: W) -> io::Result<()> {
+     pub fn write<W: Write>(&self, mut writer: W) -> io::Result<()> {
         self.ask.into_repr().write_le(&mut writer)?;
         self.nsk.into_repr().write_le(&mut writer)?;
         Ok(())
     }
 
-    pub fn read<R: io::Read>(mut reader: R) -> io::Result<Self> {
+    pub fn read<R: Read>(mut reader: R) -> io::Result<Self> {
         let mut ask_repr = <E::Fs as PrimeField>::Repr::default();
         ask_repr.read_le(&mut reader)?;
         let ask = E::Fs::from_repr(ask_repr)
-            .map_err(|_| io::Error::InvalidData)?;
+            .map_err(|e| io::Error::new(io::ErrorKind::InvalidData, e))?;
 
         let mut nsk_repr = <E::Fs as PrimeField>::Repr::default();
         nsk_repr.read_le(&mut reader)?;
         let nsk = E::Fs::from_repr(nsk_repr)
-            .map_err(|_| io::Error::InvalidData)?;
+            .map_err(|e| io::Error::new(io::ErrorKind::InvalidData, e))?;
 
         Ok(ExpandedSpendingKey {
             ask,
@@ -78,7 +78,7 @@ impl<E: JubjubEngine> ExpandedSpendingKey<E> {
     }
 } 
 
-#[derive(Clone, Default)]
+#[derive(Clone)]
 pub struct ValueCommitment<E: JubjubEngine> {
     pub value: u64,
     pub randomness: E::Fs,
@@ -193,7 +193,7 @@ impl<E: JubjubEngine> ViewingKey<E> {
 
 const DIVERSIFIER_SIZE: usize = 11;
 
-#[derive(Clone, Default)]
+#[derive(Clone)]
 pub struct Diversifier(pub [u8; DIVERSIFIER_SIZE]);
 
 impl Diversifier {    
@@ -220,8 +220,8 @@ impl Diversifier {
         group_hash::<E>(&self.0, KEY_DIVERSIFICATION_PERSONALIZATION, params)
     }
 
-    pub fn write<W: io::Write>(&self, writer: &mut W) -> io::Result<()> {
-        writer.write(&self.0)?;
+    pub fn write<W: Write>(&self, mut writer: W) -> io::Result<()> {
+        writer.write_all(&self.0)?;
         Ok(())
     }
 }
@@ -242,7 +242,7 @@ impl<E: JubjubEngine> PaymentAddress<E> {
         self.diversifier.g_d(params)
     }
 
-    pub fn write<W: io::Write>(&self, mut writer: W) -> io::Result<()> {
+    pub fn write<W: Write>(&self, mut writer: W) -> io::Result<()> {
         self.pk_d.write(&mut writer)?;
         self.diversifier.write(&mut writer)?;
         Ok(())

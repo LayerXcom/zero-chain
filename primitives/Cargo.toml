@@ -12,6 +12,7 @@ pairing = { path = "../pairing", default-features = false }
 bellman-verifier = { path = "../bellman-verifier", default-features = false }
 jubjub = { path = "../jubjub", default-features = false }
 rand = { version = "0.4", default-features = false }
+fixed-hash = { version = "0.3.0", default-features = false }
 
 [dependencies.blake2-rfc]
 git = "https://github.com/gtank/blake2-rfc"
@@ -28,5 +29,6 @@ std = [
 	"bellman-verifier/std",	
 	"jubjub/std",
 	"rand/std",
-	"blake2-rfc/std",		
+	"blake2-rfc/std",	
+	"fixed-hash/std"	
 ]

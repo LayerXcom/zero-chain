@@ -14,3 +14,6 @@ pub const DEFAULT_MIMC_SEED: &[u8] = b"mimc";
 pub const DEFAULT_MIMC_ROUND: usize = 97;
 pub const DEFAULT_MIMC_EXPONENT: u64 = 7;
 pub const SIGHASH_PERSONALIZATION: &'static [u8; 16] = b"zech_sighash_per";
+// BLAKE2s invocation personalizations
+/// BLAKE2s Personalization for CRH^ivk = BLAKE2s(ak | nk)
+pub const CRH_IVK_PERSONALIZATION: &'static [u8; 8] = b"zech_ivk";

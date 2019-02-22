@@ -1,7 +1,5 @@
 use pairing::{
-    PrimeField,
-    PrimeFieldRepr,
-    Field,    
+    PrimeField,    
 };
 
 use bellman::{
@@ -14,10 +12,14 @@ use scrypto::jubjub::{
     JubjubEngine,
     FixedGenerators
 };
+// use jubjub::curve::{
+//     JubjubEngine,
+//     FixedGenerators
+// };
 
 use zcrypto::constants;
 
-use primitives::keys::{
+use crate::primitives::{
     ValueCommitment,
     ProofGenerationKey,
     PaymentAddress,        
@@ -277,7 +279,8 @@ impl<'a, E: JubjubEngine> Circuit<E> for Transfer<'a, E> {
     use rand::{SeedableRng, Rng, XorShiftRng};    
     use super::circuit_test::TestConstraintSystem;
     use scrypto::jubjub::{JubjubBls12, fs, edwards};
-    use primitives::Diversifier;
+    use crate::primitives::Diversifier;
+    use pairing::Field;
 
     
     #[test]
