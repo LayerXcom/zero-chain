@@ -224,6 +224,12 @@ impl Diversifier {
         writer.write(&self.0)?;
         Ok(())
     }
+
+    pub fn read<R: io::Read>(mut reader: R) -> io::Result<Self> {
+        let mut ret = [0u8; DIVERSIFIER_SIZE];
+        reader.read(&mut ret)?;
+        Ok(Diversifier(ret))
+    }
 }
 
 
@@ -246,5 +252,16 @@ impl<E: JubjubEngine> PaymentAddress<E> {
         self.pk_d.write(&mut writer)?;
         self.diversifier.write(&mut writer)?;
         Ok(())
+    }
+
+    pub fn read<R: io::Read>(mut reader: &mut R, params: &E::Params) -> io::Result<Self> {
+
+        let mut pk_d = edwards::Point::<E, _>::read(reader, params)?;
+        let mut pk_d = pk_d.as_prime_order(params).unwrap();
+        let mut diversifier = Diversifier::read(reader).unwrap();
+        Ok(PaymentAddress {
+            pk_d,
+            diversifier,
+        })
     }
 }

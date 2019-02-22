@@ -45,9 +45,9 @@ use super::constants::{DEFAULT_MIMC_ROUND, DEFAULT_MIMC_SEED, MIMC_PERSONALIZATI
 //     res
 // }
 
-/// This is an implementation of MiMC.
-/// See http://eprint.iacr.org/2016/492 for more 
-/// information about this construction.
+// This is an implementation of MiMC.
+// See http://eprint.iacr.org/2016/492 for more 
+// information about this construction.
 // pub fn mimc<E: JubjubEngine>(
 //     mut x: E::Fs,
 //     k: E::Fs,

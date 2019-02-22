@@ -200,7 +200,7 @@ impl<E: JubjubEngine, Subgroup> Point<E, Subgroup> {
         if x_repr.is_odd() {
             y_repr.as_mut()[3] |= 0x8000000000000000u64;
         }
-
+        
         y_repr.write_le(writer)
     }
 
