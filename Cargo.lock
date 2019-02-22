@@ -179,25 +179,11 @@ dependencies = [
 ]
 
 [[package]]
-name = "bellman"
-version = "0.1.0"
-dependencies = [
- "bit-vec 0.4.4 (registry+https://github.com/rust-lang/crates.io-index)",
- "byteorder 1.3.1 (registry+https://github.com/rust-lang/crates.io-index)",
- "crossbeam 0.3.2 (registry+https://github.com/rust-lang/crates.io-index)",
- "futures 0.1.25 (registry+https://github.com/rust-lang/crates.io-index)",
- "futures-cpupool 0.1.8 (registry+https://github.com/rust-lang/crates.io-index)",
- "num_cpus 1.10.0 (registry+https://github.com/rust-lang/crates.io-index)",
- "pairing 0.14.2 (git+https://github.com/zcash/librustzcash)",
- "rand 0.4.6 (registry+https://github.com/rust-lang/crates.io-index)",
-]
-
-[[package]]
 name = "bellman-verifier"
 version = "0.1.0"
 dependencies = [
- "pairing 0.14.2",
  "rand 0.4.6 (registry+https://github.com/rust-lang/crates.io-index)",
+ "zero-chain-pairing 0.14.2",
 ]
 
 [[package]]
@@ -429,24 +415,6 @@ version = "0.2.3"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 dependencies = [
  "cc 1.0.26 (registry+https://github.com/rust-lang/crates.io-index)",
-]
-
-[[package]]
-name = "cli"
-version = "0.1.0"
-dependencies = [
- "bellman 0.1.0 (git+https://github.com/zcash/librustzcash)",
- "blake2-rfc 0.2.18 (git+https://github.com/gtank/blake2-rfc?rev=7a5b5fc99ae483a0043db7547fb79a6fa44b88a9)",
- "byteorder 1.3.1 (registry+https://github.com/rust-lang/crates.io-index)",
- "lazy_static 1.2.0 (registry+https://github.com/rust-lang/crates.io-index)",
- "pairing 0.14.2 (git+https://github.com/zcash/librustzcash)",
- "parity-crypto 0.3.0 (registry+https://github.com/rust-lang/crates.io-index)",
- "rand 0.4.6 (registry+https://github.com/rust-lang/crates.io-index)",
- "sapling-crypto 0.0.1 (git+https://github.com/zcash/librustzcash)",
- "structopt 0.2.14 (registry+https://github.com/rust-lang/crates.io-index)",
- "substrate-primitives 0.1.0 (git+https://github.com/paritytech/substrate)",
- "zero-chain-crypto 0.1.0",
- "zero-chain-proofs 0.1.0",
 ]
 
 [[package]]
@@ -1265,8 +1233,8 @@ dependencies = [
  "blake2-rfc 0.2.18 (git+https://github.com/gtank/blake2-rfc?rev=7a5b5fc99ae483a0043db7547fb79a6fa44b88a9)",
  "byteorder 1.3.1 (registry+https://github.com/rust-lang/crates.io-index)",
  "hex-literal 0.1.2 (registry+https://github.com/rust-lang/crates.io-index)",
- "pairing 0.14.2",
  "rand 0.4.6 (registry+https://github.com/rust-lang/crates.io-index)",
+ "zero-chain-pairing 0.14.2",
 ]
 
 [[package]]
@@ -2069,15 +2037,6 @@ name = "pairing"
 version = "0.14.2"
 source = "git+https://github.com/zcash/librustzcash#f65c37ea0131a4a6d2de326fc6d70ecc469c6ebc"
 dependencies = [
- "byteorder 1.3.1 (registry+https://github.com/rust-lang/crates.io-index)",
- "rand 0.4.6 (registry+https://github.com/rust-lang/crates.io-index)",
-]
-
-[[package]]
-name = "pairing"
-version = "0.14.2"
-dependencies = [
- "blake2 0.7.1 (registry+https://github.com/rust-lang/crates.io-index)",
  "byteorder 1.3.1 (registry+https://github.com/rust-lang/crates.io-index)",
  "rand 0.4.6 (registry+https://github.com/rust-lang/crates.io-index)",
 ]
@@ -4634,11 +4593,13 @@ dependencies = [
 name = "zero-chain"
 version = "0.9.0"
 dependencies = [
+ "bellman-verifier 0.1.0",
  "ctrlc 3.1.1 (registry+https://github.com/rust-lang/crates.io-index)",
  "error-chain 0.12.0 (registry+https://github.com/rust-lang/crates.io-index)",
  "exit-future 0.1.3 (registry+https://github.com/rust-lang/crates.io-index)",
  "futures 0.1.25 (registry+https://github.com/rust-lang/crates.io-index)",
  "hex-literal 0.1.2 (registry+https://github.com/rust-lang/crates.io-index)",
+ "jubjub 0.1.0",
  "log 0.4.6 (registry+https://github.com/rust-lang/crates.io-index)",
  "node-executor 0.1.0 (git+https://github.com/paritytech/substrate)",
  "parity-codec 3.0.0 (registry+https://github.com/rust-lang/crates.io-index)",
@@ -4659,7 +4620,30 @@ dependencies = [
  "tokio 0.1.15 (registry+https://github.com/rust-lang/crates.io-index)",
  "trie-root 0.11.0 (git+https://github.com/paritytech/trie)",
  "vergen 2.1.3 (registry+https://github.com/rust-lang/crates.io-index)",
+ "zero-chain-cli 0.1.0",
+ "zero-chain-crypto 0.1.0",
+ "zero-chain-pairing 0.14.2",
+ "zero-chain-primitives 0.1.0",
+ "zero-chain-proofs 0.1.0",
  "zero-chain-runtime 0.9.0",
+]
+
+[[package]]
+name = "zero-chain-cli"
+version = "0.1.0"
+dependencies = [
+ "bellman 0.1.0 (git+https://github.com/zcash/librustzcash)",
+ "blake2-rfc 0.2.18 (git+https://github.com/gtank/blake2-rfc?rev=7a5b5fc99ae483a0043db7547fb79a6fa44b88a9)",
+ "byteorder 1.3.1 (registry+https://github.com/rust-lang/crates.io-index)",
+ "lazy_static 1.2.0 (registry+https://github.com/rust-lang/crates.io-index)",
+ "pairing 0.14.2 (git+https://github.com/zcash/librustzcash)",
+ "parity-crypto 0.3.0 (registry+https://github.com/rust-lang/crates.io-index)",
+ "rand 0.4.6 (registry+https://github.com/rust-lang/crates.io-index)",
+ "sapling-crypto 0.0.1 (git+https://github.com/zcash/librustzcash)",
+ "structopt 0.2.14 (registry+https://github.com/rust-lang/crates.io-index)",
+ "substrate-primitives 0.1.0 (git+https://github.com/paritytech/substrate)",
+ "zero-chain-crypto 0.1.0",
+ "zero-chain-proofs 0.1.0",
 ]
 
 [[package]]
@@ -4673,6 +4657,15 @@ dependencies = [
 ]
 
 [[package]]
+name = "zero-chain-pairing"
+version = "0.14.2"
+dependencies = [
+ "blake2 0.7.1 (registry+https://github.com/rust-lang/crates.io-index)",
+ "byteorder 1.3.1 (registry+https://github.com/rust-lang/crates.io-index)",
+ "rand 0.4.6 (registry+https://github.com/rust-lang/crates.io-index)",
+]
+
+[[package]]
 name = "zero-chain-primitives"
 version = "0.1.0"
 dependencies = [
@@ -4681,10 +4674,10 @@ dependencies = [
  "byteorder 1.3.1 (registry+https://github.com/rust-lang/crates.io-index)",
  "fixed-hash 0.3.0 (registry+https://github.com/rust-lang/crates.io-index)",
  "jubjub 0.1.0",
- "pairing 0.14.2",
  "parity-codec 3.0.0 (registry+https://github.com/rust-lang/crates.io-index)",
  "parity-codec-derive 3.0.0 (registry+https://github.com/rust-lang/crates.io-index)",
  "rand 0.4.6 (registry+https://github.com/rust-lang/crates.io-index)",
+ "zero-chain-pairing 0.14.2",
 ]
 
 [[package]]
@@ -4709,7 +4702,6 @@ dependencies = [
  "blake2-rfc 0.2.18 (git+https://github.com/gtank/blake2-rfc?rev=7a5b5fc99ae483a0043db7547fb79a6fa44b88a9)",
  "hex-literal 0.1.2 (registry+https://github.com/rust-lang/crates.io-index)",
  "jubjub 0.1.0",
- "pairing 0.14.2",
  "parity-codec 3.0.0 (registry+https://github.com/rust-lang/crates.io-index)",
  "parity-codec-derive 3.0.0 (registry+https://github.com/rust-lang/crates.io-index)",
  "parity-crypto 0.3.0 (registry+https://github.com/rust-lang/crates.io-index)",
@@ -4734,6 +4726,7 @@ dependencies = [
  "substrate-client 0.1.0 (git+https://github.com/paritytech/substrate)",
  "substrate-consensus-aura-primitives 0.1.0 (git+https://github.com/paritytech/substrate)",
  "substrate-primitives 0.1.0 (git+https://github.com/paritytech/substrate)",
+ "zero-chain-pairing 0.14.2",
  "zero-chain-primitives 0.1.0",
 ]
 

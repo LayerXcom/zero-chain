@@ -32,7 +32,7 @@ parity-crypto = "0.3.0"
 rust-crypto = "0.2.36"
 rand = { version = "0.4", default-features = false}
 
-pairing = { path = "../pairing", default-features = false }
+pairing = { package = "zero-chain-pairing", path = "../pairing", default-features = false }
 bellman-verifier = { path = "../bellman-verifier", default-features = false }
 zprimitives = { package = "zero-chain-primitives", path = "../primitives" }
 jubjub = { path = "../jubjub", default-features = false }

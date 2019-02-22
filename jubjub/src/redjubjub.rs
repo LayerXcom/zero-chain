@@ -203,7 +203,7 @@ mod tests {
     use pairing::bls12_381::Bls12;    
     use rand::{Rand, Rng, SeedableRng, XorShiftRng};
 
-    use crate::jubjub::{JubjubBls12, fs::Fs, edwards};
+    use crate::curve::{JubjubBls12, fs::Fs, edwards};
 
     use super::*;
 

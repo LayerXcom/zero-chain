@@ -8,7 +8,7 @@ edition = "2018"
 parity-codec-derive = { version = "3.0", default-features = false }
 parity-codec = { version = "3.0", default-features = false }
 byteorder = { version = "1", default-features = false }
-pairing = { path = "../pairing", default-features = false }
+pairing = { package = "zero-chain-pairing", path = "../pairing", default-features = false }
 bellman-verifier = { path = "../bellman-verifier", default-features = false }
 jubjub = { path = "../jubjub", default-features = false }
 rand = { version = "0.4", default-features = false }

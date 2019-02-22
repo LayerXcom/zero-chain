@@ -1,5 +1,5 @@
 [package]
-name = "cli"
+name = "zero-chain-cli"
 version = "0.1.0"
 authors = ["osuke <dish230@gmail.com>"]
 edition = "2018"

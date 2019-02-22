@@ -3,6 +3,7 @@ name = "zero-chain"
 version = "0.9.0"
 authors = ["Parity Technologies <admin@parity.io>"]
 build = "build.rs"
+edition = "2018"
 
 [[bin]]
 name = "zero-chain"
@@ -32,7 +33,16 @@ substrate-consensus-aura = { git = "https://github.com/paritytech/substrate" }
 substrate-client = { git = "https://github.com/paritytech/substrate", default-features = false }
 substrate-basic-authorship = { git = "https://github.com/paritytech/substrate" }
 node-executor = { git = "https://github.com/paritytech/substrate" }
+
+bellman-verifier = { path = "bellman-verifier"}
+zero-chain-cli = { path = "cli" }
+zero-chain-crypto = { path = "crypto" }
+jubjub = { path = "jubjub" }
+zero-chain-pairing = { path = "pairing" }
+zero-chain-primitives = { path = "primitives" }
+proofs = { package = "zero-chain-proofs", path = "proofs" }
 zero-chain-runtime = { path = "runtime" }
+
 structopt = "0.2.13"
 
 [build-dependencies]
@@ -47,8 +57,7 @@ members = [
     "cli", 
     "pairing", 
     "bellman-verifier", 
-    "jubjub", 
-    "bellman" 
+    "jubjub",     
 ]
 exclude = [ "runtime/wasm", ]
 
