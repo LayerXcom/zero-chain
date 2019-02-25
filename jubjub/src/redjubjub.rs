@@ -34,6 +34,7 @@ pub struct Signature {
 
 pub struct PrivateKey<E: JubjubEngine>(pub E::Fs);
 
+#[derive(Clone, PartialEq)]
 pub struct PublicKey<E: JubjubEngine>(pub Point<E, Unknown>);
 
 impl Signature {
