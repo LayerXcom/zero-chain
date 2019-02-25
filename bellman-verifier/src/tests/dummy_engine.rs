@@ -12,10 +12,11 @@ use pairing::{
     EncodedPoint
 };
 
-use crate::std::cmp::Ordering;
-use crate::std::fmt;
+#[cfg(feature = "std")]
+use ::std::{cmp::Ordering, fmt, num::Wrapping};
+#[cfg(not(feature = "std"))]
+use crate::std::{cmp::Ordering, fmt, num::Wrapping};
 use rand::{Rand, Rng};
-use crate::std::num::Wrapping;
 
 const MODULUS_R: Wrapping<u32> = Wrapping(64513);
 
@@ -395,7 +396,7 @@ impl EncodedPoint for FakePoint {
         unimplemented!()
     }
 
-    fn from_affine(_: Self::Affine) -> Self {
+    fn from_affine(affine: Self::Affine) -> Self {
         unimplemented!()
     }
 }
