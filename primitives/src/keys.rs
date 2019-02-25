@@ -280,7 +280,7 @@ impl<E: JubjubEngine> PaymentAddress<E> {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use rand::{Rand, Rng, SeedableRng, XorShiftRng, OsRng};
+    use rand::{Rng, SeedableRng, XorShiftRng};
     use crate::account_id::JUBJUB;
     use pairing::bls12_381::Bls12;
 

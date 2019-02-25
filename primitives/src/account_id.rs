@@ -75,12 +75,12 @@ impl Into<AccountId> for PaymentAddress<Bls12> {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use rand::{Rand, Rng, SeedableRng, XorShiftRng, OsRng};    
+    use rand::{Rng, SeedableRng, XorShiftRng};    
     use pairing::bls12_381::Bls12;
     use crate::keys::*;
 
     #[test]
-    fn test_into_from() {
+    fn test_addr_into_from() {
         let rng = &mut XorShiftRng::from_seed([0x3dbe6259, 0x8d313d76, 0x3237db17, 0xe5bc0654]);
         let mut seed = [0u8; 32];
         rng.fill_bytes(&mut seed[..]);
