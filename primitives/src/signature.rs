@@ -70,6 +70,7 @@ mod tests {
     use pairing::bls12_381::Bls12;
     use jubjub::curve::{FixedGenerators, JubjubBls12};
     use jubjub::redjubjub::PublicKey;
+    use codec::{Encode, Decode};
 
     #[test]
     fn test_sig_into_from() {
@@ -85,11 +86,30 @@ mod tests {
         
         assert!(vk.verify(msg, &sig1, p_g, params));
 
-        let sig_b = Signature::from_signature(&sig1);
-        println!("sig_b: {:?}", sig_b);
-
+        let sig_b = Signature::from_signature(&sig1);        
         let sig2 = sig_b.into_signature().unwrap();
-        println!("sig: {:?}", sig2);
+
         assert!(sig1 == sig2);
     }
+
+    #[test]
+    fn test_sig_encode_decode() {
+        let mut rng = &mut XorShiftRng::from_seed([0x3dbe6259, 0x8d313d76, 0x3237db17, 0xe5bc0654]);
+        let p_g = FixedGenerators::SpendingKeyGenerator;
+        let params = &JubjubBls12::new();
+
+        let sk = redjubjub::PrivateKey::<Bls12>(rng.gen());
+        let vk = PublicKey::from_private(&sk, p_g, params);
+
+        let msg = b"Foo bar";
+        let sig1 = sk.sign(msg, &mut rng, p_g, params);
+        
+        assert!(vk.verify(msg, &sig1, p_g, params));
+        let sig_b = Signature::from_signature(&sig1);
+        
+        let encoded_sig = sig_b.encode();        
+        
+        let decoded_sig = Signature::decode(&mut encoded_sig.as_slice()).unwrap();
+        assert_eq!(sig_b, decoded_sig);
+    }    
 }
