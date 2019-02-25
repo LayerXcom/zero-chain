@@ -5,8 +5,10 @@ authors = ["osuke <dish230@gmail.com>"]
 edition = "2018"
 
 [dependencies]
-parity-codec-derive = { version = "3.0", default-features = false }
-parity-codec = { version = "3.0", default-features = false }
+# parity-codec-derive = { version = "3.0", default-features = false }
+# parity-codec = { version = "3.0", default-features = false }
+parity-codec-derive = { git = "https://github.com/osuketh/parity-codec", default-features = false }
+parity-codec = { git = "https://github.com/osuketh/parity-codec", default-features = false }
 serde = { version = "1.0", optional = true, default-features = false }
 serde_derive = { version = "1.0", optional = true }
 byteorder = { version = "1", default-features = false }
