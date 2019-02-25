@@ -31,7 +31,7 @@ pub fn group_hash<E: JubjubEngine>(
     let h = h.finalize().as_ref().to_vec();
     assert!(h.len() == 32);
 
-    match edwards::Point::<E, _>::read(&h[..], params) {
+    match edwards::Point::<E, _>::read(&mut &h[..], params) {
         Ok(p) => {
             let p = p.mul_by_cofactor(params);
 

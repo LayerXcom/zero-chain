@@ -262,7 +262,7 @@ fn test_read_write<E: JubjubEngine>(params: &E::Params) {
         let mut v = vec![];        
         e.write(&mut v).unwrap();    
 
-        let e2 = edwards::Point::read(&v[..], params).unwrap();        
+        let e2 = edwards::Point::read(&mut &v[..], params).unwrap();        
 
         assert!(e == e2);
     }

@@ -8,9 +8,6 @@ extern crate alloc;
 #[cfg(not(feature = "std"))]
 extern crate core;
 
-#[cfg(feature = "std")]
-extern crate std;
-
 #[cfg(not(feature = "std"))]
 mod std {
     pub use crate::core::*;
@@ -20,7 +17,7 @@ mod std {
     pub use crate::alloc::borrow;
 }
 
-use std::string::String;
+// use std::string::String;
 // use byteorder::ByteOrder;
 
 use pairing::{
@@ -31,7 +28,7 @@ use pairing::{
 };
 
 #[cfg(test)]
-mod tests;
+pub mod tests;
 
 mod verifier;
 pub use self::verifier::*;
@@ -267,9 +264,8 @@ impl From<io::Error> for SynthesisError {
 
 #[cfg(test)]
 mod test_proof_write_read {
-    use super::*;        
-    use pairing::{Field};
-    use pairing::bls12_381::{G1Affine, G2Affine, Fq, FqRepr, Fq2, Fr, Bls12};
+    use super::*;            
+    use pairing::bls12_381::{G1Affine, G2Affine, Fq, FqRepr, Fq2, Bls12};
 
     #[test]
     fn byte_cast() {        
