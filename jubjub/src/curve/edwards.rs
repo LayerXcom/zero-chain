@@ -29,6 +29,7 @@ use crate::std::marker::PhantomData;
 //
 // See "Twisted Edwards Curves Revisited"
 //     Huseyin Hisil, Kenneth Koon-Ho Wong, Gary Carter, and Ed Dawson
+#[cfg_attr(feature = "std", derive(Debug))]
 pub struct Point<E: JubjubEngine, Subgroup> {
     x: E::Fr,
     y: E::Fr,
@@ -89,13 +90,13 @@ impl<E: JubjubEngine, Subgroup> PartialEq for Point<E, Subgroup> {
 
 impl<E: JubjubEngine> Point<E, Unknown> {
     pub fn read<R: io::Read>(
-        mut reader: R,
+        mut reader: &mut R,
         params: &E::Params
     ) -> io::Result<Self>
     {
         let mut y_repr = <E::Fr as PrimeField>::Repr::default();
         
-        y_repr.read_le(&mut reader)?;
+        y_repr.read_le(reader)?;
 
         let x_sign = (y_repr.as_ref()[3] >> 63) == 1;
         y_repr.as_mut()[3] &= 0x7fffffffffffffff;

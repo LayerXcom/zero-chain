@@ -6,4 +6,4 @@ rust:
 cache: cargo
 
 script:
-  - cargo test --verbose --release -p zero-chain-proofs -p bellman-verifier -p zero-chain-crypto -p jubjub -p zero-chain-pairing
+  - cargo test --verbose --release -p zero-chain-proofs -p bellman-verifier -p zero-chain-crypto -p jubjub -p zero-chain-pairing -p zero-chain-primitives

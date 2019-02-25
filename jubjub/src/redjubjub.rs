@@ -111,7 +111,7 @@ impl<E: JubjubEngine> PublicKey<E> {
         PublicKey(res)
     }
 
-    pub fn read<R: io::Read>(reader: R, params: &E::Params) -> io::Result<Self> {
+    pub fn read<R: io::Read>(reader: &mut R, params: &E::Params) -> io::Result<Self> {
         let p = Point::read(reader, params)?;
         Ok(PublicKey(p))
     }
@@ -132,7 +132,7 @@ impl<E: JubjubEngine> PublicKey<E> {
 
         // Signature checks:
         // R != invalid
-        let r = match Point::read(&sig.rbar[..], params) {
+        let r = match Point::read(&mut &sig.rbar[..], params) {
             Ok(r) => r,
             Err(_) => return false,
         };
@@ -168,7 +168,7 @@ pub fn batch_verify<'a, E: JubjubEngine, R: Rng>(
     let mut acc = Point::<E, Unknown>::zero();
 
     for entry in batch {
-        let mut r = match Point::<E, Unknown>::read(&entry.sig.rbar[..], params) {
+        let mut r = match Point::<E, Unknown>::read(&mut &entry.sig.rbar[..], params) {
             Ok(r) => r,
             Err(_) => return false,
         };
@@ -295,7 +295,7 @@ mod tests {
             vk_2.write(&mut &mut vk_2_bytes[..]).unwrap();
             assert!(vk_bytes == vk_2_bytes);
 
-            let vk_2 = PublicKey::<Bls12>::read(&vk_bytes[..], params).unwrap();
+            let vk_2 = PublicKey::<Bls12>::read(&mut &vk_bytes[..], params).unwrap();
             let sig_2 = Signature::read(&sig_bytes[..]).unwrap();
             assert!(vk.verify(msg, &sig_2, p_g, params));
             assert!(vk_2.verify(msg, &sig, p_g, params));
