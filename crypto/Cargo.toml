@@ -5,11 +5,19 @@ authors = ["osuke <dish230@gmail.com>"]
 edition = "2018"
 
 [dependencies]
-scrypto = { package = "sapling-crypto", git = "https://github.com/zcash/librustzcash" }
-# pairing = { git = "https://github.com/zkcrypto/pairing", rev = "09b6e6f9212020f385218e5cf5287e381ccd312b" }
-pairing = { git = "https://github.com/zcash/librustzcash" }
-rand = "0.4"
+jubjub = { path = "../jubjub", default-features = false }
+pairing = { package = "zero-chain-pairing", path = "../pairing", default-features = false }
+rand = { version = "0.4", default-features = false }
 
 [dependencies.blake2-rfc]
 git = "https://github.com/gtank/blake2-rfc"
 rev = "7a5b5fc99ae483a0043db7547fb79a6fa44b88a9"
+default-features = false
+
+[features]
+default = ["std"]
+std = [
+    "pairing/std",
+    "jubjub/std",
+    "rand/std",
+]

@@ -87,6 +87,15 @@ impl From<u64> for FsRepr {
     }
 }
 
+impl From<u32> for FsRepr {
+    #[inline(always)]
+    fn from(val: u32) -> FsRepr {
+        let mut repr = Self::default();
+        repr.0[0] = val as u64;
+        repr
+    }
+}
+
 impl Ord for FsRepr {
     #[inline(always)]
     fn cmp(&self, other: &FsRepr) -> std::cmp::Ordering {
@@ -128,7 +137,7 @@ impl PrimeFieldRepr for FsRepr {
     #[inline(always)]
     fn shr(&mut self, mut n: u32) {
         if n >= 64 * 4 {
-            *self = Self::from(0);
+            *self = Self::from(0 as u64);
             return;
         }
 
@@ -176,7 +185,7 @@ impl PrimeFieldRepr for FsRepr {
     #[inline(always)]
     fn shl(&mut self, mut n: u32) {
         if n >= 64 * 4 {
-            *self = Self::from(0);
+            *self = Self::from(0 as u64);
             return;
         }
 
@@ -308,7 +317,7 @@ impl PrimeField for Fs {
 impl Field for Fs {
     #[inline]
     fn zero() -> Self {
-        Fs(FsRepr::from(0))
+        Fs(FsRepr::from(0 as u64))
     }
 
     #[inline]
@@ -366,7 +375,7 @@ impl Field for Fs {
             // Efficient Software-Implementation of Finite Fields with Applications to Cryptography
             // Algorithm 16 (BEA for Inversion in Fp)
 
-            let one = FsRepr::from(1);
+            let one = FsRepr::from(1 as u64);
 
             let mut u = self.0;
             let mut v = MODULUS;
@@ -649,25 +658,25 @@ fn test_fs_repr_ordering() {
 
 #[test]
 fn test_fs_repr_from() {
-    assert_eq!(FsRepr::from(100), FsRepr([100, 0, 0, 0]));
+    assert_eq!(FsRepr::from(100 as u64), FsRepr([100, 0, 0, 0]));
 }
 
 #[test]
 fn test_fs_repr_is_odd() {
-    assert!(!FsRepr::from(0).is_odd());
-    assert!(FsRepr::from(0).is_even());
-    assert!(FsRepr::from(1).is_odd());
-    assert!(!FsRepr::from(1).is_even());
-    assert!(!FsRepr::from(324834872).is_odd());
-    assert!(FsRepr::from(324834872).is_even());
-    assert!(FsRepr::from(324834873).is_odd());
-    assert!(!FsRepr::from(324834873).is_even());
+    assert!(!FsRepr::from(0 as u64).is_odd());
+    assert!(FsRepr::from(0 as u64).is_even());
+    assert!(FsRepr::from(1 as u64).is_odd());
+    assert!(!FsRepr::from(1 as u64).is_even());
+    assert!(!FsRepr::from(324834872 as u64).is_odd());
+    assert!(FsRepr::from(324834872 as u64).is_even());
+    assert!(FsRepr::from(324834873 as u64).is_odd());
+    assert!(!FsRepr::from(324834873 as u64).is_even());
 }
 
 #[test]
 fn test_fs_repr_is_zero() {
-    assert!(FsRepr::from(0).is_zero());
-    assert!(!FsRepr::from(1).is_zero());
+    assert!(FsRepr::from(0 as u64).is_zero());
+    assert!(!FsRepr::from(1 as u64).is_zero());
     assert!(!FsRepr([0, 0, 1, 0]).is_zero());
 }
 
@@ -728,7 +737,7 @@ fn test_fs_repr_shr() {
 
 #[test]
 fn test_fs_repr_mul2() {
-    let mut a = FsRepr::from(23712937547);
+    let mut a = FsRepr::from(23712937547 as u64);
     a.mul2();
     assert_eq!(a, FsRepr([0xb0acd6c96, 0x0, 0x0, 0x0]));
     for _ in 0..60 {
@@ -751,9 +760,9 @@ fn test_fs_repr_mul2() {
 
 #[test]
 fn test_fs_repr_num_bits() {
-    let mut a = FsRepr::from(0);
+    let mut a = FsRepr::from(0 as u64);
     assert_eq!(0, a.num_bits());
-    a = FsRepr::from(1);
+    a = FsRepr::from(1 as u64);
     for i in 1..257 {
         assert_eq!(i, a.num_bits());
         a.mul2();
@@ -862,9 +871,9 @@ fn test_fr_repr_add_nocarry() {
 fn test_fs_is_valid() {
     let mut a = Fs(MODULUS);
     assert!(!a.is_valid());
-    a.0.sub_noborrow(&FsRepr::from(1));
+    a.0.sub_noborrow(&FsRepr::from(1 as u64));
     assert!(a.is_valid());
-    assert!(Fs(FsRepr::from(0)).is_valid());
+    assert!(Fs(FsRepr::from(0 as u64)).is_valid());
     assert!(Fs(FsRepr([0xd0970e5ed6f72cb6, 0xa6682093ccc81082, 0x6673b0101343b00, 0xe7db4ea6533afa9])).is_valid());
     assert!(!Fs(FsRepr([0xffffffffffffffff, 0xffffffffffffffff, 0xffffffffffffffff, 0xffffffffffffffff])).is_valid());
 
@@ -883,24 +892,24 @@ fn test_fs_add_assign() {
         let mut tmp = Fs::from_str("4577408157467272683998459759522778614363623736323078995109579213719612604198").unwrap();
         assert!(tmp.is_valid());
         // Test that adding zero has no effect.
-        tmp.add_assign(&Fs(FsRepr::from(0)));
+        tmp.add_assign(&Fs(FsRepr::from(0 as u64)));
         assert_eq!(tmp, Fs(FsRepr([0x8e6bfff4722d6e67, 0x5643da5c892044f9, 0x9465f4b281921a69, 0x25f752d3edd7162])));
         // Add one and test for the result.
-        tmp.add_assign(&Fs(FsRepr::from(1)));
+        tmp.add_assign(&Fs(FsRepr::from(1 as u64)));
         assert_eq!(tmp, Fs(FsRepr([0x8e6bfff4722d6e68, 0x5643da5c892044f9, 0x9465f4b281921a69, 0x25f752d3edd7162])));
         // Add another random number that exercises the reduction.
         tmp.add_assign(&Fs(FsRepr([0xb634d07bc42d4a70, 0xf724f0c008411f5f, 0x456d4053d865af34, 0x24ce814e8c63027])));
         assert_eq!(tmp, Fs(FsRepr([0x44a0d070365ab8d8, 0x4d68cb1c91616459, 0xd9d3350659f7c99e, 0x4ac5d4227a3a189])));
         // Add one to (s - 1) and test for the result.
         tmp = Fs(FsRepr([0xd0970e5ed6f72cb6, 0xa6682093ccc81082, 0x6673b0101343b00, 0xe7db4ea6533afa9]));
-        tmp.add_assign(&Fs(FsRepr::from(1)));
+        tmp.add_assign(&Fs(FsRepr::from(1 as u64)));
         assert!(tmp.0.is_zero());
         // Add a random number to another one such that the result is s - 1
         tmp = Fs(FsRepr([0xa11fda5950ce3636, 0x922e0dbccfe0ca0e, 0xacebb6e215b82d4a, 0x97ffb8cdc3aee93]));
         tmp.add_assign(&Fs(FsRepr([0x2f7734058628f680, 0x143a12d6fce74674, 0x597b841eeb7c0db6, 0x4fdb95d88f8c115])));
         assert_eq!(tmp, Fs(FsRepr([0xd0970e5ed6f72cb6, 0xa6682093ccc81082, 0x6673b0101343b00, 0xe7db4ea6533afa9])));
         // Add one to the result and test for it.
-        tmp.add_assign(&Fs(FsRepr::from(1)));
+        tmp.add_assign(&Fs(FsRepr::from(1 as u64)));
         assert!(tmp.0.is_zero());
     }
 
@@ -942,12 +951,12 @@ fn test_fs_sub_assign() {
         assert_eq!(tmp, Fs(FsRepr([0x38d6f8dab75bb2c1, 0xbe6b6f71e1581439, 0x4da6ea7fb351973e, 0x539f491c768b587])));
 
         // Test for sensible results with zero
-        tmp = Fs(FsRepr::from(0));
-        tmp.sub_assign(&Fs(FsRepr::from(0)));
+        tmp = Fs(FsRepr::from(0 as u64));
+        tmp.sub_assign(&Fs(FsRepr::from(0 as u64)));
         assert!(tmp.is_zero());
 
         tmp = Fs(FsRepr([0x361e16aef5cce835, 0x55bbde2536e274c1, 0x4dc77a63fd15ee75, 0x1e14bb37c14f230]));
-        tmp.sub_assign(&Fs(FsRepr::from(0)));
+        tmp.sub_assign(&Fs(FsRepr::from(0 as u64)));
         assert_eq!(tmp, Fs(FsRepr([0x361e16aef5cce835, 0x55bbde2536e274c1, 0x4dc77a63fd15ee75, 0x1e14bb37c14f230])));
     }
 
@@ -1167,7 +1176,7 @@ fn test_fs_from_into_repr() {
     assert_eq!(a_fs.into_repr(), c);
 
     // Zero should be in the field.
-    assert!(Fs::from_repr(FsRepr::from(0)).unwrap().is_zero());
+    assert!(Fs::from_repr(FsRepr::from(0 as u64)).unwrap().is_zero());
 
     let mut rng = XorShiftRng::from_seed([0x5dbe6259, 0x8d313d76, 0x3237db17, 0xe5bc0654]);
 
@@ -1226,7 +1235,7 @@ fn test_fs_num_bits() {
 #[test]
 fn test_fs_root_of_unity() {
     assert_eq!(Fs::S, 1);
-    assert_eq!(Fs::multiplicative_generator(), Fs::from_repr(FsRepr::from(6)).unwrap());
+    assert_eq!(Fs::multiplicative_generator(), Fs::from_repr(FsRepr::from(6 as u64)).unwrap());
     assert_eq!(
         Fs::multiplicative_generator().pow([0x684b872f6b7b965b, 0x53341049e6640841, 0x83339d80809a1d80, 0x73eda753299d7d4]),
         Fs::root_of_unity()
