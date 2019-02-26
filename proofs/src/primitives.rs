@@ -25,7 +25,6 @@ pub const PRF_EXPAND_PERSONALIZATION: &'static [u8; 16] = b"zech_ExpandSeed_";
 pub const CRH_IVK_PERSONALIZATION: &'static [u8; 8] = b"zech_ivk";
 pub const KEY_DIVERSIFICATION_PERSONALIZATION: &'static [u8; 8] = b"zech_div";
 
-// TODO: Change OsRng to ChachaRng
 use rand::{OsRng, Rand, Rng};
 
 fn prf_expand(sk: &[u8], t: &[u8]) -> Blake2bResult {

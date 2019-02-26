@@ -8,7 +8,7 @@ use bellman_verifier;
 #[cfg(feature = "std")]
 use substrate_primitives::bytes;
 
-const SIZE: usize = 128;
+const SIZE: usize = 192;
 
 construct_fixed_hash! {    
     pub struct H1536(SIZE);

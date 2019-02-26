@@ -12,10 +12,6 @@ use scrypto::jubjub::{
     JubjubEngine,
     FixedGenerators
 };
-// use jubjub::curve::{
-//     JubjubEngine,
-//     FixedGenerators
-// };
 
 use zcrypto::constants;
 

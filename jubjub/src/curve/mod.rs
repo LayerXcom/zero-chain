@@ -65,11 +65,8 @@ pub enum FixedGenerators {
     /// The note commitment is randomized over this generator.
     NoteCommitmentRandomness = 1,
 
-    /// The node commitment is randomized again by the position
-    /// in order to supply the nullifier computation with a
-    /// unique input w.r.t. the note being spent, to prevent
-    /// Faerie gold attacks.
-    NullifierPosition = 2,
+    /// The transfer value is encrypted with lifted-ElGamal over this generator.
+    ElGamal = 2,
 
     /// The value commitment is used to check balance between
     /// inputs and outputs. The value is placed over this
@@ -318,8 +315,8 @@ impl JubjubBls12 {
             fixed_base_generators[FixedGenerators::NoteCommitmentRandomness as usize] =
                 find_group_hash(b"r", constants::PEDERSEN_HASH_GENERATORS_PERSONALIZATION, &tmp_params);
 
-            fixed_base_generators[FixedGenerators::NullifierPosition as usize] =
-                find_group_hash(&[], constants::NULLIFIER_POSITION_IN_TREE_GENERATOR_PERSONALIZATION, &tmp_params);
+            fixed_base_generators[FixedGenerators::ElGamal as usize] =
+                find_group_hash(&[], constants::ELGAMAL_PERSONALIZATION, &tmp_params);
 
             fixed_base_generators[FixedGenerators::ValueCommitmentValue as usize] =
                 find_group_hash(b"v", constants::VALUE_COMMITMENT_GENERATOR_PERSONALIZATION, &tmp_params);

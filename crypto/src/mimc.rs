@@ -1,4 +1,4 @@
-use scrypto::jubjub::{
+use jubjub::curve::{
     JubjubEngine,
     ToUniform,
     fs::Fs,
