@@ -100,7 +100,7 @@ fn find_point<E: JubjubEngine>(
 }
 
 /// Extend the secret key to 64 bits for the scalar field generation.
-fn elgamal_extend(sk: &[u8]) -> Blake2bResult {
+pub fn elgamal_extend(sk: &[u8]) -> Blake2bResult {
     let mut h = Blake2b::with_params(64, &[], &[], ELGAMAL_EXTEND_PERSONALIZATION);
     h.update(sk);
     h.finalize()
