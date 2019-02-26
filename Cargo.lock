@@ -4635,6 +4635,7 @@ dependencies = [
  "serde 1.0.88 (registry+https://github.com/rust-lang/crates.io-index)",
  "serde_derive 1.0.88 (registry+https://github.com/rust-lang/crates.io-index)",
  "substrate-primitives 0.1.0 (git+https://github.com/paritytech/substrate)",
+ "zero-chain-crypto 0.1.0",
  "zero-chain-pairing 0.14.2",
 ]
 

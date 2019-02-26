@@ -15,7 +15,7 @@ use crate::std::u32;
 use blake2_rfc::{
     blake2b::{Blake2b, Blake2bResult}
 };
-use pairing::PrimeField;
+use pairing::{PrimeField, io};
 
 pub const ELGAMAL_EXTEND_PERSONALIZATION: &'static [u8; 16] = b"zech_elgamal_ext";
 
@@ -66,6 +66,25 @@ impl<E: JubjubEngine> Ciphertext<E> {
 
         None
     }
+
+    pub fn write<W: io::Write>(&self, mut writer: W) -> io::Result<()> {
+        self.sbar.write(&mut writer)?;
+        self.tbar.write(&mut writer)?;
+        Ok(())
+    }
+
+    pub fn read<R: io::Read>(reader: &mut R, params: &E::Params) -> io::Result<Self> {
+        let sbar = edwards::Point::<E, _>::read(reader, params)?;
+        let sbar = sbar.as_prime_order(params).unwrap();
+
+        let tbar = edwards::Point::<E, _>::read(reader, params)?;
+        let tbar = tbar.as_prime_order(params).unwrap();
+
+        Ok(Ciphertext {
+            sbar,
+            tbar,
+        })
+    }
 }
 
 /// Find the point of the value
@@ -95,12 +114,12 @@ mod tests {
 
     #[test]
     fn test_elgamal_enc_dec() {
-        let mut rng_sk = &mut XorShiftRng::from_seed([0xbc4f6d44, 0xd62f276c, 0xb963afd0, 0x5455863d]);
+        let rng_sk = &mut XorShiftRng::from_seed([0xbc4f6d44, 0xd62f276c, 0xb963afd0, 0x5455863d]);
         let mut sk = [0u8; 32];
         rng_sk.fill_bytes(&mut sk[..]);
         let sk_fs = Fs::to_uniform(elgamal_extend(&sk).as_bytes()).into_repr();
 
-        let mut rng_r = &mut XorShiftRng::from_seed([0xbc4f6d47, 0xd62f276d, 0xb963afd3, 0x54558639]);
+        let rng_r = &mut XorShiftRng::from_seed([0xbc4f6d47, 0xd62f276d, 0xb963afd3, 0x54558639]);
         let mut randomness = [0u8; 32];
         rng_r.fill_bytes(&mut randomness[..]);
         let r_fs = Fs::to_uniform(elgamal_extend(&randomness).as_bytes());
@@ -152,5 +171,31 @@ mod tests {
 
         let decrypted_value7 = homo_ciphetext7.decrypt(&sk, p_g, params).unwrap();    
         assert_eq!(decrypted_value7, value7);       
-    }    
+    }       
+
+    #[test]
+    fn test_ciphertext_read_write() {
+        let rng_sk = &mut XorShiftRng::from_seed([0xbc4f6d44, 0xd62f276c, 0xb963afd0, 0x5455863d]);
+        let mut sk = [0u8; 32];
+        rng_sk.fill_bytes(&mut sk[..]);
+        let sk_fs = Fs::to_uniform(elgamal_extend(&sk).as_bytes()).into_repr();
+
+        let rng_r = &mut XorShiftRng::from_seed([0xbc4f6d47, 0xd62f276d, 0xb963afd3, 0x54558639]);
+        let mut randomness = [0u8; 32];
+        rng_r.fill_bytes(&mut randomness[..]);
+        let r_fs = Fs::to_uniform(elgamal_extend(&randomness).as_bytes());
+
+        let params = &JubjubBls12::new();
+        let p_g = FixedGenerators::ElGamal;
+
+        let public_key = params.generator(p_g).mul(sk_fs, params).into();
+        let value: u32 = 6 as u32;
+
+        let ciphetext1 = Ciphertext::encrypt(value, r_fs, &public_key, p_g, params);
+
+        let mut v = vec![];
+        ciphetext1.write(&mut v).unwrap();
+        let ciphetext2 = Ciphertext::read(&mut v.as_slice(), params).unwrap();
+        assert!(ciphetext1 == ciphetext2);
+    }
 }
