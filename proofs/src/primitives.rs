@@ -11,10 +11,9 @@ use scrypto::{
             PrimeOrder,
             FixedGenerators,
             ToUniform,
-        },
-        group_hash::group_hash,
+        }        
 };
-use std::io::{self, Read, Write};
+use std::io;
 
 use blake2_rfc::{
     blake2s::Blake2s, 
@@ -24,8 +23,6 @@ use blake2_rfc::{
 pub const PRF_EXPAND_PERSONALIZATION: &'static [u8; 16] = b"zech_ExpandSeed_";
 pub const CRH_IVK_PERSONALIZATION: &'static [u8; 8] = b"zech_ivk";
 pub const KEY_DIVERSIFICATION_PERSONALIZATION: &'static [u8; 8] = b"zech_div";
-
-use rand::{OsRng, Rand, Rng};
 
 fn prf_expand(sk: &[u8], t: &[u8]) -> Blake2bResult {
     prf_expand_vec(sk, &vec![t])
@@ -47,19 +44,20 @@ pub struct ExpandedSpendingKey<E: JubjubEngine> {
 }
 
 impl<E: JubjubEngine> ExpandedSpendingKey<E> {
+    /// Generate the 64bytes extend_spending_key from the 32bytes spending key.
     pub fn from_spending_key(sk: &[u8]) -> Self {
         let ask = E::Fs::to_uniform(prf_expand(sk, &[0x00]).as_bytes());
         let nsk = E::Fs::to_uniform(prf_expand(sk, &[0x01]).as_bytes());
         ExpandedSpendingKey { ask, nsk }
     }
 
-     pub fn write<W: Write>(&self, mut writer: W) -> io::Result<()> {
+    pub fn write<W: io::Write>(&self, mut writer: W) -> io::Result<()> {
         self.ask.into_repr().write_le(&mut writer)?;
         self.nsk.into_repr().write_le(&mut writer)?;
         Ok(())
     }
 
-    pub fn read<R: Read>(mut reader: R) -> io::Result<Self> {
+    pub fn read<R: io::Read>(mut reader: R) -> io::Result<Self> {
         let mut ask_repr = <E::Fs as PrimeField>::Repr::default();
         ask_repr.read_le(&mut reader)?;
         let ask = E::Fs::from_repr(ask_repr)
@@ -77,7 +75,7 @@ impl<E: JubjubEngine> ExpandedSpendingKey<E> {
     }
 } 
 
-#[derive(Clone)]
+#[derive(Clone, Default)]
 pub struct ValueCommitment<E: JubjubEngine> {
     pub value: u64,
     pub randomness: E::Fs,
@@ -85,6 +83,7 @@ pub struct ValueCommitment<E: JubjubEngine> {
 }
 
 impl<E: JubjubEngine> ValueCommitment<E> {
+    /// Generate pedersen commitment from the value and randomness parameters
     pub fn cm(
         &self,
         params: &E::Params,        
@@ -99,6 +98,7 @@ impl<E: JubjubEngine> ValueCommitment<E> {
             )
     }   
 
+    /// Change the value from the positive representation to negative one.
     pub fn change_sign(&self) -> Self {
         ValueCommitment {
             value: self.value,
@@ -115,6 +115,7 @@ pub struct ProofGenerationKey<E: JubjubEngine> {
 }
 
 impl<E: JubjubEngine> ProofGenerationKey<E> {
+    /// Generate viewing key from proof generation key.
     pub fn into_viewing_key(&self, params: &E::Params) -> ViewingKey<E> {
         ViewingKey {
             ak: self.ak.clone(),
@@ -130,6 +131,7 @@ pub struct ViewingKey<E: JubjubEngine> {
 }
 
 impl<E: JubjubEngine> ViewingKey<E> {
+    /// Generate viewing key from extended spending key
     pub fn from_expanded_spending_key(
         expsk: &ExpandedSpendingKey<E>, 
         params: &E::Params
@@ -145,6 +147,7 @@ impl<E: JubjubEngine> ViewingKey<E> {
         }
     }
 
+    /// Generate the signature verifying key
     pub fn rk(
         &self,
         ar: E::Fs,
@@ -156,6 +159,7 @@ impl<E: JubjubEngine> ViewingKey<E> {
         )
     }
 
+    /// Generate the internal viewing key
     pub fn ivk(&self) -> E::Fs {
         let mut preimage = [0; 64];
         self.ak.write(&mut &mut preimage[0..32]).unwrap();
@@ -173,77 +177,34 @@ impl<E: JubjubEngine> ViewingKey<E> {
         E::Fs::from_repr(e).expect("should be a vaild scalar")
     }
 
+    /// Generate the payment address from viewing key.
     pub fn into_payment_address(
-        &self,
-        diversifier: Diversifier,
+        &self,        
         params: &E::Params
-    ) -> Option<PaymentAddress<E>>
+    ) -> PaymentAddress<E>
     {
-        diversifier.g_d(params).map(|g_d| {
-            let pk_d = g_d.mul(self.ivk(), params);
+        let pk_d = params
+            .generator(FixedGenerators::NoteCommitmentRandomness)
+            .mul(self.ivk(), params);
 
-            PaymentAddress{
-                pk_d: pk_d,
-                diversifier: diversifier
-            }
-        })
+        PaymentAddress(pk_d)
     }
 }
 
-const DIVERSIFIER_SIZE: usize = 11;
+#[derive(Clone, PartialEq)]
+pub struct PaymentAddress<E: JubjubEngine> (
+    pub edwards::Point<E, PrimeOrder>    
+);
 
-#[derive(Clone)]
-pub struct Diversifier(pub [u8; DIVERSIFIER_SIZE]);
-
-impl Diversifier {    
-    pub fn new<E: JubjubEngine>(params: &E::Params) 
-        -> Result<Diversifier, ()> 
-    { 
-        loop {
-            let mut d_j = [0u8; 11];
-            OsRng::new().unwrap().fill_bytes(&mut d_j[..]);
-            let d_j = Diversifier(d_j);
-
-            match d_j.g_d::<E>(params) {
-                Some(_) => return Ok(d_j),
-                None => {}
-            }   
-        }                      
-    }
-
-    pub fn g_d<E: JubjubEngine>(
-        &self,
-        params: &E::Params
-    ) -> Option<edwards::Point<E, PrimeOrder>>
-    {
-        group_hash::<E>(&self.0, KEY_DIVERSIFICATION_PERSONALIZATION, params)
-    }
-
-    pub fn write<W: Write>(&self, mut writer: W) -> io::Result<()> {
-        writer.write_all(&self.0)?;
+impl<E: JubjubEngine> PaymentAddress<E> {    
+    pub fn write<W: io::Write>(&self, mut writer: W) -> io::Result<()> {
+        self.0.write(&mut writer)?;        
         Ok(())
     }
-}
 
-
-#[derive(Clone)]
-pub struct PaymentAddress<E: JubjubEngine> {
-    pub pk_d: edwards::Point<E, PrimeOrder>,
-    pub diversifier: Diversifier
-}
-
-impl<E: JubjubEngine> PaymentAddress<E> {
-    pub fn g_d(
-        &self,
-        params: &E::Params
-    ) -> Option<edwards::Point<E, PrimeOrder>>
-    {
-        self.diversifier.g_d(params)
-    }
-
-    pub fn write<W: Write>(&self, mut writer: W) -> io::Result<()> {
-        self.pk_d.write(&mut writer)?;
-        self.diversifier.write(&mut writer)?;
-        Ok(())
+    pub fn read<R: io::Read>(reader: &mut R, params: &E::Params) -> io::Result<Self> {
+        let pk_d = edwards::Point::<E, _>::read(reader, params)?;
+        let pk_d = pk_d.as_prime_order(params).unwrap();        
+        Ok(PaymentAddress(pk_d))
     }
 }

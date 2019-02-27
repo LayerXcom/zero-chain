@@ -4646,12 +4646,10 @@ dependencies = [
  "bellman 0.1.0 (git+https://github.com/zcash/librustzcash?rev=1a1c77536d824d7b6bd0eaf3e9888829a7a1f5dc)",
  "blake2-rfc 0.2.18 (git+https://github.com/gtank/blake2-rfc?rev=7a5b5fc99ae483a0043db7547fb79a6fa44b88a9)",
  "byteorder 1.3.1 (registry+https://github.com/rust-lang/crates.io-index)",
- "jubjub 0.1.0",
  "pairing 0.14.2 (git+https://github.com/zcash/librustzcash?rev=1a1c77536d824d7b6bd0eaf3e9888829a7a1f5dc)",
  "rand 0.4.6 (registry+https://github.com/rust-lang/crates.io-index)",
  "sapling-crypto 0.0.1 (git+https://github.com/zcash/librustzcash?rev=1a1c77536d824d7b6bd0eaf3e9888829a7a1f5dc)",
  "zero-chain-crypto 0.1.0",
- "zero-chain-pairing 0.14.2",
  "zero-chain-primitives 0.1.0",
 ]
 

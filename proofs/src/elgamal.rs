@@ -7,10 +7,11 @@ use scrypto::jubjub::{
         ToUniform,
 };
 
+use pairing::PrimeField;
+
 use blake2_rfc::{
     blake2b::{Blake2b, Blake2bResult}
 };
-use pairing::PrimeField;
 
 use std::io;
 
@@ -108,7 +109,7 @@ pub fn elgamal_extend(sk: &[u8]) -> Blake2bResult {
 mod tests {
     use super::*;
     use rand::{Rand, Rng, SeedableRng, XorShiftRng};
-    use jubjub::curve::{JubjubBls12, fs::Fs};
+    use scrypto::jubjub::{JubjubBls12, fs::Fs};
 
     #[test]
     fn test_elgamal_enc_dec() {
@@ -123,7 +124,7 @@ mod tests {
         let r_fs = Fs::to_uniform(elgamal_extend(&randomness).as_bytes());
 
         let params = &JubjubBls12::new();
-        let p_g = FixedGenerators::ElGamal;
+        let p_g = FixedGenerators::NullifierPosition;
 
         let public_key = params.generator(p_g).mul(sk_fs, params).into();
         let value: u32 = 5 as u32;
@@ -152,7 +153,7 @@ mod tests {
         let r_fs2 = Fs::to_uniform(elgamal_extend(&randomness).as_bytes());
 
         let params = &JubjubBls12::new();
-        let p_g = FixedGenerators::ElGamal;
+        let p_g = FixedGenerators::NullifierPosition;
 
         let public_key = params.generator(p_g).mul(sk_fs, params).into();
         let value20: u32 = 20 as u32;
@@ -200,7 +201,7 @@ mod tests {
         let r_fs2 = Fs::to_uniform(elgamal_extend(&randomness).as_bytes());
 
         let params = &JubjubBls12::new();
-        let p_g = FixedGenerators::ElGamal;
+        let p_g = FixedGenerators::NullifierPosition;
 
         let public_key1 = params.generator(p_g).mul(sk_fs1, params).into();
         let public_key2 = params.generator(p_g).mul(sk_fs2, params).into();
