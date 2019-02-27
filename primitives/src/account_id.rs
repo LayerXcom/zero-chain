@@ -1,30 +1,24 @@
 #[cfg(feature = "std")]
 use serde::{Serialize, Serializer, Deserialize, Deserializer};
-use fixed_hash::construct_fixed_hash;
 use crate::keys::PaymentAddress;
-use lazy_static::lazy_static;
-use jubjub::curve::JubjubBls12;
+use fixed_hash::construct_fixed_hash;
 use pairing::bls12_381::Bls12;
+use crate::JUBJUB;
 
 #[cfg(feature = "std")]
 use substrate_primitives::bytes;
 
-// FIXME
-const SIZE: usize = 48;
+const SIZE: usize = 32;
 
 construct_fixed_hash! {
-    /// Fixed 384-bit hash.
-    pub struct H384(SIZE);
+    /// Fixed 256-bit hash.
+    pub struct H256(SIZE);
 }
 
-lazy_static! {
-    pub static ref JUBJUB: JubjubBls12 = { JubjubBls12::new() };
-}
-
-pub type AccountId = H384;
+pub type AccountId = H256;
 
 #[cfg(feature = "std")]
-impl Serialize for H384 {
+impl Serialize for H256 {
     fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error> 
         where S: Serializer
     {
@@ -33,36 +27,36 @@ impl Serialize for H384 {
 }
 
 #[cfg(feature = "std")]
-impl<'de> Deserialize<'de> for H384 {
+impl<'de> Deserialize<'de> for H256 {
     fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
         where D: Deserializer<'de>
     {
         bytes::deserialize_check_len(deserializer, bytes::ExpectedLen::Exact(SIZE))
-            .map(|x| H384::from_slice(&x))
+            .map(|x| H256::from_slice(&x))
     }
 }
 
-impl codec::Encode for H384 {
+impl codec::Encode for H256 {
     fn using_encoded<R, F: FnOnce(&[u8]) -> R>(&self, f: F) -> R {
         self.0.using_encoded(f)
     }
 }
 
-impl codec::Decode for H384 {
+impl codec::Decode for H256 {
     fn decode<I: codec::Input>(input: &mut I) -> Option<Self> {
-        <[u8; SIZE] as codec::Decode>::decode(input).map(H384)
+        <[u8; SIZE] as codec::Decode>::decode(input).map(H256)
     }
 }
 
-impl H384 {
+impl H256 {
     pub fn into_payment_address(&self) -> Option<PaymentAddress<Bls12>> {         
-        PaymentAddress::<Bls12>::read(&mut &self.0[..], &JUBJUB).ok()        
+        PaymentAddress::<Bls12>::read(&mut &self.0[..], &JUBJUB).ok()
     }
 
     pub fn from_payment_address(address: &PaymentAddress<Bls12>) -> Self {
-        let mut writer = [0u8; 48];
+        let mut writer = [0u8; 32];
         address.write(&mut writer[..]).unwrap();
-        H384::from_slice(&writer)
+        H256::from_slice(&writer)
     }
 }
 
@@ -86,9 +80,8 @@ mod tests {
         rng.fill_bytes(&mut seed[..]);
 
         let ex_sk = ExpandedSpendingKey::<Bls12>::from_spending_key(&seed[..]);
-        let viewing_key = ViewingKey::<Bls12>::from_expanded_spending_key(&ex_sk, &JUBJUB);
-        let diversifier = Diversifier::new::<Bls12>(&JUBJUB).unwrap();
-        let addr1 = viewing_key.into_payment_address(diversifier, &JUBJUB).unwrap();
+        let viewing_key = ViewingKey::<Bls12>::from_expanded_spending_key(&ex_sk, &JUBJUB);        
+        let addr1 = viewing_key.into_payment_address(&JUBJUB);
 
         let account_id = AccountId::from_payment_address(&addr1);
         println!("account_id: {:?}", account_id);

@@ -26,3 +26,10 @@ pub mod signature;
 pub mod ciphertext;
 pub mod proof;
 pub mod public_key;
+
+use lazy_static::lazy_static;
+use jubjub::curve::JubjubBls12;
+
+lazy_static! {
+    pub static ref JUBJUB: JubjubBls12 = { JubjubBls12::new() };
+}

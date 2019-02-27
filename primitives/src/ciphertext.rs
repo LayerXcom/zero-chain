@@ -1,7 +1,7 @@
 #[cfg(feature = "std")]
 use serde::{Serialize, Serializer, Deserialize, Deserializer};
 use fixed_hash::construct_fixed_hash;
-use crate::account_id::JUBJUB;
+use crate::JUBJUB;
 
 #[cfg(feature = "std")]
 use substrate_primitives::bytes;
