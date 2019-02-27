@@ -21,8 +21,8 @@ pub const ELGAMAL_EXTEND_PERSONALIZATION: &'static [u8; 16] = b"zech_elgamal_ext
 
 #[derive(Clone, PartialEq)]
 pub struct Ciphertext<E: JubjubEngine> {
-    sbar: edwards::Point<E, PrimeOrder>,
-    tbar: edwards::Point<E, PrimeOrder>,
+    left: edwards::Point<E, PrimeOrder>,
+    right: edwards::Point<E, PrimeOrder>,
 }
 
 impl<E: JubjubEngine> Ciphertext<E> {
@@ -34,14 +34,14 @@ impl<E: JubjubEngine> Ciphertext<E> {
         params: &E::Params
     ) -> Self
     {
-        let tbar = params.generator(p_g).mul(randomness, params).into();
+        let right = params.generator(p_g).mul(randomness, params).into();
         let v_point: edwards::Point<E, PrimeOrder> = params.generator(p_g).mul(value as u64, params).into();
         let r_point = public_key.mul(randomness, params);
-        let sbar = v_point.add(&r_point, params);
+        let left = v_point.add(&r_point, params);
 
         Ciphertext {
-            sbar,
-            tbar,
+            left,
+            right,
         }
     }
 
@@ -54,9 +54,9 @@ impl<E: JubjubEngine> Ciphertext<E> {
     ) -> Option<u32> 
     {
         let sk_fs = E::Fs::to_uniform(elgamal_extend(sk).as_bytes());
-        let sr_point = self.tbar.mul(sk_fs, params);
+        let sr_point = self.right.mul(sk_fs, params);
         let neg_sr_point = sr_point.negate();
-        let v_point = self.sbar.add(&neg_sr_point, params);
+        let v_point = self.left.add(&neg_sr_point, params);
 
         // for i in 0..u32::MAX {
         for i in 0..1000 { // FIXME:
@@ -69,21 +69,21 @@ impl<E: JubjubEngine> Ciphertext<E> {
     }
 
     pub fn write<W: io::Write>(&self, mut writer: W) -> io::Result<()> {
-        self.sbar.write(&mut writer)?;
-        self.tbar.write(&mut writer)?;
+        self.left.write(&mut writer)?;
+        self.right.write(&mut writer)?;
         Ok(())
     }
 
     pub fn read<R: io::Read>(reader: &mut R, params: &E::Params) -> io::Result<Self> {
-        let sbar = edwards::Point::<E, _>::read(reader, params)?;
-        let sbar = sbar.as_prime_order(params).unwrap();
+        let left = edwards::Point::<E, _>::read(reader, params)?;
+        let left = left.as_prime_order(params).unwrap();
 
-        let tbar = edwards::Point::<E, _>::read(reader, params)?;
-        let tbar = tbar.as_prime_order(params).unwrap();
+        let right = edwards::Point::<E, _>::read(reader, params)?;
+        let right = right.as_prime_order(params).unwrap();
 
         Ok(Ciphertext {
-            sbar,
-            tbar,
+            left,
+            right,
         })
     }
 }
@@ -165,14 +165,14 @@ mod tests {
         let ciphetext20 = Ciphertext::encrypt(value20, r_fs1, &public_key, p_g, params);
         let ciphetext13 = Ciphertext::encrypt(value13, r_fs2, &public_key, p_g, params);
 
-        let neg_s_ciphertext13 = ciphetext13.sbar.negate();
-        let neg_t_ciphertext13 = ciphetext13.tbar.negate();
-        let s_ciphertext7 = ciphetext20.sbar.add(&neg_s_ciphertext13, params);
-        let t_ciphertext7 = ciphetext20.tbar.add(&neg_t_ciphertext13, params);
+        let neg_s_ciphertext13 = ciphetext13.left.negate();
+        let neg_t_ciphertext13 = ciphetext13.right.negate();
+        let s_ciphertext7 = ciphetext20.left.add(&neg_s_ciphertext13, params);
+        let t_ciphertext7 = ciphetext20.right.add(&neg_t_ciphertext13, params);
 
         let homo_ciphetext7 = Ciphertext {
-            sbar: s_ciphertext7,
-            tbar: t_ciphertext7,
+            left: s_ciphertext7,
+            right: t_ciphertext7,
         };
 
         let decrypted_value7 = homo_ciphetext7.decrypt(&sk, p_g, params).unwrap();    
@@ -214,14 +214,14 @@ mod tests {
         let ciphetext20 = Ciphertext::encrypt(value20, r_fs1, &public_key1, p_g, params);
         let ciphetext13 = Ciphertext::encrypt(value13, r_fs2, &public_key2, p_g, params);
 
-        let neg_s_ciphertext13 = ciphetext13.sbar.negate();
-        let neg_t_ciphertext13 = ciphetext13.tbar.negate();
-        let s_ciphertext7 = ciphetext20.sbar.add(&neg_s_ciphertext13, params);
-        let t_ciphertext7 = ciphetext20.tbar.add(&neg_t_ciphertext13, params);
+        let neg_s_ciphertext13 = ciphetext13.left.negate();
+        let neg_t_ciphertext13 = ciphetext13.right.negate();
+        let s_ciphertext7 = ciphetext20.left.add(&neg_s_ciphertext13, params);
+        let t_ciphertext7 = ciphetext20.right.add(&neg_t_ciphertext13, params);
 
         let homo_ciphetext7 = Ciphertext {
-            sbar: s_ciphertext7,
-            tbar: t_ciphertext7,
+            left: s_ciphertext7,
+            right: t_ciphertext7,
         };
 
         let expected_value7 = homo_ciphetext7.decrypt(&sk1, p_g, params).unwrap();  

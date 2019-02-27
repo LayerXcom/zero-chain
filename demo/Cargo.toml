@@ -9,10 +9,10 @@ rand = "0.4"
 proofs = { package = "zero-chain-proofs", path = "../proofs" }
 structopt = "0.2"
 substrate-primitives = { git = "https://github.com/paritytech/substrate" }
-pairing = { git = "https://github.com/zcash/librustzcash" }
+pairing = { git = "https://github.com/zcash/librustzcash", rev = "1a1c77536d824d7b6bd0eaf3e9888829a7a1f5dc" }
 lazy_static = "1"
-bellman = { git = "https://github.com/zcash/librustzcash" }
-scrypto = { package = "sapling-crypto", git = "https://github.com/zcash/librustzcash" }
+bellman = { git = "https://github.com/zcash/librustzcash", rev = "1a1c77536d824d7b6bd0eaf3e9888829a7a1f5dc" }
+scrypto = { package = "sapling-crypto", git = "https://github.com/zcash/librustzcash", rev = "1a1c77536d824d7b6bd0eaf3e9888829a7a1f5dc" }
 zcrypto = { package = "zero-chain-crypto", path = "../crypto"}
 zprimitives = { package = "zero-chain-primitives", path = "../primitives" }
 

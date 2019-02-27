@@ -32,7 +32,7 @@
 
 // use scrypto::circuit::boolean;
 
-// use primitives::{
+// use zprimitives::{
 //     ValueCommitment,
 //     ProofGenerationKey,
 //     PaymentAddress

@@ -2,7 +2,7 @@ use pairing::{
     Engine,
     Field,
     PrimeField,
-    PrimeFieldRepr
+    PrimeFieldRepr,
 };
 
 use bellman::{
