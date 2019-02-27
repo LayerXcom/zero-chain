@@ -58,7 +58,8 @@ impl<E: JubjubEngine> Ciphertext<E> {
         let neg_sr_point = sr_point.negate();
         let v_point = self.sbar.add(&neg_sr_point, params);
 
-        for i in 0..u32::MAX {
+        // for i in 0..u32::MAX {
+        for i in 0..1000 { // FIXME:
             if find_point(i, &v_point, p_g, params) {
                 return Some(i);
             }
@@ -137,27 +138,32 @@ mod tests {
     }
 
     #[test]
-    fn test_homomorphic() {
+    fn test_homomorphic_true_same_public_key() {
         let rng_sk = &mut XorShiftRng::from_seed([0xbc4f6d44, 0xd62f276c, 0xb963afd0, 0x5455863d]);
         let mut sk = [0u8; 32];
         rng_sk.fill_bytes(&mut sk[..]);
-        let sk_fs = Fs::to_uniform(elgamal_extend(&sk).as_bytes()).into_repr();
+        let sk_fs = Fs::to_uniform(elgamal_extend(&sk).as_bytes());
 
-        let rng_r = &mut XorShiftRng::from_seed([0xbc4f6d47, 0xd62f276d, 0xb963afd3, 0x54558639]);
+        let rng_r1 = &mut XorShiftRng::from_seed([0xbc4f6d47, 0xd62f276d, 0xb963afd3, 0x54558639]);
         let mut randomness = [0u8; 32];
-        rng_r.fill_bytes(&mut randomness[..]);
-        let r_fs = Fs::to_uniform(elgamal_extend(&randomness).as_bytes());
+        rng_r1.fill_bytes(&mut randomness[..]);
+        let r_fs1 = Fs::to_uniform(elgamal_extend(&randomness).as_bytes());
+
+        let rng_r2 = &mut XorShiftRng::from_seed([0xbc4f6d37, 0xd32f276d, 0xb943afd3, 0x54598639]);
+        let mut randomness = [0u8; 32];
+        rng_r2.fill_bytes(&mut randomness[..]);
+        let r_fs2 = Fs::to_uniform(elgamal_extend(&randomness).as_bytes());
 
         let params = &JubjubBls12::new();
         let p_g = FixedGenerators::ElGamal;
 
         let public_key = params.generator(p_g).mul(sk_fs, params).into();
         let value20: u32 = 20 as u32;
-        let value13: u32 = 13 as u32;
+        let value13: u32 = 13 as u32;        
         let value7: u32 = 7 as u32;
 
-        let ciphetext20 = Ciphertext::encrypt(value20, r_fs, &public_key, p_g, params);
-        let ciphetext13 = Ciphertext::encrypt(value13, r_fs, &public_key, p_g, params);
+        let ciphetext20 = Ciphertext::encrypt(value20, r_fs1, &public_key, p_g, params);
+        let ciphetext13 = Ciphertext::encrypt(value13, r_fs2, &public_key, p_g, params);
 
         let neg_s_ciphertext13 = ciphetext13.sbar.negate();
         let neg_t_ciphertext13 = ciphetext13.tbar.negate();
@@ -172,6 +178,56 @@ mod tests {
         let decrypted_value7 = homo_ciphetext7.decrypt(&sk, p_g, params).unwrap();    
         assert_eq!(decrypted_value7, value7);       
     }       
+        
+    #[test]
+    #[should_panic]
+    fn test_homomorphic_false_wrong_public_key() {
+        let rng_sk1 = &mut XorShiftRng::from_seed([0xbc4f6d44, 0xd62f276c, 0xb963afd0, 0x5455863d]);
+        let mut sk1 = [0u8; 32];
+        rng_sk1.fill_bytes(&mut sk1[..]);
+        let sk_fs1 = Fs::to_uniform(elgamal_extend(&sk1).as_bytes());
+
+        let rng_sk2 = &mut XorShiftRng::from_seed([0xbc4f6d74, 0xd32f276c, 0xb913afd0, 0x9455863d]);
+        let mut sk2 = [0u8; 32];
+        rng_sk2.fill_bytes(&mut sk2[..]);
+        let sk_fs2 = Fs::to_uniform(elgamal_extend(&sk2).as_bytes());
+
+        let rng_r1 = &mut XorShiftRng::from_seed([0xbc4f6d47, 0xd62f276d, 0xb963afd3, 0x54558639]);
+        let mut randomness = [0u8; 32];
+        rng_r1.fill_bytes(&mut randomness[..]);
+        let r_fs1 = Fs::to_uniform(elgamal_extend(&randomness).as_bytes());
+
+        let rng_r2 = &mut XorShiftRng::from_seed([0xbc4f6d37, 0xd32f276d, 0xb943afd3, 0x54598639]);
+        let mut randomness = [0u8; 32];
+        rng_r2.fill_bytes(&mut randomness[..]);
+        let r_fs2 = Fs::to_uniform(elgamal_extend(&randomness).as_bytes());
+
+        let params = &JubjubBls12::new();
+        let p_g = FixedGenerators::ElGamal;
+
+        let public_key1 = params.generator(p_g).mul(sk_fs1, params).into();
+        let public_key2 = params.generator(p_g).mul(sk_fs2, params).into();
+        let value20: u32 = 20 as u32;
+        let value13: u32 = 13 as u32;        
+        let value7: u32 = 7 as u32;
+
+        let ciphetext20 = Ciphertext::encrypt(value20, r_fs1, &public_key1, p_g, params);
+        let ciphetext13 = Ciphertext::encrypt(value13, r_fs2, &public_key2, p_g, params);
+
+        let neg_s_ciphertext13 = ciphetext13.sbar.negate();
+        let neg_t_ciphertext13 = ciphetext13.tbar.negate();
+        let s_ciphertext7 = ciphetext20.sbar.add(&neg_s_ciphertext13, params);
+        let t_ciphertext7 = ciphetext20.tbar.add(&neg_t_ciphertext13, params);
+
+        let homo_ciphetext7 = Ciphertext {
+            sbar: s_ciphertext7,
+            tbar: t_ciphertext7,
+        };
+
+        let expected_value7 = homo_ciphetext7.decrypt(&sk1, p_g, params).unwrap();  
+        println!("expect_value7: {:?}", expected_value7);
+        assert_eq!(expected_value7, value7);   
+    }
 
     #[test]
     fn test_ciphertext_read_write() {

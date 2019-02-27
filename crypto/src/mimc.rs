@@ -1,21 +1,21 @@
-use jubjub::curve::{
-    JubjubEngine,
-    ToUniform,
-    fs::Fs,
-};
+// use jubjub::curve::{
+//     JubjubEngine,
+//     ToUniform,
+//     fs::Fs,
+// };
 
-use pairing::{
-    PrimeField,
-    PrimeFieldRepr,
-    Field,    
-    bls12_381::{Bls12},    
-};
+// use pairing::{
+//     PrimeField,
+//     PrimeFieldRepr,
+//     Field,    
+//     bls12_381::{Bls12},    
+// };
 
-use blake2_rfc::blake2s::Blake2s;
+// use blake2_rfc::blake2s::Blake2s;
 
-use rand::{thread_rng, Rng, Rand};
+// use rand::{thread_rng, Rng, Rand};
 
-use super::constants::{DEFAULT_MIMC_ROUND, DEFAULT_MIMC_SEED, MIMC_PERSONALIZATION};
+// use super::constants::{DEFAULT_MIMC_ROUND, DEFAULT_MIMC_SEED, MIMC_PERSONALIZATION};
 
 // pub fn mimc_constants<'a, E>(
 //     seed: &'a[u8],

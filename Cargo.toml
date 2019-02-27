@@ -35,7 +35,7 @@ substrate-basic-authorship = { git = "https://github.com/paritytech/substrate" }
 node-executor = { git = "https://github.com/paritytech/substrate" }
 
 bellman-verifier = { path = "bellman-verifier"}
-zero-chain-cli = { path = "cli" }
+zero-chain-demo = { path = "demo" }
 zero-chain-crypto = { path = "crypto" }
 jubjub = { path = "jubjub" }
 zero-chain-pairing = { path = "pairing" }
@@ -54,7 +54,7 @@ members = [
     "primitives", 
     "proofs", 
     "crypto", 
-    "cli", 
+    "demo", 
     "pairing", 
     "bellman-verifier", 
     "jubjub",     

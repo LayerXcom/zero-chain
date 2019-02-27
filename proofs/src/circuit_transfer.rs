@@ -10,7 +10,8 @@ use bellman::{
 
 use scrypto::jubjub::{
     JubjubEngine,
-    FixedGenerators
+    FixedGenerators,
+    PrimeOrder,
 };
 
 use zcrypto::constants;
@@ -29,78 +30,88 @@ use scrypto::circuit::{
 
 // An instance of the Transfer circuit.
 pub struct Transfer<'a, E: JubjubEngine> {
-    pub params: &'a E::Params,     
-    pub transfer_value_commitment: Option<ValueCommitment<E>>,
-    pub balance_value_commitment: Option<ValueCommitment<E>>,            
+    pub params: &'a E::Params,    
+    pub value: Option<u32>,
+    pub value_random: Option<E::Fs>,    
+    pub balance: Option<u32>,       
+    pub balance_random: Option<E::Fs>,    
     // Re-randomization of the public key
     pub ar: Option<E::Fs>,
-    pub proof_generation_key: Option<ProofGenerationKey<E>>, // ak and nsk
-    pub esk: Option<E::Fs>,
+    pub proof_generation_key: Option<ProofGenerationKey<E>>, // ak and nsk    
     // The payment address associated with the note
-    pub prover_payment_address: Option<PaymentAddress<E>>,
-    // The payment address  of the recipient
-    pub recipient_payment_address: Option<PaymentAddress<E>>,
+    pub address_sender: Option<PaymentAddress<E>>,        
 }
 
-fn expose_value_commitment<E, CS>(
+fn expose_ciphertext<E, CS>(
     mut cs: CS,
-    value_commitment: &Option<ValueCommitment<E>>,
-    transfer_or_balance: &str,
+    amount: Option<u32>,
+    randomness: Option<E::Fs>,
+    pk_d: Option<edwards::Point<E, PrimeOrder>>,
+    value_or_balance: &str,
     params: &E::Params
 ) -> Result<(), SynthesisError>
     where E: JubjubEngine, CS: ConstraintSystem<E>
 {
-    let value_bits = boolean::u64_into_boolean_vec_le(
-        cs.namespace(|| format!("{} value", transfer_or_balance)), 
-        value_commitment.as_ref().map(|c| c.value)
+    let value_bits = boolean::u32_into_boolean_vec_le(
+        cs.namespace(|| format!("{} value", value_or_balance)), 
+        amount
     )?;
 
     let value = ecc::fixed_base_multiplication(
-        cs.namespace(|| format!("compute the {} value in the exponent", transfer_or_balance)), 
-        FixedGenerators::ValueCommitmentValue, 
+        cs.namespace(|| format!("compute the {} value in the exponent", value_or_balance)), 
+        FixedGenerators::ElGamal, 
         &value_bits, 
         params
     )?;
 
     let rcv = boolean::field_into_boolean_vec_le(
-        cs.namespace(|| format!("{} rcv", transfer_or_balance)), 
-        value_commitment.as_ref().map(|c| c.randomness)
+        cs.namespace(|| format!("{} rcv", value_or_balance)), 
+        randomness
     )?;
 
     let rcv = ecc::fixed_base_multiplication(
-        cs.namespace(|| format!("computation of {} rcv", transfer_or_balance)), 
-        FixedGenerators::ValueCommitmentRandomness, 
+        cs.namespace(|| format!("computation of {} rcv", value_or_balance)), 
+        FixedGenerators::ElGamal, 
         &rcv, 
         params
     )?;
 
+    // TODO:
+    // let rsp = ecc::mul(
+    //     cs.namespace(|| format!("{} rsp", value_or_balance)),
+    //     edwards::Point,
+    //     &rcv,
+    //     params
+    // )
+    
     let cv = value.add(
-        cs.namespace(|| format!("computation of {} cv", transfer_or_balance)),
-        &rcv,
+        cs.namespace(|| format!("computation of {} cv", value_or_balance)),
+        &rcv, // TODO: Replace with &rsp
         params
     )?;
-
-    cv.inputize(cs.namespace(|| format!("{} commitment point", transfer_or_balance)))?;  
+    
+    cv.inputize(cs.namespace(|| format!("{} sbar point", value_or_balance)))?;  
+    rcv.inputize(cs.namespace(|| format!("{} tbar point ", value_or_balance)))?;
     Ok(())  
 }
 
-fn u64_into_alloc<E, CS>(
+fn u32_into_boolean_vec_le<E, CS>(
     mut cs: CS,
-    value: Option<u64>
+    value: Option<u32>
 ) -> Result<(), SynthesisError>
     where E: JubjubEngine, CS: ConstraintSystem<E>
 {
     let values = match value {
         Some(ref value) => {
-            let mut tmp = Vec::with_capacity(64);
-            for i in 0..64 {
+            let mut tmp = Vec::with_capacity(32);
+            for i in 0..32 {
                 tmp.push(Some(*value >> i & 1 == 1));
             }
             tmp
         },
 
         None => {
-            vec![None; 64]
+            vec![None; 32]
         }
     };
 
@@ -123,58 +134,45 @@ impl<'a, E: JubjubEngine> Circuit<E> for Transfer<'a, E> {
         cs: &mut CS
     ) -> Result<(), SynthesisError>
     {                
-        // value commitment integrity of sender's balance and expose the commitment publicly.   
-        expose_value_commitment(
-            cs.namespace(|| "balance commitment"), 
-            &self.balance_value_commitment, 
+        // value ciphertext integrity of sender's balance and expose the ciphertext publicly.   
+        expose_ciphertext(
+            cs.namespace(|| "balance ciphertext"), 
+            balance,
+            balance_random,
+            public,
             "balance", 
             self.params
         )?;        
 
-        // value commitment integrity of transferring amount and expose the commitment publicly.        
-        expose_value_commitment(
-            cs.namespace(|| "transfer commitment"), 
+        // value ciphertext integrity of transferring amount and expose the ciphertext publicly.        
+        expose_ciphertext(
+            cs.namespace(|| "value ciphertext"), 
             &self.transfer_value_commitment, 
-            "transfer", 
+            "value", 
             self.params
         )?;
 
-        // Ensure transferring amount is not over the sender's balance
-        self.balance_value_commitment.as_ref().map(|b|
-            self.transfer_value_commitment.as_ref().map(|t|
-                u64_into_alloc(
+        // Ensure transferring value is not over the sender's balance
+        self.balance.as_ref().map(|b|
+            self.value.as_ref().map(|v|
+                u32_into_boolean_vec_le(
                     cs.namespace(|| "range proof of balance"), 
-                    Some(b.value - t.value))
+                    Some(b - v))
             )
         ).unwrap();        
 
-        // Prover witnesses recipient_g_d, ensuring it's on the curve.
-        let recipient_g_d = ecc::EdwardsPoint::witness(
-            cs.namespace(|| "witness recipient_g_d"),
-            self.recipient_payment_address.as_ref().and_then(|a| a.g_d(self.params)),
-            self.params
-        )?;
+        // // Prover witnesses recipient_g_d, ensuring it's on the curve.
+        // let recipient_g_d = ecc::EdwardsPoint::witness(
+        //     cs.namespace(|| "witness recipient_g_d"),
+        //     self.address_recipient.as_ref().and_then(|a| a.g_d(self.params)),
+        //     self.params
+        // )?;
 
-        // Ensure recipient_g_d is large order.
-        recipient_g_d.assert_not_small_order(
-            cs.namespace(|| "recipient_g_d not small order"),
-            self.params
-        )?;
-        
-        let esk = boolean::field_into_boolean_vec_le(
-            cs.namespace(|| "esk"),
-            self.esk
-        )?;
-
-        // Create the ephemeral public key from recipient_g_d.
-        let epk = recipient_g_d.mul(
-            cs.namespace(|| "epk computation"),
-            &esk,
-            self.params
-        )?;
-
-        // Expose epk publicly.
-        epk.inputize(cs.namespace(|| "epk"))?;
+        // // Ensure recipient_g_d is large order.
+        // recipient_g_d.assert_not_small_order(
+        //     cs.namespace(|| "recipient_g_d not small order"),
+        //     self.params
+        // )?;                        
 
         // Ensure ak on the curve.
         let ak = ecc::EdwardsPoint::witness(
@@ -250,7 +248,7 @@ impl<'a, E: JubjubEngine> Circuit<E> for Transfer<'a, E> {
             let params = self.params;
             ecc::EdwardsPoint::witness(
                 cs.namespace(|| "witness prover_g_d"),
-                self.prover_payment_address.as_ref().and_then(|a| a.g_d(params)),
+                self.address_sender.as_ref().and_then(|a| a.g_d(params)),
                 self.params
             )?
         };   
@@ -293,7 +291,7 @@ impl<'a, E: JubjubEngine> Circuit<E> for Transfer<'a, E> {
         };
 
         let viewing_key_s = proof_generation_key_s.into_viewing_key(params);
-        let prover_payment_address;
+        let address_sender;
 
         loop {
             let diversifier_s = Diversifier(rng.gen());
@@ -303,12 +301,12 @@ impl<'a, E: JubjubEngine> Circuit<E> for Transfer<'a, E> {
                 params
             )
             {
-                prover_payment_address = p;
+                address_sender = p;
                 break;
             }
         }
 
-        let recipient_payment_address;        
+        let address_recipient;        
         let nsk_r: fs::Fs = rng.gen();
         
         let ak_r = edwards::Point::rand(rng, params).mul_by_cofactor(params);
@@ -327,12 +325,11 @@ impl<'a, E: JubjubEngine> Circuit<E> for Transfer<'a, E> {
                 params
             )
             {
-                recipient_payment_address = p;
+                address_recipient = p;
                 break;
             }
         }                        
-
-        let esk: fs::Fs = rng.gen();
+        
         let ar: fs::Fs = rng.gen();
 
         let transfer_value_commitment = ValueCommitment {
@@ -359,34 +356,24 @@ impl<'a, E: JubjubEngine> Circuit<E> for Transfer<'a, E> {
             transfer_value_commitment: Some(transfer_value_commitment.clone()),
             balance_value_commitment: Some(balance_value_commitment.clone()),
             proof_generation_key: Some(proof_generation_key_s.clone()),
-            prover_payment_address: Some(prover_payment_address.clone()),
-            recipient_payment_address: Some(recipient_payment_address.clone()),                                
-            esk: Some(esk.clone()),
+            address_sender: Some(address_sender.clone()),
+            address_recipient: Some(address_recipient.clone()),                                            
             ar: Some(ar.clone())
         };        
 
-        instance.synthesize(&mut cs).unwrap();
-
-        let expected_epk = recipient_payment_address
-            .g_d(params)
-            .expect("should be valid")
-            .mul(esk, params);
-
-        let expected_epk_xy = expected_epk.into_xy();
+        instance.synthesize(&mut cs).unwrap();        
         
         println!("transfer_constraints: {:?}", cs.num_constraints());
         assert!(cs.is_satisfied());
         // assert_eq!(cs.num_constraints(), 75415);
         // assert_eq!(cs.hash(), "3ff9338cc95b878a20b0974490633219e032003ced1d3d917cde4f50bc902a12");
         
-        assert_eq!(cs.num_inputs(), 9);
+        assert_eq!(cs.num_inputs(), 7);
         assert_eq!(cs.get_input(0, "ONE"), Fr::one());
         assert_eq!(cs.get_input(1, "balance commitment/balance commitment point/x/input variable"), expected_balance_cm.0);
         assert_eq!(cs.get_input(2, "balance commitment/balance commitment point/y/input variable"), expected_balance_cm.1);
         assert_eq!(cs.get_input(3, "transfer commitment/transfer commitment point/x/input variable"), expected_transfer_cm.0);
-        assert_eq!(cs.get_input(4, "transfer commitment/transfer commitment point/y/input variable"), expected_transfer_cm.1);
-        assert_eq!(cs.get_input(5, "epk/x/input variable"), expected_epk_xy.0);
-        assert_eq!(cs.get_input(6, "epk/y/input variable"), expected_epk_xy.1);
-        assert_eq!(cs.get_input(7, "rk/x/input variable"), rk.0);
-        assert_eq!(cs.get_input(8, "rk/y/input variable"), rk.1);        
+        assert_eq!(cs.get_input(4, "transfer commitment/transfer commitment point/y/input variable"), expected_transfer_cm.1);        
+        assert_eq!(cs.get_input(5, "rk/x/input variable"), rk.0);
+        assert_eq!(cs.get_input(6, "rk/y/input variable"), rk.1);        
     }

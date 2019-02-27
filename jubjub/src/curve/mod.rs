@@ -62,8 +62,8 @@ pub enum FixedGenerators {
     /// a proof, in order to authorize proof construction.
     ProofGenerationKey = 0,
 
-    /// The note commitment is randomized over this generator.
-    NoteCommitmentRandomness = 1,
+    /// The public key is generated with this generator.
+    Diversifier = 1,
 
     /// The transfer value is encrypted with lifted-ElGamal over this generator.
     ElGamal = 2,
@@ -312,8 +312,8 @@ impl JubjubBls12 {
             fixed_base_generators[FixedGenerators::ProofGenerationKey as usize] =
                 find_group_hash(&[], constants::PROOF_GENERATION_KEY_BASE_GENERATOR_PERSONALIZATION, &tmp_params);
 
-            fixed_base_generators[FixedGenerators::NoteCommitmentRandomness as usize] =
-                find_group_hash(b"r", constants::PEDERSEN_HASH_GENERATORS_PERSONALIZATION, &tmp_params);
+            fixed_base_generators[FixedGenerators::Diversifier as usize] =
+                find_group_hash(b"r", constants::DIVERSIFIER_PERSONALIZATION, &tmp_params);
 
             fixed_base_generators[FixedGenerators::ElGamal as usize] =
                 find_group_hash(&[], constants::ELGAMAL_PERSONALIZATION, &tmp_params);

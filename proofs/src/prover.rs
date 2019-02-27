@@ -38,8 +38,7 @@ pub struct TransferProof {
     pub proof: Proof<Bls12>,
     pub balance_value_commitment: ValueCommitment<Bls12>,
     pub transfer_value_commitment: ValueCommitment<Bls12>,
-    pub rk: PublicKey<Bls12>, // rk, re-randomization sig-verifying key
-    pub epk: edwards::Point<Bls12, PrimeOrder>,
+    pub rk: PublicKey<Bls12>, // rk, re-randomization sig-verifying key    
     pub payment_address_sender: PaymentAddress<Bls12>,
 }
 
@@ -47,12 +46,11 @@ impl TransferProof {
     pub fn gen_proof(        
         transfer_value: u64,         
         balance_value: u64,        
-        ar: Fs,
-        esk: Fs, 
+        ar: Fs,        
         proving_key: &Parameters<Bls12>, 
         verifying_key: &PreparedVerifyingKey<Bls12>,
         proof_generation_key: ProofGenerationKey<Bls12>,
-        recipient_payment_address: PaymentAddress<Bls12>,
+        address_recipient: PaymentAddress<Bls12>,
         diversifier: Diversifier,
         params: &JubjubBls12,        
     ) -> Result<Self, ()>
@@ -87,22 +85,16 @@ impl TransferProof {
                 ar,
                 FixedGenerators::SpendingKeyGenerator,
                 params,
-        );
-
-        let epk = recipient_payment_address
-            .g_d(params)
-            .expect("should be valid")
-            .mul(esk, params);
+        );       
 
         let instance = Transfer {
             params: params,     
             transfer_value_commitment: Some(transfer_value_commitment.clone()),
             balance_value_commitment: Some(balance_value_commitment.clone()),            
             ar: Some(ar),
-            proof_generation_key: Some(proof_generation_key), 
-            esk: Some(esk),
+            proof_generation_key: Some(proof_generation_key),             
             prover_payment_address: Some(prover_payment_address.clone()),
-            recipient_payment_address: Some(recipient_payment_address),
+            address_recipient: Some(address_recipient),
         };
 
         // Crate proof
@@ -119,16 +111,11 @@ impl TransferProof {
             let (x, y) = (&transfer_value_commitment).cm(params).into_xy();
             public_input[2] = x;
             public_input[3] = y;
-        }
-        {
-            let (x, y) = epk.into_xy();
-            public_input[4] = x;
-            public_input[5] = y;
-        }
+        }     
         {
             let (x, y) = rk.0.into_xy();
-            public_input[6] = x;
-            public_input[7] = y;
+            public_input[4] = x;
+            public_input[5] = y;
         }
 
         match verify_proof(verifying_key, &proof, &public_input[..]) {
@@ -142,8 +129,7 @@ impl TransferProof {
             proof: proof,
             balance_value_commitment: balance_value_commitment,
             transfer_value_commitment: transfer_value_commitment,
-            rk: rk, 
-            epk: epk,
+            rk: rk,             
             payment_address_sender: prover_payment_address,
         };
 
