@@ -4,3 +4,4 @@ pub mod prover;
 pub mod verifier;
 pub mod circuit_test;
 pub mod primitives;
+pub mod elgamal;

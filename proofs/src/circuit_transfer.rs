@@ -15,7 +15,7 @@ use scrypto::jubjub::{
     JubjubParams,
 };
 
-use zcrypto::{constants, elgamal::Ciphertext};
+use zcrypto::constants;
 
 use crate::primitives::{
     ValueCommitment,
@@ -31,6 +31,7 @@ use scrypto::circuit::{
 };
 // From no_std
 use zpairing::bls12_381::Bls12;
+use crate::elgamal::Ciphertext;
 
 // An instance of the Transfer circuit.
 pub struct Transfer<'a, E: JubjubEngine> {
@@ -42,7 +43,7 @@ pub struct Transfer<'a, E: JubjubEngine> {
     pub proof_generation_key: Option<ProofGenerationKey<E>>, // ak and nsk        
     pub ivk: Option<E::Fs>,    
     pub pk_d_recipient: Option<edwards::Point<E, PrimeOrder>>,
-    pub encrypted_balance: Option<Ciphertext<Bls12>>,
+    pub encrypted_balance: Option<Ciphertext<E>>,
 }
 
 fn get_rsg<E, CS>(
@@ -228,7 +229,41 @@ impl<'a, E: JubjubEngine> Circuit<E> for Transfer<'a, E> {
         c_right.inputize(cs.namespace(|| format!("c_right")))?;
 
         // TODO:
-        
+        {
+            let (xl, yl) = self.encrypted_balance.clone().map(|e| e.left.into_xy()).unwrap();
+            let (xr, yr) = self.encrypted_balance.map(|e| e.right.into_xy()).unwrap();
+
+            let numxl = AllocatedNum::alloc(cs.namespace(|| "numxl"), || {
+                Ok(xl)
+            })?;
+            let numyl = AllocatedNum::alloc(cs.namespace(|| "numyl"), || {
+                Ok(yl)
+            })?;
+            let numxr = AllocatedNum::alloc(cs.namespace(|| "numxr"), || {
+                Ok(xr)
+            })?;
+            let numyr = AllocatedNum::alloc(cs.namespace(|| "numyr"), || {
+                Ok(yr)
+            })?;
+
+            let pointl = EdwardsPoint::interpret(
+                cs.namespace(|| format!("interpret to pointl")), 
+                &numxl, 
+                &numyl, 
+                params
+            )?;
+
+            let pointr = EdwardsPoint::interpret(
+                cs.namespace(|| format!("interpret to pointr")), 
+                &numxr, 
+                &numyr, 
+                params
+            )?;
+
+            pointl.inputize(cs.namespace(|| format!("inputize pointl")))?;
+            pointr.inputize(cs.namespace(|| format!("inputize pointr")))?;
+        }
+
 
         // Ensure ak on the curve.
         let ak = ecc::EdwardsPoint::witness(

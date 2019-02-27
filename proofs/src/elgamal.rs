@@ -1,4 +1,4 @@
-use jubjub::curve::{
+use scrypto::jubjub::{
         JubjubEngine,
         JubjubParams,
         edwards,
@@ -7,15 +7,12 @@ use jubjub::curve::{
         ToUniform,
 };
 
-#[cfg(feature = "std")]
-use ::std::u32;
-#[cfg(not(feature = "std"))]
-use crate::std::u32;
-
 use blake2_rfc::{
     blake2b::{Blake2b, Blake2bResult}
 };
-use pairing::{PrimeField, io};
+use pairing::PrimeField;
+
+use std::io;
 
 pub const ELGAMAL_EXTEND_PERSONALIZATION: &'static [u8; 16] = b"zech_elgamal_ext";
 
@@ -74,18 +71,18 @@ impl<E: JubjubEngine> Ciphertext<E> {
         Ok(())
     }
 
-    pub fn read<R: io::Read>(reader: &mut R, params: &E::Params) -> io::Result<Self> {
-        let left = edwards::Point::<E, _>::read(reader, params)?;
-        let left = left.as_prime_order(params).unwrap();
+    // pub fn read<R: io::Read>(reader: &mut R, params: &E::Params) -> io::Result<Self> {
+    //     let left = edwards::Point::<E, _>::read(reader, params)?;
+    //     let left = left.as_prime_order(params).unwrap();
 
-        let right = edwards::Point::<E, _>::read(reader, params)?;
-        let right = right.as_prime_order(params).unwrap();
+    //     let right = edwards::Point::<E, _>::read(reader, params)?;
+    //     let right = right.as_prime_order(params).unwrap();
 
-        Ok(Ciphertext {
-            left,
-            right,
-        })
-    }
+    //     Ok(Ciphertext {
+    //         left,
+    //         right,
+    //     })
+    // }
 }
 
 /// Find the point of the value
@@ -229,29 +226,29 @@ mod tests {
         assert_eq!(expected_value7, value7);   
     }
 
-    #[test]
-    fn test_ciphertext_read_write() {
-        let rng_sk = &mut XorShiftRng::from_seed([0xbc4f6d44, 0xd62f276c, 0xb963afd0, 0x5455863d]);
-        let mut sk = [0u8; 32];
-        rng_sk.fill_bytes(&mut sk[..]);
-        let sk_fs = Fs::to_uniform(elgamal_extend(&sk).as_bytes()).into_repr();
+    // #[test]
+    // fn test_ciphertext_read_write() {
+    //     let rng_sk = &mut XorShiftRng::from_seed([0xbc4f6d44, 0xd62f276c, 0xb963afd0, 0x5455863d]);
+    //     let mut sk = [0u8; 32];
+    //     rng_sk.fill_bytes(&mut sk[..]);
+    //     let sk_fs = Fs::to_uniform(elgamal_extend(&sk).as_bytes()).into_repr();
 
-        let rng_r = &mut XorShiftRng::from_seed([0xbc4f6d47, 0xd62f276d, 0xb963afd3, 0x54558639]);
-        let mut randomness = [0u8; 32];
-        rng_r.fill_bytes(&mut randomness[..]);
-        let r_fs = Fs::to_uniform(elgamal_extend(&randomness).as_bytes());
+    //     let rng_r = &mut XorShiftRng::from_seed([0xbc4f6d47, 0xd62f276d, 0xb963afd3, 0x54558639]);
+    //     let mut randomness = [0u8; 32];
+    //     rng_r.fill_bytes(&mut randomness[..]);
+    //     let r_fs = Fs::to_uniform(elgamal_extend(&randomness).as_bytes());
 
-        let params = &JubjubBls12::new();
-        let p_g = FixedGenerators::ElGamal;
+    //     let params = &JubjubBls12::new();
+    //     let p_g = FixedGenerators::ElGamal;
 
-        let public_key = params.generator(p_g).mul(sk_fs, params).into();
-        let value: u32 = 6 as u32;
+    //     let public_key = params.generator(p_g).mul(sk_fs, params).into();
+    //     let value: u32 = 6 as u32;
 
-        let ciphetext1 = Ciphertext::encrypt(value, r_fs, &public_key, p_g, params);
+    //     let ciphetext1 = Ciphertext::encrypt(value, r_fs, &public_key, p_g, params);
 
-        let mut v = vec![];
-        ciphetext1.write(&mut v).unwrap();
-        let ciphetext2 = Ciphertext::read(&mut v.as_slice(), params).unwrap();
-        assert!(ciphetext1 == ciphetext2);
-    }
+    //     let mut v = vec![];
+    //     ciphetext1.write(&mut v).unwrap();
+    //     let ciphetext2 = Ciphertext::read(&mut v.as_slice(), params).unwrap();
+    //     assert!(ciphetext1 == ciphetext2);
+    // }
 }
