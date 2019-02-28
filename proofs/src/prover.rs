@@ -36,7 +36,8 @@ use crate::elgamal::{Ciphertext, elgamal_extend};
 pub struct TransferProof<E: JubjubEngine> {
     pub proof: Proof<E>,
     pub rk: PublicKey<E>, // re-randomization sig-verifying key    
-    pub address_sender: PaymentAddress<E>,        
+    pub address_sender: PaymentAddress<E>,    
+    pub address_recipient: PaymentAddress<E>,
     pub cipher_val_s: Ciphertext<E>,
     pub cipher_val_r: Ciphertext<E>,
 }
@@ -45,7 +46,7 @@ impl<E: JubjubEngine> TransferProof<E> {
     pub fn gen_proof(        
         value: u32,         
         remaining_balance: u32,        
-        ar: E::Fs,        
+        alpha: E::Fs,        
         proving_key: &Parameters<E>, 
         verifying_key: &PreparedVerifyingKey<E>,
         proof_generation_key: ProofGenerationKey<E>,
@@ -66,7 +67,7 @@ impl<E: JubjubEngine> TransferProof<E> {
 
         let rk = PublicKey(proof_generation_key.ak.clone().into())
             .randomize(
-                ar,
+                alpha,
                 FixedGenerators::SpendingKeyGenerator,
                 params,
         );                       
@@ -76,7 +77,7 @@ impl<E: JubjubEngine> TransferProof<E> {
             value: Some(value),
             remaining_balance: Some(remaining_balance),
             randomness: Some(randomness.clone()),
-            alpha: Some(ar.clone()),
+            alpha: Some(alpha.clone()),
             proof_generation_key: Some(proof_generation_key.clone()),
             ivk: Some(ivk.clone()),
             pk_d_recipient: Some(address_recipient.0.clone()),
@@ -156,9 +157,10 @@ impl<E: JubjubEngine> TransferProof<E> {
         let transfer_proof = TransferProof {
             proof: proof,        
             rk: rk,             
-            address_sender: address_sender,            
-            cipher_val_r: cipher_val_r,
+            address_sender: address_sender,  
+            address_recipient: address_recipient,          
             cipher_val_s: cipher_val_s,
+            cipher_val_r: cipher_val_r,
         };
 
         Ok(transfer_proof)

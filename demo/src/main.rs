@@ -1,16 +1,15 @@
-#[macro_use]
-extern crate lazy_static;
-
 // use structopt::Structopt;
-use rand::{rngs::OsRng, RngCore};
-use zero_chain_proofs::primitives::{ExpandedSpendingKey, ViewingKey, Diversifier};
+use rand::{OsRng, Rand, Rng};
+use proofs::primitives::{ExpandedSpendingKey, ViewingKey};
 use substrate_primitives::hexdisplay::HexDisplay;
 use pairing::bls12_381::Bls12;
-use sapling_crypto::jubjub::JubjubBls12;
+use scrypto::jubjub::JubjubBls12;
 
-lazy_static! {
-    static ref JUBJUB: JubjubBls12 = { JubjubBls12::new() };
-}
+pub mod transaction;
+
+extern crate parity_codec as codec;
+#[macro_use]
+extern crate parity_codec_derive as codec_derive;
 
 fn print_account(seed: &[u8; 32]) {    
     for i in 0..3 {
@@ -18,9 +17,10 @@ fn print_account(seed: &[u8; 32]) {
         let mut expsk_bytes = vec![];
         expsk.write(&mut expsk_bytes).unwrap();
 
-        let viewing_key = ViewingKey::<Bls12>::from_expanded_spending_key(&expsk, &JUBJUB);
-        let diversifier = Diversifier::new::<Bls12>(&JUBJUB).unwrap();
-        let address = viewing_key.into_payment_address(diversifier, &JUBJUB).unwrap();
+        let params = JubjubBls12::new();
+
+        let viewing_key = ViewingKey::<Bls12>::from_expanded_spending_key(&expsk, &params);        
+        let address = viewing_key.into_payment_address(&params);
 
         let mut address_bytes = vec![];
         address.write(&mut address_bytes).unwrap();
