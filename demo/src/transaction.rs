@@ -7,7 +7,7 @@ use pairing::{
 };
 
 use scrypto::{    
-    jubjub::{edwards, FixedGenerators, PrimeOrder, JubjubEngine},    
+    jubjub::{FixedGenerators, PrimeOrder, JubjubEngine},    
     redjubjub::{PrivateKey, PublicKey, Signature},
 };
 use zjubjub::{
@@ -121,17 +121,19 @@ impl<E: JubjubEngine> Transaction<E> {
 
 		let mut env_val_rb = [0u8; 64];
 		proof_output.cipher_val_r.write(&mut env_val_rb[..]).unwrap();
+		// Read the sending value encrypted by the recipient key as a no_std type
 		let zenc_val_recipient = zCiphertext::read(&mut &env_val_rb[..], &jbujub_bls12).unwrap();
 
 		let mut env_val_sb = [0u8; 64];
 		proof_output.cipher_val_s.write(&mut env_val_sb[..]).unwrap();
+		// Read the sending value encrypted by the sender key as a no_std type
 		let zenc_val_sender = zCiphertext::read(&mut &env_val_sb[..], &jbujub_bls12).unwrap();
 
 		let mut env_bal_sb = [0u8; 64];
 		ciphertext_balance.write(&mut env_bal_sb[..]).unwrap();
+		// Read the sender's balance encrypted by the sender key as a no_std type
 		let zenc_bal_sender = zCiphertext::read(&mut &env_bal_sb[..], &jbujub_bls12).unwrap();
 		
-
 		let tx = Transaction {
 			sig: pSignature::from_signature(&zsig),                   
 			sighash_value: sighash_value,          
@@ -148,3 +150,4 @@ impl<E: JubjubEngine> Transaction<E> {
 		Ok(tx)
 	}
 }
+
