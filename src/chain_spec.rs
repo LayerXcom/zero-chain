@@ -1,7 +1,7 @@
 use primitives::{Ed25519AuthorityId, ed25519};
-use zero_chain_runtime::{
+use runtime::{
 	AccountId, GenesisConfig, ConsensusConfig, TimestampConfig, BalancesConfig,
-	SudoConfig, IndicesConfig
+	SudoConfig, IndicesConfig, FeesConfig,
 };
 use substrate_service;
 
@@ -79,7 +79,7 @@ impl Alternative {
 fn testnet_genesis(initial_authorities: Vec<Ed25519AuthorityId>, endowed_accounts: Vec<AccountId>, root_key: AccountId) -> GenesisConfig {
 	GenesisConfig {
 		consensus: Some(ConsensusConfig {
-			code: include_bytes!("../runtime/wasm/target/wasm32-unknown-unknown/release/zero_chain_runtime.compact.wasm").to_vec(),
+			code: include_bytes!("../runtime/wasm/target/wasm32-unknown-unknown/release/zero_chain_runtime_wasm.compact.wasm").to_vec(),
 			authorities: initial_authorities.clone(),
 		}),
 		system: None,
@@ -90,15 +90,18 @@ fn testnet_genesis(initial_authorities: Vec<Ed25519AuthorityId>, endowed_account
 			ids: endowed_accounts.clone(),
 		}),
 		balances: Some(BalancesConfig {
-			transaction_base_fee: 1,
-			transaction_byte_fee: 0,
 			existential_deposit: 500,
 			transfer_fee: 0,
 			creation_fee: 0,
 			balances: endowed_accounts.iter().map(|&k|(k, (1 << 60))).collect(),
+			vesting: vec![],
 		}),
 		sudo: Some(SudoConfig {
 			key: root_key,
 		}),
+		fees: Some(FeesConfig {
+			transaction_base_fee: 1,
+			transaction_byte_fee: 0,
+		})
 	}
 }
