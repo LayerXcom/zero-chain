@@ -17,8 +17,10 @@ mod std {
     pub use crate::alloc::borrow;
 }
 
-// use std::string::String;
-// use byteorder::ByteOrder;
+#[cfg(feature = "std")]
+use ::std::vec::Vec;
+#[cfg(not(feature = "std"))]
+use crate::std::vec::Vec;
 
 use pairing::{
     Engine,

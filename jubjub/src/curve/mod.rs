@@ -34,6 +34,11 @@ use pairing::bls12_381::{
 
 use byteorder::ByteOrder;
 
+#[cfg(feature = "std")]
+use ::std::vec::Vec;
+#[cfg(not(feature = "std"))]
+use crate::std::vec::Vec;
+
 /// This is an implementation of the twisted Edwards Jubjub curve.
 pub mod edwards;
 

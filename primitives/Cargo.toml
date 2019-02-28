@@ -5,8 +5,8 @@ authors = ["osuke <dish230@gmail.com>"]
 edition = "2018"
 
 [dependencies]
-parity-codec-derive = { git = "https://github.com/osuketh/parity-codec", default-features = false }
-parity-codec = { git = "https://github.com/osuketh/parity-codec", default-features = false }
+parity-codec-derive = { version = "3.0", default-features = false }
+parity-codec = { version = "3.0", default-features = false }
 serde = { version = "1.0", optional = true, default-features = false }
 serde_derive = { version = "1.0", optional = true }
 byteorder = { version = "1", default-features = false }
@@ -17,8 +17,8 @@ zcrypto = { package = "zero-chain-crypto", path = "../crypto", default-features 
 rand = { version = "0.4", default-features = false }
 fixed-hash = { version = "0.3.0", default-features = false }
 lazy_static = "1"
-substrate-primitives = { git = "https://github.com/paritytech/substrate", default-features = false }
-runtime-primitives = { package = "sr-primitives", git = "https://github.com/paritytech/substrate", default-features = false }
+substrate-primitives = { git = "https://github.com/paritytech/substrate", rev = 'f429a0cb8983cebe380d1cbc7aaf753db0aeba55', default-features = false }
+runtime-primitives = { package = "sr-primitives", git = "https://github.com/paritytech/substrate", rev = 'f429a0cb8983cebe380d1cbc7aaf753db0aeba55', default-features = false }
 
 [dependencies.blake2-rfc]
 git = "https://github.com/gtank/blake2-rfc"
