@@ -20,8 +20,8 @@
 //     },
 //     Field,    
 // };
-// use scrypto::{    
-//     jubjub::{
+// use jubjub::{    
+//     curve::{
 //         edwards,         
 //         FixedGenerators, 
 //         JubjubBls12, 
@@ -34,14 +34,12 @@
 //     },
 // };
 
-// use proofs::primitives::PaymentAddress;
+// use zprimitives::PaymentAddress;
 
 // pub trait Trait: system::Trait {
 // 	/// The units in which we record balances.
 // 	type Balance: Member + Parameter + SimpleArithmetic + Default + Copy;
 // }
-
-// type AssetId = u32;
 
 // decl_module! {	
 // 	pub struct Module<T: Trait> for enum Call where origin: T::Origin {		

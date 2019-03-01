@@ -16,7 +16,6 @@ jubjub = { path = "../jubjub", default-features = false }
 zcrypto = { package = "zero-chain-crypto", path = "../crypto", default-features = false }
 rand = { version = "0.4", default-features = false }
 fixed-hash = { version = "0.3.0", default-features = false }
-lazy_static = "1"
 substrate-primitives = { git = "https://github.com/paritytech/substrate", rev = 'f429a0cb8983cebe380d1cbc7aaf753db0aeba55', default-features = false }
 runtime-primitives = { package = "sr-primitives", git = "https://github.com/paritytech/substrate", rev = 'f429a0cb8983cebe380d1cbc7aaf753db0aeba55', default-features = false }
 
@@ -24,6 +23,10 @@ runtime-primitives = { package = "sr-primitives", git = "https://github.com/pari
 git = "https://github.com/gtank/blake2-rfc"
 rev = "7a5b5fc99ae483a0043db7547fb79a6fa44b88a9"
 default-features = false
+
+[dependencies.lazy_static]
+version = "1"
+features = ["spin_no_std"]
 
 [features]
 default = ["std"]

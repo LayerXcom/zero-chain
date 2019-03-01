@@ -157,7 +157,6 @@ std = [
 	"jubjub/std",
 ]
 
-
 [package]
 name = "zero-chain-runtime"
 version = "0.9.0"
