@@ -75,7 +75,7 @@ impl<'a, E: JubjubEngine> Circuit<E> for Transfer<'a, E> {
             FixedGenerators::NoteCommitmentRandomness,
             &ivk_v,
             params
-        )?;
+        )?;        
 
         // Expose the pk_d_sender publicly
         pk_d_sender_v.inputize(cs.namespace(|| format!("inputize pk_d_sender")))?;        
@@ -99,45 +99,69 @@ impl<'a, E: JubjubEngine> Circuit<E> for Transfer<'a, E> {
         let rcv = boolean::field_into_boolean_vec_le(
             cs.namespace(|| format!("rcv")), 
             self.randomness
-        )?;                 
-
-        let pk_d_sender = params
-            .generator(p_g)
-            .mul(self.ivk.unwrap(), params);
+        )?;
 
         // Generate the randomness * pk_d_sender in circuit
-        let rsg_sender = get_rsg(
-            cs.namespace(|| format!("get sender's rsg")),
+        let val_rls = pk_d_sender_v.mul(
+            cs.namespace(|| format!("compute sender value cipher")),
             &rcv,
-            Some(pk_d_sender), 
-            "sender", 
+            params
+        )?;                
+
+        // Ensures recipient pk_d is on the curve
+        let val_gl = ecc::EdwardsPoint::witness(
+            cs.namespace(|| "recipient pk_d witness"), 
+            self.pk_d_recipient.as_ref().map(|e| e.clone()), 
+            params
+        )?;
+
+        // Check the recipient pk_d is not small order
+        val_gl.assert_not_small_order(
+            cs.namespace(|| "val_gl not small order"), 
+            params
+        )?;
+
+        let r_g_xy = self.pk_d_recipient.clone().map(|e| e.into_xy());
+        
+        let rgx = AllocatedNum::alloc(cs.namespace(|| "rgx"), || {
+            Ok(r_g_xy.get()?.0)
+        })?;
+
+        let rgy = AllocatedNum::alloc(cs.namespace(|| "rgy"), || {
+            Ok(r_g_xy.get()?.1)
+        })?;
+
+        // compute the recipient pk_d in circuit
+        let pk_d_recipient_v = EdwardsPoint::interpret(
+            cs.namespace(|| format!("interpret to pk_d_recipient_v")), 
+            &rgx, 
+            &rgy, 
             params
         )?;
 
         // Generate the randomness * pk_d_recipient in circuit
-        let rsg_recipient = get_rsg(
-            cs.namespace(|| format!("get recipient's rsg")),
+        let val_rlr = pk_d_recipient_v.mul(
+            cs.namespace(|| format!("compute recipient value cipher")),
             &rcv,
-            self.pk_d_recipient, 
-            "recipient", 
             params
-        )?;
+        )?;    
         
-        rsg_recipient.inputize(cs.namespace(|| format!("inputize pk_d_recipient")))?; 
+        val_rlr.inputize(cs.namespace(|| format!("inputize pk_d_recipient")))?; 
+
 
         // Generate the left elgamal component for sender in circuit
         let c_left_sender = value_g.add(
             cs.namespace(|| format!("computation of sender's c_left")),
-            &rsg_sender, 
+            &val_rls, 
             params
         )?;
 
         // Generate the left elgamal component for recipient in circuit
         let c_left_recipient = value_g.add(
             cs.namespace(|| format!("computation of recipient's c_left")),
-            &rsg_recipient, 
+            &val_rlr, 
             params
-        )?;        
+        )?;
 
         // Multiply the randomness to the base point same as FixedGenerators::ElGamal.
         let c_right = ecc::fixed_base_multiplication(
@@ -251,46 +275,10 @@ impl<'a, E: JubjubEngine> Circuit<E> for Transfer<'a, E> {
             self.params
         )?;
 
-
         rk.inputize(cs.namespace(|| "rk"))?;                                          
 
         Ok(())        
     }
-}
-
-fn get_rsg<E, CS>(
-    mut cs: CS,    
-    rcv: &[Boolean],
-    pk_d: Option<edwards::Point<E, PrimeOrder>>,
-    address: &str,
-    params: &E::Params
-) -> Result<EdwardsPoint<E>, SynthesisError>
-    where E: JubjubEngine, CS: ConstraintSystem<E>
-{    
-    let (x, y) = pk_d.map(|e| e.into_xy()).unwrap();    
-
-    let numx = AllocatedNum::alloc(cs.namespace(|| "mont x"), || {
-        Ok(x)
-    })?;
-    let numy = AllocatedNum::alloc(cs.namespace(|| "mont y"), || {
-        Ok(y)
-    })?;
-
-    // Generate the point into the circuit
-    let point = EdwardsPoint::interpret(
-        cs.namespace(|| format!("{} interpret to the point", address)),
-        &numx, 
-        &numy, 
-        params
-    )?;      
-
-    let rsg = point.mul(
-        cs.namespace(|| format!("{} rsg", address)), 
-        rcv, 
-        params
-    )?;   
-
-    Ok(rsg)
 }
 
 fn u32_into_boolean_vec_le<E, CS>(
