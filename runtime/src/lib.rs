@@ -182,6 +182,10 @@ impl template::Trait for Runtime {
 	type Event = Event;
 }
 
+impl conf_transfer::Trait for Runtime {
+	type Event = Event;
+}
+
 construct_runtime!(
 	pub enum Runtime with Log(InternalLog: DigestItem<Hash, Ed25519AuthorityId>) where
 		Block = Block,
@@ -198,6 +202,7 @@ construct_runtime!(
 		Fees: fees::{Module, Storage, Config<T>, Event<T>},
 		// Used for the module template in `./template.rs`
 		TemplateModule: template::{Module, Call, Storage, Event<T>},
+		ConfTransfer: conf_transfer::{Module, Call, Storage, Event<T>},
 	}
 );
 

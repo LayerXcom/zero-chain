@@ -8,16 +8,22 @@ use bellman_verifier;
 #[cfg(feature = "std")]
 use substrate_primitives::bytes;
 
-const SIZE: usize = 192;
+const SIZE1: usize = 128;
+const SIZE2: usize = 64;
 
 construct_fixed_hash! {    
-    pub struct H1536(SIZE);
+    pub struct H1024(SIZE1);    
 }
 
-pub type Proof = H1536;
+construct_fixed_hash! {    
+    pub struct H512(SIZE2);    
+}
+
+pub type Proof1 = H1024;
+pub type Proof2 = H512;
 
 #[cfg(feature = "std")]
-impl Serialize for H1536 {
+impl Serialize for H1024 {
     fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error> 
         where S: Serializer
     {
@@ -26,44 +32,76 @@ impl Serialize for H1536 {
 }
 
 #[cfg(feature = "std")]
-impl<'de> Deserialize<'de> for H1536 {
-    fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
-        where D: Deserializer<'de>
+impl Serialize for H512 {
+    fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error> 
+        where S: Serializer
     {
-        bytes::deserialize_check_len(deserializer, bytes::ExpectedLen::Exact(SIZE))
-            .map(|x| H1536::from_slice(&x))
+        bytes::serialize(&self.0, serializer)
     }
 }
 
-impl codec::Encode for H1536 {
+#[cfg(feature = "std")]
+impl<'de> Deserialize<'de> for H1024 {
+    fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
+        where D: Deserializer<'de>
+    {
+        bytes::deserialize_check_len(deserializer, bytes::ExpectedLen::Exact(SIZE1))
+            .map(|x| H1024::from_slice(&x))
+    }
+}
+
+#[cfg(feature = "std")]
+impl<'de> Deserialize<'de> for H512 {
+    fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
+        where D: Deserializer<'de>
+    {
+        bytes::deserialize_check_len(deserializer, bytes::ExpectedLen::Exact(SIZE2))
+            .map(|x| H512::from_slice(&x))
+    }
+}
+
+impl codec::Encode for H1024 {
     fn using_encoded<R, F: FnOnce(&[u8]) -> R>(&self, f: F) -> R {
         self.0.using_encoded(f)
     }
 }
 
-impl codec::Decode for H1536 {
-    fn decode<I: codec::Input>(input: &mut I) -> Option<Self> {
-        <[u8; SIZE] as codec::Decode>::decode(input).map(H1536)
+impl codec::Encode for H512 {
+    fn using_encoded<R, F: FnOnce(&[u8]) -> R>(&self, f: F) -> R {
+        self.0.using_encoded(f)
     }
 }
 
-impl H1536 {
-    pub fn into_proof(&self) -> Option<bellman_verifier::Proof<Bls12>> {   
-        bellman_verifier::Proof::<Bls12>::read(&self.0[..]).ok()        
+impl codec::Decode for H1024 {
+    fn decode<I: codec::Input>(input: &mut I) -> Option<Self> {
+        <[u8; SIZE1] as codec::Decode>::decode(input).map(H1024)
+    }
+}
+
+impl codec::Decode for H512 {
+    fn decode<I: codec::Input>(input: &mut I) -> Option<Self> {
+        <[u8; SIZE2] as codec::Decode>::decode(input).map(H512)
+    }
+}
+
+impl H1024 {
+    pub fn into_proof(&self, right: H512) -> Option<bellman_verifier::Proof<Bls12>> {  
+        let res = [&self.0[..], &right.0[..]].concat();
+        bellman_verifier::Proof::<Bls12>::read(&res[..]).ok()        
     }
 
-    pub fn from_proof(proof: &bellman_verifier::Proof<Bls12>) -> Self {
+    pub fn from_proof(proof: &bellman_verifier::Proof<Bls12>) -> (Self, H512) {
         let mut writer = [0u8; 192];
         proof.write(&mut &mut writer[..]).unwrap();
-        H1536::from_slice(&writer)
+        (H1024::from_slice(&writer[..128]), H512::from_slice(&writer[128..]))
     }
 }
 
-impl Into<Proof> for bellman_verifier::Proof<Bls12> {
-    fn into(self) -> Proof {
-        Proof::from_proof(&self)
-    }
-}
+// impl Into<Proof1> for bellman_verifier::Proof<Bls12> {
+//     fn into(self) -> Proof1 {
+//         Proof1::from_proof(&self)
+//     }
+// }
 
 #[cfg(test)]
 mod tests {

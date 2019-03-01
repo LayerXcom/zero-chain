@@ -3,6 +3,7 @@ pairing = { package = "zero-chain-pairing", path = "../pairing", default-feature
 bellman-verifier = { path = "../bellman-verifier", default-features = false }
 zprimitives = { package = "zero-chain-primitives", path = "../primitives", default-features = false }
 jubjub = { path = "../jubjub", default-features = false }
+zcrypto = { package = "zero-chain-crypto", path = "../crypto", default-features = false }
 
 [dependencies.aura]
 default_features = false

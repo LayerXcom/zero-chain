@@ -31,7 +31,7 @@ use crate::primitives::{
     PaymentAddress, 
     ProofGenerationKey,     
 };
-use crate::elgamal::{Ciphertext, elgamal_extend};
+use crate::elgamal::Ciphertext;
 
 pub struct TransferProof<E: JubjubEngine> {
     pub proof: Proof<E>,
@@ -165,4 +165,14 @@ impl<E: JubjubEngine> TransferProof<E> {
 
         Ok(transfer_proof)
     }    
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn test_gen_proof() {
+        
+    }
 }

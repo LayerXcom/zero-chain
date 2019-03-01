@@ -95,3 +95,18 @@ version = '0.9.0'
 [[bin]]
 name = 'zero-chain'
 path = 'src/main.rs'
+
+[workspace]
+members = [
+    "bellman-verifier",
+    "crypto",
+    "demo",
+    "jubjub",
+    "pairing",
+    "primitives",
+    "proofs",
+    "runtime",
+]
+exclude = [
+    "runtime/wasm",
+]

@@ -1,102 +1,130 @@
-// //! A simple module for dealing with confidential transfer of fungible assets.
+//! A simple module for dealing with confidential transfer of fungible assets.
 
-// // Ensure we're `no_std` when compiling for Wasm.
-// #![cfg_attr(not(feature = "std"), no_std)]
-// #![cfg_attr(not(feature = "std"), feature(alloc))]
+// Ensure we're `no_std` when compiling for Wasm.
+#![cfg_attr(not(feature = "std"), no_std)]
+#![cfg_attr(not(feature = "std"), feature(alloc))]
 
-// use runtime_support::{StorageValue, StorageMap, Parameter};
-// use runtime_primitives::traits::{Member, SimpleArithmetic, Zero, StaticLookup};
-// use system::ensure_signed;
+use support::{decl_module, decl_storage, decl_event, StorageValue, dispatch::Result};
+use runtime_primitives::traits::{Member, SimpleArithmetic, Zero, StaticLookup};
+use system::ensure_signed;
 
-// use bellman_verifier::groth16::{   
-//     PreparedVerifyingKey, 
-//     verify_proof, 
-//     Proof,      
-// };
-// use pairing::{
-//     bls12_381::{
-//         Bls12, 
-//         Fr,         
-//     },
-//     Field,    
-// };
-// use jubjub::{    
-//     curve::{
-//         edwards,         
-//         FixedGenerators, 
-//         JubjubBls12, 
-//         Unknown, 
-//         PrimeOrder
-//     },    
-//     redjubjub::{        
-//         PublicKey, 
-//         Signature as RedjubjubSignature,        
-//     },
-// };
+use bellman_verifier::{   
+    PreparedVerifyingKey, 
+    verify_proof,           
+};
+use pairing::{
+    bls12_381::{
+        Bls12, 
+        Fr,         
+    },
+    Field,    
+};
+use jubjub::{    
+    curve::{
+        edwards,         
+        FixedGenerators, 
+        JubjubBls12, 
+        Unknown, 
+        PrimeOrder
+    },    
+    redjubjub::{        
+        PublicKey, 
+        Signature as RedjubjubSignature,        
+    },
+};
 
-// use zprimitives::PaymentAddress;
+use zprimitives::{
+    account_id::AccountId, 
+    ciphertext::Ciphertext, 
+    proof::{Proof1, Proof2}, 
+    public_key::SigVerificationKey, 
+    signature::Signature,
+    keys::{PaymentAddress},
+};
 
-// pub trait Trait: system::Trait {
-// 	/// The units in which we record balances.
-// 	type Balance: Member + Parameter + SimpleArithmetic + Default + Copy;
-// }
+use zcrypto::elgamal;
 
-// decl_module! {	
-// 	pub struct Module<T: Trait> for enum Call where origin: T::Origin {		
-// 		fn confidential_transfer(
-//             _origin,
-//             zkproof: Proof<Bls12>,
-//             cv_transfer: edwards::Point<Bls12, PrimeOrder>,
-//             cv_balance: edwards::Point<Bls12, PrimeOrder>,
-//             epk: edwards::Point<Bls12, PrimeOrder>,
-//             rk: PublicKey<Bls12>,
-//             verifying_key: PreparedVerifyingKey<Bls12>, // TODO: Hardcoded on-chain
-//             sighash_value: [u8; 32],
-//             auth_sig: RedjubjubSignature,
-//             params: JubjubBls12
-//         ) {
-// 			// let origin = ensure_signed(origin)?;
+pub trait Trait: system::Trait {
+	/// The overarching event type.
+	type Event: From<Event<Self>> + Into<<Self as system::Trait>::Event>;
+}
 
-//             // Verify the auth_sig
-//             ensure!(
-//                 Self::verify_auth_sig(rk, auth_sig, &sighash_value, &params),
-//                 "Invalid auth_sig"
-//             );
+// verifying_key: PreparedVerifyingKey<Bls12>, // TODO: Hardcoded on-chain  
+// params: JubjubBls12  // TODO: Hardcoded on-chain
 
-//             // Verify the zk proof
-//             ensure!(
-//                 Self::check_proof(
-//                     zkproof,
-//                     cv_transfer,
-//                     cv_balance,
-//                     epk,
-//                     rk,
-//                     &verifying_key,
-//                     &sighash_value,
-//                     auth_sig,
-//                     &params
-//                 ),
-//                 "Invalid zkproof"
-//             );                        
-			
-//             // TODO: Add ensure!(find_group_hash() == g_d_sender);
+decl_module! {	
+	pub struct Module<T: Trait> for enum Call where origin: T::Origin {		
+        // Initializing events
+		// this is needed only if you are using events in your module
+		fn deposit_event<T>() = default;
 
+		pub fn confidential_transfer(
+            _origin,
+            zkproof1: Proof1,
+            zkproof2: Proof2,
+            address_sender: AccountId, // TODO: Extract from origin
+            address_recipient: AccountId,
+            value_sender: Ciphertext,
+            value_recipient: Ciphertext,
+            balance_sender: Ciphertext,          
+            rk: SigVerificationKey                    
+            // auth_sig: Signature,            
+        ) -> Result {
+			// let origin = ensure_signed(origin)?;
 
-// 		}		
-// 	}
-// }
+            // // Verify the auth_sig
+            // ensure!(
+            //     Self::verify_auth_sig(rk, auth_sig, &sighash_value, &params),
+            //     "Invalid auth_sig"
+            // );
+            
+            // let szkproof = Proof.into_proof().unwrap();
+            // let saddr_sender = AccountId.into_payment_address().unwrap();
+            // let saddr_recipient = AccountId.into_payment_address().unwrap();
+            // let svalue_sender = Ciphertext.into_ciphertext().unwrap();
+            // let svalue_recipient = Ciphertext.into_ciphertext().unwrap();
+            // let sbalance_sender = Ciphertext.into_ciphertext().unwrap();
+            // let srk = SigVerificationKey.into_verification_key().unwrap();
 
-// // decl_storage! {
-// //     trait Store for Module<T: Trait> as ConfidentialTransfer {
-// //         // The balances represented by pedersen commitment for hiding.
-// //         pub CommittedBalance get(committed_balance) : map PaymentAddress<Bls12> => CommittedBalanceMap<Bls12>;    
-// //         // Encrypted parameters of pedersen commitment to get thier own balances    
-// //         pub Txo get(txo) : map PaymentAddress<Bls12> => TxoMap<Bls12>;           
-// //     }
-// // }
+            // // Verify the zk proof
+            // ensure!(
+            //     Self::check_proof(
+            //         szkproof,
+            //         saddr_sender,
+            //         saddr_recipient,
+            //         svalue_sender,
+            //         svalue_recipient,
+            //         sbalance_sender,
+            //         srk,                    
+            //     ),
+            //     "Invalid zkproof"
+            // );               
 
-// impl<T: Trait> Module<T> {
-//     // Public immutables
+            Ok(())         			            
+		}		
+	}
+}
+
+decl_storage! {
+    trait Store for Module<T: Trait> as ConfTransfer {
+        // The encrypted balance for each account
+        pub EncryptedBalance get(encrypted_balance) : map AccountId => Ciphertext;         
+        // pub VerifyingKey get(verifying_key) config(): PreparedVerifyingKey<Bls12>; // TODO: change type for substrate
+    }
+}
+
+decl_event! (
+    /// An event in this module.
+	pub enum Event<T> where AccountId = <T as system::Trait>::AccountId {
+		// Just a dummy event.
+		// Event `Something` is declared with a parameter of the type `u32` and `AccountId`
+		// To emit this event, we call the deposit funtion, from our runtime funtions
+		SomethingStored(u32, AccountId),
+	}
+);
+
+impl<T: Trait> Module<T> {
+    // Public immutables
 
 //     pub fn verify_auth_sig (
 //         rk: PublicKey<Bls12>, 
@@ -119,64 +147,73 @@
 //         )
 //     }
 
-// 	pub fn check_proof (    
-//         zkproof: Proof<Bls12>,
-//         cv_transfer: edwards::Point<Bls12, PrimeOrder>,
-//         cv_balance: edwards::Point<Bls12, PrimeOrder>,
-//         epk: edwards::Point<Bls12, PrimeOrder>,
-//         rk: PublicKey<Bls12>,
-//         verifying_key: &PreparedVerifyingKey<Bls12>,
-//         sighash_value: &[u8; 32],
-//         auth_sig: RedjubjubSignature,
-//         params: &JubjubBls12,
-//     ) -> bool {
-//         // Check the points are not small order
-//         if Self::is_small_order(&cv_transfer, params) {
-//             return false;
-//         }
-//         if Self::is_small_order(&cv_balance, params) {
-//             return false;
-//         }
-//         if Self::is_small_order(&rk.0, params) {
-//             return false;
-//         }                
+	pub fn check_proof (    
+        zkproof: bellman_verifier::Proof<Bls12>,
+        address_sender: PaymentAddress<Bls12>,
+        address_recipient: PaymentAddress<Bls12>,
+        value_sender: elgamal::Ciphertext<Bls12>,
+        value_recipient: elgamal::Ciphertext<Bls12>,
+        balance_sender: elgamal::Ciphertext<Bls12>,
+        rk: PublicKey<Bls12>,
+        verifying_key: &PreparedVerifyingKey<Bls12>,              
+    ) -> bool {
+        // Construct public input for circuit
+        let mut public_input = [Fr::zero(); 16];
 
-//         // Construct public input for circuit
-//         let mut public_input = [Fr::zero(); 8];
-//         {
-//             let (x, y) = (&cv_balance).into_xy();
-//             public_input[0] = x;
-//             public_input[1] = y;
-//         }
-//         {
-//             let (x, y) = (&cv_transfer).into_xy();
-//             public_input[2] = x;
-//             public_input[3] = y;
-//         }
-//         {
-//             let (x, y) = epk.into_xy();
-//             public_input[4] = x;
-//             public_input[5] = y;
-//         }
-//         {
-//             let (x, y) = rk.0.into_xy();
-//             public_input[6] = x;
-//             public_input[7] = y;
-//         }
+        {
+            let (x, y) = address_sender.0.into_xy();
+            public_input[0] = x;
+            public_input[1] = y;
+        }
+        {
+            let (x, y) = address_recipient.0.into_xy();
+            public_input[2] = x;
+            public_input[3] = y;
+        }
+        {
+            let (x, y) = value_sender.left.into_xy();
+            public_input[4] = x;
+            public_input[5] = y;
+        }
+        {
+            let (x, y) = value_recipient.left.into_xy();
+            public_input[6] = x;
+            public_input[7] = y;
+        }
+        {
+            let (x, y) = value_sender.right.into_xy();
+            public_input[8] = x;
+            public_input[9] = y;
+        }
+        {
+            let (x, y) = balance_sender.left.into_xy();
+            public_input[10] = x;
+            public_input[11] = y;
+        }
+        {
+            let (x, y) = balance_sender.right.into_xy();
+            public_input[12] = x;
+            public_input[13] = y;
+        }
+        {
+            let (x, y) = rk.0.into_xy();
+            public_input[14] = x;
+            public_input[15] = y;
+        }
 
-//         // Verify the proof
-//         match verify_proof(verifying_key, &zkproof, &public_input[..]) {
-//             // No error, and proof verification successful
-//             Ok(true) => true,
-//             _ => false,                
-//         }
+        // Verify the proof
+        match verify_proof(verifying_key, &zkproof, &public_input[..]) {
+            // No error, and proof verification successful
+            Ok(true) => true,
+            _ => false,                
+        }
         
-//     }
+    }
 
-//     fn is_small_order<Order>(p: &edwards::Point<Bls12, Order>, params: &JubjubBls12) -> bool {
-//         p.double(params).double(params).double(params) == edwards::Point::zero()
-//     }
-// }
+    // fn is_small_order<Order>(p: &edwards::Point<Bls12, Order>, params: &JubjubBls12) -> bool {
+    //     p.double(params).double(params).double(params) == edwards::Point::zero()
+    // }
+}
 
 // #[cfg(test)]
 // mod tests {
