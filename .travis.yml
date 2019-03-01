@@ -9,4 +9,4 @@ cache: cargo
 script:
   - sudo apt-get -y update
   - sudo apt-get install -y cmake pkg-config libssl-dev
-  - cargo test --verbose --release -p bellman-verifier -p zero-chain-crypto -p jubjub -p zero-chain-pairing -p zero-chain-primitives -p zero-chain-proofs -p zero-chain-demo
+  - cargo test --release -p bellman-verifier -p zero-chain-crypto -p jubjub -p zero-chain-pairing -p zero-chain-primitives -p zero-chain-proofs -p zero-chain-demo
