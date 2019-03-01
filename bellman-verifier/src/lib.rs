@@ -133,6 +133,40 @@ impl<E: Engine> PreparedVerifyingKey<E> {
 
         Ok(())
     }
+
+    pub fn read<R: io::Read> (
+        reader: &mut R
+    ) -> io::Result<Self>
+    {   
+        use byteorder::BigEndian;
+        
+        let mut g1_repr = <E::G1Affine as CurveAffine>::Uncompressed::empty();
+        
+
+        let ic_len = BigEndian::read_u32(reader)? as usize;
+        
+        let mut ic = vec![];
+
+        for _ in 0..ic_len {
+            reader.read(g1_repr.as_mut())?;
+            let g1 = g1_repr
+                        .into_affine()
+                        .map_err(|_| io::Error::InvalidData)
+                        .and_then(|e| if e.is_zero() {
+                            Err(io::Error::PointInfinity)
+                        } else {
+                            Ok(e)
+                        })?;
+            ic.push(g1);
+        }
+
+        Ok(PreparedVerifyingKey {
+            alpha_g1_beta_g2:,
+            neg_gamma_g2:,
+            neg_delta_g2:,
+            ic: ic,
+        })
+    }
 }
 
 

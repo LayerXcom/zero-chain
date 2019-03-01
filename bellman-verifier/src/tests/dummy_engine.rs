@@ -17,11 +17,18 @@ use ::std::{cmp::Ordering, fmt, num::Wrapping};
 #[cfg(not(feature = "std"))]
 use crate::std::{cmp::Ordering, fmt, num::Wrapping};
 use rand::{Rand, Rng};
+use pairing::{RW, io};
 
 const MODULUS_R: Wrapping<u32> = Wrapping(64513);
 
 #[derive(Copy, Clone, Debug, PartialEq, Eq)]
 pub struct Fr(pub Wrapping<u32>);
+
+impl RW for Fr {
+    fn write<W: io::Write>(&self, _writer: &mut W) -> io::Result<()> {
+        Ok(())
+    }
+}
 
 impl fmt::Display for Fr {
     fn fmt(&self, f: &mut fmt::Formatter) -> Result<(), fmt::Error> {

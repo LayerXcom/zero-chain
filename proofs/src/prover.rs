@@ -56,7 +56,7 @@ impl<E: JubjubEngine> TransferProof<E> {
     ) -> Result<Self, ()>
     {
         // TODO: Change OsRng for wasm
-        let mut rng = OsRng::new().expect("should be able to construct RNG");        
+        let mut rng = OsRng::new().expect("should be able to construct RNG");
 
         let randomness = E::Fs::rand(&mut rng);        
         

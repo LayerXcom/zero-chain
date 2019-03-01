@@ -937,8 +937,11 @@ pub mod g1 {
     // WARNING: SHOULD NOT BE USED
     impl RW for G1Prepared {
         fn write<W: ::io::Write>(&self, writer: &mut W) -> ::io::Result<()> {               
-            Ok(())
+            unimplemented!();
         }
+        // fn read<R: ::io::Read>(reader: &mut R) -> ::io::Result<Self> {
+        //     unimplemented!();
+        // }
     }
 
     #[test]
@@ -1639,6 +1642,22 @@ pub mod g2 {
 
             Ok(())
         }
+
+        // fn read<R: ::io::Read>(reader: &mut R) -> ::io::Result<Self> {
+        //     let mut a = Fq2::read(reader)?;
+        //     let mut b = Fq2::read(reader)?;
+        //     let mut c = Fq2::read(reader)?;
+        //     let infinity = false;
+            
+        //     match reader[0] {
+        //         1 => infinity = true,
+        //         0 => infinity = false
+        //     }
+
+        //     Ok(G2Prepared{
+        //         coeffs: vec!
+        //     })
+        // }
     }
 
     #[test]

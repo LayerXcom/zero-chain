@@ -32,6 +32,16 @@ impl RW for Fq12 {
         self.c1.write(writer)?;        
         Ok(())
     }
+
+    // fn read<R: ::io::Read>(reader: &mut R) -> ::io::Result<Self> {
+    //     let a = Fq6::read(reader)?;
+    //     let b = Fq6::read(reader)?;
+
+    //     Ok(Fq12{
+    //         c0: a,
+    //         c1: b,
+    //     })
+    // }
 }
 
 impl Fq12 {    
