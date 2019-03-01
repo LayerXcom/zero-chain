@@ -27,7 +27,8 @@ native_executor_instance!(
 	pub Executor,
 	zero_chain_runtime::api::dispatch,
 	zero_chain_runtime::native_version,
-	include_bytes!("../runtime/wasm/target/wasm32-unknown-unknown/release/node_template_runtime_wasm.compact.wasm")
+	// include_bytes!("../runtime/wasm/target/wasm32-unknown-unknown/release/node_template_runtime_wasm.compact.wasm")
+	include_bytes!("../runtime/wasm/target/wasm32-unknown-unknown/release/zero_chain_runtime_wasm.wasm")
 );
 
 #[derive(Default)]

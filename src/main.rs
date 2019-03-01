@@ -14,9 +14,9 @@ fn run() -> cli::error::Result<()> {
 		name: "Substrate Node",
 		commit: env!("VERGEN_SHA_SHORT"),
 		version: env!("CARGO_PKG_VERSION"),
-		executable_name: "zero-chain-node",
-		author: "LayerX",
-		description: "Zerochain Node",
+		executable_name: "zerochain",
+		author: "osuke",
+		description: "zerochain",
 		support_url: "support.anonymous.an",
 	};
 	cli::run(::std::env::args(), cli::Exit, version)
