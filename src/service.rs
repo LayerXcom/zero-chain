@@ -3,6 +3,7 @@
 #![warn(unused_extern_crates)]
 
 use std::sync::Arc;
+use log::info;
 use transaction_pool::{self, txpool::{Pool as TransactionPool}};
 use zero_chain_runtime::{self, GenesisConfig, opaque::Block, RuntimeApi};
 use substrate_service::{
@@ -13,9 +14,12 @@ use substrate_service::{
 use basic_authorship::ProposerFactory;
 use node_executor;
 use consensus::{import_queue, start_aura, AuraImportQueue, SlotDuration, NothingExtra};
-use client;
+use substrate_client as client;
 use primitives::ed25519::Pair;
 use inherents::InherentDataProviders;
+use network::construct_simple_protocol;
+use substrate_executor::native_executor_instance;
+use substrate_service::construct_service_factory;
 
 pub use substrate_executor::NativeExecutor;
 // Our native executor instance.
@@ -23,7 +27,7 @@ native_executor_instance!(
 	pub Executor,
 	zero_chain_runtime::api::dispatch,
 	zero_chain_runtime::native_version,
-	include_bytes!("../runtime/wasm/target/wasm32-unknown-unknown/release/zero_chain_runtime.compact.wasm")
+	include_bytes!("../runtime/wasm/target/wasm32-unknown-unknown/release/node_template_runtime_wasm.compact.wasm")
 );
 
 #[derive(Default)]
@@ -80,8 +84,6 @@ construct_service_factory! {
 			{ |config, executor| <LightComponents<Factory>>::new(config, executor) },
 		FullImportQueue = AuraImportQueue<
 			Self::Block,
-			FullClient<Self>,
-			NothingExtra,
 		>
 			{ |config: &mut FactoryFullConfiguration<Self> , client: Arc<FullClient<Self>>|
 				import_queue(
@@ -95,8 +97,6 @@ construct_service_factory! {
 			},
 		LightImportQueue = AuraImportQueue<
 			Self::Block,
-			LightClient<Self>,
-			NothingExtra,
 		>
 			{ |config: &mut FactoryFullConfiguration<Self>, client: Arc<LightClient<Self>>|
 				import_queue(

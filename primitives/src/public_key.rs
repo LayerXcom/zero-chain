@@ -3,7 +3,7 @@ use serde::{Serialize, Serializer, Deserialize, Deserializer};
 use fixed_hash::construct_fixed_hash;
 use jubjub::curve::JubjubBls12;
 use jubjub::redjubjub;
-use crate::account_id::JUBJUB;
+use crate::JUBJUB;
 use pairing::bls12_381::Bls12;
 
 #[cfg(feature = "std")]

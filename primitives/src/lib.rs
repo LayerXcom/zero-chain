@@ -18,10 +18,7 @@ mod std {
 }
 
 extern crate parity_codec as codec;
-#[macro_use]
 extern crate parity_codec_derive as codec_derive;
-#[cfg(feature = "std")]
-use serde_derive::{Serialize, Deserialize};
 
 pub mod keys;
 pub mod account_id;
@@ -30,22 +27,9 @@ pub mod ciphertext;
 pub mod proof;
 pub mod public_key;
 
-use signature::*;
-use keys::*;
-use account_id::*;
-use ciphertext::*;
-use proof::*;
-use public_key::*;
+use lazy_static::lazy_static;
+use jubjub::curve::JubjubBls12;
 
-#[derive(Eq, PartialEq, Clone, Encode, Decode)]
-#[cfg_attr(feature = "std", derive(Debug, Serialize, Deserialize))]
-pub struct Transaction {
-    pub sig: Signature,                   // 64 bytes
-    pub sighash_value: [u8; 32],          // 32 bytes
-    pub vk: SigVerificationKey,           // 32 bytes
-    pub proof: Proof,                     // 192 bytes
-    pub address_sender: AccountId,        // 43 bytes
-    pub address_recipient: AccountId,     // 43 bytes
-    pub ciphertext_sender: Ciphertext,    // 64 bytes
-    pub ciphertext_recipient: Ciphertext, // 64 bytes
+lazy_static! {
+    pub static ref JUBJUB: JubjubBls12 = { JubjubBls12::new() };
 }

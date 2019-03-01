@@ -17,7 +17,8 @@ zcrypto = { package = "zero-chain-crypto", path = "../crypto", default-features 
 rand = { version = "0.4", default-features = false }
 fixed-hash = { version = "0.3.0", default-features = false }
 lazy_static = "1"
-substrate-primitives = { git = "https://github.com/paritytech/substrate", default-features = false }
+substrate-primitives = { git = "https://github.com/paritytech/substrate", rev = 'f429a0cb8983cebe380d1cbc7aaf753db0aeba55', default-features = false }
+runtime-primitives = { package = "sr-primitives", git = "https://github.com/paritytech/substrate", rev = 'f429a0cb8983cebe380d1cbc7aaf753db0aeba55', default-features = false }
 
 [dependencies.blake2-rfc]
 git = "https://github.com/gtank/blake2-rfc"
@@ -41,4 +42,5 @@ std = [
 	"blake2-rfc/std",	
 	"fixed-hash/std",
 	"substrate-primitives/std",
+	"runtime-primitives/std"
 ]

@@ -1,66 +1,110 @@
+[profile.release]
+panic = 'unwind'
+
+[build-dependencies]
+vergen = '3'
+
+[dependencies]
+error-chain = '0.12'
+exit-future = '0.1'
+futures = '0.1'
+hex-literal = '0.1'
+log = '0.4'
+parity-codec = '3.0'
+parking_lot = '0.7.1'
+slog = '^2'
+tokio = '0.1'
+trie-root = '0.11.0'
+
+bellman-verifier = { path = "bellman-verifier"}
+demo = { package = "zero-chain-demo", path = "demo" }
+zcrypto = { package = "zero-chain-crypto", path = "crypto" }
+jubjub = { path = "jubjub" }
+zpairing = { package = "zero-chain-pairing", path = "pairing" }
+zprimitives = { package = "zero-chain-primitives", path = "primitives" }
+proofs = { package = "zero-chain-proofs", path = "proofs" }
+
+[dependencies.basic-authorship]
+git = 'https://github.com/paritytech/substrate.git'
+package = 'substrate-basic-authorship'
+rev = 'f429a0cb8983cebe380d1cbc7aaf753db0aeba55'
+
+[dependencies.consensus]
+git = 'https://github.com/paritytech/substrate.git'
+package = 'substrate-consensus-aura'
+rev = 'f429a0cb8983cebe380d1cbc7aaf753db0aeba55'
+
+[dependencies.ctrlc]
+features = ['termination']
+version = '3.0'
+
+[dependencies.inherents]
+git = 'https://github.com/paritytech/substrate.git'
+package = 'substrate-inherents'
+rev = 'f429a0cb8983cebe380d1cbc7aaf753db0aeba55'
+
+[dependencies.network]
+git = 'https://github.com/paritytech/substrate.git'
+package = 'substrate-network'
+rev = 'f429a0cb8983cebe380d1cbc7aaf753db0aeba55'
+
+[dependencies.node-executor]
+git = 'https://github.com/paritytech/substrate.git'
+rev = 'f429a0cb8983cebe380d1cbc7aaf753db0aeba55'
+
+[dependencies.zero-chain-runtime]
+path = 'runtime'
+
+[dependencies.primitives]
+git = 'https://github.com/paritytech/substrate.git'
+package = 'substrate-primitives'
+rev = 'f429a0cb8983cebe380d1cbc7aaf753db0aeba55'
+
+[dependencies.sr-io]
+git = 'https://github.com/paritytech/substrate.git'
+rev = 'f429a0cb8983cebe380d1cbc7aaf753db0aeba55'
+
+[dependencies.substrate-cli]
+git = 'https://github.com/paritytech/substrate.git'
+rev = 'f429a0cb8983cebe380d1cbc7aaf753db0aeba55'
+
+[dependencies.substrate-client]
+git = 'https://github.com/paritytech/substrate.git'
+rev = 'f429a0cb8983cebe380d1cbc7aaf753db0aeba55'
+
+[dependencies.substrate-executor]
+git = 'https://github.com/paritytech/substrate.git'
+rev = 'f429a0cb8983cebe380d1cbc7aaf753db0aeba55'
+
+[dependencies.substrate-service]
+git = 'https://github.com/paritytech/substrate.git'
+rev = 'f429a0cb8983cebe380d1cbc7aaf753db0aeba55'
+
+[dependencies.transaction-pool]
+git = 'https://github.com/paritytech/substrate.git'
+package = 'substrate-transaction-pool'
+rev = 'f429a0cb8983cebe380d1cbc7aaf753db0aeba55'
+
 [package]
-name = "zero-chain"
+name = "zerochain"
 version = "0.9.0"
-authors = ["Parity Technologies <admin@parity.io>"]
+authors = ["Osuke Sudo<dish230@gmail.com>"]
 build = "build.rs"
 edition = "2018"
 
 [[bin]]
-name = "zero-chain"
+name = "zerochain"
 path = "src/main.rs"
 
-[dependencies]
-error-chain = "0.12"
-futures = "0.1"
-ctrlc = { version = "3.0", features = ["termination"] }
-log = "0.4"
-tokio = "0.1.7"
-exit-future = "0.1"
-parking_lot = "0.4"
-hex-literal = "0.1"
-slog = "^2"
-parity-codec = { version = "3.0" }
-trie-root = { git = "https://github.com/paritytech/trie" }
-sr-io = { git = "https://github.com/paritytech/substrate" }
-substrate-cli = { git = "https://github.com/paritytech/substrate" }
-substrate-primitives = { git = "https://github.com/paritytech/substrate" }
-substrate-executor = { git = "https://github.com/paritytech/substrate" }
-substrate-service = { git = "https://github.com/paritytech/substrate" }
-substrate-inherents = { git = "https://github.com/paritytech/substrate" }
-substrate-transaction-pool = { git = "https://github.com/paritytech/substrate" }
-substrate-network = { git = "https://github.com/paritytech/substrate" }
-substrate-consensus-aura = { git = "https://github.com/paritytech/substrate" }
-substrate-client = { git = "https://github.com/paritytech/substrate", default-features = false }
-substrate-basic-authorship = { git = "https://github.com/paritytech/substrate" }
-node-executor = { git = "https://github.com/paritytech/substrate" }
-
-bellman-verifier = { path = "bellman-verifier"}
-zero-chain-cli = { path = "cli" }
-zero-chain-crypto = { path = "crypto" }
-jubjub = { path = "jubjub" }
-zero-chain-pairing = { path = "pairing" }
-zero-chain-primitives = { path = "primitives" }
-proofs = { package = "zero-chain-proofs", path = "proofs" }
-zero-chain-runtime = { path = "runtime" }
-
-structopt = "0.2.13"
-
-[build-dependencies]
-vergen = "2"
-
-[workspace]
-members = [ 
-    "runtime", 
-    "primitives", 
-    "proofs", 
-    "crypto", 
-    "cli", 
-    "pairing", 
-    "bellman-verifier", 
-    "jubjub",     
-]
-exclude = [ "runtime/wasm", ]
-
-[profile.release]
-# Substrate runtime requires unwinding.
-panic = "unwind"
+# [workspace]
+# members = [ 
+#     "runtime", 
+#     "primitives", 
+#     "proofs", 
+#     "crypto", 
+#     "demo", 
+#     "pairing", 
+#     "bellman-verifier", 
+#     "jubjub",     
+# ]
+# exclude = [ "runtime/wasm", ]

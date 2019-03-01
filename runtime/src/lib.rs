@@ -1,22 +1,13 @@
-//! The Substrate Node Template runtime. This can be compiled with `#[no_std]`, ready for Wasm.
+//! The Substrate Zerochain runtime. This can be compiled with `#[no_std]`, ready for Wasm.
 
-// #![cfg_attr(not(feature = "std"), no_std)]
-// #![cfg_attr(not(feature = "std"), feature(alloc))]
+#![cfg_attr(not(feature = "std"), no_std)]
+#![cfg_attr(not(feature = "std"), feature(alloc))]
 // `construct_runtime!` does a lot of recursion and requires us to increase the limit to 256.
 #![recursion_limit="256"]
 
 #[cfg(feature = "std")]
-#[macro_use]
-extern crate serde_derive;
-
-extern crate substrate_client as client;
-
-#[macro_use]
-extern crate parity_codec_derive;
-
-#[macro_use]
-extern crate support as runtime_support;
-
+use serde_derive::{Serialize, Deserialize};
+use parity_codec_derive::{Encode, Decode};
 use rstd::prelude::*;
 #[cfg(feature = "std")]
 use primitives::bytes;
@@ -33,8 +24,6 @@ use version::RuntimeVersion;
 #[cfg(feature = "std")]
 use version::NativeVersion;
 
-mod confidential_transfer;
-
 // A few exports that help ease life for downstream crates.
 #[cfg(any(feature = "std", test))]
 pub use runtime_primitives::BuildStorage;
@@ -43,7 +32,7 @@ pub use timestamp::Call as TimestampCall;
 pub use balances::Call as BalancesCall;
 pub use runtime_primitives::{Permill, Perbill};
 pub use timestamp::BlockPeriod;
-pub use runtime_support::{StorageValue, construct_runtime};
+pub use support::{StorageValue, construct_runtime};
 
 /// Alias to Ed25519 pubkey that identifies an account on the chain.
 pub type AccountId = primitives::H256;
@@ -56,6 +45,11 @@ pub type BlockNumber = u64;
 
 /// Index of an account's extrinsic in the chain.
 pub type Nonce = u64;
+
+/// Used for the module template in `./template.rs`
+mod template;
+
+mod conf_transfer;
 
 /// Opaque types. These are used by the CLI to instantiate machinery that don't need to know
 /// the specifics of the runtime. They can then be made to be agnostic over specific formats
@@ -85,8 +79,8 @@ pub mod opaque {
 
 /// This runtime version.
 pub const VERSION: RuntimeVersion = RuntimeVersion {
-	spec_name: create_runtime_str!("zero-chain-node"),
-	impl_name: create_runtime_str!("zero-chain-node"),
+	spec_name: create_runtime_str!("zerochain"),
+	impl_name: create_runtime_str!("zerochain"),
 	authoring_version: 3,
 	spec_version: 3,
 	impl_version: 0,
@@ -172,10 +166,20 @@ impl balances::Trait for Runtime {
 	type Event = Event;
 }
 
+impl fees::Trait for Runtime {
+	type TransferAsset = Balances;
+	type Event = Event;
+}
+
 impl sudo::Trait for Runtime {
 	/// The uniquitous event type.
 	type Event = Event;
 	type Proposal = Call;
+}
+
+/// Used for the module template in `./template.rs`
+impl template::Trait for Runtime { 
+	type Event = Event;
 }
 
 construct_runtime!(
@@ -191,6 +195,9 @@ construct_runtime!(
 		Indices: indices,
 		Balances: balances,
 		Sudo: sudo,
+		Fees: fees::{Module, Storage, Config<T>, Event<T>},
+		// Used for the module template in `./template.rs`
+		TemplateModule: template::{Module, Call, Storage, Event<T>},
 	}
 );
 
@@ -209,7 +216,7 @@ pub type UncheckedExtrinsic = generic::UncheckedMortalCompactExtrinsic<Address, 
 /// Extrinsic type that has already been checked.
 pub type CheckedExtrinsic = generic::CheckedExtrinsic<AccountId, Nonce, Call>;
 /// Executive: handles dispatch to the various modules.
-pub type Executive = executive::Executive<Runtime, Block, Context, Balances, AllModules>;
+pub type Executive = executive::Executive<Runtime, Block, Context, Fees, AllModules>;
 
 // Implement our runtime API endpoints. This is just a bunch of proxying.
 impl_runtime_apis! {

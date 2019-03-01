@@ -2,6 +2,11 @@
 use serde::{Serialize, Serializer, Deserialize, Deserializer};
 use fixed_hash::construct_fixed_hash;
 use jubjub::redjubjub;
+use runtime_primitives::traits::{Verify, Lazy};
+use crate::account_id::AccountId;
+use jubjub::curve::FixedGenerators;
+use pairing::bls12_381::Bls12;
+use crate::JUBJUB;
 
 #[cfg(feature = "std")]
 use substrate_primitives::bytes;
@@ -13,6 +18,20 @@ construct_fixed_hash! {
 }
 
 pub type Signature = H512;
+
+// impl Verify for Signature {
+//     type Signer = AccountId;
+//     fn verify<L: Lazy<[u8]>>(&self, mut msg: L, signer: &Self::Signer) -> bool {
+//         let sig = self.into_signature().unwrap();
+//         let p_g = FixedGenerators::SpendingKeyGenerator;
+
+//         match signer.into_payment_address() {
+//             Some(vk) => return vk.verify(msg, &sig, p_g, &JUBJUB),
+//             None => return false
+//         }
+        
+//     }
+// }
 
 #[cfg(feature = "std")]
 impl Serialize for H512 {
