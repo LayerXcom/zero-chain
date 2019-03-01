@@ -4,7 +4,7 @@
 #![cfg_attr(not(feature = "std"), no_std)]
 #![cfg_attr(not(feature = "std"), feature(alloc))]
 
-use support::{decl_module, decl_storage, decl_event, StorageValue, dispatch::Result};
+use support::{decl_module, decl_storage, decl_event, StorageValue, StorageMap, dispatch::Result, ensure};
 use runtime_primitives::traits::{Member, SimpleArithmetic, Zero, StaticLookup};
 use system::ensure_signed;
 
@@ -78,27 +78,27 @@ decl_module! {
             //     "Invalid auth_sig"
             // );
             
-            // let szkproof = Proof.into_proof().unwrap();
-            // let saddr_sender = AccountId.into_payment_address().unwrap();
-            // let saddr_recipient = AccountId.into_payment_address().unwrap();
-            // let svalue_sender = Ciphertext.into_ciphertext().unwrap();
-            // let svalue_recipient = Ciphertext.into_ciphertext().unwrap();
-            // let sbalance_sender = Ciphertext.into_ciphertext().unwrap();
-            // let srk = SigVerificationKey.into_verification_key().unwrap();
+            let szkproof = zkproof1.into_proof(zkproof2).unwrap();
+            let saddr_sender = address_sender.into_payment_address().unwrap();
+            let saddr_recipient = address_recipient.into_payment_address().unwrap();
+            let svalue_sender = value_sender.into_ciphertext().unwrap();
+            let svalue_recipient = value_recipient.into_ciphertext().unwrap();
+            let sbalance_sender = balance_sender.into_ciphertext().unwrap();
+            let srk = rk.into_verification_key().unwrap();
 
-            // // Verify the zk proof
-            // ensure!(
-            //     Self::check_proof(
-            //         szkproof,
-            //         saddr_sender,
-            //         saddr_recipient,
-            //         svalue_sender,
-            //         svalue_recipient,
-            //         sbalance_sender,
-            //         srk,                    
-            //     ),
-            //     "Invalid zkproof"
-            // );               
+            // Verify the zk proof
+            ensure!(
+                Self::check_proof(
+                    szkproof,
+                    saddr_sender,
+                    saddr_recipient,
+                    svalue_sender,
+                    svalue_recipient,
+                    sbalance_sender,
+                    srk,                    
+                ),
+                "Invalid zkproof"
+            );               
 
             Ok(())         			            
 		}		
@@ -155,7 +155,7 @@ impl<T: Trait> Module<T> {
         value_recipient: elgamal::Ciphertext<Bls12>,
         balance_sender: elgamal::Ciphertext<Bls12>,
         rk: PublicKey<Bls12>,
-        verifying_key: &PreparedVerifyingKey<Bls12>,              
+        // verifying_key: &PreparedVerifyingKey<Bls12>,              
     ) -> bool {
         // Construct public input for circuit
         let mut public_input = [Fr::zero(); 16];

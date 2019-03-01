@@ -28,6 +28,13 @@ impl Rand for Fq6 {
 }
 
 impl Fq6 {
+    pub fn write<W: ::io::Write>(&self, writer: &mut W) -> ::io::Result<()> {
+        self.c0.write(writer)?;
+        self.c1.write(writer)?;
+        self.c2.write(writer)?;
+        Ok(())
+    }
+
     /// Multiply by quadratic nonresidue v.
     pub fn mul_by_nonresidue(&mut self) {
         use std::mem::swap;

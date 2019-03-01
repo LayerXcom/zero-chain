@@ -99,7 +99,7 @@ pub trait Engine: Sized + 'static + Clone {
     type Fqe: SqrtField;
 
     /// The extension field that hosts the target group of the pairing.
-    type Fqk: Field;
+    type Fqk: Field + RW;
 
     /// Perform a miller loop with some number of (G1, G2) pairs.
     fn miller_loop<'a, I>(i: I) -> Self::Fqk
@@ -124,6 +124,10 @@ pub trait Engine: Sized + 'static + Clone {
             [(&(p.into().prepare()), &(q.into().prepare()))].into_iter(),
         )).unwrap()
     }
+}
+
+pub trait RW {
+    fn write<W: io::Write>(&self, writer: &mut W) -> io::Result<()>;
 }
 
 /// Projective representation of an elliptic curve point guaranteed to be
@@ -204,7 +208,7 @@ pub trait CurveAffine:
     type Scalar: PrimeField + SqrtField;
     type Base: SqrtField;
     type Projective: CurveProjective<Affine = Self, Scalar = Self::Scalar>;
-    type Prepared: Clone + Send + Sync + 'static;
+    type Prepared: Clone + Send + Sync + 'static + RW;
     type Uncompressed: EncodedPoint<Affine = Self>;
     type Compressed: EncodedPoint<Affine = Self>;
     type Pair: CurveAffine<Pair = Self>;
@@ -336,7 +340,7 @@ pub trait Field:
         }
 
         res
-    }
+    } 
 }
 
 /// This trait represents an element of a field that has a square root operation described for it.

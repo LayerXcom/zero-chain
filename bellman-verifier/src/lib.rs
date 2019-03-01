@@ -23,7 +23,8 @@ use pairing::{
     Engine,
     CurveAffine,
     EncodedPoint,
-    io
+    io,
+    RW
 };
 
 #[cfg(test)]
@@ -115,6 +116,25 @@ pub struct PreparedVerifyingKey<E: Engine> {
     /// Copy of IC from `VerifiyingKey`.
     ic: Vec<E::G1Affine>
 }
+
+impl<E: Engine> PreparedVerifyingKey<E> {
+    pub fn write<W: io::Write> (
+        &self,
+        writer: &mut W
+    ) -> io::Result<()>
+    {
+        self.alpha_g1_beta_g2.write(writer)?;
+        self.neg_gamma_g2.write(writer)?;
+        self.neg_delta_g2.write(writer)?; 
+
+        for ic in &self.ic {
+            writer.write(ic.into_uncompressed().as_ref())?;
+        }
+
+        Ok(())
+    }
+}
+
 
 #[derive(Clone)]
 pub struct VerifyingKey<E: Engine> {
