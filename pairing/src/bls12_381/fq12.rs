@@ -33,7 +33,7 @@ impl RW for Fq12 {
         Ok(())
     }
 
-    fn read<R: ::io::Read>(&self, reader: &mut R) -> ::io::Result<Self> {
+    fn read<R: ::io::Read>(reader: &mut R) -> ::io::Result<Self> {
         let a = Fq6::read(reader)?;
         let b = Fq6::read(reader)?;
 

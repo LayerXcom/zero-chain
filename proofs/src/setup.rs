@@ -14,6 +14,8 @@ use bellman::groth16::{
     verify_proof,
 };
 
+use bellman_verifier::PreparedVerifyingKey;
+
 use scrypto::jubjub::{JubjubBls12};
 
 use rand::{OsRng, Rand};
@@ -47,6 +49,10 @@ pub fn setup() {
     pvk.write(&mut &mut v).unwrap();
     println!("pvk: {:?}", v);
     println!("pvk: {:?}", v.len());
+
+    // let pvk2 = PreparedVerifyingKey::read(&mut &v)?;
+
+    // assert!(pvk == pvk2);
 }
 
 #[test]

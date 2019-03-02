@@ -24,7 +24,8 @@ use pairing::{
     CurveAffine,
     EncodedPoint,
     io,
-    RW
+    RW,
+    bls12_381::{Fq12, G2Prepared},
 };
 
 #[cfg(test)]
@@ -123,9 +124,16 @@ impl<E: Engine> PreparedVerifyingKey<E> {
         writer: &mut W
     ) -> io::Result<()>
     {
+        use byteorder::{ByteOrder, BigEndian};
+
         self.alpha_g1_beta_g2.write(writer)?;        
         self.neg_gamma_g2.write(writer)?;
         self.neg_delta_g2.write(writer)?; 
+
+        let mut buf = [0u8; 4];        
+
+        BigEndian::write_u32(&mut buf, self.ic.len() as u32);
+        writer.write(&buf)?;
 
         for ic in &self.ic {
             writer.write(ic.into_uncompressed().as_ref())?;
@@ -138,12 +146,18 @@ impl<E: Engine> PreparedVerifyingKey<E> {
         reader: &mut R
     ) -> io::Result<Self>
     {   
-        use byteorder::BigEndian;
+        use byteorder::{ByteOrder, BigEndian}; 
         
         let mut g1_repr = <E::G1Affine as CurveAffine>::Uncompressed::empty();
 
+        let alpha_g1_beta_g2 = E::Fqk::read(reader)?;
+        let neg_gamma_g2 = <E::G2Affine as CurveAffine>::Prepared::read(reader)?;
+        let neg_delta_g2 = <E::G2Affine as CurveAffine>::Prepared::read(reader)?;
 
-        let ic_len = BigEndian::read_u32(reader)? as usize;
+        let mut buf = [0u8; 4];
+        reader.read(&mut buf)?;
+
+        let ic_len = BigEndian::read_u32(&buf) as usize;
         
         let mut ic = vec![];
 
@@ -161,9 +175,9 @@ impl<E: Engine> PreparedVerifyingKey<E> {
         }
 
         Ok(PreparedVerifyingKey {
-            alpha_g1_beta_g2:,
-            neg_gamma_g2:,
-            neg_delta_g2:,
+            alpha_g1_beta_g2: alpha_g1_beta_g2,
+            neg_gamma_g2: neg_gamma_g2,
+            neg_delta_g2: neg_delta_g2,
             ic: ic,
         })
     }

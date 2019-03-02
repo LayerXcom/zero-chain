@@ -11,6 +11,7 @@ scrypto = { package = "sapling-crypto", git = "https://github.com/LayerXcom/libr
 rand = "0.4"
 byteorder = "1"
 zcrypto = { package = "zero-chain-crypto", path = "../crypto" }
+bellman-verifier = { path = "../bellman-verifier" }
 
 [dependencies.blake2-rfc]
 git = "https://github.com/gtank/blake2-rfc"
