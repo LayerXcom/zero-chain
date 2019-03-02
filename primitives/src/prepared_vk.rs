@@ -8,7 +8,10 @@ use substrate_primitives::bytes;
 use pairing::bls12_381::Bls12;
 use bellman_verifier;
 
-
+#[cfg(feature = "std")]
+use ::std::vec::Vec;
+#[cfg(not(feature = "std"))]
+use crate::std::vec::Vec;
 
 /// Prepared Verifying Key for SNARKs proofs
 #[derive(Eq, PartialEq, Clone, Default, Encode, Decode)]

@@ -36,7 +36,7 @@ use jubjub::{
 use zprimitives::{
     account_id::AccountId, 
     ciphertext::Ciphertext, 
-    proof::{Proof1, Proof2}, 
+    proof::Proof, 
     public_key::SigVerificationKey, 
     signature::Signature,
     keys::{PaymentAddress},
@@ -60,8 +60,7 @@ decl_module! {
 
 		pub fn confidential_transfer(
             _origin,
-            zkproof1: Proof1,
-            zkproof2: Proof2,
+            zkproof: Proof,           
             address_sender: AccountId, // TODO: Extract from origin
             address_recipient: AccountId,
             value_sender: Ciphertext,
@@ -78,7 +77,7 @@ decl_module! {
             //     "Invalid auth_sig"
             // );
             
-            let szkproof = zkproof1.into_proof(zkproof2).unwrap();
+            let szkproof = zkproof.into_proof().unwrap();
             let saddr_sender = address_sender.into_payment_address().unwrap();
             let saddr_recipient = address_recipient.into_payment_address().unwrap();
             let svalue_sender = value_sender.into_ciphertext().unwrap();
