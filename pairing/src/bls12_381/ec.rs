@@ -939,9 +939,9 @@ pub mod g1 {
         fn write<W: ::io::Write>(&self, writer: &mut W) -> ::io::Result<()> {               
             unimplemented!();
         }
-        // fn read<R: ::io::Read>(reader: &mut R) -> ::io::Result<Self> {
-        //     unimplemented!();
-        // }
+        fn read<R: ::io::Read>(&self, reader: &mut R) -> ::io::Result<Self> {
+            unimplemented!();
+        }
     }
 
     #[test]
@@ -1630,7 +1630,8 @@ pub mod g2 {
 
     impl RW for G2Prepared {
         fn write<W: ::io::Write>(&self, writer: &mut W) -> ::io::Result<()> {
-            for coeffs in &self.coeffs {                
+            for coeffs in &self.coeffs {    
+                println!("A");                       
                 coeffs.0.write(writer)?;
                 coeffs.1.write(writer)?;
                 coeffs.2.write(writer)?;
@@ -1643,21 +1644,32 @@ pub mod g2 {
             Ok(())
         }
 
-        // fn read<R: ::io::Read>(reader: &mut R) -> ::io::Result<Self> {
-        //     let mut a = Fq2::read(reader)?;
-        //     let mut b = Fq2::read(reader)?;
-        //     let mut c = Fq2::read(reader)?;
-        //     let infinity = false;
-            
-        //     match reader[0] {
-        //         1 => infinity = true,
-        //         0 => infinity = false
-        //     }
+        fn read<R: ::io::Read>(&self, reader: &mut R) -> ::io::Result<Self> {            
+            let mut coeffs = ::std::vec::Vec::with_capacity(self.coeffs.len());
 
-        //     Ok(G2Prepared{
-        //         coeffs: vec!
-        //     })
-        // }
+            for _ in 0..self.coeffs.len() {
+                let mut a = Fq2::read(reader)?;
+                let mut b = Fq2::read(reader)?;
+                let mut c = Fq2::read(reader)?;
+
+                coeffs.push((a, b, c));
+            }            
+
+            let res;
+            let mut d = [0u8; 1];
+            reader.read(&mut d)?;            
+            
+            match d[0] {
+                1 => res = true,
+                0 => res = false,
+                _ => return Err(::io::Error::NotOnCurve)
+            }
+
+            Ok(G2Prepared{
+                coeffs: coeffs,
+                infinity: res,
+            })
+        }
     }
 
     #[test]

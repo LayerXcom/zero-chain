@@ -43,8 +43,10 @@ pub fn setup() {
     };
 
     let pvk = prepare_verifying_key(&params.vk);
-    // let pvk_v = pvk.write();
-    // println!("pvk_len{:?}", pvk_v.len());
+    let mut v = vec![];
+    pvk.write(&mut &mut v).unwrap();
+    println!("pvk: {:?}", v);
+    println!("pvk: {:?}", v.len());
 }
 
 #[test]

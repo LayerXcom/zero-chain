@@ -59,7 +59,7 @@ impl<'a, E: JubjubEngine> Circuit<E> for Transfer<'a, E> {
 
         // Ensure the remaining balance is u32.
         u32_into_boolean_vec_le(
-            cs.namespace(|| "range proof of value"), 
+            cs.namespace(|| "range proof of remaining_balance"), 
             self.remaining_balance
         )?;            
 
@@ -109,38 +109,20 @@ impl<'a, E: JubjubEngine> Circuit<E> for Transfer<'a, E> {
         )?;                
 
         // Ensures recipient pk_d is on the curve
-        let val_gl = ecc::EdwardsPoint::witness(
+        let recipient_pk_d_v = ecc::EdwardsPoint::witness(
             cs.namespace(|| "recipient pk_d witness"), 
             self.pk_d_recipient.as_ref().map(|e| e.clone()), 
             params
         )?;
 
         // Check the recipient pk_d is not small order
-        val_gl.assert_not_small_order(
+        recipient_pk_d_v.assert_not_small_order(
             cs.namespace(|| "val_gl not small order"), 
             params
-        )?;
-
-        let r_g_xy = self.pk_d_recipient.clone().map(|e| e.into_xy());
-        
-        let rgx = AllocatedNum::alloc(cs.namespace(|| "rgx"), || {
-            Ok(r_g_xy.get()?.0)
-        })?;
-
-        let rgy = AllocatedNum::alloc(cs.namespace(|| "rgy"), || {
-            Ok(r_g_xy.get()?.1)
-        })?;
-
-        // compute the recipient pk_d in circuit
-        let pk_d_recipient_v = EdwardsPoint::interpret(
-            cs.namespace(|| format!("interpret to pk_d_recipient_v")), 
-            &rgx, 
-            &rgy, 
-            params
-        )?;
+        )?;     
 
         // Generate the randomness * pk_d_recipient in circuit
-        let val_rlr = pk_d_recipient_v.mul(
+        let val_rlr = recipient_pk_d_v.mul(
             cs.namespace(|| format!("compute recipient value cipher")),
             &rcv,
             params

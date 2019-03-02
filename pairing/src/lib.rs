@@ -128,7 +128,7 @@ pub trait Engine: Sized + 'static + Clone {
 
 pub trait RW: Sized {
     fn write<W: io::Write>(&self, writer: &mut W) -> io::Result<()>;
-    // fn read<R: ::io::Read>(reader: &mut R) -> ::io::Result<Self>;
+    fn read<R: ::io::Read>(&self, reader: &mut R) -> ::io::Result<Self>;
 }
 
 /// Projective representation of an elliptic curve point guaranteed to be

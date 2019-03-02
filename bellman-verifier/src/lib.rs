@@ -123,7 +123,7 @@ impl<E: Engine> PreparedVerifyingKey<E> {
         writer: &mut W
     ) -> io::Result<()>
     {
-        self.alpha_g1_beta_g2.write(writer)?;
+        self.alpha_g1_beta_g2.write(writer)?;        
         self.neg_gamma_g2.write(writer)?;
         self.neg_delta_g2.write(writer)?; 
 
@@ -141,7 +141,7 @@ impl<E: Engine> PreparedVerifyingKey<E> {
         use byteorder::BigEndian;
         
         let mut g1_repr = <E::G1Affine as CurveAffine>::Uncompressed::empty();
-        
+
 
         let ic_len = BigEndian::read_u32(reader)? as usize;
         
