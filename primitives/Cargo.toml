@@ -16,6 +16,7 @@ jubjub = { path = "../jubjub", default-features = false }
 zcrypto = { package = "zero-chain-crypto", path = "../crypto", default-features = false }
 rand = { version = "0.4", default-features = false }
 fixed-hash = { version = "0.3.0", default-features = false }
+primitive-types = { version = "0.2", default-features = false, features = ["codec"] }
 substrate-primitives = { git = "https://github.com/paritytech/substrate", rev = 'f429a0cb8983cebe380d1cbc7aaf753db0aeba55', default-features = false }
 runtime-primitives = { package = "sr-primitives", git = "https://github.com/paritytech/substrate", rev = 'f429a0cb8983cebe380d1cbc7aaf753db0aeba55', default-features = false }
 

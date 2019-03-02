@@ -3,9 +3,8 @@ use serde::{Serialize, Serializer, Deserialize, Deserializer};
 use fixed_hash::construct_fixed_hash;
 use jubjub::redjubjub;
 use runtime_primitives::traits::{Verify, Lazy};
-use crate::account_id::AccountId;
+use crate::sig_vk::SigVerificationKey;
 use jubjub::curve::FixedGenerators;
-use pairing::bls12_381::Bls12;
 use crate::JUBJUB;
 
 #[cfg(feature = "std")]
@@ -17,21 +16,25 @@ construct_fixed_hash! {
     pub struct H512(SIZE);
 }
 
-pub type Signature = H512;
+pub type RedjubjubSignature = H512;
 
-// impl Verify for Signature {
-//     type Signer = AccountId;
-//     fn verify<L: Lazy<[u8]>>(&self, mut msg: L, signer: &Self::Signer) -> bool {
-//         let sig = self.into_signature().unwrap();
-//         let p_g = FixedGenerators::SpendingKeyGenerator;
+impl Verify for RedjubjubSignature {
+    type Signer = SigVerificationKey;
+    fn verify<L: Lazy<[u8]>>(&self, mut msg: L, signer: &Self::Signer) -> bool {
+        let sig = match self.into_signature() {
+            Some(s) => s,
+            None => return false
+        };
 
-//         match signer.into_payment_address() {
-//             Some(vk) => return vk.verify(msg, &sig, p_g, &JUBJUB),
-//             None => return false
-//         }
+        let p_g = FixedGenerators::SpendingKeyGenerator;
+
+        match signer.into_verification_key() {
+            Some(vk) => return vk.verify(msg.get(), &sig, p_g, &JUBJUB),
+            None => return false
+        }
         
-//     }
-// }
+    }
+}
 
 #[cfg(feature = "std")]
 impl Serialize for H512 {
@@ -76,9 +79,9 @@ impl H512 {
     }
 }
 
-impl Into<Signature> for redjubjub::Signature {
-    fn into(self) -> Signature {
-        Signature::from_signature(&self)
+impl Into<RedjubjubSignature> for redjubjub::Signature {
+    fn into(self) -> RedjubjubSignature {
+        RedjubjubSignature::from_signature(&self)
     }
 }
 

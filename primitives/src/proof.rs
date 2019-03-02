@@ -1,6 +1,4 @@
 #[cfg(feature = "std")]
-use serde::{Serialize, Serializer, Deserialize, Deserializer};
-use fixed_hash::construct_fixed_hash;
 use pairing::bls12_381::Bls12;
 use bellman_verifier;
 
@@ -12,68 +10,6 @@ use crate::std::vec::Vec;
 #[derive(Eq, PartialEq, Clone, Default, Encode, Decode)]
 #[cfg_attr(feature = "std", derive(Debug, Serialize, Deserialize))]
 pub struct Proof(pub Vec<u8>);
-
-// #[cfg(feature = "std")]
-// impl Serialize for H1024 {
-//     fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error> 
-//         where S: Serializer
-//     {
-//         bytes::serialize(&self.0, serializer)
-//     }
-// }
-
-// #[cfg(feature = "std")]
-// impl Serialize for H512 {
-//     fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error> 
-//         where S: Serializer
-//     {
-//         bytes::serialize(&self.0, serializer)
-//     }
-// }
-
-// #[cfg(feature = "std")]
-// impl<'de> Deserialize<'de> for H1024 {
-//     fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
-//         where D: Deserializer<'de>
-//     {
-//         bytes::deserialize_check_len(deserializer, bytes::ExpectedLen::Exact(SIZE1))
-//             .map(|x| H1024::from_slice(&x))
-//     }
-// }
-
-// #[cfg(feature = "std")]
-// impl<'de> Deserialize<'de> for H512 {
-//     fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
-//         where D: Deserializer<'de>
-//     {
-//         bytes::deserialize_check_len(deserializer, bytes::ExpectedLen::Exact(SIZE2))
-//             .map(|x| H512::from_slice(&x))
-//     }
-// }
-
-// impl codec::Encode for H1024 {
-//     fn using_encoded<R, F: FnOnce(&[u8]) -> R>(&self, f: F) -> R {
-//         self.0.using_encoded(f)
-//     }
-// }
-
-// impl codec::Encode for H512 {
-//     fn using_encoded<R, F: FnOnce(&[u8]) -> R>(&self, f: F) -> R {
-//         self.0.using_encoded(f)
-//     }
-// }
-
-// impl codec::Decode for H1024 {
-//     fn decode<I: codec::Input>(input: &mut I) -> Option<Self> {
-//         <[u8; SIZE1] as codec::Decode>::decode(input).map(H1024)
-//     }
-// }
-
-// impl codec::Decode for H512 {
-//     fn decode<I: codec::Input>(input: &mut I) -> Option<Self> {
-//         <[u8; SIZE2] as codec::Decode>::decode(input).map(H512)
-//     }
-// }
 
 impl Proof {
     pub fn into_proof(&self) -> Option<bellman_verifier::Proof<Bls12>> {          

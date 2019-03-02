@@ -27,7 +27,7 @@ pub mod account_id;
 pub mod signature;
 pub mod ciphertext;
 pub mod proof;
-pub mod public_key;
+pub mod sig_vk;
 pub mod prepared_vk;
 
 use lazy_static::lazy_static;

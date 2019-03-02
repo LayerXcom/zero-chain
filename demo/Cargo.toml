@@ -9,16 +9,16 @@ rand = "0.4"
 proofs = { package = "zero-chain-proofs", path = "../proofs" }
 structopt = "0.2"
 substrate-primitives = { git = "https://github.com/paritytech/substrate" }
-pairing = { git = "https://github.com/zcash/librustzcash", rev = "1a1c77536d824d7b6bd0eaf3e9888829a7a1f5dc" }
-bellman = { git = "https://github.com/zcash/librustzcash", rev = "1a1c77536d824d7b6bd0eaf3e9888829a7a1f5dc" }
+zpairing = { package = "zero-chain-pairing", path = "../pairing" }
+pairing = { git = "https://github.com/LayerXcom/librustzcash", branch = "zero-chain" }
+bellman = { git = "https://github.com/LayerXcom/librustzcash", branch = "zero-chain" }
+scrypto = { package = "sapling-crypto", git = "https://github.com/LayerXcom/librustzcash", branch = "zero-chain" }
 bellman-verifier = { path = "../bellman-verifier"}
-# scrypto = { package = "sapling-crypto", git = "https://github.com/LayerXcom/librustzcash", branch = "zero-chain" }
-scrypto = { package = "sapling-crypto", git = "https://github.com/zcash/librustzcash", rev = "1a1c77536d824d7b6bd0eaf3e9888829a7a1f5dc" }
 zcrypto = { package = "zero-chain-crypto", path = "../crypto"}
 zprimitives = { package = "zero-chain-primitives", path = "../primitives" }
 zjubjub = { package = "jubjub", path = "../jubjub"}
-parity-codec-derive = { git = "https://github.com/osuketh/parity-codec" }
-parity-codec = { git = "https://github.com/osuketh/parity-codec" }
+parity-codec-derive = { version = "3.0", default-features = false }
+parity-codec = { version = "3.0", default-features = false }
 
 [dependencies.blake2-rfc]
 git = "https://github.com/gtank/blake2-rfc"
