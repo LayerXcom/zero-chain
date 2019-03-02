@@ -51,5 +51,5 @@ pub fn setup() {
 
 #[test]
 fn test_setup() {    
-    setup().unwrap();
+    setup();
 }
