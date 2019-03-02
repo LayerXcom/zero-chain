@@ -24,8 +24,7 @@ use pairing::{
     CurveAffine,
     EncodedPoint,
     io,
-    RW,
-    bls12_381::{Fq12, G2Prepared},
+    RW,    
 };
 
 #[cfg(test)]

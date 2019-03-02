@@ -15,7 +15,12 @@ mod std {
 }
 
 extern crate parity_codec as codec;
+#[macro_use]
 extern crate parity_codec_derive as codec_derive;
+
+#[cfg(feature = "std")]
+#[macro_use]
+extern crate serde_derive;
 
 pub mod keys;
 pub mod account_id;

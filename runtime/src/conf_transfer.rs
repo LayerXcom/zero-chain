@@ -40,6 +40,7 @@ use zprimitives::{
     public_key::SigVerificationKey, 
     signature::Signature,
     keys::{PaymentAddress},
+    prepared_vk::PreparedVk,
 };
 
 use zcrypto::elgamal;
@@ -49,7 +50,6 @@ pub trait Trait: system::Trait {
 	type Event: From<Event<Self>> + Into<<Self as system::Trait>::Event>;
 }
 
-// verifying_key: PreparedVerifyingKey<Bls12>, // TODO: Hardcoded on-chain  
 // params: JubjubBls12  // TODO: Hardcoded on-chain
 
 decl_module! {	
@@ -109,7 +109,7 @@ decl_storage! {
     trait Store for Module<T: Trait> as ConfTransfer {
         // The encrypted balance for each account
         pub EncryptedBalance get(encrypted_balance) : map AccountId => Ciphertext;         
-        // pub VerifyingKey get(verifying_key) config(): PreparedVerifyingKey<Bls12>; // TODO: change type for substrate
+        pub VerifyingKey get(verifying_key) config(): PreparedVk; 
     }
 }
 
@@ -201,8 +201,10 @@ impl<T: Trait> Module<T> {
             public_input[15] = y;
         }
 
+        let pvk = Self::verifying_key().into_prepared_vk().unwrap();
+
         // Verify the proof
-        match verify_proof(verifying_key, &zkproof, &public_input[..]) {
+        match verify_proof(&pvk, &zkproof, &public_input[..]) {
             // No error, and proof verification successful
             Ok(true) => true,
             _ => false,                

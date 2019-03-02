@@ -1,20 +1,20 @@
-// #[cfg(feature = "std")]
-// use serde::{Serialize, Serializer, Deserialize, Deserializer};
-// use fixed_hash::construct_fixed_hash;
+#[cfg(feature = "std")]
+use serde::{Serialize, Serializer, Deserialize, Deserializer};
+use fixed_hash::construct_fixed_hash;
 
-// #[cfg(feature = "std")]
-// use substrate_primitives::bytes;
+#[cfg(feature = "std")]
+use substrate_primitives::bytes;
 
-// use pairing::bls12_381::Bls12;
-// use bellman_verifier;
+use pairing::bls12_381::Bls12;
+use bellman_verifier;
 
-// const SIZE: usize = 32;
 
-// construct_fixed_hash! {
-//     pub struct H256(SIZE);
-// }
 
-// pub type PreparedVk = H256;
+/// Prepared Verifying Key for SNARKs proofs
+#[derive(Eq, PartialEq, Clone, Default, Encode, Decode)]
+#[cfg_attr(feature = "std", derive(Debug, Serialize, Deserialize))]
+pub struct PreparedVk(pub Vec<u8>);
+
 
 // #[cfg(feature = "std")]
 // impl Serialize for H256 {
@@ -47,23 +47,23 @@
 //     }
 // }
 
-// impl H256 {
-//     pub fn into_prepared_vk(&self) -> Option<bellman_verifier::PreparedVerifyingKey<Bls12>> {   
-//         bellman_verifier::PreparedVerifyingKey::read(&mut &self.0[..], &JUBJUB as &JubjubBls12).ok()        
-//     }
+impl PreparedVk {
+    pub fn into_prepared_vk(&self) -> Option<bellman_verifier::PreparedVerifyingKey<Bls12>> {   
+        bellman_verifier::PreparedVerifyingKey::read(&mut &self.0[..]).ok()        
+    }
 
-//     pub fn from_prepared_vk(sig: &bellman_verifier::PreparedVerifyingKey<Bls12>) -> Self {
-//         let mut writer = [0u8; 32];
-//         sig.write(&mut &mut writer[..]).unwrap();
-//         H256::from_slice(&writer)
-//     }
-// }
+    pub fn from_prepared_vk(pvk: &bellman_verifier::PreparedVerifyingKey<Bls12>) -> Self {
+        let mut writer = vec![];
+        pvk.write(&mut &mut writer[..]).unwrap();
+        PreparedVk(writer)
+    }
+}
 
-// impl Into<PreparedVk> for bellman_verifier::PreparedVerifyingKey<Bls12> {
-//     fn into(self) -> PreparedVk {
-//         PreparedVk::from_prepared_vk(&self)
-//     }
-// }
+impl Into<PreparedVk> for bellman_verifier::PreparedVerifyingKey<Bls12> {
+    fn into(self) -> PreparedVk {
+        PreparedVk::from_prepared_vk(&self)
+    }
+}
 
 // #[cfg(test)]
 // mod tests {
