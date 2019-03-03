@@ -77,13 +77,40 @@ decl_module! {
             //     "Invalid auth_sig"
             // );
             
-            let szkproof = zkproof.into_proof().unwrap();
-            let saddr_sender = address_sender.into_payment_address().unwrap();
-            let saddr_recipient = address_recipient.into_payment_address().unwrap();
-            let svalue_sender = value_sender.into_ciphertext().unwrap();
-            let svalue_recipient = value_recipient.into_ciphertext().unwrap();
-            let sbalance_sender = balance_sender.into_ciphertext().unwrap();
-            let srk = rk.into_verification_key().unwrap();
+            let szkproof = match zkproof.into_proof() {
+                Some(v) => v,
+                None => return Err("Invalid zkproof"),
+            };
+
+            let saddr_sender = match address_sender.into_payment_address() {
+                Some(v) => v,
+                None => return Err("Invalid address_sender"),
+            };
+
+            let saddr_recipient = match  address_recipient.into_payment_address() {
+                Some(v) => v,
+                None => return Err("Invalid address_recipient"),
+            };
+
+            let svalue_sender = match value_sender.into_ciphertext() {
+                Some(v) => v,
+                None => return Err("Invalid value_sender"),
+            };
+
+            let svalue_recipient = match value_recipient.into_ciphertext() {
+                Some(v) => v,
+                None => return Err("Invalid value_recipient"),
+            };
+
+            let sbalance_sender = match balance_sender.into_ciphertext() {
+                Some(v) => v,
+                None => return Err("Invalid balance_sender"),
+            };
+
+            let srk = match rk.into_verification_key() {
+                Some(v) => v,
+                None => return Err("Invalid rk"),
+            };
 
             // Verify the zk proof
             ensure!(
@@ -105,7 +132,28 @@ decl_module! {
                 "Invalid encrypted balance"
             );
 
+            let bal_sender = match Self::encrypted_balance(address_sender) {
+                Some(b) => match b.into_ciphertext() {
+                    Some(c) => c,
+                    None => return Err("Invalid ciphertext of sender balance"),
+                },
+                None => return Err("Invalid sender balance"),
+            };
+
+            let bal_recipient = match Self::encrypted_balance(address_recipient) {
+                Some(b) => match b.into_ciphertext() {
+                    Some(c) => c,                    
+                    None => return Err("Invalid ciphertext of recipient balance"),
+                },
+                None => return Err("Invalid recipient balance"),
+            };
             
+            // <EncryptedBalance<T>>::mutate(|balance| {
+            //     let new_balance = balance.map_or(value_sender, 
+            //         |balance| Ciphertext::from_ciphertext(&bal_sender.add(svalue_sender, ));
+            //     *balance = new_balance
+            // });
+
 
             Ok(())         			            
 		}		
@@ -152,7 +200,7 @@ impl<T: Trait> Module<T> {
 //             FixedGenerators::SpendingKeyGenerator,
 //             &params,
 //         )
-//     }
+//     }    
 
 	pub fn check_proof (    
         zkproof: bellman_verifier::Proof<Bls12>,

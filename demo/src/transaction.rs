@@ -12,7 +12,8 @@ use zpairing::{
 		},
     	Field as zField, 
 		PrimeField as zPrimeField, 
-		PrimeFieldRepr as zPrimeFieldRepr,
+		PrimeFieldRepr as zPrimeFieldRepr,	
+		io,	
 };
 
 use scrypto::{    
@@ -68,7 +69,7 @@ impl Transaction {
 		address_recipient: &PaymentAddress<Bls12>,		
 		sk: &[u8],
         ciphertext_balance: proofs::elgamal::Ciphertext<Bls12>		
-    ) -> Result<Self, &'static str>
+    ) -> Result<Self, io::Error>
 	{
 		let rng = &mut OsRng::new().expect("OsRng::new() error.");
 
@@ -91,7 +92,7 @@ impl Transaction {
 			address_recipient.clone(),			
             ciphertext_balance.clone(),
 			&params,
-		).unwrap();
+		).map_err(|_| io::Error::InvalidData)?;
 		
 		let sk = fs::Fs::to_uniform(sk);
 
@@ -109,44 +110,44 @@ impl Transaction {
 		let sig = rsk.sign(msg, rng, p_g, &params);
 
 		let mut sig_bytes = [0u8; 32];
-		sig.write(&mut sig_bytes[..]).unwrap();
+		sig.write(&mut sig_bytes[..]).map_err(|_| io::Error::InvalidData)?;
 		// Read Signature as a no_std type
-		let zsig = zSignature::read(&sig_bytes[..]).unwrap();
+		let zsig = zSignature::read(&sig_bytes[..])?;
 		
 		let mut rk_bytes = [0u8; 32];
-		proof_output.rk.write(&mut rk_bytes[..]).unwrap();
+		proof_output.rk.write(&mut rk_bytes[..]).map_err(|_| io::Error::InvalidData)?;
 		// Read Publickey as a no_std type
-		let zrk = zPublicKey::read(&mut &rk_bytes[..], &zparams).unwrap();
+		let zrk = zPublicKey::read(&mut &rk_bytes[..], &zparams)?;
 
 		let mut proof_bytes = [0u8; 192];
-		proof_output.proof.write(&mut proof_bytes[..]).unwrap();
+		proof_output.proof.write(&mut proof_bytes[..]).map_err(|_| io::Error::InvalidData)?;
 		// Read Proof as a no_std type
-		let zproof = zProof::read(&proof_bytes[..]).unwrap();
+		let zproof = zProof::read(&proof_bytes[..])?;
 
 		let mut z_addr_sb = [0u8; 32];
-		proof_output.address_sender.write(&mut z_addr_sb[..]).unwrap();
+		proof_output.address_sender.write(&mut z_addr_sb[..]).map_err(|_| io::Error::InvalidData)?;
 		// Read the sender address as a no_std type
-		let zaddress_sender = zPaymentAddress::read(&mut &z_addr_sb[..], &zparams).unwrap();
+		let zaddress_sender = zPaymentAddress::read(&mut &z_addr_sb[..], &zparams)?;
 
 		let mut z_addr_rb = [0u8; 32];
-		proof_output.address_recipient.write(&mut z_addr_rb[..]).unwrap();
+		proof_output.address_recipient.write(&mut z_addr_rb[..]).map_err(|_| io::Error::InvalidData)?;
 		// Read the recipient address as a no_std type
-		let zaddress_recipient = zPaymentAddress::read(&mut &z_addr_rb[..], &zparams).unwrap();
+		let zaddress_recipient = zPaymentAddress::read(&mut &z_addr_rb[..], &zparams)?;
 
 		let mut env_val_rb = [0u8; 64];
-		proof_output.cipher_val_r.write(&mut env_val_rb[..]).unwrap();
+		proof_output.cipher_val_r.write(&mut env_val_rb[..]).map_err(|_| io::Error::InvalidData)?;
 		// Read the sending value encrypted by the recipient key as a no_std type
-		let zenc_val_recipient = zCiphertext::read(&mut &env_val_rb[..], &zparams).unwrap();
+		let zenc_val_recipient = zCiphertext::read(&mut &env_val_rb[..], &zparams)?;
 
 		let mut env_val_sb = [0u8; 64];
-		proof_output.cipher_val_s.write(&mut env_val_sb[..]).unwrap();
+		proof_output.cipher_val_s.write(&mut env_val_sb[..]).map_err(|_| io::Error::InvalidData)?;
 		// Read the sending value encrypted by the sender key as a no_std type
-		let zenc_val_sender = zCiphertext::read(&mut &env_val_sb[..], &zparams).unwrap();
+		let zenc_val_sender = zCiphertext::read(&mut &env_val_sb[..], &zparams)?;
 
 		let mut env_bal_sb = [0u8; 64];
-		ciphertext_balance.write(&mut env_bal_sb[..]).unwrap();
+		ciphertext_balance.write(&mut env_bal_sb[..]).map_err(|_| io::Error::InvalidData)?;
 		// Read the sender's balance encrypted by the sender key as a no_std type
-		let zenc_bal_sender = zCiphertext::read(&mut &env_bal_sb[..], &zparams).unwrap();
+		let zenc_bal_sender = zCiphertext::read(&mut &env_bal_sb[..], &zparams)?;
 		
 		let tx = Transaction {
 			sig: pRedjubjubSignature::from_signature(&zsig),                   
