@@ -19,6 +19,7 @@ zprimitives = { package = "zero-chain-primitives", path = "../primitives" }
 zjubjub = { package = "jubjub", path = "../jubjub"}
 parity-codec-derive = { version = "3.0", default-features = false }
 parity-codec = { version = "3.0", default-features = false }
+lazy_static = "1.3.0"
 
 [dependencies.blake2-rfc]
 git = "https://github.com/gtank/blake2-rfc"

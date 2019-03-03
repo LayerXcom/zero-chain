@@ -51,6 +51,13 @@ impl<E: JubjubEngine> ExpandedSpendingKey<E> {
         ExpandedSpendingKey { ask, nsk }
     }
 
+    pub fn into_proof_generation_key(&self, params: &E::Params) -> ProofGenerationKey<E> {
+        ProofGenerationKey {
+            ak: params.generator(FixedGenerators::ProofGenerationKey).mul(self.ask, params),
+            nsk: self.nsk,
+        }
+    }
+
     pub fn write<W: io::Write>(&self, mut writer: W) -> io::Result<()> {
         self.ask.into_repr().write_le(&mut writer)?;
         self.nsk.into_repr().write_le(&mut writer)?;
@@ -121,7 +128,7 @@ impl<E: JubjubEngine> ProofGenerationKey<E> {
             ak: self.ak.clone(),
             nk: params.generator(FixedGenerators::ProofGenerationKey).mul(self.nsk, params)
         }
-    }
+    }    
 }
 
 #[derive(Clone)]

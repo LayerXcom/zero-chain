@@ -16,7 +16,7 @@ use zpairing::{
 };
 
 use scrypto::{    
-    jubjub::{FixedGenerators, PrimeOrder, JubjubBls12, fs},    
+    jubjub::{FixedGenerators, PrimeOrder, JubjubBls12, fs, ToUniform},    
     redjubjub::{PrivateKey, PublicKey, Signature},
 };
 use zjubjub::{
@@ -26,7 +26,7 @@ use zjubjub::{
 
 use proofs::{
     self,
-	primitives::{PaymentAddress, ProofGenerationKey},
+	primitives::{PaymentAddress, ProofGenerationKey, ExpandedSpendingKey},
 	prover::TransferProof,
 	elgamal::Ciphertext,   
 };
@@ -64,10 +64,9 @@ impl Transaction {
         remaining_balance: u32,
         alpha: fs::Fs,
         proving_key: &Parameters<Bls12>,
-		verifying_key: &PreparedVerifyingKey<Bls12>,
-		proof_generation_key: ProofGenerationKey<Bls12>,
+		verifying_key: &PreparedVerifyingKey<Bls12>,		
 		address_recipient: &PaymentAddress<Bls12>,		
-		sk: fs::Fs,
+		sk: &[u8],
         ciphertext_balance: proofs::elgamal::Ciphertext<Bls12>		
     ) -> Result<Self, &'static str>
 	{
@@ -78,6 +77,10 @@ impl Transaction {
 		// The pramaters from no_std environment
 		let zparams = zJubjubBls12::new();
 
+		let expsk = ExpandedSpendingKey::<Bls12>::from_spending_key(sk);
+		let proof_generation_key = expsk.into_proof_generation_key(&params);
+
+		// Generate the zk proof
 		let proof_output = TransferProof::gen_proof(
 			value,
 			remaining_balance,        
@@ -88,8 +91,10 @@ impl Transaction {
 			address_recipient.clone(),			
             ciphertext_balance.clone(),
 			&params,
-		).unwrap();		
+		).unwrap();
 		
+		let sk = fs::Fs::to_uniform(sk);
+
 		// Generate the re-randomized sign key
 		let rsk: PrivateKey<Bls12> = PrivateKey(sk).randomize(alpha);
 
