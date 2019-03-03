@@ -23,6 +23,10 @@ jubjub = { path = "jubjub" }
 zpairing = { package = "zero-chain-pairing", path = "pairing" }
 zprimitives = { package = "zero-chain-primitives", path = "primitives" }
 proofs = { package = "zero-chain-proofs", path = "proofs" }
+scrypto = { package = "sapling-crypto", git = "https://github.com/LayerXcom/librustzcash", branch = "zero-chain" }
+bellman = { git = "https://github.com/LayerXcom/librustzcash", branch = "zero-chain" }
+pairing = { git = "https://github.com/LayerXcom/librustzcash", branch = "zero-chain" }
+rand = "0.4"
 
 [dependencies.basic-authorship]
 git = 'https://github.com/paritytech/substrate.git'
@@ -86,25 +90,27 @@ package = 'substrate-transaction-pool'
 rev = 'f429a0cb8983cebe380d1cbc7aaf753db0aeba55'
 
 [package]
-name = "zerochain"
-version = "0.9.0"
-authors = ["Osuke Sudo<dish230@gmail.com>"]
-build = "build.rs"
-edition = "2018"
+authors = ['Osuke Sudo<dish230@gmail.com>']
+build = 'build.rs'
+edition = '2018'
+name = 'zero-chain'
+version = '0.9.0'
 
 [[bin]]
-name = "zerochain"
-path = "src/main.rs"
+name = 'zero-chain'
+path = 'src/main.rs'
 
-# [workspace]
-# members = [ 
-#     "runtime", 
-#     "primitives", 
-#     "proofs", 
-#     "crypto", 
-#     "demo", 
-#     "pairing", 
-#     "bellman-verifier", 
-#     "jubjub",     
-# ]
-# exclude = [ "runtime/wasm", ]
+[workspace]
+members = [
+    "bellman-verifier",
+    "crypto",
+    "demo",
+    "jubjub",
+    "pairing",
+    "primitives",
+    "proofs",
+    "runtime",
+]
+exclude = [
+    "runtime/wasm",
+]

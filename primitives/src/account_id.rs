@@ -11,14 +11,13 @@ use substrate_primitives::bytes;
 const SIZE: usize = 32;
 
 construct_fixed_hash! {
-    /// Fixed 256-bit hash.
     pub struct H256(SIZE);
 }
 
 pub type AccountId = H256;
 
 #[cfg(feature = "std")]
-impl Serialize for H256 {
+impl Serialize for AccountId {
     fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error> 
         where S: Serializer
     {
@@ -27,28 +26,28 @@ impl Serialize for H256 {
 }
 
 #[cfg(feature = "std")]
-impl<'de> Deserialize<'de> for H256 {
+impl<'de> Deserialize<'de> for AccountId {
     fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
         where D: Deserializer<'de>
     {
         bytes::deserialize_check_len(deserializer, bytes::ExpectedLen::Exact(SIZE))
-            .map(|x| H256::from_slice(&x))
+            .map(|x| AccountId::from_slice(&x))
     }
 }
 
-impl codec::Encode for H256 {
+impl codec::Encode for AccountId {
     fn using_encoded<R, F: FnOnce(&[u8]) -> R>(&self, f: F) -> R {
         self.0.using_encoded(f)
     }
 }
 
-impl codec::Decode for H256 {
+impl codec::Decode for AccountId {
     fn decode<I: codec::Input>(input: &mut I) -> Option<Self> {
         <[u8; SIZE] as codec::Decode>::decode(input).map(H256)
     }
 }
 
-impl H256 {
+impl AccountId {
     pub fn into_payment_address(&self) -> Option<PaymentAddress<Bls12>> {         
         PaymentAddress::<Bls12>::read(&mut &self.0[..], &JUBJUB).ok()
     }
@@ -56,7 +55,7 @@ impl H256 {
     pub fn from_payment_address(address: &PaymentAddress<Bls12>) -> Self {
         let mut writer = [0u8; 32];
         address.write(&mut writer[..]).unwrap();
-        H256::from_slice(&writer)
+        AccountId::from_slice(&writer)      
     }
 }
 

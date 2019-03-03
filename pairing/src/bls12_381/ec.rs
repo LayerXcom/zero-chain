@@ -627,7 +627,7 @@ pub mod g1 {
     use std::fmt;
     use {
         BitIterator, CurveAffine, CurveProjective, EncodedPoint, Engine, Field, GroupDecodingError,
-        PrimeField, PrimeFieldRepr, SqrtField,
+        PrimeField, PrimeFieldRepr, SqrtField, RW
     };
 
     curve_impl!(
@@ -931,6 +931,16 @@ pub mod g1 {
 
         pub fn from_affine(p: G1Affine) -> Self {
             G1Prepared(p)
+        }
+    }
+
+    // WARNING: SHOULD NOT BE USED
+    impl RW for G1Prepared {
+        fn write<W: ::io::Write>(&self, writer: &mut W) -> ::io::Result<()> {               
+            unimplemented!();
+        }
+        fn read<R: ::io::Read>(reader: &mut R) -> ::io::Result<Self> {
+            unimplemented!();
         }
     }
 
@@ -1274,7 +1284,7 @@ pub mod g2 {
     use std::fmt;
     use {
         BitIterator, CurveAffine, CurveProjective, EncodedPoint, Engine, Field, GroupDecodingError,
-        PrimeField, PrimeFieldRepr, SqrtField,
+        PrimeField, PrimeFieldRepr, SqrtField, RW
     };
 
     curve_impl!(
@@ -1616,6 +1626,62 @@ pub mod g2 {
     pub struct G2Prepared {
         pub(crate) coeffs: ::std::vec::Vec<(Fq2, Fq2, Fq2)>,
         pub(crate) infinity: bool,
+    }
+
+    impl RW for G2Prepared {
+        fn write<W: ::io::Write>(&self, writer: &mut W) -> ::io::Result<()> {
+            use byteorder::{ByteOrder, BigEndian};
+            let mut buf = [0u8; 4];
+
+            BigEndian::write_u32(&mut buf, self.coeffs.len() as u32);
+            writer.write(&buf)?;
+
+            for coeffs in &self.coeffs {                              
+                coeffs.0.write(writer)?;
+                coeffs.1.write(writer)?;
+                coeffs.2.write(writer)?;
+            }
+            match self.infinity {
+                true => writer.write(&[1u8])?,
+                false => writer.write(&[0u8])?
+            }
+
+            Ok(())
+        }
+
+        fn read<R: ::io::Read>(reader: &mut R) -> ::io::Result<Self> {
+            use byteorder::{ByteOrder, BigEndian};
+
+            let mut buf = [0u8; 4];
+            reader.read(&mut buf)?;
+
+            let coeffs_len = BigEndian::read_u32(&buf) as usize;
+
+            let mut coeffs = ::std::vec::Vec::with_capacity(coeffs_len);
+
+            for _ in 0..coeffs_len {
+                let mut a = Fq2::read(reader)?;
+                let mut b = Fq2::read(reader)?;
+                let mut c = Fq2::read(reader)?;
+
+                coeffs.push((a, b, c));
+            }            
+
+            let res;
+            let mut d = [0u8; 1];
+            reader.read(&mut d)?;            
+            
+            match d[0] {
+                1 => res = true,
+                0 => res = false,
+                _ => return Err(::io::Error::NotOnCurve)
+            }
+
+            Ok(G2Prepared{
+                coeffs: coeffs,
+                infinity: res,
+            })
+        }
     }
 
     #[test]

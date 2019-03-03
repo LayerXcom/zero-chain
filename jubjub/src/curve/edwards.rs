@@ -90,7 +90,7 @@ impl<E: JubjubEngine, Subgroup> PartialEq for Point<E, Subgroup> {
 
 impl<E: JubjubEngine> Point<E, Unknown> {
     pub fn read<R: io::Read>(
-        mut reader: &mut R,
+        reader: &mut R,
         params: &E::Params
     ) -> io::Result<Self>
     {

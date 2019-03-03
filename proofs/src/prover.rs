@@ -31,7 +31,7 @@ use crate::primitives::{
     PaymentAddress, 
     ProofGenerationKey,     
 };
-use crate::elgamal::{Ciphertext, elgamal_extend};
+use crate::elgamal::Ciphertext;
 
 pub struct TransferProof<E: JubjubEngine> {
     pub proof: Proof<E>,
@@ -56,7 +56,7 @@ impl<E: JubjubEngine> TransferProof<E> {
     ) -> Result<Self, ()>
     {
         // TODO: Change OsRng for wasm
-        let mut rng = OsRng::new().expect("should be able to construct RNG");        
+        let mut rng = OsRng::new().expect("should be able to construct RNG");
 
         let randomness = E::Fs::rand(&mut rng);        
         
@@ -165,4 +165,14 @@ impl<E: JubjubEngine> TransferProof<E> {
 
         Ok(transfer_proof)
     }    
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn test_gen_proof() {
+        
+    }
 }

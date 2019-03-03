@@ -28,7 +28,7 @@ use scrypto::circuit::{
     num::AllocatedNum,
 };
 
-use crate::elgamal::{Ciphertext, elgamal_extend};
+use crate::{elgamal::Ciphertext, Assignment};
 
 // An instance of the Transfer circuit.
 pub struct Transfer<'a, E: JubjubEngine> {
@@ -43,74 +43,6 @@ pub struct Transfer<'a, E: JubjubEngine> {
     pub encrypted_balance: Option<Ciphertext<E>>,
 }
 
-fn get_rsg<E, CS>(
-    mut cs: CS,    
-    rcv: &[Boolean],
-    pk_d: Option<edwards::Point<E, PrimeOrder>>,
-    address: &str,
-    params: &E::Params
-) -> Result<EdwardsPoint<E>, SynthesisError>
-    where E: JubjubEngine, CS: ConstraintSystem<E>
-{    
-    let (x, y) = pk_d.map(|e| e.into_xy()).unwrap();    
-
-    let numx = AllocatedNum::alloc(cs.namespace(|| "mont x"), || {
-        Ok(x)
-    })?;
-    let numy = AllocatedNum::alloc(cs.namespace(|| "mont y"), || {
-        Ok(y)
-    })?;
-
-    // Generate the point into the circuit
-    let point = EdwardsPoint::interpret(
-        cs.namespace(|| format!("{} interpret to the point", address)),
-        &numx, 
-        &numy, 
-        params
-    )?;      
-
-    let rsg = point.mul(
-        cs.namespace(|| format!("{} rsg", address)), 
-        rcv, 
-        params
-    )?;   
-
-    Ok(rsg)
-}
-
-fn u32_into_boolean_vec_le<E, CS>(
-    mut cs: CS,
-    value: Option<u32>
-) -> Result<Vec<Boolean>, SynthesisError>
-    where E: JubjubEngine, CS: ConstraintSystem<E>
-{
-    let values = match value {
-        Some(ref value) => {
-            let mut tmp = Vec::with_capacity(32);
-            for i in 0..32 {
-                tmp.push(Some(*value >> i & 1 == 1));
-            }
-            tmp
-        },
-
-        None => {
-            vec![None; 32]
-        }
-    };
-
-    let bits = values.into_iter()
-            .enumerate()
-            .map(|(i, v)| {
-                Ok(boolean::Boolean::from(boolean::AllocatedBit::alloc(
-                    cs.namespace(|| format!("bit {}", i)),
-                    v
-                )?))
-            })
-            .collect::<Result<Vec<_>, SynthesisError>>()?;
-    
-    Ok(bits)
-}
-
 impl<'a, E: JubjubEngine> Circuit<E> for Transfer<'a, E> {
     fn synthesize<CS: ConstraintSystem<E>>(
         self,
@@ -119,22 +51,19 @@ impl<'a, E: JubjubEngine> Circuit<E> for Transfer<'a, E> {
     { 
         let params = self.params;
 
-        // Ensure the value is u32.
-        self.value.map(|v|
-            u32_into_boolean_vec_le(
-                cs.namespace(|| "range proof of value"), 
-                Some(v)
-            )
-        ).unwrap();
-        
-        // Ensure the remaining balance is u32.
-        self.remaining_balance.map(|b|
-            u32_into_boolean_vec_le(
-                cs.namespace(|| "range proof of remaining balance"), 
-                Some(b)
-            )
-        ).unwrap();    
+        // Ensure the value is u32.        
+        u32_into_boolean_vec_le(
+            cs.namespace(|| "range proof of value"), 
+            self.value
+        )?;
 
+        // Ensure the remaining balance is u32.
+        u32_into_boolean_vec_le(
+            cs.namespace(|| "range proof of remaining_balance"), 
+            self.remaining_balance
+        )?;            
+
+        // ivk in circuit
         let ivk_v = boolean::field_into_boolean_vec_le(
             cs.namespace(|| format!("ivk")),
             self.ivk 
@@ -146,7 +75,7 @@ impl<'a, E: JubjubEngine> Circuit<E> for Transfer<'a, E> {
             FixedGenerators::NoteCommitmentRandomness,
             &ivk_v,
             params
-        )?;
+        )?;        
 
         // Expose the pk_d_sender publicly
         pk_d_sender_v.inputize(cs.namespace(|| format!("inputize pk_d_sender")))?;        
@@ -170,47 +99,51 @@ impl<'a, E: JubjubEngine> Circuit<E> for Transfer<'a, E> {
         let rcv = boolean::field_into_boolean_vec_le(
             cs.namespace(|| format!("rcv")), 
             self.randomness
-        )?; 
-
-        let p_g = FixedGenerators::NoteCommitmentRandomness;
-
-        let pk_d_sender = params
-            .generator(p_g)
-            .mul(self.ivk.unwrap(), params);
+        )?;
 
         // Generate the randomness * pk_d_sender in circuit
-        let rsg_sender = get_rsg(
-            cs.namespace(|| format!("get sender's rsg")),
+        let val_rls = pk_d_sender_v.mul(
+            cs.namespace(|| format!("compute sender value cipher")),
             &rcv,
-            Some(pk_d_sender), 
-            "sender", 
+            params
+        )?;                
+
+        // Ensures recipient pk_d is on the curve
+        let recipient_pk_d_v = ecc::EdwardsPoint::witness(
+            cs.namespace(|| "recipient pk_d witness"), 
+            self.pk_d_recipient.as_ref().map(|e| e.clone()), 
             params
         )?;
+
+        // Check the recipient pk_d is not small order
+        recipient_pk_d_v.assert_not_small_order(
+            cs.namespace(|| "val_gl not small order"), 
+            params
+        )?;     
 
         // Generate the randomness * pk_d_recipient in circuit
-        let rsg_recipient = get_rsg(
-            cs.namespace(|| format!("get recipient's rsg")),
+        let val_rlr = recipient_pk_d_v.mul(
+            cs.namespace(|| format!("compute recipient value cipher")),
             &rcv,
-            self.pk_d_recipient, 
-            "recipient", 
             params
-        )?;
+        )?;    
+        
+        val_rlr.inputize(cs.namespace(|| format!("inputize pk_d_recipient")))?; 
 
-        rsg_recipient.inputize(cs.namespace(|| format!("inputize pk_d_recipient")))?; 
 
         // Generate the left elgamal component for sender in circuit
         let c_left_sender = value_g.add(
             cs.namespace(|| format!("computation of sender's c_left")),
-            &rsg_sender, 
+            &val_rls, 
             params
         )?;
 
         // Generate the left elgamal component for recipient in circuit
         let c_left_recipient = value_g.add(
             cs.namespace(|| format!("computation of recipient's c_left")),
-            &rsg_recipient, 
+            &val_rlr, 
             params
-        )?;        
+        )?;
 
         // Multiply the randomness to the base point same as FixedGenerators::ElGamal.
         let c_right = ecc::fixed_base_multiplication(
@@ -227,20 +160,42 @@ impl<'a, E: JubjubEngine> Circuit<E> for Transfer<'a, E> {
 
         // TODO:
         {
-            let (xl, yl) = self.encrypted_balance.clone().map(|e| e.left.into_xy()).unwrap();
-            let (xr, yr) = self.encrypted_balance.map(|e| e.right.into_xy()).unwrap();
+            let bal_gl = ecc::EdwardsPoint::witness(
+                cs.namespace(|| "balance left"), 
+                self.encrypted_balance.as_ref().map(|e| e.left.clone()), 
+                params
+            )?;
+
+            bal_gl.assert_not_small_order(
+                cs.namespace(|| "bal_gl not small order"), 
+                params
+            )?;
+
+            let bal_gr = ecc::EdwardsPoint::witness(
+                cs.namespace(|| "balance right"), 
+                self.encrypted_balance.as_ref().map(|e| e.right.clone()), 
+                params
+            )?;
+
+            bal_gr.assert_not_small_order(
+                cs.namespace(|| "bal_gr not small order"), 
+                params
+            )?;
+
+            let left = self.encrypted_balance.clone().map(|e| e.left.into_xy());
+            let right = self.encrypted_balance.map(|e| e.right.into_xy());
 
             let numxl = AllocatedNum::alloc(cs.namespace(|| "numxl"), || {
-                Ok(xl)
+                Ok(left.get()?.0)
             })?;
             let numyl = AllocatedNum::alloc(cs.namespace(|| "numyl"), || {
-                Ok(yl)
+                Ok(left.get()?.1)
             })?;
             let numxr = AllocatedNum::alloc(cs.namespace(|| "numxr"), || {
-                Ok(xr)
+                Ok(right.get()?.0)
             })?;
             let numyr = AllocatedNum::alloc(cs.namespace(|| "numyr"), || {
-                Ok(yr)
+                Ok(right.get()?.1)
             })?;
 
             let pointl = EdwardsPoint::interpret(
@@ -281,16 +236,18 @@ impl<'a, E: JubjubEngine> Circuit<E> for Transfer<'a, E> {
             self.alpha
         )?;
 
-        let alpha = ecc::fixed_base_multiplication(
+        // Make the alpha on the curve
+        let alpha_g = ecc::fixed_base_multiplication(
             cs.namespace(|| "computation of randomiation for the signing key"),
             FixedGenerators::SpendingKeyGenerator,
             &alpha,
             self.params
         )?;
 
+        // Ensure re-randomaized sig-verification key is computed by the addition of ak and alpha_g
         let rk = ak.add(
             cs.namespace(|| "computation of rk"),
-            &alpha,
+            &alpha_g,
             self.params
         )?;
 
@@ -306,11 +263,45 @@ impl<'a, E: JubjubEngine> Circuit<E> for Transfer<'a, E> {
     }
 }
 
+fn u32_into_boolean_vec_le<E, CS>(
+    mut cs: CS,
+    value: Option<u32>
+) -> Result<Vec<Boolean>, SynthesisError>
+    where E: JubjubEngine, CS: ConstraintSystem<E>
+{
+    let values = match value {
+        Some(ref value) => {
+            let mut tmp = Vec::with_capacity(32);
+            for i in 0..32 {
+                tmp.push(Some(*value >> i & 1 == 1));
+            }
+            tmp
+        },
+
+        None => {
+            vec![None; 32]
+        }
+    };
+
+    let bits = values.into_iter()
+            .enumerate()
+            .map(|(i, v)| {
+                Ok(boolean::Boolean::from(boolean::AllocatedBit::alloc(
+                    cs.namespace(|| format!("bit {}", i)),
+                    v
+                )?))
+            })
+            .collect::<Result<Vec<_>, SynthesisError>>()?;
+    
+    Ok(bits)
+}
+
 #[cfg(test)]
     use pairing::bls12_381::*;
     use rand::{SeedableRng, Rng, XorShiftRng};    
     use super::circuit_test::TestConstraintSystem;
-    use scrypto::jubjub::{JubjubBls12, fs, edwards};       
+    use scrypto::jubjub::{JubjubBls12, fs, edwards};  
+    use crate::elgamal::elgamal_extend;     
 
     
     #[test]

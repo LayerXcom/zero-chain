@@ -1,61 +1,25 @@
 #[cfg(feature = "std")]
-use serde::{Serialize, Serializer, Deserialize, Deserializer};
-use fixed_hash::construct_fixed_hash;
 use pairing::bls12_381::Bls12;
 use bellman_verifier;
 
-
 #[cfg(feature = "std")]
-use substrate_primitives::bytes;
+use ::std::vec::Vec;
+#[cfg(not(feature = "std"))]
+use crate::std::vec::Vec;
 
-const SIZE: usize = 192;
+#[derive(Eq, PartialEq, Clone, Default, Encode, Decode)]
+#[cfg_attr(feature = "std", derive(Debug, Serialize, Deserialize))]
+pub struct Proof(pub Vec<u8>);
 
-construct_fixed_hash! {    
-    pub struct H1536(SIZE);
-}
-
-pub type Proof = H1536;
-
-#[cfg(feature = "std")]
-impl Serialize for H1536 {
-    fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error> 
-        where S: Serializer
-    {
-        bytes::serialize(&self.0, serializer)
-    }
-}
-
-#[cfg(feature = "std")]
-impl<'de> Deserialize<'de> for H1536 {
-    fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
-        where D: Deserializer<'de>
-    {
-        bytes::deserialize_check_len(deserializer, bytes::ExpectedLen::Exact(SIZE))
-            .map(|x| H1536::from_slice(&x))
-    }
-}
-
-impl codec::Encode for H1536 {
-    fn using_encoded<R, F: FnOnce(&[u8]) -> R>(&self, f: F) -> R {
-        self.0.using_encoded(f)
-    }
-}
-
-impl codec::Decode for H1536 {
-    fn decode<I: codec::Input>(input: &mut I) -> Option<Self> {
-        <[u8; SIZE] as codec::Decode>::decode(input).map(H1536)
-    }
-}
-
-impl H1536 {
-    pub fn into_proof(&self) -> Option<bellman_verifier::Proof<Bls12>> {   
+impl Proof {
+    pub fn into_proof(&self) -> Option<bellman_verifier::Proof<Bls12>> {          
         bellman_verifier::Proof::<Bls12>::read(&self.0[..]).ok()        
     }
 
     pub fn from_proof(proof: &bellman_verifier::Proof<Bls12>) -> Self {
-        let mut writer = [0u8; 192];
+        let mut writer = vec![];
         proof.write(&mut &mut writer[..]).unwrap();
-        H1536::from_slice(&writer)
+        Proof(writer)        
     }
 }
 

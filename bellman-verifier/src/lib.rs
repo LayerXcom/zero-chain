@@ -6,11 +6,8 @@
 extern crate alloc;
 
 #[cfg(not(feature = "std"))]
-extern crate core;
-
-#[cfg(not(feature = "std"))]
 mod std {
-    pub use crate::core::*;
+    pub use ::core::*;
     pub use crate::alloc::vec;
     pub use crate::alloc::string;
     pub use crate::alloc::boxed;
@@ -26,7 +23,8 @@ use pairing::{
     Engine,
     CurveAffine,
     EncodedPoint,
-    io
+    io,
+    RW,    
 };
 
 #[cfg(test)]
@@ -118,6 +116,72 @@ pub struct PreparedVerifyingKey<E: Engine> {
     /// Copy of IC from `VerifiyingKey`.
     ic: Vec<E::G1Affine>
 }
+
+impl<E: Engine> PreparedVerifyingKey<E> {
+    pub fn write<W: io::Write> (
+        &self,
+        writer: &mut W
+    ) -> io::Result<()>
+    {
+        use byteorder::{ByteOrder, BigEndian};
+
+        self.alpha_g1_beta_g2.write(writer)?;        
+        self.neg_gamma_g2.write(writer)?;
+        self.neg_delta_g2.write(writer)?; 
+
+        let mut buf = [0u8; 4];        
+
+        BigEndian::write_u32(&mut buf, self.ic.len() as u32);
+        writer.write(&buf)?;
+
+        for ic in &self.ic {
+            writer.write(ic.into_uncompressed().as_ref())?;
+        }
+
+        Ok(())
+    }
+
+    pub fn read<R: io::Read> (
+        reader: &mut R
+    ) -> io::Result<Self>
+    {   
+        use byteorder::{ByteOrder, BigEndian}; 
+        
+        let mut g1_repr = <E::G1Affine as CurveAffine>::Uncompressed::empty();
+
+        let alpha_g1_beta_g2 = E::Fqk::read(reader)?;
+        let neg_gamma_g2 = <E::G2Affine as CurveAffine>::Prepared::read(reader)?;
+        let neg_delta_g2 = <E::G2Affine as CurveAffine>::Prepared::read(reader)?;
+
+        let mut buf = [0u8; 4];
+        reader.read(&mut buf)?;
+
+        let ic_len = BigEndian::read_u32(&buf) as usize;
+        
+        let mut ic = vec![];
+
+        for _ in 0..ic_len {
+            reader.read(g1_repr.as_mut())?;
+            let g1 = g1_repr
+                        .into_affine()
+                        .map_err(|_| io::Error::InvalidData)
+                        .and_then(|e| if e.is_zero() {
+                            Err(io::Error::PointInfinity)
+                        } else {
+                            Ok(e)
+                        })?;
+            ic.push(g1);
+        }
+
+        Ok(PreparedVerifyingKey {
+            alpha_g1_beta_g2: alpha_g1_beta_g2,
+            neg_gamma_g2: neg_gamma_g2,
+            neg_delta_g2: neg_delta_g2,
+            ic: ic,
+        })
+    }
+}
+
 
 #[derive(Clone)]
 pub struct VerifyingKey<E: Engine> {

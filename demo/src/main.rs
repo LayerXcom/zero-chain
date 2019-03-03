@@ -10,24 +10,30 @@ pub mod transaction;
 extern crate parity_codec as codec;
 #[macro_use]
 extern crate parity_codec_derive as codec_derive;
+#[macro_use]
+extern crate lazy_static;
 
-fn print_account(seed: &[u8; 32]) {    
-    for i in 0..3 {
-        let expsk = ExpandedSpendingKey::<Bls12>::from_spending_key(seed);
-        let mut expsk_bytes = vec![];
-        expsk.write(&mut expsk_bytes).unwrap();
+lazy_static! {
+    static ref JUBJUB: JubjubBls12 = { JubjubBls12::new() };
+}
 
-        let params = JubjubBls12::new();
+fn get_address(seed: &[u8; 32]) -> Vec<u8> {    
+    let expsk = ExpandedSpendingKey::<Bls12>::from_spending_key(seed);        
+    let viewing_key = ViewingKey::<Bls12>::from_expanded_spending_key(&expsk, &JUBJUB);        
+    let address = viewing_key.into_payment_address(&JUBJUB);
 
-        let viewing_key = ViewingKey::<Bls12>::from_expanded_spending_key(&expsk, &params);        
-        let address = viewing_key.into_payment_address(&params);
+    let mut address_bytes = vec![];
+    address.write(&mut address_bytes).unwrap();
+    address_bytes
+}
 
-        let mut address_bytes = vec![];
-        address.write(&mut address_bytes).unwrap();
+fn print_random_accounts(seed: &[u8; 32], num: i32) {    
+    for i in 0..num {
+        let address_bytes = get_address(seed);
 
-        println!("Spending key{}: 0x{}\n Address{}: 0x{}\n", 
+        println!("Secret Key{}: 0x{}\n Address{}: 0x{}\n", 
             i,
-            HexDisplay::from(&expsk_bytes),
+            HexDisplay::from(seed),
             i,
             HexDisplay::from(&address_bytes),
         );
@@ -37,5 +43,14 @@ fn print_account(seed: &[u8; 32]) {
 fn main() {
     let mut seed = [0u8; 32];
     OsRng::new().unwrap().fill_bytes(&mut seed[..]);
-    print_account(&seed);
+
+    let alice_seed = b"Alice                           ";
+    let alice_address = get_address(alice_seed);
+
+    println!("Secret Key(Alice): 0x{}\n Address(Alice): 0x{}\n",        
+        HexDisplay::from(alice_seed),        
+        HexDisplay::from(&alice_address),
+    );
+
+    print_random_accounts(&seed, 2);
 }

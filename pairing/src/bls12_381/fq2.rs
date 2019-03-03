@@ -1,6 +1,6 @@
-use super::fq::{FROBENIUS_COEFF_FQ2_C1, Fq, NEGATIVE_ONE};
+use super::fq::{FROBENIUS_COEFF_FQ2_C1, Fq, NEGATIVE_ONE, FqRepr};
 use rand::{Rand, Rng};
-use {Field, SqrtField};
+use {Field, SqrtField, PrimeField, PrimeFieldRepr};
 
 use std::cmp::Ordering;
 
@@ -37,6 +37,28 @@ impl PartialOrd for Fq2 {
 }
 
 impl Fq2 {
+    pub fn write<W: ::io::Write>(&self, writer: &mut W) -> ::io::Result<()> {
+        self.c0.into_repr().write_be(writer)?;
+        self.c1.into_repr().write_be(writer)?;
+        Ok(())
+    }
+
+    pub fn read<R: ::io::Read>(reader: &mut R) -> ::io::Result<Self> {
+        let mut repr0 = FqRepr::default();
+        let mut repr1 = FqRepr::default();
+        repr0.read_be(reader)?;
+        repr1.read_be(reader)?;     
+        
+        Fq::from_repr(repr0).and_then(|r0|
+            Fq::from_repr(repr1).and_then(|r1|
+                Ok(Fq2{
+                    c0: r0,
+                    c1: r1
+                })
+            )
+        ).map_err(|_| ::io::Error::NotInField)        
+    }    
+
     /// Multiply this element by the cubic and quadratic nonresidue 1 + u.
     pub fn mul_by_nonresidue(&mut self) {
         let t0 = self.c0;
@@ -905,4 +927,14 @@ fn fq2_field_tests() {
     ::tests::field::random_field_tests::<Fq2>();
     ::tests::field::random_sqrt_tests::<Fq2>();
     ::tests::field::random_frobenius_tests::<Fq2, _>(super::fq::Fq::char(), 13);
+}
+
+#[test]
+fn fq2_read_write() {
+    let mut rng = XorShiftRng::from_seed([0x5dbe6259, 0x8d313d76, 0x3237db17, 0xe5bc0654]);
+    let a = Fq2::rand(&mut rng);
+    let mut v = vec![];
+    a.write(&mut &mut v).unwrap();
+    let b = Fq2::read(&mut &v[..]).unwrap();
+    assert_eq!(a, b);
 }

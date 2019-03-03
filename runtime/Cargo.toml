@@ -3,6 +3,7 @@ pairing = { package = "zero-chain-pairing", path = "../pairing", default-feature
 bellman-verifier = { path = "../bellman-verifier", default-features = false }
 zprimitives = { package = "zero-chain-primitives", path = "../primitives", default-features = false }
 jubjub = { path = "../jubjub", default-features = false }
+zcrypto = { package = "zero-chain-crypto", path = "../crypto", default-features = false }
 
 [dependencies.aura]
 default_features = false
@@ -127,9 +128,9 @@ package = 'sr-version'
 rev = 'f429a0cb8983cebe380d1cbc7aaf753db0aeba55'
 
 [features]
-default = ["std"]
+default = ['std']
 std = [
-	'parity-codec/std',
+    'parity-codec/std',
     'parity-codec-derive/std',
     'primitives/std',
     'client/std',
@@ -151,15 +152,14 @@ std = [
     'safe-mix/std',
     'consensus-aura/std',
 
-	"pairing/std",
+    "pairing/std",
 	"bellman-verifier/std",
 	"zprimitives/std",
 	"jubjub/std",
 ]
 
-
 [package]
-name = "zero-chain-runtime"
-version = "0.9.0"
-authors = ["Osuke <dish230@gmail.com>"]
-edition = "2018"
+authors = ['Osuke <dish230@gmail.com>']
+edition = '2018'
+name = 'zero-chain-runtime'
+version = '0.9.0'

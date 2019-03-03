@@ -2,7 +2,7 @@ use super::fq::FROBENIUS_COEFF_FQ12_C1;
 use super::fq2::Fq2;
 use super::fq6::Fq6;
 use rand::{Rand, Rng};
-use Field;
+use {Field, RW};
 
 /// An element of Fq12, represented by c0 + c1 * w.
 #[derive(Copy, Clone, Debug, Eq, PartialEq)]
@@ -26,7 +26,25 @@ impl Rand for Fq12 {
     }
 }
 
-impl Fq12 {
+impl RW for Fq12 {
+    fn write<W: ::io::Write>(&self, writer: &mut W) -> ::io::Result<()> {
+        self.c0.write(writer)?;
+        self.c1.write(writer)?;        
+        Ok(())
+    }
+
+    fn read<R: ::io::Read>(reader: &mut R) -> ::io::Result<Self> {
+        let a = Fq6::read(reader)?;
+        let b = Fq6::read(reader)?;
+
+        Ok(Fq12{
+            c0: a,
+            c1: b,
+        })
+    }
+}
+
+impl Fq12 {    
     pub fn conjugate(&mut self) {
         self.c1.negate();
     }
@@ -146,6 +164,7 @@ impl Field for Fq12 {
             tmp
         })
     }
+    
 }
 
 #[cfg(test)]

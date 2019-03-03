@@ -1,9 +1,13 @@
 use primitives::{Ed25519AuthorityId, ed25519};
 use zero_chain_runtime::{
 	AccountId, GenesisConfig, ConsensusConfig, TimestampConfig, BalancesConfig,
-	SudoConfig, IndicesConfig, FeesConfig,
+	SudoConfig, IndicesConfig, FeesConfig, ConfTransferConfig
 };
 use substrate_service;
+
+use crate::pvk::PVK;
+use bellman_verifier::PreparedVerifyingKey;
+use zprimitives::prepared_vk::PreparedVk;
 
 // Note this is the URL for the telemetry server
 //const STAGING_TELEMETRY_URL: &str = "wss://telemetry.polkadot.io/submit/";
@@ -79,7 +83,8 @@ impl Alternative {
 fn testnet_genesis(initial_authorities: Vec<Ed25519AuthorityId>, endowed_accounts: Vec<AccountId>, root_key: AccountId) -> GenesisConfig {
 	GenesisConfig {
 		consensus: Some(ConsensusConfig {
-			code: include_bytes!("../runtime/wasm/target/wasm32-unknown-unknown/release/node_template_runtime_wasm.compact.wasm").to_vec(),
+			// code: include_bytes!("../runtime/wasm/target/wasm32-unknown-unknown/release/node_template_runtime_wasm.compact.wasm").to_vec(),
+			code: include_bytes!("../runtime/wasm/target/wasm32-unknown-unknown/release/zero_chain_runtime_wasm.wasm").to_vec(),
 			authorities: initial_authorities.clone(),
 		}),
 		system: None,
@@ -102,6 +107,15 @@ fn testnet_genesis(initial_authorities: Vec<Ed25519AuthorityId>, endowed_account
 		fees: Some(FeesConfig {
 			transaction_base_fee: 1,
 			transaction_byte_fee: 0,
+		}),
+		conf_transfer: Some(ConfTransferConfig {
+			verifying_key: get_pvk(&PVK),
+			_genesis_phantom_data: Default::default(),
 		})
 	}
+}
+
+fn get_pvk(pvk_array: &[i32]) -> PreparedVk {
+	let pvk_vec_u8 = pvk_array.to_vec().into_iter().map(|e| e as u8).collect();
+	PreparedVk(pvk_vec_u8)
 }
