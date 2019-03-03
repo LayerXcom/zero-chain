@@ -6,11 +6,11 @@ use bellman::groth16::{
 };
 
 use scrypto::jubjub::{JubjubBls12};
-use rand::{OsRng, Rand};
+use rand::OsRng;
 use proofs::circuit_transfer::Transfer;
 
-use std::fs::File;
-use std::io::{Write, BufWriter};
+// use std::fs::File;
+// use std::io::{Write, BufWriter};
 
 pub fn setup() {
     let rng = &mut OsRng::new().expect("should be able to construct RNG");

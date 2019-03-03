@@ -68,36 +68,43 @@ decl_module! {
             //     "Invalid auth_sig"
             // );
             
+            // Get zkproofs with the type
             let szkproof = match zkproof.into_proof() {
                 Some(v) => v,
                 None => return Err("Invalid zkproof"),
             };
 
+            // Get address_sender with the type
             let saddr_sender = match address_sender.into_payment_address() {
                 Some(v) => v,
                 None => return Err("Invalid address_sender"),
             };
 
+            // Get address_recipient with the type
             let saddr_recipient = match  address_recipient.into_payment_address() {
                 Some(v) => v,
                 None => return Err("Invalid address_recipient"),
             };
 
+            // Get value_sender with the type
             let svalue_sender = match value_sender.into_ciphertext() {
                 Some(v) => v,
                 None => return Err("Invalid value_sender"),
             };
 
+            // Get value_recipient with the type
             let svalue_recipient = match value_recipient.into_ciphertext() {
                 Some(v) => v,
                 None => return Err("Invalid value_recipient"),
             };
 
+            // Get balance_sender with the type
             let sbalance_sender = match balance_sender.into_ciphertext() {
                 Some(v) => v,
                 None => return Err("Invalid balance_sender"),
             };
 
+            // Get rk with the type
             let srk = match rk.into_verification_key() {
                 Some(v) => v,
                 None => return Err("Invalid rk"),
@@ -123,6 +130,7 @@ decl_module! {
                 "Invalid encrypted balance"
             );
 
+            // Get balance_sender with the type
             let bal_sender = match Self::encrypted_balance(address_sender) {
                 Some(b) => match b.into_ciphertext() {
                     Some(c) => c,
@@ -131,6 +139,7 @@ decl_module! {
                 None => return Err("Invalid sender balance"),
             };
 
+            // Get balance_recipient with the type
             let bal_recipient = match Self::encrypted_balance(address_recipient) {
                 Some(b) => match b.into_ciphertext() {
                     Some(c) => c,                    
@@ -164,7 +173,7 @@ decl_module! {
 decl_storage! {
     trait Store for Module<T: Trait> as ConfTransfer {
         // The encrypted balance for each account
-        pub EncryptedBalance get(encrypted_balance) : map AccountId => Option<Ciphertext>; 
+        pub EncryptedBalance get(encrypted_balance) config() : map AccountId => Option<Ciphertext>; 
         // The verification key of zk proofs (only readable)
         pub VerifyingKey get(verifying_key) config(): PreparedVk; 
     }

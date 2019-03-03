@@ -27,6 +27,7 @@ scrypto = { package = "sapling-crypto", git = "https://github.com/LayerXcom/libr
 bellman = { git = "https://github.com/LayerXcom/librustzcash", branch = "zero-chain" }
 pairing = { git = "https://github.com/LayerXcom/librustzcash", branch = "zero-chain" }
 rand = "0.4"
+lazy_static = "1.3.0"
 
 [dependencies.basic-authorship]
 git = 'https://github.com/paritytech/substrate.git'

@@ -17,7 +17,7 @@ lazy_static! {
     static ref JUBJUB: JubjubBls12 = { JubjubBls12::new() };
 }
 
-fn get_address(seed: &[u8; 32]) -> Vec<u8> {    
+fn get_address(seed: &[u8; 32]) -> Vec<u8> { 
     let expsk = ExpandedSpendingKey::<Bls12>::from_spending_key(seed);        
     let viewing_key = ViewingKey::<Bls12>::from_expanded_spending_key(&expsk, &JUBJUB);        
     let address = viewing_key.into_payment_address(&JUBJUB);
@@ -42,7 +42,9 @@ fn print_random_accounts(seed: &[u8; 32], num: i32) {
 
 fn main() {
     let mut seed = [0u8; 32];
-    OsRng::new().unwrap().fill_bytes(&mut seed[..]);
+    if let Ok(e) = OsRng::new() {
+        e.fill_bytes(&mut seed[..]);
+    }    
 
     let alice_seed = b"Alice                           ";
     let alice_address = get_address(alice_seed);
