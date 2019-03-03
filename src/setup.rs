@@ -5,10 +5,9 @@ use bellman::groth16::{
     prepare_verifying_key,        
 };
 
-use bellman_verifier::PreparedVerifyingKey;
 use scrypto::jubjub::{JubjubBls12};
 use rand::{OsRng, Rand};
-use crate::circuit_transfer::Transfer;
+use proofs::circuit_transfer::Transfer;
 
 use std::fs::File;
 use std::io::{Write, BufWriter};
@@ -38,18 +37,16 @@ pub fn setup() {
     let pvk = prepare_verifying_key(&params.vk);
     let mut v = vec![];
     pvk.write(&mut &mut v).unwrap();    
+    // println!("pvk: {:?}", v);
     println!("pvk: {:?}", v.len());
 
     // let mut file = BufWriter::new(File::create("pvk.txt")?);
     // file.write_all(&v)?;
     // file.flush()?;
-    // Ok(())
-    // let pvk2 = PreparedVerifyingKey::read(&mut &v)?;
-
-    // assert!(pvk == pvk2);
+    // Ok(())    
 }
 
-#[test]
-fn test_setup() {    
-    setup();
-}
+// #[test]
+// fn test_setup() {    
+//     setup();
+// }

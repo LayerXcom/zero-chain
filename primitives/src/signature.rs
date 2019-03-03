@@ -1,22 +1,13 @@
-#[cfg(feature = "std")]
-use serde::{Serialize, Serializer, Deserialize, Deserializer};
-use fixed_hash::construct_fixed_hash;
+use primitive_types::H512;
 use jubjub::redjubjub;
 use runtime_primitives::traits::{Verify, Lazy};
 use crate::sig_vk::SigVerificationKey;
 use jubjub::curve::FixedGenerators;
 use crate::JUBJUB;
 
-#[cfg(feature = "std")]
-use substrate_primitives::bytes;
-
-const SIZE: usize = 64;
-
-construct_fixed_hash! {
-    pub struct H512(SIZE);
-}
-
-pub type RedjubjubSignature = H512;
+#[derive(Eq, PartialEq, Clone, Default, Encode, Decode)]
+#[cfg_attr(feature = "std", derive(Debug, Serialize, Deserialize))]
+pub struct RedjubjubSignature(H512);
 
 impl Verify for RedjubjubSignature {
     type Signer = SigVerificationKey;
@@ -36,38 +27,13 @@ impl Verify for RedjubjubSignature {
     }
 }
 
-#[cfg(feature = "std")]
-impl Serialize for H512 {
-    fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error> 
-        where S: Serializer
-    {
-        bytes::serialize(&self.0, serializer)
-    }
+impl From<H512> for RedjubjubSignature {
+	fn from(h: H512) -> RedjubjubSignature {
+		RedjubjubSignature(h)
+	}
 }
 
-#[cfg(feature = "std")]
-impl<'de> Deserialize<'de> for H512 {
-    fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
-        where D: Deserializer<'de>
-    {
-        bytes::deserialize_check_len(deserializer, bytes::ExpectedLen::Exact(SIZE))
-            .map(|x| H512::from_slice(&x))
-    }
-}
-
-impl codec::Encode for H512 {
-    fn using_encoded<R, F: FnOnce(&[u8]) -> R>(&self, f: F) -> R {
-        self.0.using_encoded(f)
-    }
-}
-
-impl codec::Decode for H512 {
-    fn decode<I: codec::Input>(input: &mut I) -> Option<Self> {
-        <[u8; SIZE] as codec::Decode>::decode(input).map(H512)
-    }
-}
-
-impl H512 {
+impl RedjubjubSignature {
     pub fn into_signature(&self) -> Option<redjubjub::Signature> {   
         redjubjub::Signature::read(&self.0[..]).ok()        
     }
@@ -75,7 +41,7 @@ impl H512 {
     pub fn from_signature(sig: &redjubjub::Signature) -> Self {
         let mut writer = [0u8; 64];
         sig.write(&mut writer[..]).unwrap();
-        H512::from_slice(&writer)
+        RedjubjubSignature(H512::from_slice(&writer))
     }
 }
 
@@ -108,7 +74,7 @@ mod tests {
         
         assert!(vk.verify(msg, &sig1, p_g, params));
 
-        let sig_b = Signature::from_signature(&sig1);        
+        let sig_b = RedjubjubSignature::from_signature(&sig1);        
         let sig2 = sig_b.into_signature().unwrap();
 
         assert!(sig1 == sig2);
@@ -127,11 +93,11 @@ mod tests {
         let sig1 = sk.sign(msg, &mut rng, p_g, params);
         
         assert!(vk.verify(msg, &sig1, p_g, params));
-        let sig_b = Signature::from_signature(&sig1);
+        let sig_b = RedjubjubSignature::from_signature(&sig1);
         
         let encoded_sig = sig_b.encode();        
         
-        let decoded_sig = Signature::decode(&mut encoded_sig.as_slice()).unwrap();
+        let decoded_sig = RedjubjubSignature::decode(&mut encoded_sig.as_slice()).unwrap();
         assert_eq!(sig_b, decoded_sig);
     }    
 }

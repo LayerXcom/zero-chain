@@ -24,6 +24,12 @@ use version::RuntimeVersion;
 #[cfg(feature = "std")]
 use version::NativeVersion;
 
+use zprimitives::{
+	signature::RedjubjubSignature,
+	// account_id::AccountId,
+	sig_vk::SigVerificationKey,
+};
+
 // A few exports that help ease life for downstream crates.
 #[cfg(any(feature = "std", test))]
 pub use runtime_primitives::BuildStorage;
@@ -202,7 +208,7 @@ construct_runtime!(
 		Fees: fees::{Module, Storage, Config<T>, Event<T>},
 		// Used for the module template in `./template.rs`
 		TemplateModule: template::{Module, Call, Storage, Event<T>},
-		ConfTransfer: conf_transfer::{Module, Call, Storage, Event<T>},
+		ConfTransfer: conf_transfer::{Module, Call, Storage, Event<T>, Config<T>},
 	}
 );
 

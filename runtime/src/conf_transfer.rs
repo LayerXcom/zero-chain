@@ -29,7 +29,7 @@ use jubjub::{
     },    
     redjubjub::{        
         PublicKey, 
-        Signature as RedjubjubSignature,        
+        // Signature as RedjubjubSignature,        
     },
 };
 
@@ -37,8 +37,8 @@ use zprimitives::{
     account_id::AccountId, 
     ciphertext::Ciphertext, 
     proof::Proof, 
-    public_key::SigVerificationKey, 
-    signature::Signature,
+    sig_vk::SigVerificationKey, 
+    signature::RedjubjubSignature,
     keys::{PaymentAddress},
     prepared_vk::PreparedVk,
 };
@@ -97,7 +97,15 @@ decl_module! {
                     srk,                    
                 ),
                 "Invalid zkproof"
-            );               
+            );
+
+            // Verify the balance
+            ensure!(
+                Self::encrypted_balance(address_sender) == Some(balance_sender),
+                "Invalid encrypted balance"
+            );
+
+            
 
             Ok(())         			            
 		}		
@@ -107,7 +115,7 @@ decl_module! {
 decl_storage! {
     trait Store for Module<T: Trait> as ConfTransfer {
         // The encrypted balance for each account
-        pub EncryptedBalance get(encrypted_balance) : map AccountId => Ciphertext;         
+        pub EncryptedBalance get(encrypted_balance) : map AccountId => Option<Ciphertext>; 
         pub VerifyingKey get(verifying_key) config(): PreparedVk; 
     }
 }
