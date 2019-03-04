@@ -14,10 +14,10 @@ construct_fixed_hash! {
     pub struct H256(SIZE);
 }
 
-pub type AccountId = H256;
+pub type PkdAddress = H256;
 
 #[cfg(feature = "std")]
-impl Serialize for AccountId {
+impl Serialize for PkdAddress {
     fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error> 
         where S: Serializer
     {
@@ -26,28 +26,28 @@ impl Serialize for AccountId {
 }
 
 #[cfg(feature = "std")]
-impl<'de> Deserialize<'de> for AccountId {
+impl<'de> Deserialize<'de> for PkdAddress {
     fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
         where D: Deserializer<'de>
     {
         bytes::deserialize_check_len(deserializer, bytes::ExpectedLen::Exact(SIZE))
-            .map(|x| AccountId::from_slice(&x))
+            .map(|x| PkdAddress::from_slice(&x))
     }
 }
 
-impl codec::Encode for AccountId {
+impl codec::Encode for PkdAddress {
     fn using_encoded<R, F: FnOnce(&[u8]) -> R>(&self, f: F) -> R {
         self.0.using_encoded(f)
     }
 }
 
-impl codec::Decode for AccountId {
+impl codec::Decode for PkdAddress {
     fn decode<I: codec::Input>(input: &mut I) -> Option<Self> {
         <[u8; SIZE] as codec::Decode>::decode(input).map(H256)
     }
 }
 
-impl AccountId {
+impl PkdAddress {
     pub fn into_payment_address(&self) -> Option<PaymentAddress<Bls12>> {         
         PaymentAddress::<Bls12>::read(&mut &self.0[..], &JUBJUB).ok()
     }
@@ -55,13 +55,13 @@ impl AccountId {
     pub fn from_payment_address(address: &PaymentAddress<Bls12>) -> Self {
         let mut writer = [0u8; 32];
         address.write(&mut writer[..]).unwrap();
-        AccountId::from_slice(&writer)      
+        PkdAddress::from_slice(&writer)      
     }
 }
 
-impl Into<AccountId> for PaymentAddress<Bls12> {
-    fn into(self) -> AccountId {
-        AccountId::from_payment_address(&self)
+impl Into<PkdAddress> for PaymentAddress<Bls12> {
+    fn into(self) -> PkdAddress {
+        PkdAddress::from_payment_address(&self)
     }
 }
 
@@ -82,7 +82,7 @@ mod tests {
         let viewing_key = ViewingKey::<Bls12>::from_expanded_spending_key(&ex_sk, &JUBJUB);        
         let addr1 = viewing_key.into_payment_address(&JUBJUB);
 
-        let account_id = AccountId::from_payment_address(&addr1);
+        let account_id = PkdAddress::from_payment_address(&addr1);
         println!("account_id: {:?}", account_id);
         let addr2 = account_id.into_payment_address().unwrap();
         assert!(addr1 == addr2);

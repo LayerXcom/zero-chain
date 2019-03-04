@@ -25,7 +25,7 @@ use jubjub::{
     };
 
 use zprimitives::{
-    account_id::AccountId, 
+    pkd_address::PkdAddress, 
     ciphertext::Ciphertext, 
     proof::Proof, 
     sig_vk::SigVerificationKey, 
@@ -52,8 +52,8 @@ decl_module! {
 		pub fn confidential_transfer(
             _origin,
             zkproof: Proof,           
-            address_sender: AccountId, 
-            address_recipient: AccountId,
+            address_sender: PkdAddress, 
+            address_recipient: PkdAddress,
             value_sender: Ciphertext,
             value_recipient: Ciphertext,
             balance_sender: Ciphertext,          
@@ -173,7 +173,7 @@ decl_module! {
 decl_storage! {
     trait Store for Module<T: Trait> as ConfTransfer {
         // The encrypted balance for each account
-        pub EncryptedBalance get(encrypted_balance) config() : map AccountId => Option<Ciphertext>; 
+        pub EncryptedBalance get(encrypted_balance) config() : map PkdAddress => Option<Ciphertext>; 
         // The verification key of zk proofs (only readable)
         pub VerifyingKey get(verifying_key) config(): PreparedVk; 
     }

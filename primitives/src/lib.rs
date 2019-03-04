@@ -23,7 +23,7 @@ extern crate parity_codec_derive as codec_derive;
 extern crate serde_derive;
 
 pub mod keys;
-pub mod account_id;
+pub mod pkd_address;
 pub mod signature;
 pub mod ciphertext;
 pub mod proof;

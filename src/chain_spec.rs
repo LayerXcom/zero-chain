@@ -8,7 +8,7 @@ use substrate_service;
 use crate::pvk::PVK;
 use zprimitives::{
 	prepared_vk::PreparedVk,
-	account_id,
+	pkd_address::PkdAddress,
 	ciphertext::Ciphertext,
 	keys::{ExpandedSpendingKey, ViewingKey},
 	};
@@ -133,7 +133,7 @@ fn get_pvk(pvk_array: &[i32]) -> PreparedVk {
 	PreparedVk(pvk_vec_u8)
 }
 
-fn alice_init() -> (account_id::AccountId, Ciphertext) {
+fn alice_init() -> (PkdAddress, Ciphertext) {
 	let alice_seed = b"Alice                           ";
 	let alice_value = 100 as u32;
 
@@ -151,5 +151,5 @@ fn alice_init() -> (account_id::AccountId, Ciphertext) {
 
 	let enc_alice_val = elgamal::Ciphertext::encrypt(alice_value, r_fs, &address.0, p_g, &JUBJUB);
 
-	(account_id::AccountId::from_payment_address(&address), Ciphertext::from_ciphertext(&enc_alice_val))
+	(PkdAddress::from_payment_address(&address), Ciphertext::from_ciphertext(&enc_alice_val))
 }
