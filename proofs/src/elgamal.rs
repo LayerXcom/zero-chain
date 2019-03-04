@@ -106,8 +106,9 @@ pub fn elgamal_extend(sk: &[u8]) -> Blake2bResult {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use rand::{Rand, Rng, SeedableRng, XorShiftRng};
+    use rand::{Rng, SeedableRng, XorShiftRng};
     use scrypto::jubjub::{JubjubBls12, fs::Fs};
+    use pairing::PrimeField;
 
     #[test]
     fn test_elgamal_enc_dec() {

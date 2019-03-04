@@ -92,7 +92,7 @@ impl Transaction {
 			address_recipient.clone(),			
             ciphertext_balance.clone(),
 			&params,
-		).map_err(|_| io::Error::InvalidData)?;
+		);
 		
 		let sk = fs::Fs::to_uniform(sk);
 

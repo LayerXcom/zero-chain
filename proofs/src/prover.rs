@@ -165,9 +165,9 @@ mod tests {
     use crate::setup;    
     use rand::{SeedableRng, XorShiftRng, Rng};
     use crate::primitives::{ExpandedSpendingKey, ViewingKey};
-    use scrypto::jubjub::{fs, ToUniform};
+    use scrypto::jubjub::{fs, ToUniform, JubjubParams};
     use crate::elgamal::elgamal_extend;
-    use pairing::PrimeField;
+    use pairing::PrimeField;    
 
     #[test]
     fn test_gen_proof() {        

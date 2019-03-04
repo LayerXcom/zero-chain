@@ -1,7 +1,3 @@
-use pairing::{
-    PrimeField,       
-};
-
 use bellman::{
     SynthesisError,
     ConstraintSystem,
@@ -17,14 +13,12 @@ use scrypto::jubjub::{
 };
 
 use crate::primitives::{    
-    ProofGenerationKey,
-    PaymentAddress,     
+    ProofGenerationKey,     
 };
 
 use scrypto::circuit::{    
     boolean::{self, Boolean},
-    ecc::{self, EdwardsPoint},    
-    blake2s,    
+    ecc::{self, EdwardsPoint},      
     num::AllocatedNum,
 };
 
@@ -297,11 +291,11 @@ fn u32_into_boolean_vec_le<E, CS>(
 }
 
 #[cfg(test)]
-    use pairing::bls12_381::*;
+    use pairing::{PrimeField, bls12_381::*};
     use rand::{SeedableRng, Rng, XorShiftRng};    
     use super::circuit_test::TestConstraintSystem;
     use scrypto::jubjub::{JubjubBls12, fs, edwards};  
-    use crate::elgamal::elgamal_extend;     
+    use crate::elgamal::elgamal_extend;         
 
     
     #[test]

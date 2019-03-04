@@ -57,7 +57,8 @@ decl_module! {
             balance_sender: Ciphertext,       
             rk: SigVerificationKey  // TODO: Extract from origin            
         ) -> Result {
-			let _origin = ensure_signed(origin)?;            
+            // Temporally removed the signature verification.
+			//let _origin = ensure_signed(origin)?;
             
             // Get zkproofs with the type
             let szkproof = match zkproof.into_proof() {
