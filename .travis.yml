@@ -8,7 +8,7 @@ script:
 - sudo apt-get install -y cmake pkg-config libssl-dev
 - cargo test --release --all
 before_install:
-- cp ./runtime/wasm/target/wasm32-unknown-unknown/release/zero_chain_runtime_wasm.wasm
+- cp $PWD/runtime/wasm/target/wasm32-unknown-unknown/release/zero_chain_runtime_wasm.wasm
   ${TRAVIS_BUILD_DIR}/runtime/wasm/target/wasm32-unknown-unknown/release/zero_chain_runtime_wasm.wasm
 notifications:
   slack:
