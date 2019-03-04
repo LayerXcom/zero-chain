@@ -17,6 +17,7 @@ env:
     - RUST_TOOLCHAIN=stable TARGET=native
 
 before_install:
+  - chmod +x ./ci/script.sh
   # Check how much space we've got on this machine.
   - df -h
 
