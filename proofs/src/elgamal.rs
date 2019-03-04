@@ -7,8 +7,6 @@ use scrypto::jubjub::{
         ToUniform,
 };
 
-use pairing::PrimeField;
-
 use blake2_rfc::{
     blake2b::{Blake2b, Blake2bResult}
 };

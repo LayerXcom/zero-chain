@@ -174,7 +174,7 @@ dependencies = [
 [[package]]
 name = "bellman"
 version = "0.1.0"
-source = "git+https://github.com/LayerXcom/librustzcash?branch=zero-chain#fb6fbdd2c1ee76e1c920009207eac8bc68731cdd"
+source = "git+https://github.com/LayerXcom/librustzcash?branch=zero-chain#e8e822f6a480e5351a04db4540c77c75eb4f01e5"
 dependencies = [
  "bit-vec 0.4.4 (registry+https://github.com/rust-lang/crates.io-index)",
  "byteorder 1.3.1 (registry+https://github.com/rust-lang/crates.io-index)",
@@ -2010,7 +2010,7 @@ dependencies = [
 [[package]]
 name = "pairing"
 version = "0.14.2"
-source = "git+https://github.com/LayerXcom/librustzcash?branch=zero-chain#fb6fbdd2c1ee76e1c920009207eac8bc68731cdd"
+source = "git+https://github.com/LayerXcom/librustzcash?branch=zero-chain#e8e822f6a480e5351a04db4540c77c75eb4f01e5"
 dependencies = [
  "byteorder 1.3.1 (registry+https://github.com/rust-lang/crates.io-index)",
  "rand 0.4.6 (registry+https://github.com/rust-lang/crates.io-index)",
@@ -2587,7 +2587,7 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 [[package]]
 name = "sapling-crypto"
 version = "0.0.1"
-source = "git+https://github.com/LayerXcom/librustzcash?branch=zero-chain#fb6fbdd2c1ee76e1c920009207eac8bc68731cdd"
+source = "git+https://github.com/LayerXcom/librustzcash?branch=zero-chain#e8e822f6a480e5351a04db4540c77c75eb4f01e5"
 dependencies = [
  "bellman 0.1.0 (git+https://github.com/LayerXcom/librustzcash?branch=zero-chain)",
  "blake2-rfc 0.2.18 (git+https://github.com/gtank/blake2-rfc?rev=7a5b5fc99ae483a0043db7547fb79a6fa44b88a9)",
@@ -3406,7 +3406,7 @@ dependencies = [
  "substrate-service 0.3.0 (git+https://github.com/paritytech/substrate?rev=f429a0cb8983cebe380d1cbc7aaf753db0aeba55)",
  "substrate-state-machine 0.1.0 (git+https://github.com/paritytech/substrate?rev=f429a0cb8983cebe380d1cbc7aaf753db0aeba55)",
  "substrate-telemetry 0.3.1 (git+https://github.com/paritytech/substrate?rev=f429a0cb8983cebe380d1cbc7aaf753db0aeba55)",
- "sysinfo 0.8.1 (registry+https://github.com/rust-lang/crates.io-index)",
+ "sysinfo 0.8.2 (registry+https://github.com/rust-lang/crates.io-index)",
  "time 0.1.42 (registry+https://github.com/rust-lang/crates.io-index)",
  "tokio 0.1.16 (registry+https://github.com/rust-lang/crates.io-index)",
 ]
@@ -3932,7 +3932,7 @@ dependencies = [
 
 [[package]]
 name = "sysinfo"
-version = "0.8.1"
+version = "0.8.2"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 dependencies = [
  "cfg-if 0.1.6 (registry+https://github.com/rust-lang/crates.io-index)",
@@ -5067,7 +5067,7 @@ dependencies = [
 "checksum subtle 2.0.0 (registry+https://github.com/rust-lang/crates.io-index)" = "702662512f3ddeb74a64ce2fbbf3707ee1b6bb663d28bb054e0779bbc720d926"
 "checksum syn 0.15.27 (registry+https://github.com/rust-lang/crates.io-index)" = "525bd55255f03c816e5d7f615587bd13030c7103354fadb104993dcee6a788ec"
 "checksum synstructure 0.10.1 (registry+https://github.com/rust-lang/crates.io-index)" = "73687139bf99285483c96ac0add482c3776528beac1d97d444f6e91f203a2015"
-"checksum sysinfo 0.8.1 (registry+https://github.com/rust-lang/crates.io-index)" = "384f63c60a7d1980e864713989363f64875210841c334a57731a7f6dd102837b"
+"checksum sysinfo 0.8.2 (registry+https://github.com/rust-lang/crates.io-index)" = "b5a0cb7899e248ed0baa6ef6f8406352523c2f99bc7c4b1800f4cd6d5dde99eb"
 "checksum take_mut 0.2.2 (registry+https://github.com/rust-lang/crates.io-index)" = "f764005d11ee5f36500a149ace24e00e3da98b0158b3e2d53a7495660d3f4d60"
 "checksum target_info 0.1.0 (registry+https://github.com/rust-lang/crates.io-index)" = "c63f48baada5c52e65a29eef93ab4f8982681b67f9e8d29c7b05abcfec2b9ffe"
 "checksum tempfile 3.0.7 (registry+https://github.com/rust-lang/crates.io-index)" = "b86c784c88d98c801132806dadd3819ed29d8600836c4088e855cdf3e178ed8a"

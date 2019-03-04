@@ -4,6 +4,7 @@ pub mod prover;
 pub mod circuit_test;
 pub mod primitives;
 pub mod elgamal;
+pub mod setup;
 
 use bellman::SynthesisError;
 

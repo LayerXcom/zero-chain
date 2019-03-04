@@ -123,7 +123,7 @@ fn testnet_genesis(initial_authorities: Vec<Ed25519AuthorityId>, endowed_account
 		conf_transfer: Some(ConfTransferConfig {
 			encrypted_balance: vec![alice_init()],
 			// verifying_key: get_pvk(&PVK),
-			verifying_key: PreparedVk(vec![1]),
+			verifying_key: PreparedVk(vec![1 as u8]),
 			simple_num: 3 as u32,
 			_genesis_phantom_data: Default::default(),
 		})

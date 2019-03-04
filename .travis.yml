@@ -8,8 +8,8 @@ script:
 - sudo apt-get install -y cmake pkg-config libssl-dev
 - cargo test --release --all
 before_install:
-- cp ${TRAVIS_BUILD_DIR}/runtime/wasm/target/wasm32-unknown-unknown/release/zero_chain_runtime_wasm.wasm
-  runtime/wasm/target/wasm32-unknown-unknown/release/zero_chain_runtime_wasm.wasm
+- cp ./runtime/wasm/target/wasm32-unknown-unknown/release/zero_chain_runtime_wasm.wasm
+  ${TRAVIS_BUILD_DIR}/runtime/wasm/target/wasm32-unknown-unknown/release/zero_chain_runtime_wasm.wasm
 notifications:
   slack:
     secure: u5HkPAH8t2ElGogwTU+XLSXhS5Aly/YGVAp4/u+qwioRn8jbfUUt2r8f2TiNc4etusA4uSWVxtxQQJgi+Z+aFwYCL0wGLzPWDJhkZu0anljaRzrTi+VbZX9kzKI+MObR7hQWYumkYeYUQYaQ6zu2TemQQWffNOMKFnE0oabcimeEPxjLFqZwP1das7FUsaydIY7PMX3IHHWmAU+lhtecU7VfA+ig33EdEli6YAiHPsEEiV2t1QSoOOBP7yMezrYCKgSIr6T+Ijpo24SW2S33Ic4+in4dkIGIUzk/lkjd0WsiWkiGgvG48NmRVC2zvRj2fhZ7MJgbgue3h76bYTJMWSpzRwD7SwQASvLFRBj0YyI4o288xJ6hhz38eHy7a50mycUgjPijXqVDNJ1M253MWJhhGeTe7ujkLFn0BawzT34T7guf9NMczmJiIgqDbfHumWAVP4m4Qcst4gNs7aa3470+fPVebdUCLcd5oMDrd/LqNpPQGrJsK22yOvWhUVd7A8Ekgr8TMgslgyHfP2X3mFwfpw61dYNk55uQ1Jj9YmqLodAE8C+bkU6SUdJflxEVKAfxzOqaYDJWcRunZBXFsb7/giTuk47nwhE/tMhCBFJkKBncfErWfswANwlhlUhtRP7gHvCgioiYLxtIeWU9gUMr1L2FnQXCYecsZCJiK24=

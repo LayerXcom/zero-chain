@@ -2,17 +2,19 @@ use pairing::bls12_381::Bls12;
 
 use bellman::groth16::{    
     generate_random_parameters,
-    prepare_verifying_key,        
+    prepare_verifying_key,
+    Parameters,
+    PreparedVerifyingKey,
 };
 
 use scrypto::jubjub::{JubjubBls12};
 use rand::OsRng;
-use proofs::circuit_transfer::Transfer;
+use crate::circuit_transfer::Transfer;
 
 // use std::fs::File;
 // use std::io::{Write, BufWriter};
 
-pub fn setup() {
+pub fn setup() -> (Parameters<Bls12>, PreparedVerifyingKey<Bls12>) {
     let rng = &mut OsRng::new().expect("should be able to construct RNG");
 
     let params = JubjubBls12::new();
@@ -40,13 +42,15 @@ pub fn setup() {
     // println!("pvk: {:?}", v);
     println!("pvk: {:?}", v.len());
 
+    (params, pvk) 
+
     // let mut file = BufWriter::new(File::create("pvk.txt")?);
     // file.write_all(&v)?;
     // file.flush()?;
     // Ok(())    
 }
 
-// #[test]
-// fn test_setup() {    
-//     setup();
-// }
+#[test]
+fn test_setup() {    
+    setup();
+}
