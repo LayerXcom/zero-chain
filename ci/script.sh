@@ -25,7 +25,7 @@ case $TARGET in
 
 	"wasm")
 		# Install prerequisites and build all wasm projects
-		./scripts/init.sh
-		./scripts/build.sh
+		./init.sh
+		./build.sh
 		;;
 esac
