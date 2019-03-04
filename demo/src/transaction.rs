@@ -38,7 +38,7 @@ use rand::{OsRng, Rand, Rng};
 
 use zprimitives::{
 		ciphertext::Ciphertext as pCiphertext,
-		account_id::AccountId as pAccountId,
+		pkd_address::PkdAddress,
 		proof::Proof as pProof,
 		sig_vk::{SigVerificationKey as pSigVerificationKey},
 		signature::RedjubjubSignature as pRedjubjubSignature,
@@ -52,8 +52,8 @@ pub struct Transaction{
     pub sighash_value: Vec<u8>,            // 32 bytes [u8; 32]
     pub vk: pSigVerificationKey,           // 32 bytes
     pub proof: pProof,                     // 192 bytes
-    pub address_sender: pAccountId,        // 43 bytes
-    pub address_recipient: pAccountId,     // 43 bytes
+    pub address_sender: PkdAddress,        // 43 bytes
+    pub address_recipient: PkdAddress,     // 43 bytes
     pub enc_val_recipient: pCiphertext,    // 64 bytes
 	pub enc_val_sender: pCiphertext,       // 64 bytes
 	pub enc_bal_sender: pCiphertext,       // 64 bytes	
@@ -154,8 +154,8 @@ impl Transaction {
 			sighash_value: sighash_value,          
 			vk: pSigVerificationKey::from_verification_key(&zrk),  
 			proof: pProof::from_proof(&zproof),                     
-			address_sender: pAccountId::from_payment_address(&zaddress_sender),        
-			address_recipient: pAccountId::from_payment_address(&zaddress_recipient),     
+			address_sender: PkdAddress::from_payment_address(&zaddress_sender),        
+			address_recipient: PkdAddress::from_payment_address(&zaddress_recipient),     
 			enc_val_recipient: pCiphertext::from_ciphertext(&zenc_val_recipient),
 			enc_val_sender: pCiphertext::from_ciphertext(&zenc_val_sender),
 			enc_bal_sender: pCiphertext::from_ciphertext(&zenc_bal_sender),			
