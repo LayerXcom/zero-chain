@@ -1,4 +1,6 @@
-// use structopt::Structopt;
+#[macro_use]
+extern crate structopt;
+use structopt::StructOpt;
 use rand::{OsRng, Rng};
 use proofs::primitives::{ExpandedSpendingKey, ViewingKey};
 use substrate_primitives::hexdisplay::HexDisplay;
@@ -15,6 +17,13 @@ extern crate lazy_static;
 
 lazy_static! {
     static ref JUBJUB: JubjubBls12 = { JubjubBls12::new() };
+}
+
+#[derive(StructOpt, Debug)]
+#[structopt(name = "handle")]
+struct Opt {
+    #[structopt(short = "b", long = "balance")]
+    balance: Vec<String>,
 }
 
 fn get_address(seed: &[u8; 32]) -> Vec<u8> { 

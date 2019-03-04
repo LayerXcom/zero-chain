@@ -41,8 +41,6 @@ pub trait Trait: system::Trait {
 	type Event: From<Event<Self>> + Into<<Self as system::Trait>::Event>;
 }
 
-// params: JubjubBls12  // TODO: Hardcoded on-chain
-
 decl_module! {	
 	pub struct Module<T: Trait> for enum Call where origin: T::Origin {		
         // Initializing events
@@ -50,23 +48,16 @@ decl_module! {
 		fn deposit_event<T>() = default;
 
 		pub fn confidential_transfer(
-            _origin,
+            origin,
             zkproof: Proof,           
             address_sender: PkdAddress, 
             address_recipient: PkdAddress,
             value_sender: Ciphertext,
             value_recipient: Ciphertext,
-            balance_sender: Ciphertext,          
-            rk: SigVerificationKey  // TODO: Extract from origin
-            // auth_sig: Signature,            
+            balance_sender: Ciphertext,       
+            rk: SigVerificationKey  // TODO: Extract from origin            
         ) -> Result {
-			// let origin = ensure_signed(origin)?;
-
-            // // Verify the auth_sig
-            // ensure!(
-            //     Self::verify_auth_sig(rk, auth_sig, &sighash_value, &params),
-            //     "Invalid auth_sig"
-            // );
+			let _origin = ensure_signed(origin)?;            
             
             // Get zkproofs with the type
             let szkproof = match zkproof.into_proof() {
@@ -176,6 +167,7 @@ decl_storage! {
         pub EncryptedBalance get(encrypted_balance) config() : map PkdAddress => Option<Ciphertext>; 
         // The verification key of zk proofs (only readable)
         pub VerifyingKey get(verifying_key) config(): PreparedVk; 
+        pub SimpleNum get(simple_num) config(): u32; 
     }
 }
 

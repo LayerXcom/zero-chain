@@ -1,4 +1,3 @@
-#[cfg(feature = "std")]
 use pairing::bls12_381::Bls12;
 use bellman_verifier;
 

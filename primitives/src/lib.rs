@@ -29,6 +29,7 @@ pub mod ciphertext;
 pub mod proof;
 pub mod sig_vk;
 pub mod prepared_vk;
+pub mod pvk;
 
 use lazy_static::lazy_static;
 use jubjub::curve::JubjubBls12;

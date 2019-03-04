@@ -25,8 +25,7 @@ use version::RuntimeVersion;
 use version::NativeVersion;
 
 use zprimitives::{
-	signature::RedjubjubSignature,
-	// account_id::AccountId,
+	signature::RedjubjubSignature,	
 	sig_vk::SigVerificationKey,
 };
 
@@ -41,7 +40,8 @@ pub use timestamp::BlockPeriod;
 pub use support::{StorageValue, construct_runtime};
 
 /// Alias to Ed25519 pubkey that identifies an account on the chain.
-pub type AccountId = primitives::H256;
+// pub type AccountId = primitives::H256;
+pub type AccountId = SigVerificationKey;
 
 /// A hash of some data used by the chain.
 pub type Hash = primitives::H256;
@@ -213,7 +213,7 @@ pub type Block = generic::Block<Header, UncheckedExtrinsic>;
 /// BlockId type as expected by this runtime.
 pub type BlockId = generic::BlockId<Block>;
 /// Unchecked extrinsic type as expected by this runtime.
-pub type UncheckedExtrinsic = generic::UncheckedMortalCompactExtrinsic<Address, Nonce, Call, Ed25519Signature>;
+pub type UncheckedExtrinsic = generic::UncheckedMortalCompactExtrinsic<Address, Nonce, Call, RedjubjubSignature>;
 /// Extrinsic type that has already been checked.
 pub type CheckedExtrinsic = generic::CheckedExtrinsic<AccountId, Nonce, Call>;
 /// Executive: handles dispatch to the various modules.

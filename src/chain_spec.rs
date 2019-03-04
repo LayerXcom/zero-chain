@@ -40,7 +40,7 @@ pub enum Alternative {
 
 impl Alternative {
 	/// Get an actual chain config from one of the alternatives.
-	pub(crate) fn load(self) -> Result<ChainSpec, String> {
+	pub(crate) fn load(self) -> Result<ChainSpec, String> {		
 		Ok(match self {
 			Alternative::Development => ChainSpec::from_genesis(
 				"Development",
@@ -92,7 +92,7 @@ impl Alternative {
 	}
 }
 
-fn testnet_genesis(initial_authorities: Vec<Ed25519AuthorityId>, endowed_accounts: Vec<AccountId>, root_key: AccountId) -> GenesisConfig {
+fn testnet_genesis(initial_authorities: Vec<Ed25519AuthorityId>, endowed_accounts: Vec<AccountId>, root_key: AccountId) -> GenesisConfig {	
 	GenesisConfig {
 		consensus: Some(ConsensusConfig {
 			// code: include_bytes!("../runtime/wasm/target/wasm32-unknown-unknown/release/node_template_runtime_wasm.compact.wasm").to_vec(),
@@ -122,15 +122,17 @@ fn testnet_genesis(initial_authorities: Vec<Ed25519AuthorityId>, endowed_account
 		}),
 		conf_transfer: Some(ConfTransferConfig {
 			encrypted_balance: vec![alice_init()],
-			verifying_key: get_pvk(&PVK),
+			// verifying_key: get_pvk(&PVK),
+			verifying_key: PreparedVk(vec![1]),
+			simple_num: 3 as u32,
 			_genesis_phantom_data: Default::default(),
 		})
 	}
 }
 
 fn get_pvk(pvk_array: &[i32]) -> PreparedVk {
-	let pvk_vec_u8 = pvk_array.to_vec().into_iter().map(|e| e as u8).collect();
-	PreparedVk(pvk_vec_u8)
+	let pvk_vec_u8: Vec<u8> = pvk_array.to_vec().into_iter().map(|e| e as u8).collect();	
+	PreparedVk(pvk_vec_u8)	
 }
 
 fn alice_init() -> (PkdAddress, Ciphertext) {

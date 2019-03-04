@@ -19,6 +19,12 @@ impl Verify for RedjubjubSignature {
 
         let p_g = FixedGenerators::SpendingKeyGenerator;
 
+        // Compute the signature's message for rk/auth_sig
+        // let mut data_to_be_signed = [0u8; 64];
+        // rk.0.write(&mut data_to_be_signed[0..32])
+        //     .expect("message buffer should be 32 bytes");
+        // (&mut data_to_be_signed[32..64]).copy_from_slice(&sighash_value[..]);
+
         match signer.into_verification_key() {
             Some(vk) => return vk.verify(msg.get(), &sig, p_g, &JUBJUB),
             None => return false
