@@ -50,7 +50,7 @@ use zprimitives::{
 pub struct Transaction{
     pub sig: pRedjubjubSignature,          // 64 bytes
     pub sighash_value: Vec<u8>,            // 32 bytes [u8; 32]
-    pub vk: pSigVerificationKey,           // 32 bytes
+    pub rk: pSigVerificationKey,           // 32 bytes
     pub proof: pProof,                     // 192 bytes
     pub address_sender: PkdAddress,        // 43 bytes
     pub address_recipient: PkdAddress,     // 43 bytes
@@ -65,7 +65,7 @@ impl Transaction {
         remaining_balance: u32,
         alpha: fs::Fs,
         proving_key: &Parameters<Bls12>,
-		verifying_key: &PreparedVerifyingKey<Bls12>,		
+		prepared_vk: &PreparedVerifyingKey<Bls12>,		
 		address_recipient: &PaymentAddress<Bls12>,		
 		sk: &[u8],
         ciphertext_balance: proofs::elgamal::Ciphertext<Bls12>		
@@ -87,7 +87,7 @@ impl Transaction {
 			remaining_balance,        
 			alpha,			
 			proving_key, 
-			verifying_key,
+			prepared_vk,
 			proof_generation_key,
 			address_recipient.clone(),			
             ciphertext_balance.clone(),
@@ -152,7 +152,7 @@ impl Transaction {
 		let tx = Transaction {
 			sig: pRedjubjubSignature::from_signature(&zsig),                   
 			sighash_value: sighash_value,          
-			vk: pSigVerificationKey::from_verification_key(&zrk),  
+			rk: pSigVerificationKey::from_verification_key(&zrk),  
 			proof: pProof::from_proof(&zproof),                     
 			address_sender: PkdAddress::from_payment_address(&zaddress_sender),        
 			address_recipient: PkdAddress::from_payment_address(&zaddress_recipient),     

@@ -87,10 +87,16 @@ impl<E: JubjubEngine> Ciphertext<E> {
 
     pub fn read<R: io::Read>(reader: &mut R, params: &E::Params) -> io::Result<Self> {
         let left = edwards::Point::<E, _>::read(reader, params)?;
-        let left = left.as_prime_order(params).unwrap();
+        let left = match left.as_prime_order(params) {
+            Some(l) => l,
+            None => return Err(io::Error::NotOnCurve),
+        };
 
         let right = edwards::Point::<E, _>::read(reader, params)?;
-        let right = right.as_prime_order(params).unwrap();
+        let right = match right.as_prime_order(params) {
+            Some(r) => r,
+            None => return Err(io::Error::NotOnCurve),
+        };
 
         Ok(Ciphertext {
             left,

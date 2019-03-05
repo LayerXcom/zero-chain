@@ -152,7 +152,7 @@ impl<'a, E: JubjubEngine> Circuit<E> for Transfer<'a, E> {
         c_left_recipient.inputize(cs.namespace(|| format!("c_left_recipient")))?;
         c_right.inputize(cs.namespace(|| format!("c_right")))?;
 
-        // TODO:
+        
         {
             let bal_gl = ecc::EdwardsPoint::witness(
                 cs.namespace(|| "balance left"), 
@@ -208,6 +208,15 @@ impl<'a, E: JubjubEngine> Circuit<E> for Transfer<'a, E> {
 
             pointl.inputize(cs.namespace(|| format!("inputize pointl")))?;
             pointr.inputize(cs.namespace(|| format!("inputize pointr")))?;
+
+            // TODO:
+            // The balance encryption validity. 
+            // It is a bit complicated bacause we can not know the randomness of balance.
+            // { (current_balance)G - (value)G } + (rbar - random)pk_d_sender  
+            //   == (remaining_balance)G + (ivk){ (rbar)G - (random)G }
+            // rbar is the current_balance randomness   
+            // Enc_sender(sender_balance).cl - Enc_sender(value).cl 
+            //     == (remaining_balance)G + ivk(Enc_sender(sender_balance).cr - Enc(random))
         }
 
 
