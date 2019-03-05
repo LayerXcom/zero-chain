@@ -1,5 +1,6 @@
 use pairing::bls12_381::Bls12;
 use bellman_verifier;
+use substrate_primitives::hexdisplay::AsBytesRef;
 
 #[cfg(feature = "std")]
 use ::std::vec::Vec;
@@ -42,5 +43,5 @@ mod tests {
         let encoded_pvk = pvk.encode();
         let decoded_pvk = PreparedVk::decode(&mut encoded_pvk.as_slice()).unwrap();
         assert_eq!(pvk, decoded_pvk);
-    }
+    }    
 }

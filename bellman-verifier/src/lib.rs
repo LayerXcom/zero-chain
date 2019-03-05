@@ -33,7 +33,7 @@ pub mod tests;
 mod verifier;
 pub use self::verifier::*;
 
-#[derive(Clone)]
+#[derive(Clone, Debug)]
 pub struct Proof<E: Engine> {
     pub a: E::G1Affine,
     pub b: E::G2Affine,
@@ -53,8 +53,8 @@ impl<E: Engine> Proof<E> {
         &self,
         writer: &mut W
     ) -> io::Result<()>
-    {
-        writer.write(self.a.into_compressed().as_ref())?;
+    {            
+        writer.write(self.a.into_compressed().as_ref())?;           
         writer.write(self.b.into_compressed().as_ref())?;
         writer.write(self.c.into_compressed().as_ref())?;
 

@@ -54,9 +54,9 @@ impl SigVerificationKey {
         redjubjub::PublicKey::read(&mut &self.0[..], &JUBJUB as &JubjubBls12).ok()        
     }
 
-    pub fn from_verification_key(sig: &redjubjub::PublicKey<Bls12>) -> Self {
+    pub fn from_verification_key(vk: &redjubjub::PublicKey<Bls12>) -> Self {
         let mut writer = [0u8; 32];
-        sig.write(&mut &mut writer[..]).unwrap();
+        vk.write(&mut &mut writer[..]).unwrap();        
         SigVerificationKey::from_slice(&writer)
     }
 }

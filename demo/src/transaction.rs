@@ -27,7 +27,12 @@ use zjubjub::{
 
 use proofs::{
     self,
-	primitives::{PaymentAddress, ProofGenerationKey, ExpandedSpendingKey},
+	primitives::{
+		self,
+		PaymentAddress, 
+		ProofGenerationKey, 
+		ExpandedSpendingKey,		
+		},
 	prover::TransferProof,
 	elgamal::Ciphertext,   
 };
@@ -94,7 +99,7 @@ impl Transaction {
 			&params,
 		);
 		
-		let sk = fs::Fs::to_uniform(sk);
+		let sk = fs::Fs::to_uniform(primitives::prf_extend_wo_t(sk).as_bytes());
 
 		// Generate the re-randomized sign key
 		let rsk: PrivateKey<Bls12> = PrivateKey(sk).randomize(alpha);
@@ -108,11 +113,7 @@ impl Transaction {
 		
 		let p_g = FixedGenerators::SpendingKeyGenerator;
 		let sig = rsk.sign(msg, rng, p_g, &params);
-
-		let mut sig_bytes = [0u8; 32];
-		sig.write(&mut sig_bytes[..]).map_err(|_| io::Error::InvalidData)?;
-		// Read Signature as a no_std type
-		let zsig = zSignature::read(&sig_bytes[..])?;
+				
 		
 		let mut rk_bytes = [0u8; 32];
 		proof_output.rk.write(&mut rk_bytes[..]).map_err(|_| io::Error::InvalidData)?;
@@ -122,7 +123,7 @@ impl Transaction {
 		let mut proof_bytes = [0u8; 192];
 		proof_output.proof.write(&mut proof_bytes[..]).map_err(|_| io::Error::InvalidData)?;
 		// Read Proof as a no_std type
-		let zproof = zProof::read(&proof_bytes[..])?;
+		let zproof = zProof::read(&proof_bytes[..])?;			
 
 		let mut z_addr_sb = [0u8; 32];
 		proof_output.address_sender.write(&mut z_addr_sb[..]).map_err(|_| io::Error::InvalidData)?;
@@ -147,18 +148,23 @@ impl Transaction {
 		let mut env_bal_sb = [0u8; 64];
 		ciphertext_balance.write(&mut env_bal_sb[..]).map_err(|_| io::Error::InvalidData)?;
 		// Read the sender's balance encrypted by the sender key as a no_std type
-		let zenc_bal_sender = zCiphertext::read(&mut &env_bal_sb[..], &zparams)?;
-		
-		let tx = Transaction {
-			sig: pRedjubjubSignature::from_signature(&zsig),                   
+		let zenc_bal_sender = zCiphertext::read(&mut &env_bal_sb[..], &zparams)?;		
+
+		let mut sig_bytes = [0u8; 64];
+		sig.write(&mut sig_bytes[..]).map_err(|_| io::Error::InvalidData)?;		
+		// Read Signature as a no_std type		
+		let zsig = zSignature::read(&sig_bytes[..])?;				
+
+		let tx = Transaction {		
+			proof: pProof::from_proof(&zproof),		                  
 			sighash_value: sighash_value,          
-			rk: pSigVerificationKey::from_verification_key(&zrk),  
-			proof: pProof::from_proof(&zproof),                     
+			rk: pSigVerificationKey::from_verification_key(&zrk),  			      
 			address_sender: PkdAddress::from_payment_address(&zaddress_sender),        
 			address_recipient: PkdAddress::from_payment_address(&zaddress_recipient),     
 			enc_val_recipient: pCiphertext::from_ciphertext(&zenc_val_recipient),
 			enc_val_sender: pCiphertext::from_ciphertext(&zenc_val_sender),
-			enc_bal_sender: pCiphertext::from_ciphertext(&zenc_bal_sender),			
+			enc_bal_sender: pCiphertext::from_ciphertext(&zenc_bal_sender),				
+			sig: pRedjubjubSignature::from_signature(&zsig), 							
 		};
 
 		Ok(tx)

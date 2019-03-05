@@ -37,6 +37,13 @@ fn prf_expand_vec(sk: &[u8], ts: &[&[u8]]) -> Blake2bResult {
     h.finalize()
 }
 
+/// Extend the secret key to 64 bits for the scalar field generation.
+pub fn prf_extend_wo_t(sk: &[u8]) -> Blake2bResult {
+    let mut h = Blake2b::with_params(64, &[], &[], PRF_EXPAND_PERSONALIZATION);
+    h.update(sk);
+    h.finalize()
+}
+
 #[derive(Debug, Clone, PartialEq)]
 pub struct ExpandedSpendingKey<E: JubjubEngine> {
     ask: E::Fs,

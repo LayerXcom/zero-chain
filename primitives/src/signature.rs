@@ -67,7 +67,7 @@ impl RedjubjubSignature {
 
     pub fn from_signature(sig: &redjubjub::Signature) -> Self {
         let mut writer = [0u8; 64];
-        sig.write(&mut writer[..]).unwrap();
+        sig.write(&mut writer[..]).unwrap();        
         RedjubjubSignature(H512::from_slice(&writer))
     }
 }

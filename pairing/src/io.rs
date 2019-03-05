@@ -138,6 +138,8 @@ impl<T: ::std::io::Read> Read for T {
  #[cfg(feature = "std")]
 impl<T: ::std::io::Write> Write for T {
 	fn write(&mut self, buf: &[u8]) -> Result<()> {
+		println!("buf: {:?}", buf);
+		println!("buf: {:?}", buf.len());
 		self.write_all(buf).map_err(Error::IoError)
 	}
 }

@@ -4,6 +4,7 @@ use crate::keys::PaymentAddress;
 use fixed_hash::construct_fixed_hash;
 use pairing::bls12_381::Bls12;
 use crate::JUBJUB;
+use substrate_primitives::hexdisplay::AsBytesRef;
 
 #[cfg(feature = "std")]
 use substrate_primitives::bytes;
@@ -62,6 +63,12 @@ impl PkdAddress {
 impl Into<PkdAddress> for PaymentAddress<Bls12> {
     fn into(self) -> PkdAddress {
         PkdAddress::from_payment_address(&self)
+    }
+}
+
+impl AsBytesRef for H256 {
+    fn as_bytes_ref(&self) -> &[u8] {
+        self.as_bytes()
     }
 }
 

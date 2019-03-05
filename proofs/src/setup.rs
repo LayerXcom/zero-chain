@@ -49,8 +49,3 @@ pub fn setup() -> (Parameters<Bls12>, PreparedVerifyingKey<Bls12>) {
     // file.flush()?;
     // Ok(())    
 }
-
-#[test]
-fn test_setup() {    
-    setup();
-}
