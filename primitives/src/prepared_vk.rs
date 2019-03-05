@@ -1,5 +1,6 @@
 use pairing::bls12_381::Bls12;
 use bellman_verifier;
+#[cfg(feature = "std")]
 use substrate_primitives::hexdisplay::AsBytesRef;
 
 #[cfg(feature = "std")]
@@ -18,9 +19,10 @@ impl PreparedVk {
     }
 
     pub fn from_prepared_vk(pvk: &bellman_verifier::PreparedVerifyingKey<Bls12>) -> Self {
-        let mut writer = vec![];
+        // let mut writer = vec![];
+        let mut writer = vec![0u8; 41386];
         pvk.write(&mut &mut writer[..]).unwrap();
-        PreparedVk(writer)
+        PreparedVk(writer.to_vec())
     }
 }
 
@@ -43,5 +45,10 @@ mod tests {
         let encoded_pvk = pvk.encode();
         let decoded_pvk = PreparedVk::decode(&mut encoded_pvk.as_slice()).unwrap();
         assert_eq!(pvk, decoded_pvk);
-    }    
+    }
+
+    #[test]
+    fn test_pvk_into_from() {
+
+    }
 }

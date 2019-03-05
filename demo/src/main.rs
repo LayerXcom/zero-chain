@@ -9,7 +9,9 @@ use proofs::{
     };
 use substrate_primitives::hexdisplay::HexDisplay;
 use pairing::{bls12_381::Bls12, PrimeField};
-use scrypto::jubjub::{JubjubBls12, fs, ToUniform, JubjubParams, FixedGenerators};                 
+use scrypto::jubjub::{JubjubBls12, fs, ToUniform, JubjubParams, FixedGenerators};      
+#[cfg(feature = "std")]
+use substrate_primitives::hexdisplay::AsBytesRef;     
 
 pub mod transaction;
 use transaction::Transaction;
@@ -91,22 +93,28 @@ fn print_alice_tx(sender_seed: &[u8], recipient_seed: &[u8]) {
                     ciphertext_balance
             ).expect("fails to generate the tx");
 
-    println!(
-        "zkProof(Alice): 0x{}\n 
-        address_sender(Alice): 0x{:?}\n
-        address_recipient(Alice): 0x{:?}\n
-        value_sender(Alice): 0x{:?}\n
-        value_recipient(Alice): 0x{:?}\n
-        balance_sender(Alice): 0x{:?}\n
-        rk(Alice): 0x{:?}\n           
-        ",        
-        HexDisplay::from(&tx.proof.0),        
-        tx.address_sender.as_bytes(),
-        tx.address_recipient.as_bytes(),
-        tx.enc_val_sender.as_bytes(),
-        tx.enc_val_recipient.as_bytes(),
-        tx.enc_bal_sender.as_bytes(),
-        tx.rk.as_bytes(),
+    // println!(
+    //     "zkProof(Alice): 0x{}\n 
+    //     address_sender(Alice): 0x{}\n
+    //     address_recipient(Alice): 0x{}\n
+    //     value_sender(Alice): 0x{}\n
+    //     value_recipient(Alice): 0x{}\n
+    //     balance_sender(Alice): 0x{}\n
+    //     rk(Alice): 0x{}\n           
+    //     ",        
+    //     HexDisplay::from(&tx.proof.0),    
+    //     HexDisplay::from(&tx.address_sender.0),    
+    //     HexDisplay::from(&tx.address_recipient.0),    
+    //     // tx.address_sender.as_bytes(),
+    //     // tx.address_recipient.as_bytes(),
+    //     HexDisplay::from(&tx.enc_val_sender.0),
+    //     HexDisplay::from(&tx.enc_val_recipient.0),
+    //     HexDisplay::from(&tx.enc_bal_sender.0),
+    //     // tx.enc_val_sender.as_bytes(),
+    //     // tx.enc_val_recipient.as_bytes(),
+    //     // tx.enc_bal_sender.as_bytes(),
+    //     // tx.rk.as_bytes(),
+    //     HexDisplay::from(&tx.rk.0),
     );
 }
 

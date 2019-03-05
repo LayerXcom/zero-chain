@@ -1,6 +1,7 @@
 #[cfg(feature = "std")]
 use serde::{Serialize, Serializer, Deserialize, Deserializer};
 use fixed_hash::construct_fixed_hash;
+use primitive_types::H512;
 use crate::JUBJUB;
 
 #[cfg(feature = "std")]
@@ -10,46 +11,55 @@ use zcrypto::elgamal;
 use pairing::bls12_381::Bls12;
 use jubjub::curve::JubjubBls12;
 
-const SIZE: usize = 64;
-
-construct_fixed_hash! {
-    pub struct H512(SIZE);
-}
-
-pub type Ciphertext = H512;
-
 #[cfg(feature = "std")]
-impl Serialize for H512 {
-    fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error> 
-        where S: Serializer
-    {
-        bytes::serialize(&self.0, serializer)
-    }
-}
+use ::std::marker;
+#[cfg(not(feature = "std"))]
+use crate::std::marker;
 
-#[cfg(feature = "std")]
-impl<'de> Deserialize<'de> for H512 {
-    fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
-        where D: Deserializer<'de>
-    {
-        bytes::deserialize_check_len(deserializer, bytes::ExpectedLen::Exact(SIZE))
-            .map(|x| H512::from_slice(&x))
-    }
-}
+// const SIZE: usize = 64;
 
-impl codec::Encode for H512 {
-    fn using_encoded<R, F: FnOnce(&[u8]) -> R>(&self, f: F) -> R {
-        self.0.using_encoded(f)
-    }
-}
+// construct_fixed_hash! {
+//     pub struct H512(SIZE);
+// }
 
-impl codec::Decode for H512 {
-    fn decode<I: codec::Input>(input: &mut I) -> Option<Self> {
-        <[u8; SIZE] as codec::Decode>::decode(input).map(H512)
-    }
-}
+// pub type Ciphertext = H512;
 
-impl H512 {
+#[derive(Eq, PartialEq, Clone, Default, Encode, Decode)]
+#[cfg_attr(feature = "std", derive(Debug, Serialize, Deserialize))]
+pub struct Ciphertext(pub H512);
+
+// #[cfg(feature = "std")]
+// impl Serialize for H512 {
+//     fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error> 
+//         where S: Serializer
+//     {
+//         bytes::serialize(&self.0, serializer)
+//     }
+// }
+
+// #[cfg(feature = "std")]
+// impl<'de> Deserialize<'de> for H512 {
+//     fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
+//         where D: Deserializer<'de>
+//     {
+//         bytes::deserialize_check_len(deserializer, bytes::ExpectedLen::Exact(SIZE))
+//             .map(|x| H512::from_slice(&x))
+//     }
+// }
+
+// impl codec::Encode for H512 {
+//     fn using_encoded<R, F: FnOnce(&[u8]) -> R>(&self, f: F) -> R {
+//         self.0.using_encoded(f)
+//     }
+// }
+
+// impl codec::Decode for H512 {
+//     fn decode<I: codec::Input>(input: &mut I) -> Option<Self> {
+//         <[u8; SIZE] as codec::Decode>::decode(input).map(H512)
+//     }
+// }
+
+impl Ciphertext {
     pub fn into_ciphertext(&self) -> Option<elgamal::Ciphertext<Bls12>> {   
         elgamal::Ciphertext::read(&mut &self.0[..], &JUBJUB as &JubjubBls12).ok()        
     }
@@ -57,7 +67,7 @@ impl H512 {
     pub fn from_ciphertext(sig: &elgamal::Ciphertext<Bls12>) -> Self {
         let mut writer = [0u8; 64];
         sig.write(&mut writer[..]).unwrap();
-        H512::from_slice(&writer)
+        Ciphertext(H512::from_slice(&writer))
     }
 }
 
@@ -66,6 +76,15 @@ impl Into<Ciphertext> for elgamal::Ciphertext<Bls12> {
         Ciphertext::from_ciphertext(&self)
     }
 }
+
+impl From<H512> for Ciphertext {
+    fn from(h: H512) -> Self {
+        Ciphertext(h)
+    }
+}
+
+impl marker::Copy for Ciphertext {}
+
 
 #[cfg(test)]
 mod tests {
