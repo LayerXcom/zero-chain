@@ -86,16 +86,13 @@ impl Into<SigVerificationKey> for redjubjub::PublicKey<Bls12> {
     }
 }
 
-
-
 #[cfg(test)]
 mod tests {
     use super::*;
     use rand::{Rng, SeedableRng, XorShiftRng};    
     use pairing::bls12_381::Bls12;
     use jubjub::curve::{FixedGenerators, JubjubBls12};
-    use jubjub::redjubjub::PublicKey;    
-    use parity_codec::{Encode, Decode};
+    use jubjub::redjubjub::PublicKey;        
 
     #[test]
     fn test_vk_into_from() {
