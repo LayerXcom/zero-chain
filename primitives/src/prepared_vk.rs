@@ -8,6 +8,8 @@ use ::std::vec::Vec;
 #[cfg(not(feature = "std"))]
 use crate::std::vec::Vec;
 
+use parity_codec_derive::{Encode, Decode};
+
 /// Prepared Verifying Key for SNARKs proofs
 #[derive(Eq, PartialEq, Clone, Default, Encode, Decode)]
 #[cfg_attr(feature = "std", derive(Debug, Serialize, Deserialize))]
@@ -36,7 +38,7 @@ impl Into<PreparedVk> for bellman_verifier::PreparedVerifyingKey<Bls12> {
 mod tests {
     use super::*;   
     use crate::pvk::PVK; 
-    use codec::{Encode, Decode};
+    use parity_codec::{Encode, Decode};    
 
     #[test]
     fn test_pvk_encode_decode() {

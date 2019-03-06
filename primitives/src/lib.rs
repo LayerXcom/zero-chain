@@ -14,10 +14,6 @@ mod std {
     pub use crate::alloc::borrow;    
 }
 
-extern crate parity_codec as codec;
-#[macro_use]
-extern crate parity_codec_derive as codec_derive;
-
 #[cfg(feature = "std")]
 #[macro_use]
 extern crate serde_derive;

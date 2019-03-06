@@ -4,8 +4,8 @@
 #![cfg_attr(not(feature = "std"), no_std)]
 #![cfg_attr(not(feature = "std"), feature(alloc))]
 
-use support::{decl_module, decl_storage, decl_event, StorageValue, StorageMap, dispatch::Result, ensure};
-use runtime_primitives::traits::{Member, SimpleArithmetic, Zero, StaticLookup};
+use support::{decl_module, decl_storage, decl_event, StorageValue, StorageMap, dispatch::Result, ensure, Parameter};
+use runtime_primitives::traits::{Member, SimpleArithmetic, Zero, StaticLookup, MaybeSerializeDebug, MaybeDisplay};
 use system::ensure_signed;
 
 use bellman_verifier::{    
@@ -36,9 +36,10 @@ use zprimitives::{
 
 use zcrypto::elgamal;
 
+
 pub trait Trait: system::Trait {
 	/// The overarching event type.
-	type Event: From<Event<Self>> + Into<<Self as system::Trait>::Event>;
+	type Event: From<Event<Self>> + Into<<Self as system::Trait>::Event>;   
 }
 
 decl_module! {	
@@ -48,8 +49,8 @@ decl_module! {
 		fn deposit_event<T>() = default;
 
 		pub fn confidential_transfer(
-            origin,
-            zkproof: Proof,           
+            _origin,
+            zkproof: Proof,
             address_sender: PkdAddress, 
             address_recipient: PkdAddress,
             value_sender: Ciphertext,
@@ -168,7 +169,8 @@ decl_storage! {
         pub EncryptedBalance get(encrypted_balance) config() : map PkdAddress => Option<Ciphertext>; 
         // The verification key of zk proofs (only readable)
         pub VerifyingKey get(verifying_key) config(): PreparedVk; 
-        pub SimpleNum get(simple_num) config(): u32; 
+        pub SimpleNum get(simple_num) config(): u32;
+        pub H256 get(h256) config(): T::Hash;
     }
 }
 

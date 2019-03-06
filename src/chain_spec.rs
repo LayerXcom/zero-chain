@@ -1,4 +1,4 @@
-use primitives::{Ed25519AuthorityId, ed25519};
+use primitives::{Ed25519AuthorityId, ed25519, H256};
 use zero_chain_runtime::{
 	AccountId, GenesisConfig, ConsensusConfig, TimestampConfig, BalancesConfig,
 	SudoConfig, IndicesConfig, FeesConfig, ConfTransferConfig
@@ -125,7 +125,8 @@ fn testnet_genesis(initial_authorities: Vec<Ed25519AuthorityId>, endowed_account
 			// verifying_key: get_pvk(&PVK),
 			verifying_key: PreparedVk(vec![1 as u8]),
 			simple_num: 3 as u32,
-			_genesis_phantom_data: Default::default(),
+			h256: H256::from_slice(b"Alice                           "),
+			// _genesis_phantom_data: Default::default(),
 		})
 	}
 }

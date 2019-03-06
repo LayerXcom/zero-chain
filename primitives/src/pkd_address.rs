@@ -11,6 +11,8 @@ use substrate_primitives::hexdisplay::AsBytesRef;
 #[cfg(feature = "std")]
 use substrate_primitives::bytes;
 
+use parity_codec_derive::{Encode, Decode};
+
 // const SIZE: usize = 32;
 
 // construct_fixed_hash! {

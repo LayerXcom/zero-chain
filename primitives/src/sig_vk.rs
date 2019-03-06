@@ -23,6 +23,8 @@ construct_fixed_hash! {
 
 pub type SigVerificationKey = H256;
 
+use parity_codec::{Encode, Decode, Input, Output};
+
 // #[derive(Eq, PartialEq, Clone, Default, Encode, Decode, PartialOrd, Ord)]
 // #[cfg_attr(feature = "std", derive(Debug, Serialize, Deserialize))]
 // pub struct SigVerificationKey(pub H256);
@@ -54,15 +56,15 @@ impl<'de> Deserialize<'de> for SigVerificationKey {
     }
 }
 
-impl codec::Encode for SigVerificationKey {
+impl Encode for SigVerificationKey {
     fn using_encoded<R, F: FnOnce(&[u8]) -> R>(&self, f: F) -> R {
         self.0.using_encoded(f)
     }
 }
 
-impl codec::Decode for SigVerificationKey {
-    fn decode<I: codec::Input>(input: &mut I) -> Option<Self> {
-        <[u8; SIZE] as codec::Decode>::decode(input).map(H256)
+impl Decode for SigVerificationKey {
+    fn decode<I: Input>(input: &mut I) -> Option<Self> {
+        <[u8; SIZE] as Decode>::decode(input).map(H256)
     }
 }
 
@@ -92,8 +94,8 @@ mod tests {
     use rand::{Rng, SeedableRng, XorShiftRng};    
     use pairing::bls12_381::Bls12;
     use jubjub::curve::{FixedGenerators, JubjubBls12};
-    use jubjub::redjubjub::PublicKey;
-    use codec::{Encode, Decode};
+    use jubjub::redjubjub::PublicKey;    
+    use parity_codec::{Encode, Decode};
 
     #[test]
     fn test_vk_into_from() {

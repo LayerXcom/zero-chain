@@ -16,6 +16,8 @@ use ::std::marker;
 #[cfg(not(feature = "std"))]
 use crate::std::marker;
 
+use parity_codec_derive::{Encode, Decode};
+
 // const SIZE: usize = 64;
 
 // construct_fixed_hash! {
@@ -92,7 +94,7 @@ mod tests {
     use rand::{Rng, SeedableRng, XorShiftRng};    
     use pairing::PrimeField;
     use jubjub::curve::{FixedGenerators, JubjubBls12, fs::Fs, ToUniform, JubjubParams};    
-    use codec::{Encode, Decode};
+    use parity_codec::{Encode, Decode};
 
     #[test]
     fn test_ciphertext_into_from() {

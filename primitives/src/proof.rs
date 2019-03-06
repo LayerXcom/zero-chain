@@ -6,6 +6,8 @@ use ::std::vec::Vec;
 #[cfg(not(feature = "std"))]
 use crate::std::vec::Vec;
 
+use parity_codec_derive::{Encode, Decode};
+
 #[derive(Eq, PartialEq, Clone, Default, Encode, Decode)]
 #[cfg_attr(feature = "std", derive(Debug, Serialize, Deserialize))]
 pub struct Proof(pub Vec<u8>);

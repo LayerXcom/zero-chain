@@ -5,6 +5,8 @@ use crate::sig_vk::SigVerificationKey;
 use jubjub::curve::FixedGenerators;
 use crate::JUBJUB;
 
+use parity_codec_derive::{Encode, Decode};
+
 #[derive(Eq, PartialEq, Clone, Default, Encode, Decode)]
 #[cfg_attr(feature = "std", derive(Debug, Serialize, Deserialize))]
 pub struct RedjubjubSignature(H512);
@@ -85,7 +87,7 @@ mod tests {
     use pairing::bls12_381::Bls12;
     use jubjub::curve::{FixedGenerators, JubjubBls12};
     use jubjub::redjubjub::PublicKey;
-    use codec::{Encode, Decode};
+    use parity_codec::{Encode, Decode};
 
     #[test]
     fn test_sig_into_from() {

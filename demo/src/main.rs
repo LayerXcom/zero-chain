@@ -115,7 +115,7 @@ fn print_alice_tx(sender_seed: &[u8], recipient_seed: &[u8]) {
     //     // tx.enc_bal_sender.as_bytes(),
     //     // tx.rk.as_bytes(),
     //     HexDisplay::from(&tx.rk.0),
-    );
+    // );
 }
 
 fn main() {
