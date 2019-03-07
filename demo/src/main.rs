@@ -7,11 +7,9 @@ use proofs::{
     setup::setup,
     elgamal::{Ciphertext, elgamal_extend},
     };
-use substrate_primitives::hexdisplay::HexDisplay;
+use substrate_primitives::hexdisplay::{HexDisplay, AsBytesRef};
 use pairing::{bls12_381::Bls12, PrimeField};
 use scrypto::jubjub::{JubjubBls12, fs, ToUniform, JubjubParams, FixedGenerators};      
-#[cfg(feature = "std")]
-use substrate_primitives::hexdisplay::AsBytesRef;     
 
 pub mod transaction;
 use transaction::Transaction;
@@ -93,29 +91,24 @@ fn print_alice_tx(sender_seed: &[u8], recipient_seed: &[u8]) {
                     ciphertext_balance
             ).expect("fails to generate the tx");
 
-    // println!(
-    //     "zkProof(Alice): 0x{}\n 
-    //     address_sender(Alice): 0x{}\n
-    //     address_recipient(Alice): 0x{}\n
-    //     value_sender(Alice): 0x{}\n
-    //     value_recipient(Alice): 0x{}\n
-    //     balance_sender(Alice): 0x{}\n
-    //     rk(Alice): 0x{}\n           
-    //     ",        
-    //     HexDisplay::from(&tx.proof.0),    
-    //     HexDisplay::from(&tx.address_sender.0),    
-    //     HexDisplay::from(&tx.address_recipient.0),    
-    //     // tx.address_sender.as_bytes(),
-    //     // tx.address_recipient.as_bytes(),
-    //     HexDisplay::from(&tx.enc_val_sender.0),
-    //     HexDisplay::from(&tx.enc_val_recipient.0),
-    //     HexDisplay::from(&tx.enc_bal_sender.0),
-    //     // tx.enc_val_sender.as_bytes(),
-    //     // tx.enc_val_recipient.as_bytes(),
-    //     // tx.enc_bal_sender.as_bytes(),
-    //     // tx.rk.as_bytes(),
-    //     HexDisplay::from(&tx.rk.0),
-    // );
+    println!(
+        "
+        \nzkProof(Alice): 0x{}
+        \naddress_sender(Alice): 0x{}
+        \naddress_recipient(Alice): 0x{}
+        \nvalue_sender(Alice): 0x{}
+        \nvalue_recipient(Alice): 0x{}
+        \nbalance_sender(Alice): 0x{}
+        \nrk(Alice): 0x{}           
+        ",        
+        HexDisplay::from(&tx.proof as &AsBytesRef),    
+        HexDisplay::from(&tx.address_sender as &AsBytesRef),    
+        HexDisplay::from(&tx.address_recipient as &AsBytesRef),        
+        HexDisplay::from(&tx.enc_val_sender as &AsBytesRef),
+        HexDisplay::from(&tx.enc_val_recipient as &AsBytesRef),
+        HexDisplay::from(&tx.enc_bal_sender as &AsBytesRef),     
+        HexDisplay::from(&tx.rk as &AsBytesRef),
+    );
 }
 
 fn main() {
@@ -128,7 +121,7 @@ fn main() {
     let bob_seed = b"Bob                             ";
     let alice_address = get_address(alice_seed);
 
-    println!("Secret Key(Alice): 0x{}\n Address(Alice): 0x{}\n",        
+    println!("Secret Key(Alice): 0x{}\nAddress(Alice): 0x{}\n",        
         HexDisplay::from(alice_seed),        
         HexDisplay::from(&alice_address),
     );

@@ -17,6 +17,8 @@ use ::std::marker;
 use crate::std::marker;
 
 use parity_codec::{Encode, Decode, Input, Output};
+#[cfg(feature = "std")]
+use substrate_primitives::hexdisplay::AsBytesRef;
 
 const SIZE: usize = 64;
 
@@ -84,6 +86,13 @@ impl Into<Ciphertext> for elgamal::Ciphertext<Bls12> {
 //         Ciphertext(h)
 //     }
 // }
+
+#[cfg(feature = "std")]
+impl AsBytesRef for Ciphertext {
+    fn as_bytes_ref(&self) -> &[u8] {
+        self.as_ref()
+    }
+}
 
     
 #[cfg(test)]

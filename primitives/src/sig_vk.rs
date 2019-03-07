@@ -9,6 +9,8 @@ use pairing::bls12_381::Bls12;
 
 #[cfg(feature = "std")]
 use substrate_primitives::bytes;
+#[cfg(feature = "std")]
+use substrate_primitives::hexdisplay::AsBytesRef;
 
 #[cfg(feature = "std")]
 use std::{fmt, write};
@@ -85,6 +87,14 @@ impl Into<SigVerificationKey> for redjubjub::PublicKey<Bls12> {
         SigVerificationKey::from_verification_key(&self)
     }
 }
+
+#[cfg(feature = "std")]
+impl AsBytesRef for SigVerificationKey {
+    fn as_bytes_ref(&self) -> &[u8] {
+        self.as_ref()
+    }
+}
+
 
 #[cfg(test)]
 mod tests {

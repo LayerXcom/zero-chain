@@ -1,5 +1,7 @@
 #[cfg(feature = "std")]
 use serde::{Serialize, Serializer, Deserialize, Deserializer};
+#[cfg(feature = "std")]
+use substrate_primitives::hexdisplay::AsBytesRef;
 // use primitive_types::H512;
 use jubjub::redjubjub;
 use runtime_primitives::traits::{Verify, Lazy};
@@ -35,7 +37,7 @@ impl Serialize for H512 {
 }
 
 #[cfg(feature = "std")]
-impl<'de> Deserialize<'de> for H512 {
+impl<'de> Deserialize<'de> for RedjubjubSignature {
     fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
         where D: Deserializer<'de>
     {
@@ -44,15 +46,22 @@ impl<'de> Deserialize<'de> for H512 {
     }
 }
 
-impl Encode for H512 {
+impl Encode for RedjubjubSignature {
     fn using_encoded<R, F: FnOnce(&[u8]) -> R>(&self, f: F) -> R {
         self.0.using_encoded(f)
     }
 }
 
-impl Decode for H512 {
+impl Decode for RedjubjubSignature {
     fn decode<I: Input>(input: &mut I) -> Option<Self> {
         <[u8; SIZE] as Decode>::decode(input).map(H512)
+    }
+}
+
+#[cfg(feature = "std")]
+impl AsBytesRef for RedjubjubSignature {
+    fn as_bytes_ref(&self) -> &[u8] {
+        self.as_ref()
     }
 }
 

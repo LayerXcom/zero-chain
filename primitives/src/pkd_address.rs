@@ -83,12 +83,12 @@ impl Into<PkdAddress> for PaymentAddress<Bls12> {
 //     }
 // }
 
-// #[cfg(feature = "std")]
-// impl AsBytesRef for PkdAddress {
-//     fn as_bytes_ref(&self) -> &[u8] {
-//         self.0.as_bytes()
-//     }
-// }
+#[cfg(feature = "std")]
+impl AsBytesRef for PkdAddress {
+    fn as_bytes_ref(&self) -> &[u8] {
+        self.as_ref()
+    }
+}
 
 #[cfg(test)]
 mod tests {
