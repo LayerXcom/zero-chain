@@ -121,10 +121,9 @@ fn testnet_genesis(initial_authorities: Vec<Ed25519AuthorityId>, endowed_account
 			transaction_byte_fee: 0,
 		}),
 		conf_transfer: Some(ConfTransferConfig {
-			encrypted_balance: vec![alice_init()],
-			// verifying_key: get_pvk(&PVK),
-			verifying_key: PreparedVk{key: vec![1]},
-			simple_num: 3 as u32,
+			encrypted_balance: vec![alice_init(), (PkdAddress::from_slice(b"Alice                           "), Ciphertext::from_slice(b"Alice                           Bob                             "))],
+			verifying_key: get_pvk(&PVK),
+			// verifying_key: PreparedVk(vec![1]),			
 			h256: H256::from_slice(b"Alice                           "),
 			// _genesis_phantom_data: Default::default(),
 		})
@@ -133,7 +132,7 @@ fn testnet_genesis(initial_authorities: Vec<Ed25519AuthorityId>, endowed_account
 
 fn get_pvk(pvk_array: &[i32]) -> PreparedVk {
 	let pvk_vec_u8: Vec<u8> = pvk_array.to_vec().into_iter().map(|e| e as u8).collect();	
-	PreparedVk{key: pvk_vec_u8}	
+	PreparedVk(pvk_vec_u8)
 }
 
 fn alice_init() -> (PkdAddress, Ciphertext) {

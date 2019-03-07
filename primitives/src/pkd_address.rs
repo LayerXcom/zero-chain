@@ -109,6 +109,7 @@ mod tests {
 
         let account_id = PkdAddress::from_payment_address(&addr1);
         println!("account_id: {:?}", account_id);
+        println!("pkd_address: {:?}", PkdAddress::from_slice(b"Alice                           "));
         let addr2 = account_id.into_payment_address().unwrap();
         assert!(addr1 == addr2);
     }
