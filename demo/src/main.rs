@@ -1,6 +1,7 @@
 #[macro_use]
 extern crate structopt;
 use structopt::StructOpt;
+use clap::{Arg, App, SubCommand};
 use rand::{OsRng, Rng, Rand};
 use proofs::{
     primitives::{ExpandedSpendingKey, ViewingKey}, 
@@ -25,10 +26,13 @@ lazy_static! {
 }
 
 #[derive(StructOpt, Debug)]
-#[structopt(name = "handle")]
+#[structopt(name = "zero-chain-demo")]
 struct Opt {
+    #[structopt(short = "n", long = "nonce")]
+    nonce: u64,
+    
     #[structopt(short = "b", long = "balance")]
-    balance: Vec<String>,
+    balance: u32,
 }
 
 fn get_address(seed: &[u8; 32]) -> Vec<u8> { 
@@ -54,7 +58,7 @@ fn print_random_accounts(seed: &[u8; 32], num: i32) {
     }
 }
 
-fn print_alice_tx(sender_seed: &[u8], recipient_seed: &[u8]) {
+fn print_alice_tx(sender_seed: &[u8], recipient_seed: &[u8], nonce: u64) {
     let params = &JubjubBls12::new();
     let mut rng = OsRng::new().expect("should be able to construct RNG");
     let p_g = FixedGenerators::NullifierPosition; // 2
@@ -88,7 +92,8 @@ fn print_alice_tx(sender_seed: &[u8], recipient_seed: &[u8]) {
                     &prepared_vk,
                     &address_recipient,
                     sender_seed,
-                    ciphertext_balance
+                    ciphertext_balance,
+                    nonce
             ).expect("fails to generate the tx");
 
     println!(
@@ -112,6 +117,8 @@ fn print_alice_tx(sender_seed: &[u8], recipient_seed: &[u8]) {
 }
 
 fn main() {
+    let opt = Opt::from_args();
+    println!("{:?}", opt);
     let mut seed = [0u8; 32];
     if let Ok(mut e) = OsRng::new() {
         e.fill_bytes(&mut seed[..]);
@@ -127,5 +134,6 @@ fn main() {
     );
 
     print_random_accounts(&seed, 2);
-    print_alice_tx(alice_seed, bob_seed);
+    let nonce = 0 as u64;
+    print_alice_tx(alice_seed, bob_seed, nonce);
 }

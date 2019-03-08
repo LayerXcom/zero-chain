@@ -39,7 +39,7 @@ use zcrypto::elgamal;
 
 pub trait Trait: system::Trait {
 	/// The overarching event type.
-	type Event: From<Event<Self>> + Into<<Self as system::Trait>::Event>;   
+	type Event: From<Event<Self>> + Into<<Self as system::Trait>::Event>;       
 }
 
 decl_module! {	
@@ -59,7 +59,7 @@ decl_module! {
             rk: SigVerificationKey  // TODO: Extract from origin            
         ) -> Result {
             // Temporally removed the signature verification.
-			//let _origin = ensure_signed(origin)?;
+			// let rk = ensure_signed(origin)?;
             
             // Get zkproofs with the type
             let szkproof = match zkproof.into_proof() {

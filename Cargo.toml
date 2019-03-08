@@ -114,4 +114,5 @@ members = [
 ]
 exclude = [
     "runtime/wasm",
+    # "demo",
 ]

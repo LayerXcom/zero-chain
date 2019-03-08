@@ -41,7 +41,8 @@ pub use support::{StorageValue, construct_runtime};
 
 /// Alias to Ed25519 pubkey that identifies an account on the chain.
 // pub type AccountId = primitives::H256;
-pub type AccountId = primitives::H256;
+// pub type AccountId = primitives::H256;
+pub type AccountId = SigVerificationKey;
 
 /// A hash of some data used by the chain.
 pub type Hash = primitives::H256;
@@ -190,6 +191,7 @@ construct_runtime!(
 		NodeBlock = opaque::Block,
 		UncheckedExtrinsic = UncheckedExtrinsic
 	{
+		ConfTransfer: conf_transfer::{Module, Call, Storage, Event<T>, Config<T>},
 		System: system::{default, Log(ChangesTrieRoot)},
 		Timestamp: timestamp::{Module, Call, Storage, Config<T>, Inherent},
 		Consensus: consensus::{Module, Call, Storage, Config<T>, Log(AuthoritiesChange), Inherent},
@@ -197,8 +199,7 @@ construct_runtime!(
 		Indices: indices,
 		Balances: balances,
 		Sudo: sudo,
-		Fees: fees::{Module, Storage, Config<T>, Event<T>},				
-		ConfTransfer: conf_transfer::{Module, Call, Storage, Event<T>, Config<T>},
+		Fees: fees::{Module, Storage, Config<T>, Event<T>},						
 	}
 );
 
@@ -213,7 +214,8 @@ pub type Block = generic::Block<Header, UncheckedExtrinsic>;
 /// BlockId type as expected by this runtime.
 pub type BlockId = generic::BlockId<Block>;
 /// Unchecked extrinsic type as expected by this runtime.
-pub type UncheckedExtrinsic = generic::UncheckedMortalCompactExtrinsic<Address, Nonce, Call, Ed25519Signature>;
+// pub type UncheckedExtrinsic = generic::UncheckedMortalCompactExtrinsic<Address, Nonce, Call, Ed25519Signature>;
+pub type UncheckedExtrinsic = generic::UncheckedExtrinsic<Address, Nonce, Call, RedjubjubSignature>;
 /// Extrinsic type that has already been checked.
 pub type CheckedExtrinsic = generic::CheckedExtrinsic<AccountId, Nonce, Call>;
 /// Executive: handles dispatch to the various modules.
