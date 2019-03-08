@@ -3,10 +3,12 @@
 #![warn(missing_docs)]
 #![warn(unused_extern_crates)]
 
+#[macro_use]
+extern crate lazy_static;
+
 mod chain_spec;
 mod service;
 mod cli;
-mod setup;
 mod pvk;
 
 pub use substrate_cli::{VersionInfo, IntoExit, error};

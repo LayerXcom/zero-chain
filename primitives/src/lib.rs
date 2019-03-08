@@ -14,21 +14,18 @@ mod std {
     pub use crate::alloc::borrow;    
 }
 
-extern crate parity_codec as codec;
-#[macro_use]
-extern crate parity_codec_derive as codec_derive;
-
 #[cfg(feature = "std")]
 #[macro_use]
 extern crate serde_derive;
 
 pub mod keys;
-pub mod account_id;
+pub mod pkd_address;
 pub mod signature;
 pub mod ciphertext;
 pub mod proof;
 pub mod sig_vk;
 pub mod prepared_vk;
+pub mod pvk;
 
 use lazy_static::lazy_static;
 use jubjub::curve::JubjubBls12;

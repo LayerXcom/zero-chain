@@ -8,7 +8,7 @@ edition = "2018"
 rand = "0.4"
 proofs = { package = "zero-chain-proofs", path = "../proofs" }
 structopt = "0.2"
-substrate-primitives = { git = "https://github.com/paritytech/substrate" }
+substrate-primitives = { git = "https://github.com/paritytech/substrate", rev = '9112a28af677b75cd6f935dda34d283bb4f676e7' }
 zpairing = { package = "zero-chain-pairing", path = "../pairing" }
 pairing = { git = "https://github.com/LayerXcom/librustzcash", branch = "zero-chain" }
 bellman = { git = "https://github.com/LayerXcom/librustzcash", branch = "zero-chain" }
@@ -17,8 +17,8 @@ bellman-verifier = { path = "../bellman-verifier"}
 zcrypto = { package = "zero-chain-crypto", path = "../crypto"}
 zprimitives = { package = "zero-chain-primitives", path = "../primitives" }
 zjubjub = { package = "jubjub", path = "../jubjub"}
-parity-codec-derive = { version = "3.0", default-features = false }
-parity-codec = { version = "3.0", default-features = false }
+parity-codec-derive = { version = "3.1" }
+parity-codec = { version = "3.1" }
 lazy_static = "1.3.0"
 
 [dependencies.blake2-rfc]

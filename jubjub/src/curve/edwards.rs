@@ -499,6 +499,77 @@ impl<E: JubjubEngine, Subgroup> Point<E, Subgroup> {
         }
     }
 
+    pub fn add_no_params(&self, other: &Self) -> Self {
+        // See "Twisted Edwards Curves Revisited"
+        //     Huseyin Hisil, Kenneth Koon-Ho Wong, Gary Carter, and Ed Dawson
+        //     3.1 Unified Addition in E^e
+
+        // A = x1 * x2
+        let mut a = self.x;
+        a.mul_assign(&other.x);
+
+        // B = y1 * y2
+        let mut b = self.y;
+        b.mul_assign(&other.y);
+
+        // C = d * t1 * t2
+        let mut c = E::Fr::from_str("19257038036680949359750312669786877991949435402254120286184196891950884077233").unwrap();
+        c.mul_assign(&self.t);
+        c.mul_assign(&other.t);
+
+        // D = z1 * z2
+        let mut d = self.z;
+        d.mul_assign(&other.z);
+
+        // H = B - aA
+        //   = B + A
+        let mut h = b;
+        h.add_assign(&a);
+
+        // E = (x1 + y1) * (x2 + y2) - A - B
+        //   = (x1 + y1) * (x2 + y2) - H
+        let mut e = self.x;
+        e.add_assign(&self.y);
+        {
+            let mut tmp = other.x;
+            tmp.add_assign(&other.y);
+            e.mul_assign(&tmp);
+        }
+        e.sub_assign(&h);
+
+        // F = D - C
+        let mut f = d;
+        f.sub_assign(&c);
+
+        // G = D + C
+        let mut g = d;
+        g.add_assign(&c);
+
+        // x3 = E * F
+        let mut x3 = e;
+        x3.mul_assign(&f);
+
+        // y3 = G * H
+        let mut y3 = g;
+        y3.mul_assign(&h);
+
+        // t3 = E * H
+        let mut t3 = e;
+        t3.mul_assign(&h);
+
+        // z3 = F * G
+        let mut z3 = f;
+        z3.mul_assign(&g);
+
+        Point {
+            x: x3,
+            y: y3,
+            t: t3,
+            z: z3,
+            _marker: PhantomData
+        }
+    }
+
     #[must_use]
     pub fn mul<S: Into<<E::Fs as PrimeField>::Repr>>(
         &self,

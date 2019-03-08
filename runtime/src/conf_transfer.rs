@@ -4,12 +4,11 @@
 #![cfg_attr(not(feature = "std"), no_std)]
 #![cfg_attr(not(feature = "std"), feature(alloc))]
 
-use support::{decl_module, decl_storage, decl_event, StorageValue, StorageMap, dispatch::Result, ensure};
-use runtime_primitives::traits::{Member, SimpleArithmetic, Zero, StaticLookup};
+use support::{decl_module, decl_storage, decl_event, StorageValue, StorageMap, dispatch::Result, ensure, Parameter};
+use runtime_primitives::traits::{Member, SimpleArithmetic, Zero, StaticLookup, MaybeSerializeDebug, MaybeDisplay};
 use system::ensure_signed;
 
-use bellman_verifier::{   
-    PreparedVerifyingKey, 
+use bellman_verifier::{    
     verify_proof,           
 };
 use pairing::{
@@ -19,22 +18,14 @@ use pairing::{
     },
     Field,    
 };
-use jubjub::{    
-    curve::{
-        edwards,         
-        FixedGenerators, 
-        JubjubBls12, 
-        Unknown, 
-        PrimeOrder
-    },    
-    redjubjub::{        
-        PublicKey, 
-        // Signature as RedjubjubSignature,        
-    },
-};
+use jubjub::{     
+        redjubjub::{        
+            PublicKey,             
+        },
+    };
 
 use zprimitives::{
-    account_id::AccountId, 
+    pkd_address::PkdAddress, 
     ciphertext::Ciphertext, 
     proof::Proof, 
     sig_vk::SigVerificationKey, 
@@ -45,12 +36,11 @@ use zprimitives::{
 
 use zcrypto::elgamal;
 
+
 pub trait Trait: system::Trait {
 	/// The overarching event type.
-	type Event: From<Event<Self>> + Into<<Self as system::Trait>::Event>;
+	type Event: From<Event<Self>> + Into<<Self as system::Trait>::Event>;   
 }
-
-// params: JubjubBls12  // TODO: Hardcoded on-chain
 
 decl_module! {	
 	pub struct Module<T: Trait> for enum Call where origin: T::Origin {		
@@ -60,41 +50,69 @@ decl_module! {
 
 		pub fn confidential_transfer(
             _origin,
-            zkproof: Proof,           
-            address_sender: AccountId, // TODO: Extract from origin
-            address_recipient: AccountId,
+            zkproof: Proof,
+            address_sender: PkdAddress, 
+            address_recipient: PkdAddress,
             value_sender: Ciphertext,
             value_recipient: Ciphertext,
-            balance_sender: Ciphertext,          
-            rk: SigVerificationKey                    
-            // auth_sig: Signature,            
+            balance_sender: Ciphertext,       
+            rk: SigVerificationKey  // TODO: Extract from origin            
         ) -> Result {
-			// let origin = ensure_signed(origin)?;
-
-            // // Verify the auth_sig
-            // ensure!(
-            //     Self::verify_auth_sig(rk, auth_sig, &sighash_value, &params),
-            //     "Invalid auth_sig"
-            // );
+            // Temporally removed the signature verification.
+			//let _origin = ensure_signed(origin)?;
             
-            let szkproof = zkproof.into_proof().unwrap();
-            let saddr_sender = address_sender.into_payment_address().unwrap();
-            let saddr_recipient = address_recipient.into_payment_address().unwrap();
-            let svalue_sender = value_sender.into_ciphertext().unwrap();
-            let svalue_recipient = value_recipient.into_ciphertext().unwrap();
-            let sbalance_sender = balance_sender.into_ciphertext().unwrap();
-            let srk = rk.into_verification_key().unwrap();
+            // Get zkproofs with the type
+            let szkproof = match zkproof.into_proof() {
+                Some(v) => v,
+                None => return Err("Invalid zkproof"),
+            };
+
+            // Get address_sender with the type
+            let saddr_sender = match address_sender.into_payment_address() {
+                Some(v) => v,
+                None => return Err("Invalid address_sender"),
+            };
+
+            // Get address_recipient with the type
+            let saddr_recipient = match  address_recipient.into_payment_address() {
+                Some(v) => v,
+                None => return Err("Invalid address_recipient"),
+            };
+
+            // Get value_sender with the type
+            let svalue_sender = match value_sender.into_ciphertext() {
+                Some(v) => v,
+                None => return Err("Invalid value_sender"),
+            };
+
+            // Get value_recipient with the type
+            let svalue_recipient = match value_recipient.into_ciphertext() {
+                Some(v) => v,
+                None => return Err("Invalid value_recipient"),
+            };
+
+            // Get balance_sender with the type
+            let sbalance_sender = match balance_sender.into_ciphertext() {
+                Some(v) => v,
+                None => return Err("Invalid balance_sender"),
+            };
+
+            // Get rk with the type
+            let srk = match rk.into_verification_key() {
+                Some(v) => v,
+                None => return Err("Invalid rk"),
+            };
 
             // Verify the zk proof
             ensure!(
-                Self::check_proof(
-                    szkproof,
-                    saddr_sender,
-                    saddr_recipient,
-                    svalue_sender,
-                    svalue_recipient,
-                    sbalance_sender,
-                    srk,                    
+                Self::validate_proof(
+                    &szkproof,
+                    &saddr_sender,
+                    &saddr_recipient,
+                    &svalue_sender,
+                    &svalue_recipient,
+                    &sbalance_sender,
+                    &srk,                    
                 ),
                 "Invalid zkproof"
             );
@@ -105,7 +123,40 @@ decl_module! {
                 "Invalid encrypted balance"
             );
 
+            // Get balance_sender with the type
+            let bal_sender = match Self::encrypted_balance(address_sender) {
+                Some(b) => match b.into_ciphertext() {
+                    Some(c) => c,
+                    None => return Err("Invalid ciphertext of sender balance"),
+                },
+                None => return Err("Invalid sender balance"),
+            };
+
+            // Get balance_recipient with the type
+            let bal_recipient = match Self::encrypted_balance(address_recipient) {
+                Some(b) => match b.into_ciphertext() {
+                    Some(c) => c,                    
+                    None => return Err("Invalid ciphertext of recipient balance"),
+                },
+                None => return Err("Invalid recipient balance"),
+            };
             
+            // Update the sender's balance
+            <EncryptedBalance<T>>::mutate(address_sender, |balance| {
+                let new_balance = balance.map(
+                    |_| Ciphertext::from_ciphertext(&bal_sender.sub_no_params(&svalue_sender)));
+                *balance = new_balance
+            });
+
+            // Update the recipient's balance
+            <EncryptedBalance<T>>::mutate(address_recipient, |balance| {
+                let new_balance = balance.map(
+                    |_| Ciphertext::from_ciphertext(&bal_recipient.add_no_params(&svalue_recipient)));
+                *balance = new_balance
+            });
+
+            // TODO: tempolaly removed address_sender and address_recipient because of mismatched types
+            Self::deposit_event(RawEvent::ConfTransfer(zkproof, value_sender, value_recipient, balance_sender, rk));
 
             Ok(())         			            
 		}		
@@ -115,54 +166,33 @@ decl_module! {
 decl_storage! {
     trait Store for Module<T: Trait> as ConfTransfer {
         // The encrypted balance for each account
-        pub EncryptedBalance get(encrypted_balance) : map AccountId => Option<Ciphertext>; 
-        pub VerifyingKey get(verifying_key) config(): PreparedVk; 
+        pub EncryptedBalance get(encrypted_balance) config() : map PkdAddress => Option<Ciphertext>; 
+        // The verification key of zk proofs (only readable)
+        pub VerifyingKey get(verifying_key) config(): PreparedVk;         
+        pub H256 get(h256) config(): T::Hash;
     }
 }
 
 decl_event! (
     /// An event in this module.
-	pub enum Event<T> where AccountId = <T as system::Trait>::AccountId {
-		// Just a dummy event.
-		// Event `Something` is declared with a parameter of the type `u32` and `AccountId`
-		// To emit this event, we call the deposit funtion, from our runtime funtions
-		SomethingStored(u32, AccountId),
+	pub enum Event<T> where <T as system::Trait>::AccountId {    
+        // TODO: tempolaly removed AccountId because of mismatched types
+		ConfTransfer(Proof, Ciphertext, Ciphertext, Ciphertext, SigVerificationKey),
+        Phantom(AccountId),
 	}
 );
 
 impl<T: Trait> Module<T> {
     // Public immutables
-
-//     pub fn verify_auth_sig (
-//         rk: PublicKey<Bls12>, 
-//         auth_sig: RedjubjubSignature,
-//         sighash_value: &[u8; 32],
-//         params: &JubjubBls12,
-//     ) -> bool {        
-//         // Compute the signature's message for rk/auth_sig
-//         let mut data_to_be_signed = [0u8; 64];
-//         rk.0.write(&mut data_to_be_signed[0..32])
-//             .expect("message buffer should be 32 bytes");
-//         (&mut data_to_be_signed[32..64]).copy_from_slice(&sighash_value[..]);
-
-//         // Verify the auth_sig
-//         rk.verify(
-//             &data_to_be_signed,
-//             &auth_sig,
-//             FixedGenerators::SpendingKeyGenerator,
-//             &params,
-//         )
-//     }
-
-	pub fn check_proof (    
-        zkproof: bellman_verifier::Proof<Bls12>,
-        address_sender: PaymentAddress<Bls12>,
-        address_recipient: PaymentAddress<Bls12>,
-        value_sender: elgamal::Ciphertext<Bls12>,
-        value_recipient: elgamal::Ciphertext<Bls12>,
-        balance_sender: elgamal::Ciphertext<Bls12>,
-        rk: PublicKey<Bls12>,
-        // verifying_key: &PreparedVerifyingKey<Bls12>,              
+    // Validate zk proofs
+	pub fn validate_proof (    
+        zkproof: &bellman_verifier::Proof<Bls12>,
+        address_sender: &PaymentAddress<Bls12>,
+        address_recipient: &PaymentAddress<Bls12>,
+        value_sender: &elgamal::Ciphertext<Bls12>,
+        value_recipient: &elgamal::Ciphertext<Bls12>,
+        balance_sender: &elgamal::Ciphertext<Bls12>,
+        rk: &PublicKey<Bls12>,                 
     ) -> bool {
         // Construct public input for circuit
         let mut public_input = [Fr::zero(); 16];
@@ -215,9 +245,8 @@ impl<T: Trait> Module<T> {
             // No error, and proof verification successful
             Ok(true) => true,
             _ => false,                
-        }
-        
-    }
+        }        
+    } 
 
     // fn is_small_order<Order>(p: &edwards::Point<Bls12, Order>, params: &JubjubBls12) -> bool {
     //     p.double(params).double(params).double(params) == edwards::Point::zero()

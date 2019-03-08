@@ -9,6 +9,13 @@ use pairing::bls12_381::Bls12;
 
 #[cfg(feature = "std")]
 use substrate_primitives::bytes;
+#[cfg(feature = "std")]
+use substrate_primitives::hexdisplay::AsBytesRef;
+
+#[cfg(feature = "std")]
+use std::{fmt, write};
+#[cfg(not(feature = "std"))]
+use core::{fmt, write};
 
 const SIZE: usize = 32;
 
@@ -17,6 +24,20 @@ construct_fixed_hash! {
 }
 
 pub type SigVerificationKey = H256;
+
+use parity_codec::{Encode, Decode, Input, Output};
+
+// #[derive(Eq, PartialEq, Clone, Default, Encode, Decode, PartialOrd, Ord)]
+// #[cfg_attr(feature = "std", derive(Debug, Serialize, Deserialize))]
+// pub struct SigVerificationKey(pub H256);
+
+// #[cfg(feature = "std")]
+// impl std::fmt::Display for SigVerificationKey {
+//     fn fmt(&self, f: &mut std::fmt::Formatter) -> std::fmt::Result {  
+//         let a = &self.0;
+//         write!(f, "{}", std::string::String::from_utf8(a.to_owned()).unwrap())
+//     }
+// }
 
 #[cfg(feature = "std")]
 impl Serialize for SigVerificationKey {
@@ -37,15 +58,15 @@ impl<'de> Deserialize<'de> for SigVerificationKey {
     }
 }
 
-impl codec::Encode for SigVerificationKey {
+impl Encode for SigVerificationKey {
     fn using_encoded<R, F: FnOnce(&[u8]) -> R>(&self, f: F) -> R {
         self.0.using_encoded(f)
     }
 }
 
-impl codec::Decode for SigVerificationKey {
-    fn decode<I: codec::Input>(input: &mut I) -> Option<Self> {
-        <[u8; SIZE] as codec::Decode>::decode(input).map(H256)
+impl Decode for SigVerificationKey {
+    fn decode<I: Input>(input: &mut I) -> Option<Self> {
+        <[u8; SIZE] as Decode>::decode(input).map(H256)
     }
 }
 
@@ -54,10 +75,10 @@ impl SigVerificationKey {
         redjubjub::PublicKey::read(&mut &self.0[..], &JUBJUB as &JubjubBls12).ok()        
     }
 
-    pub fn from_verification_key(sig: &redjubjub::PublicKey<Bls12>) -> Self {
+    pub fn from_verification_key(vk: &redjubjub::PublicKey<Bls12>) -> Self {
         let mut writer = [0u8; 32];
-        sig.write(&mut &mut writer[..]).unwrap();
-        SigVerificationKey::from_slice(&writer)
+        vk.write(&mut &mut writer[..]).unwrap();        
+        H256::from_slice(&writer)
     }
 }
 
@@ -67,14 +88,21 @@ impl Into<SigVerificationKey> for redjubjub::PublicKey<Bls12> {
     }
 }
 
+#[cfg(feature = "std")]
+impl AsBytesRef for SigVerificationKey {
+    fn as_bytes_ref(&self) -> &[u8] {
+        self.as_ref()
+    }
+}
+
+
 #[cfg(test)]
 mod tests {
     use super::*;
     use rand::{Rng, SeedableRng, XorShiftRng};    
     use pairing::bls12_381::Bls12;
     use jubjub::curve::{FixedGenerators, JubjubBls12};
-    use jubjub::redjubjub::PublicKey;
-    use codec::{Encode, Decode};
+    use jubjub::redjubjub::PublicKey;        
 
     #[test]
     fn test_vk_into_from() {

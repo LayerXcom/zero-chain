@@ -14,13 +14,9 @@ use pairing::{
 use rand::{OsRng, Rand};
 use scrypto::{    
     jubjub::{
-        JubjubEngine,
-        JubjubParams,
-        edwards,         
+        JubjubEngine,               
         FixedGenerators, 
-        JubjubBls12, 
-        Unknown, 
-        PrimeOrder
+        JubjubBls12,           
     },    
     redjubjub::{        
         PublicKey,        
@@ -48,17 +44,17 @@ impl<E: JubjubEngine> TransferProof<E> {
         remaining_balance: u32,        
         alpha: E::Fs,        
         proving_key: &Parameters<E>, 
-        verifying_key: &PreparedVerifyingKey<E>,
+        prepared_vk: &PreparedVerifyingKey<E>,
         proof_generation_key: ProofGenerationKey<E>,
         address_recipient: PaymentAddress<E>,   
         ciphertext_balance: Ciphertext<E>,  
         params: &E::Params,        
-    ) -> Result<Self, ()>
+    ) -> Self
     {
         // TODO: Change OsRng for wasm
         let mut rng = OsRng::new().expect("should be able to construct RNG");
 
-        let randomness = E::Fs::rand(&mut rng);        
+        let randomness = E::Fs::rand(&mut rng);   
         
         let viewing_key = proof_generation_key.into_viewing_key(params);
         let ivk = viewing_key.ivk();
@@ -147,12 +143,8 @@ impl<E: JubjubEngine> TransferProof<E> {
             public_input[15] = y;
         }                             
 
-        match verify_proof(verifying_key, &proof, &public_input[..]) {
-            Ok(true) => {},
-            _ => {
-                return Err(());
-            }
-        }
+        verify_proof(prepared_vk, &proof, &public_input[..])
+            .expect("verifying should not fail");
 
         let transfer_proof = TransferProof {
             proof: proof,        
@@ -163,16 +155,64 @@ impl<E: JubjubEngine> TransferProof<E> {
             cipher_val_r: cipher_val_r,
         };
 
-        Ok(transfer_proof)
+        transfer_proof
     }    
 }
 
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::setup;    
+    use rand::{SeedableRng, XorShiftRng, Rng};
+    use crate::primitives::{ExpandedSpendingKey, ViewingKey};
+    use scrypto::jubjub::{fs, ToUniform, JubjubParams};
+    use crate::elgamal::elgamal_extend;
+    use pairing::PrimeField;    
 
     #[test]
-    fn test_gen_proof() {
+    fn test_gen_proof() {        
+        let params = &JubjubBls12::new();
+        let mut rng = XorShiftRng::from_seed([0x5dbe6259, 0x8d313d76, 0x3237db17, 0xe5bc0654]);
+        let p_g = FixedGenerators::NullifierPosition;
+
+        let value = 10 as u32;
+        let remaining_balance = 30 as u32;
+        let balance = 40 as u32;
+        let alpha = fs::Fs::rand(&mut rng); 
+
+        let (proving_key, prepared_vk) = setup::setup();
+
+        let mut sender_seed = [0u8; 32];
+        let mut recipient_seed = [0u8; 32];
+        rng.fill_bytes(&mut sender_seed[..]);
+        rng.fill_bytes(&mut recipient_seed[..]);
+
+        let ex_sk_s = ExpandedSpendingKey::<Bls12>::from_spending_key(&sender_seed[..]);
+        let ex_sk_r = ExpandedSpendingKey::<Bls12>::from_spending_key(&recipient_seed[..]);
+
+        let proof_generation_key = ex_sk_s.into_proof_generation_key(params);
+        let viewing_key_r = ViewingKey::<Bls12>::from_expanded_spending_key(&ex_sk_r, params);
+        let address_recipient = viewing_key_r.into_payment_address(params);
         
+        let sk_fs = fs::Fs::to_uniform(elgamal_extend(&sender_seed).as_bytes()).into_repr();
+        let mut randomness = [0u8; 32];
+
+        rng.fill_bytes(&mut randomness[..]);
+        let r_fs = fs::Fs::to_uniform(elgamal_extend(&randomness).as_bytes());
+
+        let public_key = params.generator(p_g).mul(sk_fs, params).into();
+        let ciphertext_balance = Ciphertext::encrypt(balance, r_fs, &public_key, p_g, params);
+
+        let _proofs = TransferProof::gen_proof(
+            value, 
+            remaining_balance, 
+            alpha, 
+            &proving_key, 
+            &prepared_vk, 
+            proof_generation_key, 
+            address_recipient, 
+            ciphertext_balance, 
+            params
+        );
     }
 }

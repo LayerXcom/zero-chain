@@ -25,8 +25,7 @@ use version::RuntimeVersion;
 use version::NativeVersion;
 
 use zprimitives::{
-	signature::RedjubjubSignature,
-	// account_id::AccountId,
+	signature::RedjubjubSignature,	
 	sig_vk::SigVerificationKey,
 };
 
@@ -41,6 +40,7 @@ pub use timestamp::BlockPeriod;
 pub use support::{StorageValue, construct_runtime};
 
 /// Alias to Ed25519 pubkey that identifies an account on the chain.
+// pub type AccountId = primitives::H256;
 pub type AccountId = primitives::H256;
 
 /// A hash of some data used by the chain.
@@ -51,9 +51,6 @@ pub type BlockNumber = u64;
 
 /// Index of an account's extrinsic in the chain.
 pub type Nonce = u64;
-
-/// Used for the module template in `./template.rs`
-mod template;
 
 mod conf_transfer;
 
@@ -183,11 +180,6 @@ impl sudo::Trait for Runtime {
 	type Proposal = Call;
 }
 
-/// Used for the module template in `./template.rs`
-impl template::Trait for Runtime { 
-	type Event = Event;
-}
-
 impl conf_transfer::Trait for Runtime {
 	type Event = Event;
 }
@@ -205,9 +197,7 @@ construct_runtime!(
 		Indices: indices,
 		Balances: balances,
 		Sudo: sudo,
-		Fees: fees::{Module, Storage, Config<T>, Event<T>},
-		// Used for the module template in `./template.rs`
-		TemplateModule: template::{Module, Call, Storage, Event<T>},
+		Fees: fees::{Module, Storage, Config<T>, Event<T>},				
 		ConfTransfer: conf_transfer::{Module, Call, Storage, Event<T>, Config<T>},
 	}
 );

@@ -407,7 +407,7 @@ impl EncodedPoint for FakePoint {
         unimplemented!()
     }
 
-    fn from_affine(affine: Self::Affine) -> Self {
+    fn from_affine(_affine: Self::Affine) -> Self {
         unimplemented!()
     }
 }

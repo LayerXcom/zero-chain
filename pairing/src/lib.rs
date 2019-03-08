@@ -242,8 +242,8 @@ pub trait CurveAffine:
 
     /// Converts this element into its compressed encoding, so long as it's not
     /// the point at infinity.
-    fn into_compressed(&self) -> Self::Compressed {
-        <Self::Compressed as EncodedPoint>::from_affine(*self)
+    fn into_compressed(&self) -> Self::Compressed {        
+        <Self::Compressed as EncodedPoint>::from_affine(*self)        
     }
 
     /// Converts this element into its uncompressed encoding, so long as it's not

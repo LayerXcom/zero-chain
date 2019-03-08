@@ -735,7 +735,7 @@ pub mod g1 {
             }
         }
         fn from_affine(affine: G1Affine) -> Self {
-            let mut res = Self::empty();
+            let mut res = Self::empty();            
 
             if affine.is_zero() {
                 // Set the second-most significant bit to indicate this point
@@ -836,18 +836,18 @@ pub mod g1 {
                 G1Affine::get_point_from_x(x, greatest).ok_or(GroupDecodingError::NotOnCurve)
             }
         }
-        fn from_affine(affine: G1Affine) -> Self {
+        fn from_affine(affine: G1Affine) -> Self {            
             let mut res = Self::empty();
 
-            if affine.is_zero() {
+            if affine.is_zero() {                
                 // Set the second-most significant bit to indicate this point
                 // is at infinity.
                 res.0[0] |= 1 << 6;
             } else {
-                {
+                {                    
                     let mut writer = &mut res.0[..];
 
-                    affine.x.into_repr().write_be(&mut writer).unwrap();
+                    affine.x.into_repr().write_be(&mut writer).unwrap();                    
                 }
 
                 let mut negy = affine.y;

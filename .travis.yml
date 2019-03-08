@@ -1,12 +1,28 @@
+# Request an environment that provides sudo (that goes with larger containers)
+# and a minimal language environment.
 sudo: true
-language: rust
-
-rust:
-  - 1.32.0
+language: minimal
 
 cache: cargo
 
+branches:
+  only:
+  - master
+
+env:
+  global:
+    - RUST_BACKTRACE=1
+  matrix:
+    - RUST_TOOLCHAIN=nightly TARGET=wasm
+    - RUST_TOOLCHAIN=stable TARGET=native
+
+before_install:
+  - chmod +x ./ci/script.sh
+  # Check how much space we've got on this machine.
+  - df -h
+
 script:
-  - sudo apt-get -y update
-  - sudo apt-get install -y cmake pkg-config libssl-dev
-  - cargo test --release -p bellman-verifier -p zero-chain-demo -p zero-chain-crypto -p jubjub -p zero-chain-pairing -p zero-chain-primitives -p zero-chain-proofs
+  - ./ci/script.sh
+
+after_script:
+  # Check how much free disk space left after the build

@@ -1,4 +1,4 @@
-use primitives::{Ed25519AuthorityId, ed25519};
+use primitives::{Ed25519AuthorityId, ed25519, H256};
 use zero_chain_runtime::{
 	AccountId, GenesisConfig, ConsensusConfig, TimestampConfig, BalancesConfig,
 	SudoConfig, IndicesConfig, FeesConfig, ConfTransferConfig
@@ -6,8 +6,20 @@ use zero_chain_runtime::{
 use substrate_service;
 
 use crate::pvk::PVK;
-use bellman_verifier::PreparedVerifyingKey;
-use zprimitives::prepared_vk::PreparedVk;
+use zprimitives::{
+	prepared_vk::PreparedVk,
+	pkd_address::PkdAddress,
+	ciphertext::Ciphertext,
+	keys::{ExpandedSpendingKey, ViewingKey},
+	};
+use rand::{OsRng, Rng};
+use jubjub::{curve::{JubjubBls12, FixedGenerators, fs, ToUniform}};
+use zpairing::bls12_381::Bls12;
+use zcrypto::elgamal::{self, elgamal_extend};
+
+lazy_static! {
+    static ref JUBJUB: JubjubBls12 = { JubjubBls12::new() };
+}
 
 // Note this is the URL for the telemetry server
 //const STAGING_TELEMETRY_URL: &str = "wss://telemetry.polkadot.io/submit/";
@@ -28,7 +40,7 @@ pub enum Alternative {
 
 impl Alternative {
 	/// Get an actual chain config from one of the alternatives.
-	pub(crate) fn load(self) -> Result<ChainSpec, String> {
+	pub(crate) fn load(self) -> Result<ChainSpec, String> {		
 		Ok(match self {
 			Alternative::Development => ChainSpec::from_genesis(
 				"Development",
@@ -80,11 +92,11 @@ impl Alternative {
 	}
 }
 
-fn testnet_genesis(initial_authorities: Vec<Ed25519AuthorityId>, endowed_accounts: Vec<AccountId>, root_key: AccountId) -> GenesisConfig {
+fn testnet_genesis(initial_authorities: Vec<Ed25519AuthorityId>, endowed_accounts: Vec<AccountId>, root_key: AccountId) -> GenesisConfig {	
 	GenesisConfig {
 		consensus: Some(ConsensusConfig {
 			// code: include_bytes!("../runtime/wasm/target/wasm32-unknown-unknown/release/node_template_runtime_wasm.compact.wasm").to_vec(),
-			code: include_bytes!("../runtime/wasm/target/wasm32-unknown-unknown/release/zero_chain_runtime_wasm.wasm").to_vec(),
+			code: include_bytes!("../runtime/wasm/target/wasm32-unknown-unknown/release/zero_chain_runtime_wasm.compact.wasm").to_vec(),
 			authorities: initial_authorities.clone(),
 		}),
 		system: None,
@@ -109,13 +121,37 @@ fn testnet_genesis(initial_authorities: Vec<Ed25519AuthorityId>, endowed_account
 			transaction_byte_fee: 0,
 		}),
 		conf_transfer: Some(ConfTransferConfig {
+			encrypted_balance: vec![alice_init(), (PkdAddress::from_slice(b"Alice                           "), Ciphertext::from_slice(b"Alice                           Bob                             "))],
 			verifying_key: get_pvk(&PVK),
-			_genesis_phantom_data: Default::default(),
+			// verifying_key: PreparedVk(vec![1]),			
+			h256: H256::from_slice(b"Alice                           "),
+			// _genesis_phantom_data: Default::default(),
 		})
 	}
 }
 
 fn get_pvk(pvk_array: &[i32]) -> PreparedVk {
-	let pvk_vec_u8 = pvk_array.to_vec().into_iter().map(|e| e as u8).collect();
+	let pvk_vec_u8: Vec<u8> = pvk_array.to_vec().into_iter().map(|e| e as u8).collect();	
 	PreparedVk(pvk_vec_u8)
+}
+
+fn alice_init() -> (PkdAddress, Ciphertext) {
+	let alice_seed = b"Alice                           ";
+	let alice_value = 100 as u32;
+
+	let p_g = FixedGenerators::ElGamal;
+	let mut randomness = [0u8; 32];
+
+	if let Ok(mut e) = OsRng::new() {
+		e.fill_bytes(&mut randomness[..]);
+	}
+	let r_fs = fs::Fs::to_uniform(elgamal_extend(&randomness).as_bytes());	
+
+	let expsk = ExpandedSpendingKey::<Bls12>::from_spending_key(alice_seed);        
+    let viewing_key = ViewingKey::<Bls12>::from_expanded_spending_key(&expsk, &JUBJUB);        
+    let address = viewing_key.into_payment_address(&JUBJUB);	
+
+	let enc_alice_val = elgamal::Ciphertext::encrypt(alice_value, r_fs, &address.0, p_g, &JUBJUB);
+
+	(PkdAddress::from_payment_address(&address), Ciphertext::from_ciphertext(&enc_alice_val))
 }

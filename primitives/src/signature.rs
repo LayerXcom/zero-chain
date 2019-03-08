@@ -1,13 +1,69 @@
-use primitive_types::H512;
+#[cfg(feature = "std")]
+use serde::{Serialize, Serializer, Deserialize, Deserializer};
+#[cfg(feature = "std")]
+use substrate_primitives::hexdisplay::AsBytesRef;
+// use primitive_types::H512;
 use jubjub::redjubjub;
 use runtime_primitives::traits::{Verify, Lazy};
+use fixed_hash::construct_fixed_hash;
 use crate::sig_vk::SigVerificationKey;
 use jubjub::curve::FixedGenerators;
 use crate::JUBJUB;
+#[cfg(feature = "std")]
+use substrate_primitives::bytes;
 
-#[derive(Eq, PartialEq, Clone, Default, Encode, Decode)]
-#[cfg_attr(feature = "std", derive(Debug, Serialize, Deserialize))]
-pub struct RedjubjubSignature(H512);
+use parity_codec::{Encode, Decode, Input, Output};
+
+
+// #[derive(Eq, PartialEq, Clone, Default, Encode, Decode)]
+// #[cfg_attr(feature = "std", derive(Debug, Serialize, Deserialize))]
+// pub struct RedjubjubSignature(H512);
+
+const SIZE: usize = 64;
+
+construct_fixed_hash! {
+    pub struct H512(SIZE);
+}
+
+pub type RedjubjubSignature = H512;
+
+#[cfg(feature = "std")]
+impl Serialize for H512 {
+    fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error> 
+        where S: Serializer
+    {
+        bytes::serialize(&self.0, serializer)
+    }
+}
+
+#[cfg(feature = "std")]
+impl<'de> Deserialize<'de> for RedjubjubSignature {
+    fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
+        where D: Deserializer<'de>
+    {
+        bytes::deserialize_check_len(deserializer, bytes::ExpectedLen::Exact(SIZE))
+            .map(|x| H512::from_slice(&x))
+    }
+}
+
+impl Encode for RedjubjubSignature {
+    fn using_encoded<R, F: FnOnce(&[u8]) -> R>(&self, f: F) -> R {
+        self.0.using_encoded(f)
+    }
+}
+
+impl Decode for RedjubjubSignature {
+    fn decode<I: Input>(input: &mut I) -> Option<Self> {
+        <[u8; SIZE] as Decode>::decode(input).map(H512)
+    }
+}
+
+#[cfg(feature = "std")]
+impl AsBytesRef for RedjubjubSignature {
+    fn as_bytes_ref(&self) -> &[u8] {
+        self.as_ref()
+    }
+}
 
 impl Verify for RedjubjubSignature {
     type Signer = SigVerificationKey;
@@ -19,6 +75,12 @@ impl Verify for RedjubjubSignature {
 
         let p_g = FixedGenerators::SpendingKeyGenerator;
 
+        // Compute the signature's message for rk/auth_sig
+        // let mut data_to_be_signed = [0u8; 64];
+        // rk.0.write(&mut data_to_be_signed[0..32])
+        //     .expect("message buffer should be 32 bytes");
+        // (&mut data_to_be_signed[32..64]).copy_from_slice(&sighash_value[..]);
+
         match signer.into_verification_key() {
             Some(vk) => return vk.verify(msg.get(), &sig, p_g, &JUBJUB),
             None => return false
@@ -27,11 +89,32 @@ impl Verify for RedjubjubSignature {
     }
 }
 
-impl From<H512> for RedjubjubSignature {
-	fn from(h: H512) -> RedjubjubSignature {
-		RedjubjubSignature(h)
-	}
-}
+//    pub fn verify_auth_sig (
+//         rk: PublicKey<Bls12>, 
+//         auth_sig: RedjubjubSignature,
+//         sighash_value: &[u8; 32],
+//         params: &JubjubBls12,
+//     ) -> bool {        
+//         // Compute the signature's message for rk/auth_sig
+//         let mut data_to_be_signed = [0u8; 64];
+//         rk.0.write(&mut data_to_be_signed[0..32])
+//             .expect("message buffer should be 32 bytes");
+//         (&mut data_to_be_signed[32..64]).copy_from_slice(&sighash_value[..]);
+
+//         // Verify the auth_sig
+//         rk.verify(
+//             &data_to_be_signed,
+//             &auth_sig,
+//             FixedGenerators::SpendingKeyGenerator,
+//             &params,
+//         )
+//     } 
+
+// impl From<H512> for RedjubjubSignature {
+// 	fn from(h: H512) -> RedjubjubSignature {
+// 		RedjubjubSignature(h)
+// 	}
+// }
 
 impl RedjubjubSignature {
     pub fn into_signature(&self) -> Option<redjubjub::Signature> {   
@@ -40,8 +123,8 @@ impl RedjubjubSignature {
 
     pub fn from_signature(sig: &redjubjub::Signature) -> Self {
         let mut writer = [0u8; 64];
-        sig.write(&mut writer[..]).unwrap();
-        RedjubjubSignature(H512::from_slice(&writer))
+        sig.write(&mut writer[..]).unwrap();        
+        H512::from_slice(&writer)
     }
 }
 
@@ -57,8 +140,7 @@ mod tests {
     use rand::{Rng, SeedableRng, XorShiftRng};    
     use pairing::bls12_381::Bls12;
     use jubjub::curve::{FixedGenerators, JubjubBls12};
-    use jubjub::redjubjub::PublicKey;
-    use codec::{Encode, Decode};
+    use jubjub::redjubjub::PublicKey;    
 
     #[test]
     fn test_sig_into_from() {

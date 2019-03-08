@@ -1,7 +1,3 @@
-use pairing::{
-    PrimeField,       
-};
-
 use bellman::{
     SynthesisError,
     ConstraintSystem,
@@ -17,14 +13,12 @@ use scrypto::jubjub::{
 };
 
 use crate::primitives::{    
-    ProofGenerationKey,
-    PaymentAddress,     
+    ProofGenerationKey,     
 };
 
 use scrypto::circuit::{    
     boolean::{self, Boolean},
-    ecc::{self, EdwardsPoint},    
-    blake2s,    
+    ecc::{self, EdwardsPoint},      
     num::AllocatedNum,
 };
 
@@ -158,7 +152,7 @@ impl<'a, E: JubjubEngine> Circuit<E> for Transfer<'a, E> {
         c_left_recipient.inputize(cs.namespace(|| format!("c_left_recipient")))?;
         c_right.inputize(cs.namespace(|| format!("c_right")))?;
 
-        // TODO:
+        
         {
             let bal_gl = ecc::EdwardsPoint::witness(
                 cs.namespace(|| "balance left"), 
@@ -214,6 +208,15 @@ impl<'a, E: JubjubEngine> Circuit<E> for Transfer<'a, E> {
 
             pointl.inputize(cs.namespace(|| format!("inputize pointl")))?;
             pointr.inputize(cs.namespace(|| format!("inputize pointr")))?;
+
+            // TODO:
+            // The balance encryption validity. 
+            // It is a bit complicated bacause we can not know the randomness of balance.
+            // { (current_balance)G - (value)G } + (rbar - random)pk_d_sender  
+            //   == (remaining_balance)G + (ivk){ (rbar)G - (random)G }
+            // rbar is the current_balance randomness   
+            // Enc_sender(sender_balance).cl - Enc_sender(value).cl 
+            //     == (remaining_balance)G + ivk(Enc_sender(sender_balance).cr - Enc(random))
         }
 
 
@@ -297,11 +300,11 @@ fn u32_into_boolean_vec_le<E, CS>(
 }
 
 #[cfg(test)]
-    use pairing::bls12_381::*;
+    use pairing::{PrimeField, bls12_381::*};
     use rand::{SeedableRng, Rng, XorShiftRng};    
     use super::circuit_test::TestConstraintSystem;
     use scrypto::jubjub::{JubjubBls12, fs, edwards};  
-    use crate::elgamal::elgamal_extend;     
+    use crate::elgamal::elgamal_extend;         
 
     
     #[test]

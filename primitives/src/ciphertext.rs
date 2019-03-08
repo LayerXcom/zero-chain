@@ -1,6 +1,7 @@
 #[cfg(feature = "std")]
 use serde::{Serialize, Serializer, Deserialize, Deserializer};
 use fixed_hash::construct_fixed_hash;
+// use primitive_types::H512;
 use crate::JUBJUB;
 
 #[cfg(feature = "std")]
@@ -10,6 +11,15 @@ use zcrypto::elgamal;
 use pairing::bls12_381::Bls12;
 use jubjub::curve::JubjubBls12;
 
+#[cfg(feature = "std")]
+use ::std::marker;
+#[cfg(not(feature = "std"))]
+use crate::std::marker;
+
+use parity_codec::{Encode, Decode, Input, Output};
+#[cfg(feature = "std")]
+use substrate_primitives::hexdisplay::AsBytesRef;
+
 const SIZE: usize = 64;
 
 construct_fixed_hash! {
@@ -17,6 +27,10 @@ construct_fixed_hash! {
 }
 
 pub type Ciphertext = H512;
+
+// #[derive(Eq, PartialEq, Clone, Default, Encode, Decode)]
+// #[cfg_attr(feature = "std", derive(Debug, Serialize, Deserialize))]
+// pub struct Ciphertext(pub H512);
 
 #[cfg(feature = "std")]
 impl Serialize for H512 {
@@ -37,19 +51,19 @@ impl<'de> Deserialize<'de> for H512 {
     }
 }
 
-impl codec::Encode for H512 {
+impl Encode for H512 {
     fn using_encoded<R, F: FnOnce(&[u8]) -> R>(&self, f: F) -> R {
         self.0.using_encoded(f)
     }
 }
 
-impl codec::Decode for H512 {
-    fn decode<I: codec::Input>(input: &mut I) -> Option<Self> {
-        <[u8; SIZE] as codec::Decode>::decode(input).map(H512)
+impl Decode for H512 {
+    fn decode<I: Input>(input: &mut I) -> Option<Self> {
+        <[u8; SIZE] as Decode>::decode(input).map(H512)
     }
 }
 
-impl H512 {
+impl Ciphertext {
     pub fn into_ciphertext(&self) -> Option<elgamal::Ciphertext<Bls12>> {   
         elgamal::Ciphertext::read(&mut &self.0[..], &JUBJUB as &JubjubBls12).ok()        
     }
@@ -67,13 +81,26 @@ impl Into<Ciphertext> for elgamal::Ciphertext<Bls12> {
     }
 }
 
+// impl From<H512> for Ciphertext {
+//     fn from(h: H512) -> Self {
+//         Ciphertext(h)
+//     }
+// }
+
+#[cfg(feature = "std")]
+impl AsBytesRef for Ciphertext {
+    fn as_bytes_ref(&self) -> &[u8] {
+        self.as_ref()
+    }
+}
+
+    
 #[cfg(test)]
 mod tests {
     use super::*;
     use rand::{Rng, SeedableRng, XorShiftRng};    
     use pairing::PrimeField;
-    use jubjub::curve::{FixedGenerators, JubjubBls12, fs::Fs, ToUniform, JubjubParams};    
-    use codec::{Encode, Decode};
+    use jubjub::curve::{FixedGenerators, JubjubBls12, fs::Fs, ToUniform, JubjubParams};        
 
     #[test]
     fn test_ciphertext_into_from() {
