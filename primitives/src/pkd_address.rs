@@ -11,7 +11,7 @@ use substrate_primitives::hexdisplay::AsBytesRef;
 #[cfg(feature = "std")]
 use substrate_primitives::bytes;
 
-use parity_codec::{Encode, Decode, Input, Output};
+use parity_codec::{Encode, Decode, Input};
 
 const SIZE: usize = 32;
 

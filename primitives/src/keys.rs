@@ -46,8 +46,8 @@ pub fn prf_extend_wo_t(sk: &[u8]) -> Blake2bResult {
 
 #[derive(Debug, Clone, PartialEq)]
 pub struct ExpandedSpendingKey<E: JubjubEngine> {
-    ask: E::Fs,
-    nsk: E::Fs,
+    pub ask: E::Fs,
+    pub nsk: E::Fs,
 }
 
 impl<E: JubjubEngine> ExpandedSpendingKey<E> {
@@ -56,6 +56,13 @@ impl<E: JubjubEngine> ExpandedSpendingKey<E> {
         let ask = E::Fs::to_uniform(prf_expand(sk, &[0x00]).as_bytes());
         let nsk = E::Fs::to_uniform(prf_expand(sk, &[0x01]).as_bytes());
         ExpandedSpendingKey { ask, nsk }
+    }
+
+    pub fn into_proof_generation_key(&self, params: &E::Params) -> ProofGenerationKey<E> {
+        ProofGenerationKey {
+            ak: params.generator(FixedGenerators::ProofGenerationKey).mul(self.ask, params),
+            nsk: self.nsk,
+        }
     }
 
     pub fn write<W: io::Write>(&self, mut writer: W) -> io::Result<()> {

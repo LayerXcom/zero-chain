@@ -17,19 +17,19 @@ fn read_scalar<E: JubjubEngine, R: io::Read>(mut reader: R) -> io::Result<E::Fs>
     }
 }
 
-fn write_scalar<E: JubjubEngine, W: io::Write>(s: &E::Fs, mut writer: W) -> io::Result<()> {
+pub fn write_scalar<E: JubjubEngine, W: io::Write>(s: &E::Fs, mut writer: W) -> io::Result<()> {
     s.into_repr().write_le(&mut writer)
 }
 
-fn h_star<E: JubjubEngine>(a: &[u8], b: &[u8]) -> E::Fs {
+pub fn h_star<E: JubjubEngine>(a: &[u8], b: &[u8]) -> E::Fs {
     hash_to_scalar::<E>(b"Zcash_RedJubjubH", a, b)
 }
 
 #[cfg_attr(feature = "std", derive(Debug))]
 #[derive(Copy, Clone, PartialEq)]
 pub struct Signature {
-    rbar: [u8; 32],
-    sbar: [u8; 32],
+    pub rbar: [u8; 32],
+    pub sbar: [u8; 32],
 }
 
 pub struct PrivateKey<E: JubjubEngine>(pub E::Fs);
