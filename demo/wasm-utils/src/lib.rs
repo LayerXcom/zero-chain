@@ -1,4 +1,11 @@
+extern crate cfg_if;
+extern crate wasm_bindgen;
+
+mod utils;
+
+use cfg_if::cfg_if;
 use wasm_bindgen::prelude::*;
+
 use rand::{ChaChaRng, SeedableRng, Rng};
 use zprimitives::{
     pkd_address::PkdAddress,
@@ -14,14 +21,36 @@ use zjubjub::{
     redjubjub::{h_star, Signature, write_scalar},
 };
 
+cfg_if! {
+    // When the `wee_alloc` feature is enabled, use `wee_alloc` as the global
+    // allocator.
+    if #[cfg(feature = "wee_alloc")] {
+        extern crate wee_alloc;
+        #[global_allocator]
+        static ALLOC: wee_alloc::WeeAlloc = wee_alloc::WeeAlloc::INIT;
+    }
+}
+
+#[wasm_bindgen]
+extern {
+    fn alert(s: &str);
+}
+
+#[wasm_bindgen]
+pub fn greet() {
+    alert("Hello, wasm-utils!");
+}
+
 #[wasm_bindgen]
 pub fn gen_account_id(sk: &[u8]) -> JsValue {
     let params = &JubjubBls12::new();
     let exps = keys::ExpandedSpendingKey::<Bls12>::from_spending_key(sk);
-    let viewing_key = keys::ViewingKey::<Bls12>::from_expanded_spending_key(&exps, params);
-    let account_id = viewing_key.into_payment_address(params);
 
-    let pkd_address = PkdAddress::from_payment_address(&account_id);
+
+    let viewing_key = keys::ViewingKey::<Bls12>::from_expanded_spending_key(&exps, params);
+    let address = viewing_key.into_payment_address(params);
+
+    let pkd_address = PkdAddress::from_payment_address(&address);
     JsValue::from_serde(&pkd_address).expect("fails to write json")
 }
 

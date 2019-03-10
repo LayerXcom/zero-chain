@@ -12,7 +12,6 @@ use substrate_primitives::hexdisplay::{HexDisplay, AsBytesRef};
 use pairing::{bls12_381::Bls12, PrimeField};
 use scrypto::jubjub::{JubjubBls12, fs, ToUniform, JubjubParams, FixedGenerators};      
 
-mod wasm_utils;
 pub mod transaction;
 use transaction::Transaction;
 

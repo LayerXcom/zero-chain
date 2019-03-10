@@ -17,7 +17,7 @@ tokio = '0.1'
 trie-root = '0.11.0'
 
 bellman-verifier = { path = "bellman-verifier"}
-demo = { package = "zero-chain-demo", path = "demo" }
+demo = { package = "zero-chain-demo", path = "demo/cli" }
 zcrypto = { package = "zero-chain-crypto", path = "crypto" }
 jubjub = { path = "jubjub" }
 zpairing = { package = "zero-chain-pairing", path = "pairing" }
@@ -105,7 +105,7 @@ path = 'src/main.rs'
 members = [
     "bellman-verifier",
     "crypto",
-    "demo",
+    "demo/cli",
     "jubjub",
     "pairing",
     "primitives",
@@ -114,5 +114,5 @@ members = [
 ]
 exclude = [
     "runtime/wasm",
-    # "demo",
+    "demo/wasm-utils",
 ]
