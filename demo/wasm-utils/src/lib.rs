@@ -1,5 +1,6 @@
 extern crate cfg_if;
-extern crate wasm_bindgen;
+#[macro_use]
+extern crate serde_derive;
 
 mod utils;
 
@@ -7,11 +8,7 @@ use cfg_if::cfg_if;
 use wasm_bindgen::prelude::*;
 
 use rand::{ChaChaRng, SeedableRng, Rng};
-use zprimitives::{
-    pkd_address::PkdAddress,
-    signature::RedjubjubSignature,
-    keys
-    };
+use keys::{self, PaymentAddress};
 use zpairing::{
     bls12_381::Bls12,
     Field,
@@ -41,16 +38,38 @@ pub fn greet() {
     alert("Hello, wasm-utils!");
 }
 
+#[derive(Serialize)]
+pub struct PkdAddress(pub(crate) [u8; 32]);
+
+impl From<PaymentAddress<Bls12>> for PkdAddress {
+    fn from(address: PaymentAddress<Bls12>) -> Self {
+        let mut writer = [0u8; 32];
+        address.write(&mut writer[..]).expect("fails to write payment address");
+        PkdAddress(writer)
+    }
+}
+
+#[derive(Serialize)]
+pub struct RedjubjubSignature(pub(crate) Vec<u8>);
+
+impl From<Signature> for RedjubjubSignature {
+    fn from(sig: Signature) -> Self {
+        let mut writer = [0u8; 64];
+        sig.write(&mut writer[..]).expect("fails to write signature");
+        RedjubjubSignature(writer.to_vec())
+    }
+}
+
+
 #[wasm_bindgen]
 pub fn gen_account_id(sk: &[u8]) -> JsValue {
     let params = &JubjubBls12::new();
     let exps = keys::ExpandedSpendingKey::<Bls12>::from_spending_key(sk);
 
-
     let viewing_key = keys::ViewingKey::<Bls12>::from_expanded_spending_key(&exps, params);
     let address = viewing_key.into_payment_address(params);
 
-    let pkd_address = PkdAddress::from_payment_address(&address);
+    let pkd_address = PkdAddress::from(address);
     JsValue::from_serde(&pkd_address).expect("fails to write json")
 }
 
@@ -85,6 +104,6 @@ pub fn sign(sk: &[u8], msg: &[u8], seed_slice: &[u32]) -> JsValue {
         .expect("Jubjub scalars should serialize to 32 bytes");
 
     let sig = Signature { rbar, sbar };
-    let sig = RedjubjubSignature::from_signature(&sig);
+    let sig = RedjubjubSignature::from(sig);
     JsValue::from_serde(&sig).expect("fails to write json")
 }
