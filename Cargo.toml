@@ -24,6 +24,7 @@ zpairing = { package = "zero-chain-pairing", path = "pairing" }
 zprimitives = { package = "zero-chain-primitives", path = "primitives" }
 proofs = { package = "zero-chain-proofs", path = "proofs" }
 scrypto = { package = "sapling-crypto", git = "https://github.com/LayerXcom/librustzcash", branch = "zero-chain" }
+keys = { path = "keys"}
 bellman = { git = "https://github.com/LayerXcom/librustzcash", branch = "zero-chain" }
 pairing = { git = "https://github.com/LayerXcom/librustzcash", branch = "zero-chain" }
 rand = "0.4"
@@ -111,6 +112,7 @@ members = [
     "primitives",
     "proofs",
     "runtime",
+    "keys",
 ]
 exclude = [
     "runtime/wasm",

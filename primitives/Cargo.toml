@@ -19,6 +19,7 @@ fixed-hash = { version = "0.3.0", default-features = false }
 # primitive-types = { version = "0.2", default-features = false, features = ["codec"] }
 substrate-primitives = { git = "https://github.com/paritytech/substrate", rev = '9112a28af677b75cd6f935dda34d283bb4f676e7', default-features = false }
 runtime-primitives = { package = "sr-primitives", git = "https://github.com/paritytech/substrate", rev = '9112a28af677b75cd6f935dda34d283bb4f676e7', default-features = false }
+keys = { path = "../keys", default-features = false }
 
 [dependencies.blake2-rfc]
 git = "https://github.com/gtank/blake2-rfc"
@@ -46,5 +47,6 @@ std = [
 	"blake2-rfc/std",	
 	"fixed-hash/std",
 	"substrate-primitives/std",
-	"runtime-primitives/std"
+	"runtime-primitives/std",
+	"keys/std"
 ]

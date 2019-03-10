@@ -46,9 +46,9 @@ use zprimitives::{
 		pkd_address::PkdAddress,
 		proof::Proof as pProof,
 		sig_vk::{SigVerificationKey as pSigVerificationKey},
-		signature::RedjubjubSignature as pRedjubjubSignature,
-		keys::PaymentAddress as zPaymentAddress,
+		signature::RedjubjubSignature as pRedjubjubSignature,		
 	};
+use keys::PaymentAddress as zPaymentAddress;
 use parity_codec::{Encode, Decode};
 // use byteorder::{BigEndian, ByteOrder};
 

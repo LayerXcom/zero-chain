@@ -18,7 +18,6 @@ mod std {
 #[macro_use]
 extern crate serde_derive;
 
-pub mod keys;
 pub mod pkd_address;
 pub mod signature;
 pub mod ciphertext;

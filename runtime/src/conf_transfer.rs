@@ -29,10 +29,10 @@ use zprimitives::{
     ciphertext::Ciphertext, 
     proof::Proof, 
     sig_vk::SigVerificationKey, 
-    signature::RedjubjubSignature,
-    keys::{PaymentAddress},
+    signature::RedjubjubSignature,    
     prepared_vk::PreparedVk,
 };
+use keys::PaymentAddress;
 
 use zcrypto::elgamal;
 

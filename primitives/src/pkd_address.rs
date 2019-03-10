@@ -1,7 +1,7 @@
 #[cfg(feature = "std")]
 use serde::{Serialize, Serializer, Deserialize, Deserializer};
 // use primitive_types::H256;
-use crate::keys::PaymentAddress;
+use keys::PaymentAddress;
 use fixed_hash::construct_fixed_hash;
 use pairing::bls12_381::Bls12;
 use crate::JUBJUB;
@@ -95,7 +95,7 @@ mod tests {
     use super::*;
     use rand::{Rng, SeedableRng, XorShiftRng};    
     use pairing::bls12_381::Bls12;
-    use crate::keys::*;
+    use keys::*;
 
     #[test]
     fn test_addr_into_from() {

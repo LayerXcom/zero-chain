@@ -1,3 +1,19 @@
+#![cfg_attr(not(feature = "std"), no_std)]
+#![cfg_attr(not(feature = "std"), feature(alloc))]
+
+#[cfg(not(feature = "std"))]
+#[macro_use]
+extern crate alloc;
+
+#[cfg(not(feature = "std"))]
+mod std {
+    pub use ::core::*;
+    pub use crate::alloc::vec;
+    pub use crate::alloc::string;
+    pub use crate::alloc::boxed;
+    pub use crate::alloc::borrow;    
+}
+
 use pairing::{
     PrimeField,
     PrimeFieldRepr,    
@@ -227,22 +243,23 @@ impl<E: JubjubEngine> PaymentAddress<E> {
 mod tests {
     use super::*;
     use rand::{Rng, SeedableRng, XorShiftRng};
-    use crate::JUBJUB;
+    use jubjub::curve::JubjubBls12;    
     use pairing::bls12_381::Bls12;
     
     #[test]
     fn test_payment_address_read_write() {
+        let params = &JubjubBls12::new();
         let rng = &mut XorShiftRng::from_seed([0x3dbe6259, 0x8d313d76, 0x3237db17, 0xe5bc0654]);
         let mut seed = [0u8; 32];
         rng.fill_bytes(&mut seed[..]);
 
         let ex_sk = ExpandedSpendingKey::<Bls12>::from_spending_key(&seed[..]);
-        let viewing_key = ViewingKey::<Bls12>::from_expanded_spending_key(&ex_sk, &JUBJUB);        
-        let addr1 = viewing_key.into_payment_address(&JUBJUB);
+        let viewing_key = ViewingKey::<Bls12>::from_expanded_spending_key(&ex_sk, params);        
+        let addr1 = viewing_key.into_payment_address(params);
 
         let mut v = vec![];
         addr1.write(&mut v).unwrap();
-        let addr2 = PaymentAddress::<Bls12>::read(&mut v.as_slice(), &JUBJUB).unwrap();
+        let addr2 = PaymentAddress::<Bls12>::read(&mut v.as_slice(), params).unwrap();
         assert!(addr1 == addr2);
     }
 }

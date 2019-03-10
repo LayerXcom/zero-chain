@@ -9,9 +9,9 @@ use crate::pvk::PVK;
 use zprimitives::{
 	prepared_vk::PreparedVk,
 	pkd_address::PkdAddress,
-	ciphertext::Ciphertext,
-	keys::{ExpandedSpendingKey, ViewingKey},
+	ciphertext::Ciphertext,	
 	};
+use keys::{ExpandedSpendingKey, ViewingKey};
 use rand::{OsRng, Rng};
 use jubjub::{curve::{JubjubBls12, FixedGenerators, fs, ToUniform}};
 use zpairing::bls12_381::Bls12;
