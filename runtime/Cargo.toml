@@ -5,6 +5,8 @@ zprimitives = { package = "zero-chain-primitives", path = "../primitives", defau
 jubjub = { path = "../jubjub", default-features = false }
 zcrypto = { package = "zero-chain-crypto", path = "../crypto", default-features = false }
 keys = { path = "../keys", default-features = false }
+hex-literal = "0.1.0"
+indices = { package = "srml-indices", path = "../modules/indices", default-features = false }
 
 [dependencies.aura]
 default_features = false
@@ -46,12 +48,6 @@ rev = '9112a28af677b75cd6f935dda34d283bb4f676e7'
 default_features = false
 git = 'https://github.com/paritytech/substrate.git'
 package = 'srml-fees'
-rev = '9112a28af677b75cd6f935dda34d283bb4f676e7'
-
-[dependencies.indices]
-default_features = false
-git = 'https://github.com/paritytech/substrate.git'
-package = 'srml-indices'
 rev = '9112a28af677b75cd6f935dda34d283bb4f676e7'
 
 [dependencies.parity-codec]

@@ -1,5 +1,5 @@
 [package]
-name = "wasm-utils"
+name = "zerochain-wasm-utils"
 version = "0.1.0"
 authors = ["Osuke Sudo <dish230@gmail.com>"]
 edition = "2018"

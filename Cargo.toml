@@ -113,6 +113,7 @@ members = [
     "proofs",
     "runtime",
     "keys",
+    "modules/indices"
 ]
 exclude = [
     "runtime/wasm",
