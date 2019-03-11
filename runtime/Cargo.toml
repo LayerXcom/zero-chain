@@ -1,10 +1,10 @@
 [dependencies]
-pairing = { package = "zero-chain-pairing", path = "../pairing", default-features = false }
-bellman-verifier = { path = "../bellman-verifier", default-features = false }
-zprimitives = { package = "zero-chain-primitives", path = "../primitives", default-features = false }
-jubjub = { path = "../jubjub", default-features = false }
-zcrypto = { package = "zero-chain-crypto", path = "../crypto", default-features = false }
-keys = { path = "../keys", default-features = false }
+pairing = { package = "zero-chain-pairing", path = "../core/pairing", default-features = false }
+bellman-verifier = { path = "../core/bellman-verifier", default-features = false }
+zprimitives = { package = "zero-chain-primitives", path = "../core/primitives", default-features = false }
+jubjub = { path = "../core/jubjub", default-features = false }
+zcrypto = { package = "zero-chain-crypto", path = "../core/crypto", default-features = false }
+keys = { path = "../core/keys", default-features = false }
 hex-literal = "0.1.0"
 indices = { package = "srml-indices", path = "../modules/indices", default-features = false }
 
