@@ -140,3 +140,19 @@ pub fn verify(vk: Vec<u8>, msg: &[u8], sig: Vec<u8>) -> bool {
     ).mul_by_cofactor(params).eq(&Point::zero())
 }
 
+
+
+// #[derive(Serialize)]
+// struct Calls {
+
+// }
+
+// #[wasm_bindgen]
+// pub fn gen_call(sk: &[u8], index: u64, address_recipient: &[u8], value: u32, balance: u32) -> JsValue {
+//     let params = &JubjubBls12::new();
+//     let rng = &mut ChaChaRng::from_seed(seed_slice);
+//     let p_g = params.generator(FixedGenerators::NullifierPosition); // 2
+
+
+// }
+

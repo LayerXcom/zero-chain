@@ -107,6 +107,7 @@ members = [
     "core/bellman-verifier",
     "core/crypto",
     "demo/cli",
+    "demo/wasm-utils",
     "core/jubjub",
     "core/pairing",
     "core/primitives",
@@ -116,6 +117,5 @@ members = [
     "modules/indices"
 ]
 exclude = [
-    "runtime/wasm",
-    "demo/wasm-utils",
+    "runtime/wasm",    
 ]

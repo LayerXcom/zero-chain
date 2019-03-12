@@ -9,7 +9,7 @@ use bellman::groth16::{
 
 use scrypto::jubjub::{JubjubBls12};
 use rand::OsRng;
-use crate::circuit_transfer::Transfer;
+use proofs::circuit_transfer::Transfer;
 
 // use std::fs::File;
 // use std::io::{Write, BufWriter};

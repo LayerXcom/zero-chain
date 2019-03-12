@@ -1,19 +1,27 @@
 #[macro_use]
 extern crate structopt;
 use structopt::StructOpt;
-use clap::{Arg, App, SubCommand};
+use clap::{Arg, App, SubCommand, AppSettings};
 use rand::{OsRng, Rng, Rand};
 use proofs::{
-    primitives::{ExpandedSpendingKey, ViewingKey}, 
-    setup::setup,
+    primitives::{ExpandedSpendingKey, ViewingKey},     
     elgamal::{Ciphertext, elgamal_extend},
     };
 use substrate_primitives::hexdisplay::{HexDisplay, AsBytesRef};
 use pairing::{bls12_381::Bls12, PrimeField};
 use scrypto::jubjub::{JubjubBls12, fs, ToUniform, JubjubParams, FixedGenerators};      
+use std::fs::File;
+use std::path::{Path, PathBuf};
+use std::string::String;
+use std::io::{BufWriter, Write};
+use std::env;
+
 
 pub mod transaction;
 use transaction::Transaction;
+
+mod setup;
+use setup::setup;
 
 extern crate parity_codec as codec;
 #[macro_use]
@@ -25,15 +33,15 @@ lazy_static! {
     static ref JUBJUB: JubjubBls12 = { JubjubBls12::new() };
 }
 
-// #[derive(StructOpt, Debug)]
+#[derive(StructOpt, Debug)]
 // #[structopt(name = "zero-chain-demo")]
-// struct Opt {
-//     #[structopt(short = "n", long = "nonce")]
-//     nonce: u64,
+struct Opt {
+    #[structopt(short = "n", long = "nonce", name = "nonce")]
+    nonce: u64,
     
-//     #[structopt(short = "b", long = "balance")]
-//     balance: u32,
-// }
+    #[structopt(short = "b", long = "balance")]
+    balance: u32,
+}
 
 fn get_address(seed: &[u8; 32]) -> Vec<u8> { 
     let expsk = ExpandedSpendingKey::<Bls12>::from_spending_key(seed);     
@@ -123,6 +131,12 @@ fn print_alice_tx(sender_seed: &[u8], recipient_seed: &[u8], nonce: u64) {
 fn main() {
     // let opt = Opt::from_args();
     // println!("{:?}", opt);
+
+    cli().unwrap_or_else(|e| {
+        println!("{}", e);
+        std::process::exit(1);
+    });
+
     let mut seed = [0u8; 32];
     if let Ok(mut e) = OsRng::new() {
         e.fill_bytes(&mut seed[..]);
@@ -140,4 +154,74 @@ fn main() {
     print_random_accounts(&seed, 2);
     let nonce = 0 as u64;
     print_alice_tx(alice_seed, bob_seed, nonce);
+}
+
+
+fn cli() -> Result<(), String> {
+    const VERIFICATION_KEY_PATH: &str = "verification.key";
+    const PROVING_KEY_PATH: &str = "proving.key";
+
+    let matches = App::new("Zerochain")
+        .setting(AppSettings::SubcommandRequiredElseHelp)
+        .version("0.1.0")
+        .author("Osuke Sudo")
+        .about("Privacy oriented blockchain framework")
+        .subcommand(SubCommand::with_name("setup")
+            .about("Performs a trusted setup for a given constraint system")
+            .arg(Arg::with_name("proving-key-path")
+                .short("p")
+                .long("proving-key-path")
+                .help("Path of the generated proving key file")
+                .value_name("FILE")
+                .takes_value(true)
+                .required(false)
+                .default_value(PROVING_KEY_PATH)
+            )
+            .arg(Arg::with_name("verification-key-path")
+                .short("v")
+                .long("verification-key-path")
+                .help("Path of the generated verification key file")
+                .value_name("FILE")
+                .takes_value(true)
+                .required(false)
+                .default_value(VERIFICATION_KEY_PATH)
+            )
+        )
+        .get_matches();
+
+    match matches.subcommand() {
+        ("setup", Some(sub_matches)) => {
+            println!("Performing setup...");             
+
+            let pk_path = Path::new(sub_matches.value_of("proving-key-path").unwrap());
+            let vk_path = Path::new(sub_matches.value_of("verification-key-path").unwrap());
+
+            let pk_file = File::create(&pk_path)
+                .map_err(|why| format!("couldn't create {}: {}", pk_path.display(), why))?;
+            let vk_file = File::create(&vk_path)
+                .map_err(|why| format!("couldn't create {}: {}", vk_path.display(), why))?;
+            
+            let mut bw_pk = BufWriter::new(pk_file);
+            let mut bw_vk = BufWriter::new(vk_file);
+
+            let (proving_key, prepared_vk) = setup();
+            let mut v_pk = vec![];
+            let mut v_vk = vec![];
+            proving_key.write(&mut &mut v_pk).unwrap();
+            prepared_vk.write(&mut &mut v_vk).unwrap();
+
+            bw_pk.write(&v_pk[..])
+                .map_err(|_| "Unable to write proving key data to file.".to_string())?;
+            
+            bw_vk.write(&v_vk[..])   
+                .map_err(|_| "Unable to write verification key data to file.".to_string())?;        
+
+            bw_pk.flush()
+                .map_err(|_| "Unable to flush proving key buffer.".to_string())?;
+            bw_vk.flush()
+                .map_err(|_| "Unable to flush verification key buffer.".to_string())?;
+        }
+        _ => unreachable!()
+    }
+    Ok(())
 }
