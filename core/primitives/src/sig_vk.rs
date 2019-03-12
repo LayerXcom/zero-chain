@@ -25,7 +25,7 @@ construct_fixed_hash! {
 
 pub type SigVerificationKey = H256;
 
-use parity_codec::{Encode, Decode, Input, Output};
+use parity_codec::{Encode, Decode, Input};
 
 // #[derive(Eq, PartialEq, Clone, Default, Encode, Decode, PartialOrd, Ord)]
 // #[cfg_attr(feature = "std", derive(Debug, Serialize, Deserialize))]

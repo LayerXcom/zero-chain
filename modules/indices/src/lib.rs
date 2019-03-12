@@ -22,7 +22,7 @@
 use rstd::{prelude::*, result, marker::PhantomData};
 use parity_codec::{Encode, Decode, Codec, Input, Output};
 use support::{StorageValue, StorageMap, Parameter, decl_module, decl_event, decl_storage};
-use runtime_primitives::traits::{One, SimpleArithmetic, As, StaticLookup, Member};
+use runtime_primitives::traits::{One, SimpleArithmetic, As, StaticLookup, Member, MaybeSerializeDebug, MaybeDisplay};
 use system::{IsDeadAccount, OnNewAccount};
 
 use self::address::Address as RawAddress;
@@ -67,6 +67,10 @@ pub trait Trait: system::Trait {
 
 	/// The overarching event type.
 	type Event: From<Event<Self>> + Into<<Self as system::Trait>::Event>;
+
+	// type PkdAddress: Parameter + Member + MaybeSerializeDebug + MaybeDisplay + Ord + Default;
+
+	// type AccountId: Parameter + Member + MaybeSerializeDebug + MaybeDisplay + Ord + Default;
 }
 
 decl_module! {

@@ -43,6 +43,7 @@ pub use support::{StorageValue, construct_runtime};
 /// Alias to Ed25519 pubkey that identifies an account on the chain.
 // pub type AccountId = primitives::H256;
 pub type AccountId = SigVerificationKey;
+// pub type AccountId = PkdAddress;
 
 /// A hash of some data used by the chain.
 pub type Hash = primitives::H256;
@@ -52,8 +53,6 @@ pub type BlockNumber = u64;
 
 /// Index of an account's extrinsic in the chain.
 pub type Nonce = u64;
-
-pub type PkdAddr = PkdAddress;
 
 mod conf_transfer;
 
@@ -151,6 +150,10 @@ impl indices::Trait for Runtime {
 	type IsDeadAccount = Balances;
 	/// The uniquitous event type.
 	type Event = Event;
+	// The account address
+	// type PkdAddress = PkdAddress;
+	// The account id which is equivalent to SigVerificationKey
+	// type AccountId = Self::AccountId;
 }
 
 impl timestamp::Trait for Runtime {
@@ -208,7 +211,8 @@ construct_runtime!(
 /// The type used as a helper for interpreting the sender of transactions.
 type Context = system::ChainContext<Runtime>;
 /// The address format for describing accounts.
-type Address = <Indices as StaticLookup>::Source;
+type Address = <Indices as StaticLookup>::Source; // TODO: Chenge from PkdAddress to SigVerificationKey
+// type Address = AccountId;
 /// Block header type as expected by this runtime.
 pub type Header = generic::Header<BlockNumber, BlakeTwo256, Log>;
 /// Block type as expected by this runtime.

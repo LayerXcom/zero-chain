@@ -7,7 +7,7 @@ use rand::{Rng, Rand};
 use crate::curve::{FixedGenerators, JubjubEngine, JubjubParams, Unknown, edwards::Point};
 use crate::util::{hash_to_scalar};
 
-fn read_scalar<E: JubjubEngine, R: io::Read>(mut reader: R) -> io::Result<E::Fs> {
+pub fn read_scalar<E: JubjubEngine, R: io::Read>(mut reader: R) -> io::Result<E::Fs> {
     let mut s_repr = <E::Fs as PrimeField>::Repr::default();
     s_repr.read_le(&mut reader)?;
 

@@ -14,8 +14,8 @@ use zpairing::{
     Field,
 };
 use zjubjub::{
-    curve::{JubjubBls12, FixedGenerators, JubjubParams},
-    redjubjub::{h_star, Signature, write_scalar},
+    curve::{JubjubBls12, FixedGenerators, JubjubParams, edwards::Point},
+    redjubjub::{h_star, Signature, PublicKey, write_scalar, read_scalar},
 };
 
 cfg_if! {
@@ -107,3 +107,36 @@ pub fn sign(sk: &[u8], msg: &[u8], seed_slice: &[u32]) -> JsValue {
     let sig = RedjubjubSignature::from(sig);
     JsValue::from_serde(&sig).expect("fails to write json")
 }
+
+#[wasm_bindgen]
+pub fn verify(vk: Vec<u8>, msg: &[u8], sig: Vec<u8>) -> bool {
+    let params = &JubjubBls12::new();    
+
+    let vk = PublicKey::<Bls12>::read(&mut &vk[..], params).unwrap();
+    let sig = Signature::read(&mut &sig[..]).unwrap();
+
+    // c = H*(Rbar || M)
+    let c = h_star::<Bls12>(&sig.rbar[..], msg);
+
+    // Signature checks:
+    // R != invalid
+    let r = match Point::read(&mut &sig.rbar[..], params) {
+        Ok(r) => r,
+        Err(_) => return false,
+    };
+    // S < order(G)
+    // (E::Fs guarantees its representation is in the field)
+    let s = match read_scalar::<Bls12, &[u8]>(&sig.sbar[..]) {
+        Ok(s) => s,
+        Err(_) => return false,
+    };
+    // 0 = h_G(-S . P_G + R + c . vk)
+    vk.0.mul(c, params).add(&r, params).add(
+        &params.generator(FixedGenerators::SpendingKeyGenerator)
+                .mul(s, params)
+                .negate()
+                .into(),
+        params
+    ).mul_by_cofactor(params).eq(&Point::zero())
+}
+

@@ -12,7 +12,7 @@ use crate::JUBJUB;
 #[cfg(feature = "std")]
 use substrate_primitives::bytes;
 
-use parity_codec::{Encode, Decode, Input, Output};
+use parity_codec::{Encode, Decode, Input};
 
 
 // #[derive(Eq, PartialEq, Clone, Default, Encode, Decode)]
