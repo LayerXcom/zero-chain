@@ -1,6 +1,3 @@
-#[macro_use]
-extern crate structopt;
-use structopt::StructOpt;
 use clap::{Arg, App, SubCommand, AppSettings};
 use rand::{OsRng, Rng, Rand};
 use proofs::{
@@ -30,23 +27,13 @@ extern crate parity_codec_derive as codec_derive;
 extern crate lazy_static;
 
 lazy_static! {
-    static ref JUBJUB: JubjubBls12 = { JubjubBls12::new() };
-}
-
-#[derive(StructOpt, Debug)]
-// #[structopt(name = "zero-chain-demo")]
-struct Opt {
-    #[structopt(short = "n", long = "nonce", name = "nonce")]
-    nonce: u64,
-    
-    #[structopt(short = "b", long = "balance")]
-    balance: u32,
+    pub static ref params: JubjubBls12 = { JubjubBls12::new() };
 }
 
 fn get_address(seed: &[u8; 32]) -> Vec<u8> { 
     let expsk = ExpandedSpendingKey::<Bls12>::from_spending_key(seed);     
-    let viewing_key = ViewingKey::<Bls12>::from_expanded_spending_key(&expsk, &JUBJUB);        
-    let address = viewing_key.into_payment_address(&JUBJUB);
+    let viewing_key = ViewingKey::<Bls12>::from_expanded_spending_key(&expsk, &params);        
+    let address = viewing_key.into_payment_address(&params);
 
     let mut address_bytes = vec![];
     address.write(&mut address_bytes).unwrap();
@@ -66,8 +53,7 @@ fn print_random_accounts(seed: &[u8; 32], num: i32) {
     }
 }
 
-fn print_alice_tx(sender_seed: &[u8], recipient_seed: &[u8], nonce: u64) {
-    let params = &JubjubBls12::new();
+fn print_alice_tx(sender_seed: &[u8], recipient_seed: &[u8], nonce: u64) {    
     let mut rng = OsRng::new().expect("should be able to construct RNG");
     let p_g = FixedGenerators::NullifierPosition; // 2
 
@@ -81,10 +67,10 @@ fn print_alice_tx(sender_seed: &[u8], recipient_seed: &[u8], nonce: u64) {
     let ex_sk_s = ExpandedSpendingKey::<Bls12>::from_spending_key(&sender_seed[..]);
     let ex_sk_r = ExpandedSpendingKey::<Bls12>::from_spending_key(&recipient_seed[..]);
     
-    let viewing_key_s = ViewingKey::<Bls12>::from_expanded_spending_key(&ex_sk_s, params);
-    let viewing_key_r = ViewingKey::<Bls12>::from_expanded_spending_key(&ex_sk_r, params);
+    let viewing_key_s = ViewingKey::<Bls12>::from_expanded_spending_key(&ex_sk_s, &params);
+    let viewing_key_r = ViewingKey::<Bls12>::from_expanded_spending_key(&ex_sk_r, &params);
 
-    let address_recipient = viewing_key_r.into_payment_address(params);
+    let address_recipient = viewing_key_r.into_payment_address(&params);
     
     // let sk_fs = fs::Fs::to_uniform(elgamal_extend(&sender_seed).as_bytes()).into_repr();
     let ivk = viewing_key_s.ivk();
@@ -93,19 +79,20 @@ fn print_alice_tx(sender_seed: &[u8], recipient_seed: &[u8], nonce: u64) {
     rng.fill_bytes(&mut randomness[..]);
     let r_fs = fs::Fs::to_uniform(elgamal_extend(&randomness).as_bytes());
 
-    let public_key = params.generator(p_g).mul(ivk, params).into();
-    let ciphertext_balance = Ciphertext::encrypt(balance, r_fs, &public_key, p_g, params);        
+    let public_key = params.generator(p_g).mul(ivk, &params).into();
+    let ciphertext_balance = Ciphertext::encrypt(balance, r_fs, &public_key, p_g, &params);        
 
     let tx = Transaction::gen_tx(
                     value, 
                     remaining_balance, 
                     alpha,
                     &proving_key,
-                    &prepared_vk,
+                    // &prepared_vk,
                     &address_recipient,
                     sender_seed,
                     ciphertext_balance,
-                    nonce
+                    nonce,
+                    &mut rng
             ).expect("fails to generate the tx");
 
     println!(
@@ -127,11 +114,8 @@ fn print_alice_tx(sender_seed: &[u8], recipient_seed: &[u8], nonce: u64) {
         HexDisplay::from(&tx.rk as &AsBytesRef),
     );
 }
-
-fn main() {
-    // let opt = Opt::from_args();
-    // println!("{:?}", opt);
-
+    
+fn main() {   
     cli().unwrap_or_else(|e| {
         println!("{}", e);
         std::process::exit(1);

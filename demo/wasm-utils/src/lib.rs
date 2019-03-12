@@ -141,18 +141,56 @@ pub fn verify(vk: Vec<u8>, msg: &[u8], sig: Vec<u8>) -> bool {
 }
 
 
-
 // #[derive(Serialize)]
 // struct Calls {
-
+//     zkProof: Vec<u8>,
+//     address_sender: Vec<u8>,
+//     address_recipient: Vec<u8>,
+//     value_sender: Vec<u8>,
+//     value_recipient: Vec<u8>,
+//     balance_sender: Vec<u8>,
+//     rk: Vec<u8>,
 // }
 
 // #[wasm_bindgen]
-// pub fn gen_call(sk: &[u8], index: u64, address_recipient: &[u8], value: u32, balance: u32) -> JsValue {
+// pub fn gen_call(
+//     sk: &[u8], 
+//     nonce: u64, 
+//     address_recipient: &[u8], 
+//     value: u32, 
+//     balance: u32,
+//     seed_slice: &[u32],
+// ) -> JsValue 
+// {
 //     let params = &JubjubBls12::new();
 //     let rng = &mut ChaChaRng::from_seed(seed_slice);
 //     let p_g = params.generator(FixedGenerators::NullifierPosition); // 2
+//     let remaining_balance = balance - value;
+
+//     let alpha = fs::Fs::rand(&mut rng);
+
+//     let tx = Transaction::gen_tx(
+//                 value, 
+//                 remaining_balance, 
+//                 alpha,
+//                 &proving_key,
+//                 &prepared_vk,
+//                 &address_recipient,
+//                 sender_seed,
+//                 ciphertext_balance,                
+//                 nonce,
+//                 rng
+//         ).expect("fails to generate the tx");
 
 
+//     Calls {
+//         zkProof: Vec<u8>,
+//         address_sender: Vec<u8>,
+//         address_recipient: Vec<u8>,
+//         value_sender: Vec<u8>,
+//         value_recipient: Vec<u8>,
+//         balance_sender: Vec<u8>,
+//         rk: Vec<u8>,
+//     }
 // }
 

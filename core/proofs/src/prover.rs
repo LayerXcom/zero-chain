@@ -11,7 +11,7 @@ use pairing::{
     },
     Field,    
 };
-use rand::{OsRng, Rand};
+use rand::{OsRng, Rand, Rng};
 use scrypto::{    
     jubjub::{
         JubjubEngine,               
@@ -35,26 +35,27 @@ pub struct TransferProof<E: JubjubEngine> {
     pub address_sender: PaymentAddress<E>,    
     pub address_recipient: PaymentAddress<E>,
     pub cipher_val_s: Ciphertext<E>,
-    pub cipher_val_r: Ciphertext<E>,
+    pub cipher_val_r: Ciphertext<E>,    
 }
 
 impl<E: JubjubEngine> TransferProof<E> {    
-    pub fn gen_proof(        
+    pub fn gen_proof<R: Rng>(        
         value: u32,         
         remaining_balance: u32,        
         alpha: E::Fs,        
         proving_key: &Parameters<E>, 
-        prepared_vk: &PreparedVerifyingKey<E>,
+        // prepared_vk: &PreparedVerifyingKey<E>,
         proof_generation_key: ProofGenerationKey<E>,
         address_recipient: PaymentAddress<E>,   
-        ciphertext_balance: Ciphertext<E>,  
+        ciphertext_balance: Ciphertext<E>,
+        rng: &mut R,  
         params: &E::Params,        
     ) -> Self
     {
         // TODO: Change OsRng for wasm
-        let mut rng = OsRng::new().expect("should be able to construct RNG");
+        // let mut rng = OsRng::new().expect("should be able to construct RNG");
 
-        let randomness = E::Fs::rand(&mut rng);   
+        let randomness = E::Fs::rand(rng);   
         
         let viewing_key = proof_generation_key.into_viewing_key(params);
         let ivk = viewing_key.ivk();
@@ -81,7 +82,7 @@ impl<E: JubjubEngine> TransferProof<E> {
         };
 
         // Crate proof
-        let proof = create_random_proof(instance, proving_key, &mut rng)
+        let proof = create_random_proof(instance, proving_key, rng)
             .expect("proving should not fail");
         
         let mut public_input = [E::Fr::zero(); 16];
@@ -143,8 +144,8 @@ impl<E: JubjubEngine> TransferProof<E> {
             public_input[15] = y;
         }                             
 
-        verify_proof(prepared_vk, &proof, &public_input[..])
-            .expect("verifying should not fail");
+        // verify_proof(prepared_vk, &proof, &public_input[..])
+        //     .expect("verifying should not fail");
 
         let transfer_proof = TransferProof {
             proof: proof,        
@@ -152,7 +153,7 @@ impl<E: JubjubEngine> TransferProof<E> {
             address_sender: address_sender,  
             address_recipient: address_recipient,          
             cipher_val_s: cipher_val_s,
-            cipher_val_r: cipher_val_r,
+            cipher_val_r: cipher_val_r,            
         };
 
         transfer_proof
@@ -162,12 +163,14 @@ impl<E: JubjubEngine> TransferProof<E> {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::setup;    
     use rand::{SeedableRng, XorShiftRng, Rng};
     use crate::primitives::{ExpandedSpendingKey, ViewingKey};
     use scrypto::jubjub::{fs, ToUniform, JubjubParams};
     use crate::elgamal::elgamal_extend;
-    use pairing::PrimeField;    
+    use pairing::PrimeField;
+    use std::path::{Path, PathBuf};
+    use std::fs::File;
+    use std::io::{BufRead, BufReader, Read};
 
     #[test]
     fn test_gen_proof() {        
@@ -178,9 +181,21 @@ mod tests {
         let value = 10 as u32;
         let remaining_balance = 30 as u32;
         let balance = 40 as u32;
-        let alpha = fs::Fs::rand(&mut rng); 
+        let alpha = fs::Fs::rand(&mut rng);         
 
-        let (proving_key, prepared_vk) = setup::setup();
+        let pk_path = Path::new("../../demo/cli/proving.key");        
+        let vk_path = Path::new("../../demo/cli/verification.key");        
+
+        let pk_file = File::open(&pk_path).unwrap();
+        let vk_file = File::open(&vk_path).unwrap();
+
+        let mut pk_reader = BufReader::new(pk_file);
+        let mut vk_reader = BufReader::new(vk_file);
+
+        let mut buf_pk = vec![];
+        pk_reader.read_to_end(&mut buf_pk).unwrap();
+
+        let proving_key = Parameters::<Bls12>::read(&mut &buf_pk[..], true).unwrap();
 
         let mut sender_seed = [0u8; 32];
         let mut recipient_seed = [0u8; 32];
@@ -203,16 +218,35 @@ mod tests {
         let public_key = params.generator(p_g).mul(sk_fs, params).into();
         let ciphertext_balance = Ciphertext::encrypt(balance, r_fs, &public_key, p_g, params);
 
+        // let (_, prepared_vk) = setup::setup();        
+
         let _proofs = TransferProof::gen_proof(
             value, 
             remaining_balance, 
             alpha, 
             &proving_key, 
-            &prepared_vk, 
+            // &prepared_vk, 
             proof_generation_key, 
             address_recipient, 
             ciphertext_balance, 
+            &mut rng,
             params
         );
+    }
+
+    #[test]
+    fn test_read_proving_key() {
+        let pk_path = Path::new("../../demo/cli/proving.key");        
+
+        let pk_file = File::open(&pk_path).unwrap();        
+
+        let mut pk_reader = BufReader::new(pk_file);        
+        println!("{:?}", pk_reader);
+        let mut buf = vec![];
+
+        pk_reader.read_to_end(&mut buf).unwrap();
+        println!("{:?}", buf.len());
+        
+        let proving_key = Parameters::<Bls12>::read(&mut &buf[..], true).unwrap();
     }
 }
