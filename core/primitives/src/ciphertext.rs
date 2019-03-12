@@ -16,7 +16,7 @@ use ::std::marker;
 #[cfg(not(feature = "std"))]
 use crate::std::marker;
 
-use parity_codec::{Encode, Decode, Input, Output};
+use parity_codec::{Encode, Decode, Input};
 #[cfg(feature = "std")]
 use substrate_primitives::hexdisplay::AsBytesRef;
 

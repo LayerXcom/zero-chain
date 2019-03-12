@@ -67,7 +67,7 @@ impl<E: JubjubEngine> TransferProof<E> {
                 alpha,
                 FixedGenerators::SpendingKeyGenerator,
                 params,
-        );                       
+        );
 
         let instance = Transfer {
             params: params,
@@ -183,8 +183,8 @@ mod tests {
         let balance = 40 as u32;
         let alpha = fs::Fs::rand(&mut rng);         
 
-        let pk_path = Path::new("../../demo/cli/proving.key");        
-        let vk_path = Path::new("../../demo/cli/verification.key");        
+        let pk_path = Path::new("../../demo/cli/proving.params");        
+        let vk_path = Path::new("../../demo/cli/verification.params");        
 
         let pk_file = File::open(&pk_path).unwrap();
         let vk_file = File::open(&vk_path).unwrap();
@@ -236,7 +236,7 @@ mod tests {
 
     #[test]
     fn test_read_proving_key() {
-        let pk_path = Path::new("../../demo/cli/proving.key");        
+        let pk_path = Path::new("../../demo/cli/proving.params");        
 
         let pk_file = File::open(&pk_path).unwrap();        
 

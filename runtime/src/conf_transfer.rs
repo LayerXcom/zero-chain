@@ -169,7 +169,6 @@ decl_storage! {
         pub EncryptedBalance get(encrypted_balance) config() : map PkdAddress => Option<Ciphertext>; 
         // The verification key of zk proofs (only readable)
         pub VerifyingKey get(verifying_key) config(): PreparedVk;         
-        pub H256 get(h256) config(): T::Hash;
     }
 }
 

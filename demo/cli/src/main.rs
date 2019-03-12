@@ -12,10 +12,7 @@ use std::path::{Path, PathBuf};
 use std::string::String;
 use std::io::{BufWriter, Write};
 use std::env;
-
-
-pub mod transaction;
-use transaction::Transaction;
+use wasm_utils::transaction::Transaction;
 
 mod setup;
 use setup::setup;
@@ -142,8 +139,8 @@ fn main() {
 
 
 fn cli() -> Result<(), String> {
-    const VERIFICATION_KEY_PATH: &str = "verification.key";
-    const PROVING_KEY_PATH: &str = "proving.key";
+    const VERIFICATION_KEY_PATH: &str = "verification.params";
+    const PROVING_KEY_PATH: &str = "proving.params";
 
     let matches = App::new("Zerochain")
         .setting(AppSettings::SubcommandRequiredElseHelp)

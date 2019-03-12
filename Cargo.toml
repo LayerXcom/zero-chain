@@ -17,7 +17,7 @@ tokio = '0.1'
 trie-root = '0.11.0'
 
 bellman-verifier = { path = "core/bellman-verifier"}
-demo = { package = "zero-chain-demo", path = "demo/cli" }
+demo = { package = "zero-chain-cli", path = "demo/cli" }
 zcrypto = { package = "zero-chain-crypto", path = "core/crypto" }
 jubjub = { path = "core/jubjub" }
 zpairing = { package = "zero-chain-pairing", path = "core/pairing" }

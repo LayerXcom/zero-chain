@@ -5,7 +5,6 @@ use zero_chain_runtime::{
 };
 use substrate_service;
 
-use crate::pvk::PVK;
 use zprimitives::{
 	prepared_vk::PreparedVk,
 	pkd_address::PkdAddress,
@@ -16,6 +15,9 @@ use rand::{OsRng, Rng};
 use jubjub::{curve::{JubjubBls12, FixedGenerators, fs, ToUniform}};
 use zpairing::bls12_381::Bls12;
 use zcrypto::elgamal::{self, elgamal_extend};
+use std::path::{Path, PathBuf};
+use std::fs::File;
+use std::io::{BufRead, BufReader, Read};
 
 lazy_static! {
     static ref JUBJUB: JubjubBls12 = { JubjubBls12::new() };
@@ -122,24 +124,26 @@ fn testnet_genesis(initial_authorities: Vec<Ed25519AuthorityId>, endowed_account
 		}),
 		conf_transfer: Some(ConfTransferConfig {
 			encrypted_balance: vec![alice_init(), (PkdAddress::from_slice(b"Alice                           "), Ciphertext::from_slice(b"Alice                           Bob                             "))],
-			verifying_key: get_pvk(&PVK),
-			// verifying_key: PreparedVk(vec![1]),			
-			h256: H256::from_slice(b"Alice                           "),
-			// _genesis_phantom_data: Default::default(),
+			verifying_key: get_pvk(),								
+			_genesis_phantom_data: Default::default(),
 		})
 	}
 }
 
-fn get_pvk(pvk_array: &[i32]) -> PreparedVk {
-	
+fn get_pvk() -> PreparedVk {
+	let vk_path = Path::new("./demo/cli/verification.params"); 
+	let vk_file = File::open(&vk_path).unwrap();
+	let mut vk_reader = BufReader::new(vk_file);
 
-	let pvk_vec_u8: Vec<u8> = pvk_array.to_vec().into_iter().map(|e| e as u8).collect();	
-	PreparedVk(pvk_vec_u8)
+	let mut buf_vk = vec![];
+    vk_reader.read_to_end(&mut buf_vk).unwrap();
+		
+	PreparedVk(buf_vk)
 }
 
 fn alice_init() -> (PkdAddress, Ciphertext) {
 	let alice_seed = b"Alice                           ";
-	let alice_value = 100 as u32;
+	let alice_value = 1000 as u32;
 
 	let p_g = FixedGenerators::ElGamal;
 	let mut randomness = [0u8; 32];

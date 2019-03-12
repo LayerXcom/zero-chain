@@ -1,22 +1,40 @@
 extern crate cfg_if;
 #[macro_use]
 extern crate serde_derive;
+extern crate parity_codec as codec;
+#[macro_use]
+extern crate parity_codec_derive as codec_derive;
 
 mod utils;
 
 use cfg_if::cfg_if;
 use wasm_bindgen::prelude::*;
 
-use rand::{ChaChaRng, SeedableRng, Rng};
-use keys::{self, PaymentAddress};
+use rand::{ChaChaRng, SeedableRng, Rng, Rand};
+use keys;
 use zpairing::{
-    bls12_381::Bls12,
+    bls12_381::Bls12 as zBls12,
     Field,
 };
+use pairing::{
+    bls12_381::Bls12
+};
 use zjubjub::{
-    curve::{JubjubBls12, FixedGenerators, JubjubParams, edwards::Point},
+    curve::{JubjubBls12 as zJubjubBls12, 
+        FixedGenerators as zFixedGenerators, 
+        JubjubParams as zJubjubParams, 
+        edwards::Point as zPoint},
     redjubjub::{h_star, Signature, PublicKey, write_scalar, read_scalar},
 };
+use scrypto::jubjub::{fs, FixedGenerators, ToUniform, JubjubBls12, JubjubParams};
+use proofs::{
+    primitives::{ExpandedSpendingKey, ViewingKey, PaymentAddress},
+    elgamal::{Ciphertext, elgamal_extend},
+};
+use bellman::groth16::Parameters;
+
+pub mod transaction;
+use transaction::Transaction;
 
 cfg_if! {
     // When the `wee_alloc` feature is enabled, use `wee_alloc` as the global
@@ -28,21 +46,11 @@ cfg_if! {
     }
 }
 
-#[wasm_bindgen]
-extern {
-    fn alert(s: &str);
-}
-
-#[wasm_bindgen]
-pub fn greet() {
-    alert("Hello, wasm-utils!");
-}
-
 #[derive(Serialize)]
 pub struct PkdAddress(pub(crate) [u8; 32]);
 
-impl From<PaymentAddress<Bls12>> for PkdAddress {
-    fn from(address: PaymentAddress<Bls12>) -> Self {
+impl From<keys::PaymentAddress<zBls12>> for PkdAddress {
+    fn from(address: keys::PaymentAddress<zBls12>) -> Self {
         let mut writer = [0u8; 32];
         address.write(&mut writer[..]).expect("fails to write payment address");
         PkdAddress(writer)
@@ -60,13 +68,12 @@ impl From<Signature> for RedjubjubSignature {
     }
 }
 
-
 #[wasm_bindgen]
 pub fn gen_account_id(sk: &[u8]) -> JsValue {
-    let params = &JubjubBls12::new();
-    let exps = keys::ExpandedSpendingKey::<Bls12>::from_spending_key(sk);
+    let params = &zJubjubBls12::new();
+    let exps = keys::ExpandedSpendingKey::<zBls12>::from_spending_key(sk);
 
-    let viewing_key = keys::ViewingKey::<Bls12>::from_expanded_spending_key(&exps, params);
+    let viewing_key = keys::ViewingKey::<zBls12>::from_expanded_spending_key(&exps, params);
     let address = viewing_key.into_payment_address(params);
 
     let pkd_address = PkdAddress::from(address);
@@ -75,11 +82,11 @@ pub fn gen_account_id(sk: &[u8]) -> JsValue {
 
 #[wasm_bindgen]
 pub fn sign(sk: &[u8], msg: &[u8], seed_slice: &[u32]) -> JsValue {
-    let params = &JubjubBls12::new();
+    let params = &zJubjubBls12::new();
     let rng = &mut ChaChaRng::from_seed(seed_slice);
-    let g = params.generator(FixedGenerators::SpendingKeyGenerator);
+    let g = params.generator(zFixedGenerators::SpendingKeyGenerator);
 
-    let exps = keys::ExpandedSpendingKey::<Bls12>::from_spending_key(sk);
+    let exps = keys::ExpandedSpendingKey::<zBls12>::from_spending_key(sk);
 
     // T = (l_H + 128) bits of randomness
     // For H*, l_H = 512 bits
@@ -87,7 +94,7 @@ pub fn sign(sk: &[u8], msg: &[u8], seed_slice: &[u32]) -> JsValue {
     rng.fill_bytes(&mut t[..]);
 
     // r = H*(T || M)
-    let r = h_star::<Bls12>(&t[..], msg);
+    let r = h_star::<zBls12>(&t[..], msg);
 
     // R = r . P_G
     let r_g = g.mul(r, params);
@@ -96,11 +103,11 @@ pub fn sign(sk: &[u8], msg: &[u8], seed_slice: &[u32]) -> JsValue {
         .expect("Jubjub points should serialize to 32 bytes");
 
     // S = r + H*(Rbar || M) . sk
-    let mut s = h_star::<Bls12>(&rbar[..], msg);
+    let mut s = h_star::<zBls12>(&rbar[..], msg);
     s.mul_assign(&exps.ask);
     s.add_assign(&r);
     let mut sbar = [0u8; 32];
-    write_scalar::<Bls12, &mut [u8]>(&s, &mut sbar[..])
+    write_scalar::<zBls12, &mut [u8]>(&s, &mut sbar[..])
         .expect("Jubjub scalars should serialize to 32 bytes");
 
     let sig = Signature { rbar, sbar };
@@ -110,87 +117,100 @@ pub fn sign(sk: &[u8], msg: &[u8], seed_slice: &[u32]) -> JsValue {
 
 #[wasm_bindgen]
 pub fn verify(vk: Vec<u8>, msg: &[u8], sig: Vec<u8>) -> bool {
-    let params = &JubjubBls12::new();    
+    let params = &zJubjubBls12::new();    
 
-    let vk = PublicKey::<Bls12>::read(&mut &vk[..], params).unwrap();
+    let vk = PublicKey::<zBls12>::read(&mut &vk[..], params).unwrap();
     let sig = Signature::read(&mut &sig[..]).unwrap();
 
     // c = H*(Rbar || M)
-    let c = h_star::<Bls12>(&sig.rbar[..], msg);
+    let c = h_star::<zBls12>(&sig.rbar[..], msg);
 
     // Signature checks:
     // R != invalid
-    let r = match Point::read(&mut &sig.rbar[..], params) {
+    let r = match zPoint::read(&mut &sig.rbar[..], params) {
         Ok(r) => r,
         Err(_) => return false,
     };
     // S < order(G)
     // (E::Fs guarantees its representation is in the field)
-    let s = match read_scalar::<Bls12, &[u8]>(&sig.sbar[..]) {
+    let s = match read_scalar::<zBls12, &[u8]>(&sig.sbar[..]) {
         Ok(s) => s,
         Err(_) => return false,
     };
     // 0 = h_G(-S . P_G + R + c . vk)
     vk.0.mul(c, params).add(&r, params).add(
-        &params.generator(FixedGenerators::SpendingKeyGenerator)
+        &params.generator(zFixedGenerators::SpendingKeyGenerator)
                 .mul(s, params)
                 .negate()
                 .into(),
         params
-    ).mul_by_cofactor(params).eq(&Point::zero())
+    ).mul_by_cofactor(params).eq(&zPoint::zero())
 }
 
+#[derive(Serialize)]
+struct Calls {
+    zkProof: Vec<u8>,
+    address_sender: Vec<u8>,
+    address_recipient: Vec<u8>,
+    value_sender: Vec<u8>,
+    value_recipient: Vec<u8>,
+    balance_sender: Vec<u8>,
+    rk: Vec<u8>,
+}
 
-// #[derive(Serialize)]
-// struct Calls {
-//     zkProof: Vec<u8>,
-//     address_sender: Vec<u8>,
-//     address_recipient: Vec<u8>,
-//     value_sender: Vec<u8>,
-//     value_recipient: Vec<u8>,
-//     balance_sender: Vec<u8>,
-//     rk: Vec<u8>,
-// }
+#[wasm_bindgen]
+pub fn gen_call(
+    sk: &[u8], 
+    nonce: u64, 
+    mut address_recipient: &[u8], 
+    value: u32, 
+    balance: u32,
+    mut proving_key: &[u8],
+    seed_slice: &[u32],
+) -> JsValue 
+{
+    let params = &JubjubBls12::new();
+    let mut rng = &mut ChaChaRng::from_seed(seed_slice);
+    let p_g = FixedGenerators::NullifierPosition; // 2
+    let remaining_balance = balance - value;
 
-// #[wasm_bindgen]
-// pub fn gen_call(
-//     sk: &[u8], 
-//     nonce: u64, 
-//     address_recipient: &[u8], 
-//     value: u32, 
-//     balance: u32,
-//     seed_slice: &[u32],
-// ) -> JsValue 
-// {
-//     let params = &JubjubBls12::new();
-//     let rng = &mut ChaChaRng::from_seed(seed_slice);
-//     let p_g = params.generator(FixedGenerators::NullifierPosition); // 2
-//     let remaining_balance = balance - value;
+    let alpha = fs::Fs::rand(&mut rng);
 
-//     let alpha = fs::Fs::rand(&mut rng);
+    let ex_sk_s = ExpandedSpendingKey::<Bls12>::from_spending_key(&sk[..]);
+    let viewing_key_s = ViewingKey::<Bls12>::from_expanded_spending_key(&ex_sk_s, &params);
+    let ivk = viewing_key_s.ivk();
+    let mut randomness = [0u8; 32];
 
-//     let tx = Transaction::gen_tx(
-//                 value, 
-//                 remaining_balance, 
-//                 alpha,
-//                 &proving_key,
-//                 &prepared_vk,
-//                 &address_recipient,
-//                 sender_seed,
-//                 ciphertext_balance,                
-//                 nonce,
-//                 rng
-//         ).expect("fails to generate the tx");
+    rng.fill_bytes(&mut randomness[..]);
+    let r_fs = fs::Fs::to_uniform(elgamal_extend(&randomness).as_bytes());
+    let public_key = params.generator(p_g).mul(ivk, &params).into();
+    let ciphertext_balance = Ciphertext::encrypt(balance, r_fs, &public_key, p_g, &params);
 
+    let address_recipient = PaymentAddress::<Bls12>::read(&mut address_recipient, params).unwrap();
+    let proving_key = Parameters::<Bls12>::read(&mut proving_key, true).unwrap();
 
-//     Calls {
-//         zkProof: Vec<u8>,
-//         address_sender: Vec<u8>,
-//         address_recipient: Vec<u8>,
-//         value_sender: Vec<u8>,
-//         value_recipient: Vec<u8>,
-//         balance_sender: Vec<u8>,
-//         rk: Vec<u8>,
-//     }
-// }
+    let tx = Transaction::gen_tx(
+                value, 
+                remaining_balance, 
+                alpha,
+                &proving_key,
+                // &prepared_vk,
+                &address_recipient,
+                sk,
+                ciphertext_balance,                
+                nonce,
+                rng
+        ).expect("fails to generate the tx");
+    
+    let calls = Calls {
+        zkProof: tx.proof.0,
+        address_sender: tx.address_sender.as_bytes().to_vec(),
+        address_recipient: tx.address_recipient.as_bytes().to_vec(),
+        value_sender: tx.enc_val_sender.as_bytes().to_vec(),
+        value_recipient: tx.enc_val_recipient.as_bytes().to_vec(),
+        balance_sender: tx.enc_bal_sender.as_bytes().to_vec(),
+        rk: tx.rk.as_bytes().to_vec(),
+    };
 
+    JsValue::from_serde(&calls).expect("fails to write json")
+}
