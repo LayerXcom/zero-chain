@@ -68,9 +68,9 @@ impl Ciphertext {
         elgamal::Ciphertext::read(&mut &self.0[..], &JUBJUB as &JubjubBls12).ok()        
     }
 
-    pub fn from_ciphertext(sig: &elgamal::Ciphertext<Bls12>) -> Self {
+    pub fn from_ciphertext(ciphertext: &elgamal::Ciphertext<Bls12>) -> Self {
         let mut writer = [0u8; 64];
-        sig.write(&mut writer[..]).unwrap();
+        ciphertext.write(&mut writer[..]).unwrap();
         H512::from_slice(&writer)
     }
 }

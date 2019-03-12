@@ -25,7 +25,7 @@ proofs = { package = "zero-chain-proofs", path = "../../core/proofs" }
 bellman = { git = "https://github.com/LayerXcom/librustzcash", branch = "zero-chain" }
 zcrypto = { package = "zero-chain-crypto", path = "../../core/crypto"}
 bellman-verifier = { path = "../../core/bellman-verifier"}
-zprimitives = { package = "zero-chain-primitives", path = "../../core/primitives" }
+# zprimitives = { package = "zero-chain-primitives", path = "../../core/primitives" }
 parity-codec-derive = { version = "3.1" }
 parity-codec = { version = "3.1" }
 
@@ -56,3 +56,4 @@ rev = "7a5b5fc99ae483a0043db7547fb79a6fa44b88a9"
 [profile.release]
 # Tell `rustc` to optimize for small code size.
 opt-level = "s"
+

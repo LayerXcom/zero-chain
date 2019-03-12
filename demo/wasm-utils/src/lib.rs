@@ -6,7 +6,6 @@ extern crate parity_codec as codec;
 extern crate parity_codec_derive as codec_derive;
 
 mod utils;
-
 use cfg_if::cfg_if;
 use wasm_bindgen::prelude::*;
 
@@ -149,7 +148,7 @@ pub fn verify(vk: Vec<u8>, msg: &[u8], sig: Vec<u8>) -> bool {
 
 #[derive(Serialize)]
 struct Calls {
-    zkProof: Vec<u8>,
+    zk_proof: Vec<u8>,
     address_sender: Vec<u8>,
     address_recipient: Vec<u8>,
     value_sender: Vec<u8>,
@@ -160,8 +159,7 @@ struct Calls {
 
 #[wasm_bindgen]
 pub fn gen_call(
-    sk: &[u8], 
-    nonce: u64, 
+    sk: &[u8],    
     mut address_recipient: &[u8], 
     value: u32, 
     balance: u32,
@@ -197,19 +195,18 @@ pub fn gen_call(
                 // &prepared_vk,
                 &address_recipient,
                 sk,
-                ciphertext_balance,                
-                nonce,
+                ciphertext_balance,                        
                 rng
         ).expect("fails to generate the tx");
     
     let calls = Calls {
-        zkProof: tx.proof.0,
-        address_sender: tx.address_sender.as_bytes().to_vec(),
-        address_recipient: tx.address_recipient.as_bytes().to_vec(),
-        value_sender: tx.enc_val_sender.as_bytes().to_vec(),
-        value_recipient: tx.enc_val_recipient.as_bytes().to_vec(),
-        balance_sender: tx.enc_bal_sender.as_bytes().to_vec(),
-        rk: tx.rk.as_bytes().to_vec(),
+        zk_proof: tx.proof.to_vec(),
+        address_sender: tx.address_sender.to_vec(),
+        address_recipient: tx.address_recipient.to_vec(),
+        value_sender: tx.enc_val_sender.to_vec(),
+        value_recipient: tx.enc_val_recipient.to_vec(),
+        balance_sender: tx.enc_bal_sender.to_vec(),
+        rk: tx.rk.to_vec(),
     };
 
     JsValue::from_serde(&calls).expect("fails to write json")

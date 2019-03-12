@@ -1,13 +1,10 @@
 use pairing::bls12_381::Bls12;
-
 use bellman::groth16::{    
     generate_random_parameters,
     prepare_verifying_key,
     Parameters,
     PreparedVerifyingKey,
 };
-
-use scrypto::jubjub::{JubjubBls12};
 use rand::OsRng;
 use proofs::circuit_transfer::Transfer;
 use crate::params;

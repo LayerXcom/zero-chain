@@ -5,21 +5,17 @@ use proofs::{
     elgamal::{Ciphertext, elgamal_extend},
     };
 use substrate_primitives::hexdisplay::{HexDisplay, AsBytesRef};
-use pairing::{bls12_381::Bls12, PrimeField};
+use pairing::bls12_381::Bls12;
 use scrypto::jubjub::{JubjubBls12, fs, ToUniform, JubjubParams, FixedGenerators};      
 use std::fs::File;
-use std::path::{Path, PathBuf};
+use std::path::Path;
 use std::string::String;
 use std::io::{BufWriter, Write};
-use std::env;
 use wasm_utils::transaction::Transaction;
 
 mod setup;
 use setup::setup;
 
-extern crate parity_codec as codec;
-#[macro_use]
-extern crate parity_codec_derive as codec_derive;
 #[macro_use]
 extern crate lazy_static;
 

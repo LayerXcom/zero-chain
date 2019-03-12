@@ -106,8 +106,7 @@ path = 'src/main.rs'
 members = [
     "core/bellman-verifier",
     "core/crypto",
-    "demo/cli",
-    "demo/wasm-utils",
+    "demo/cli",    
     "core/jubjub",
     "core/pairing",
     "core/primitives",
@@ -117,5 +116,6 @@ members = [
     "modules/indices"
 ]
 exclude = [
-    "runtime/wasm",    
+    "runtime/wasm",   
+    "demo/wasm-utils", 
 ]

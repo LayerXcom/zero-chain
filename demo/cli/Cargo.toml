@@ -7,7 +7,6 @@ edition = "2018"
 [dependencies]
 rand = "0.4"
 proofs = { package = "zero-chain-proofs", path = "../../core/proofs" }
-structopt = "0.2"
 clap = "~2.32"
 substrate-primitives = { git = "https://github.com/paritytech/substrate", rev = '9112a28af677b75cd6f935dda34d283bb4f676e7' }
 zpairing = { package = "zero-chain-pairing", path = "../../core/pairing" }
@@ -18,8 +17,6 @@ bellman-verifier = { path = "../../core/bellman-verifier"}
 zcrypto = { package = "zero-chain-crypto", path = "../../core/crypto"}
 zprimitives = { package = "zero-chain-primitives", path = "../../core/primitives" }
 zjubjub = { package = "jubjub", path = "../../core/jubjub"}
-parity-codec-derive = { version = "3.1" }
-parity-codec = { version = "3.1" }
 lazy_static = "1.3.0"
 byteorder = "1"
 keys = { path = "../../core/keys" }
