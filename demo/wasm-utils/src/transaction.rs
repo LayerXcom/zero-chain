@@ -57,7 +57,7 @@ impl Transaction {
 		// The pramaters from std environment
 		let params = JubjubBls12::new();
 		// The pramaters from no_std environment
-		let zparams = zJubjubBls12::new();
+		// let zparams = zJubjubBls12::new();
 
 		let expsk = ExpandedSpendingKey::<Bls12>::from_spending_key(sk);
 		let proof_generation_key = expsk.into_proof_generation_key(&params);

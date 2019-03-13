@@ -142,7 +142,8 @@ fn get_pvk() -> PreparedVk {
 }
 
 fn alice_init() -> (PkdAddress, Ciphertext) {
-	let alice_seed = b"Alice                           ";
+	// let alice_seed = b"Alice                           ";
+	let alice_seed: [u8; 32] = hex!("b4a7109c67f24ad01fc553bcd1c81ad1995cc41751291f7bb9522f2870c8f7c1");
 	let alice_value = 1000 as u32;
 
 	let p_g = FixedGenerators::ElGamal;
@@ -153,7 +154,7 @@ fn alice_init() -> (PkdAddress, Ciphertext) {
 	}
 	let r_fs = fs::Fs::to_uniform(elgamal_extend(&randomness).as_bytes());	
 
-	let expsk = ExpandedSpendingKey::<Bls12>::from_spending_key(alice_seed);        
+	let expsk = ExpandedSpendingKey::<Bls12>::from_spending_key(&alice_seed);        
     let viewing_key = ViewingKey::<Bls12>::from_expanded_spending_key(&expsk, &JUBJUB);        
     let address = viewing_key.into_payment_address(&JUBJUB);	
 

@@ -13,7 +13,7 @@ use rand::{ChaChaRng, SeedableRng, Rng, Rand};
 use keys;
 use zpairing::{
     bls12_381::Bls12 as zBls12,
-    Field,
+    Field, PrimeField, PrimeFieldRepr,
 };
 use pairing::{
     bls12_381::Bls12
@@ -31,6 +31,7 @@ use proofs::{
     elgamal::{Ciphertext, elgamal_extend},
 };
 use bellman::groth16::Parameters;
+use zcrypto::elgamal::Ciphertext as zCiphertext;
 
 pub mod transaction;
 use transaction::Transaction;
@@ -77,6 +78,22 @@ pub fn gen_account_id(sk: &[u8]) -> JsValue {
 
     let pkd_address = PkdAddress::from(address);
     JsValue::from_serde(&pkd_address).expect("fails to write json")
+}
+
+#[derive(Serialize)]
+pub struct Ivk(pub(crate) Vec<u8>);
+
+pub fn gen_ivk(sk: &[u8]) -> JsValue {
+    let params = &zJubjubBls12::new();
+    let exps = keys::ExpandedSpendingKey::<zBls12>::from_spending_key(sk);
+
+    let viewing_key = keys::ViewingKey::<zBls12>::from_expanded_spending_key(&exps, params);
+    let ivk = viewing_key.ivk();
+
+    let mut buf = vec![];
+    ivk.into_repr().write_le(&mut buf).unwrap();    
+    let ivk = Ivk(buf.to_vec());
+    JsValue::from_serde(&ivk).expect("fails to write json")
 }
 
 #[wasm_bindgen]
@@ -210,4 +227,16 @@ pub fn gen_call(
     };
 
     JsValue::from_serde(&calls).expect("fails to write json")
+}
+
+#[wasm_bindgen(catch)]
+pub fn decrypt(mut ciphertext: &[u8], sk: &[u8]) -> Result<u32, JsValue> {
+    let params = &zJubjubBls12::new();
+    let p_g = zFixedGenerators::ElGamal;
+
+    let ciphertext = zCiphertext::<zBls12>::read(&mut ciphertext, params).unwrap();
+    match ciphertext.decrypt(sk, p_g, params) {
+        Some(v) => Ok(v),
+        None => Err(JsValue::from_str("fails to decrypt"))
+    }
 }

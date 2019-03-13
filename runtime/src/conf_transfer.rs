@@ -6,7 +6,7 @@
 
 use support::{decl_module, decl_storage, decl_event, StorageValue, StorageMap, dispatch::Result, ensure, Parameter};
 use runtime_primitives::traits::{Member, SimpleArithmetic, Zero, StaticLookup, MaybeSerializeDebug, MaybeDisplay};
-use system::ensure_signed;
+use system::{ensure_signed, IsDeadAccount, OnNewAccount};
 
 use bellman_verifier::{    
     verify_proof,           
@@ -251,6 +251,15 @@ impl<T: Trait> Module<T> {
     //     p.double(params).double(params).double(params) == edwards::Point::zero()
     // }
 }
+
+// impl<T: Trait> IsDeadAccount<T::AccountId> for Module<T>
+// where
+// 	T::Balance: MaybeSerializeDebug
+// {
+// 	fn is_dead_account(who: &T::AccountId) -> bool {
+// 		Self::total_balance(who).is_zero()
+// 	}
+// }
 
 // #[cfg(test)]
 // mod tests {
