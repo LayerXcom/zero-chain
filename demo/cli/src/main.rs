@@ -46,67 +46,67 @@ fn print_random_accounts(seed: &[u8; 32], num: i32) {
     }
 }
 
-fn print_alice_tx(sender_seed: &[u8], recipient_seed: &[u8], nonce: u64) {    
-    let mut rng = OsRng::new().expect("should be able to construct RNG");
-    let p_g = FixedGenerators::NullifierPosition; // 2
+// fn print_alice_tx(sender_seed: &[u8], recipient_seed: &[u8], nonce: u64) {    
+//     let mut rng = OsRng::new().expect("should be able to construct RNG");
+//     let p_g = FixedGenerators::NullifierPosition; // 2
 
-    let value = 10 as u32;
-    let remaining_balance = 90 as u32;
-    let balance = 100 as u32;
-    let alpha = fs::Fs::rand(&mut rng); 
+//     let value = 10 as u32;
+//     let remaining_balance = 90 as u32;
+//     let balance = 100 as u32;
+//     let alpha = fs::Fs::rand(&mut rng); 
 
-    let (proving_key, prepared_vk) = setup();        
+//     let (proving_key, prepared_vk) = setup();        
     
-    let ex_sk_s = ExpandedSpendingKey::<Bls12>::from_spending_key(&sender_seed[..]);
-    let ex_sk_r = ExpandedSpendingKey::<Bls12>::from_spending_key(&recipient_seed[..]);
+//     let ex_sk_s = ExpandedSpendingKey::<Bls12>::from_spending_key(&sender_seed[..]);
+//     let ex_sk_r = ExpandedSpendingKey::<Bls12>::from_spending_key(&recipient_seed[..]);
     
-    let viewing_key_s = ViewingKey::<Bls12>::from_expanded_spending_key(&ex_sk_s, &params);
-    let viewing_key_r = ViewingKey::<Bls12>::from_expanded_spending_key(&ex_sk_r, &params);
+//     let viewing_key_s = ViewingKey::<Bls12>::from_expanded_spending_key(&ex_sk_s, &params);
+//     let viewing_key_r = ViewingKey::<Bls12>::from_expanded_spending_key(&ex_sk_r, &params);
 
-    let address_recipient = viewing_key_r.into_payment_address(&params);
+//     let address_recipient = viewing_key_r.into_payment_address(&params);
     
-    // let sk_fs = fs::Fs::to_uniform(elgamal_extend(&sender_seed).as_bytes()).into_repr();
-    let ivk = viewing_key_s.ivk();
-    let mut randomness = [0u8; 32];
+//     // let sk_fs = fs::Fs::to_uniform(elgamal_extend(&sender_seed).as_bytes()).into_repr();
+//     let ivk = viewing_key_s.ivk();
+//     let mut randomness = [0u8; 32];
 
-    rng.fill_bytes(&mut randomness[..]);
-    let r_fs = fs::Fs::to_uniform(elgamal_extend(&randomness).as_bytes());
+//     rng.fill_bytes(&mut randomness[..]);
+//     let r_fs = fs::Fs::to_uniform(elgamal_extend(&randomness).as_bytes());
 
-    let public_key = params.generator(p_g).mul(ivk, &params).into();
-    let ciphertext_balance = Ciphertext::encrypt(balance, r_fs, &public_key, p_g, &params);        
+//     let public_key = params.generator(p_g).mul(ivk, &params).into();
+//     let ciphertext_balance = Ciphertext::encrypt(balance, r_fs, &public_key, p_g, &params);        
 
-    let tx = Transaction::gen_tx(
-                    value, 
-                    remaining_balance, 
-                    alpha,
-                    &proving_key,
-                    // &prepared_vk,
-                    &address_recipient,
-                    sender_seed,
-                    ciphertext_balance,
-                    nonce,
-                    &mut rng
-            ).expect("fails to generate the tx");
+//     let tx = Transaction::gen_tx(
+//                     value, 
+//                     remaining_balance, 
+//                     alpha,
+//                     &proving_key,
+//                     // &prepared_vk,
+//                     &address_recipient,
+//                     sender_seed,
+//                     ciphertext_balance,
+//                     nonce,
+//                     &mut rng
+//             ).expect("fails to generate the tx");
 
-    println!(
-        "
-        \nzkProof(Alice): 0x{}
-        \naddress_sender(Alice): 0x{}
-        \naddress_recipient(Alice): 0x{}
-        \nvalue_sender(Alice): 0x{}
-        \nvalue_recipient(Alice): 0x{}
-        \nbalance_sender(Alice): 0x{}
-        \nrk(Alice): 0x{}           
-        ",        
-        HexDisplay::from(&tx.proof as &AsBytesRef),    
-        HexDisplay::from(&tx.address_sender as &AsBytesRef),    
-        HexDisplay::from(&tx.address_recipient as &AsBytesRef),        
-        HexDisplay::from(&tx.enc_val_sender as &AsBytesRef),
-        HexDisplay::from(&tx.enc_val_recipient as &AsBytesRef),
-        HexDisplay::from(&tx.enc_bal_sender as &AsBytesRef),     
-        HexDisplay::from(&tx.rk as &AsBytesRef),
-    );
-}
+//     println!(
+//         "
+//         \nzkProof(Alice): 0x{}
+//         \naddress_sender(Alice): 0x{}
+//         \naddress_recipient(Alice): 0x{}
+//         \nvalue_sender(Alice): 0x{}
+//         \nvalue_recipient(Alice): 0x{}
+//         \nbalance_sender(Alice): 0x{}
+//         \nrk(Alice): 0x{}           
+//         ",        
+//         HexDisplay::from(&tx.proof as &AsBytesRef),    
+//         HexDisplay::from(&tx.address_sender as &AsBytesRef),    
+//         HexDisplay::from(&tx.address_recipient as &AsBytesRef),        
+//         HexDisplay::from(&tx.enc_val_sender as &AsBytesRef),
+//         HexDisplay::from(&tx.enc_val_recipient as &AsBytesRef),
+//         HexDisplay::from(&tx.enc_bal_sender as &AsBytesRef),     
+//         HexDisplay::from(&tx.rk as &AsBytesRef),
+//     );
+// }
     
 fn main() {   
     cli().unwrap_or_else(|e| {
@@ -130,7 +130,7 @@ fn main() {
 
     print_random_accounts(&seed, 2);
     let nonce = 0 as u64;
-    print_alice_tx(alice_seed, bob_seed, nonce);
+    // print_alice_tx(alice_seed, bob_seed, nonce);
 }
 
 

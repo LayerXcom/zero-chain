@@ -83,6 +83,7 @@ pub fn gen_account_id(sk: &[u8]) -> JsValue {
 #[derive(Serialize)]
 pub struct Ivk(pub(crate) Vec<u8>);
 
+#[wasm_bindgen]
 pub fn gen_ivk(sk: &[u8]) -> JsValue {
     let params = &zJubjubBls12::new();
     let exps = keys::ExpandedSpendingKey::<zBls12>::from_spending_key(sk);
