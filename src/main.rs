@@ -5,11 +5,12 @@
 
 #[macro_use]
 extern crate lazy_static;
+#[macro_use]
+extern crate hex_literal;
 
 mod chain_spec;
 mod service;
 mod cli;
-mod pvk;
 
 pub use substrate_cli::{VersionInfo, IntoExit, error};
 

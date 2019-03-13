@@ -6,7 +6,7 @@
 
 use support::{decl_module, decl_storage, decl_event, StorageValue, StorageMap, dispatch::Result, ensure, Parameter};
 use runtime_primitives::traits::{Member, SimpleArithmetic, Zero, StaticLookup, MaybeSerializeDebug, MaybeDisplay};
-use system::ensure_signed;
+use system::{ensure_signed, IsDeadAccount, OnNewAccount};
 
 use bellman_verifier::{    
     verify_proof,           
@@ -29,17 +29,17 @@ use zprimitives::{
     ciphertext::Ciphertext, 
     proof::Proof, 
     sig_vk::SigVerificationKey, 
-    signature::RedjubjubSignature,
-    keys::{PaymentAddress},
+    signature::RedjubjubSignature,    
     prepared_vk::PreparedVk,
 };
+use keys::PaymentAddress;
 
 use zcrypto::elgamal;
 
 
 pub trait Trait: system::Trait {
 	/// The overarching event type.
-	type Event: From<Event<Self>> + Into<<Self as system::Trait>::Event>;   
+	type Event: From<Event<Self>> + Into<<Self as system::Trait>::Event>;       
 }
 
 decl_module! {	
@@ -59,7 +59,7 @@ decl_module! {
             rk: SigVerificationKey  // TODO: Extract from origin            
         ) -> Result {
             // Temporally removed the signature verification.
-			//let _origin = ensure_signed(origin)?;
+			// let rk = ensure_signed(origin)?;
             
             // Get zkproofs with the type
             let szkproof = match zkproof.into_proof() {
@@ -169,7 +169,6 @@ decl_storage! {
         pub EncryptedBalance get(encrypted_balance) config() : map PkdAddress => Option<Ciphertext>; 
         // The verification key of zk proofs (only readable)
         pub VerifyingKey get(verifying_key) config(): PreparedVk;         
-        pub H256 get(h256) config(): T::Hash;
     }
 }
 
@@ -252,6 +251,15 @@ impl<T: Trait> Module<T> {
     //     p.double(params).double(params).double(params) == edwards::Point::zero()
     // }
 }
+
+// impl<T: Trait> IsDeadAccount<T::AccountId> for Module<T>
+// where
+// 	T::Balance: MaybeSerializeDebug
+// {
+// 	fn is_dead_account(who: &T::AccountId) -> bool {
+// 		Self::total_balance(who).is_zero()
+// 	}
+// }
 
 // #[cfg(test)]
 // mod tests {

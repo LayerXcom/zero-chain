@@ -1,0 +1,18 @@
+[package]
+name = "bellman-verifier"
+version = "0.1.0"
+authors = ["osuke <dish230@gmail.com>"]
+edition = "2018"
+
+[dependencies]
+rand = { version = "0.4", default-features = false }
+pairing = { package = "zero-chain-pairing", path = "../pairing", default-features = false }
+byteorder = { version = "1", default-features = false }
+
+[features]
+default = ["std"]
+std = [
+    "rand/std",                
+    "pairing/std",
+    "byteorder/std"
+]

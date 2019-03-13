@@ -16,14 +16,15 @@ slog = '^2'
 tokio = '0.1'
 trie-root = '0.11.0'
 
-bellman-verifier = { path = "bellman-verifier"}
-demo = { package = "zero-chain-demo", path = "demo" }
-zcrypto = { package = "zero-chain-crypto", path = "crypto" }
-jubjub = { path = "jubjub" }
-zpairing = { package = "zero-chain-pairing", path = "pairing" }
-zprimitives = { package = "zero-chain-primitives", path = "primitives" }
-proofs = { package = "zero-chain-proofs", path = "proofs" }
+bellman-verifier = { path = "core/bellman-verifier"}
+demo = { package = "zero-chain-cli", path = "demo/cli" }
+zcrypto = { package = "zero-chain-crypto", path = "core/crypto" }
+jubjub = { path = "core/jubjub" }
+zpairing = { package = "zero-chain-pairing", path = "core/pairing" }
+zprimitives = { package = "zero-chain-primitives", path = "core/primitives" }
+proofs = { package = "zero-chain-proofs", path = "core/proofs" }
 scrypto = { package = "sapling-crypto", git = "https://github.com/LayerXcom/librustzcash", branch = "zero-chain" }
+keys = { path = "core/keys"}
 bellman = { git = "https://github.com/LayerXcom/librustzcash", branch = "zero-chain" }
 pairing = { git = "https://github.com/LayerXcom/librustzcash", branch = "zero-chain" }
 rand = "0.4"
@@ -103,15 +104,18 @@ path = 'src/main.rs'
 
 [workspace]
 members = [
-    "bellman-verifier",
-    "crypto",
-    "demo",
-    "jubjub",
-    "pairing",
-    "primitives",
-    "proofs",
+    "core/bellman-verifier",
+    "core/crypto",
+    "demo/cli",    
+    "core/jubjub",
+    "core/pairing",
+    "core/primitives",
+    "core/proofs",
     "runtime",
+    "core/keys",
+    "modules/indices"
 ]
 exclude = [
-    "runtime/wasm",
+    "runtime/wasm",   
+    "demo/wasm-utils", 
 ]

@@ -1,9 +1,12 @@
 [dependencies]
-pairing = { package = "zero-chain-pairing", path = "../pairing", default-features = false }
-bellman-verifier = { path = "../bellman-verifier", default-features = false }
-zprimitives = { package = "zero-chain-primitives", path = "../primitives", default-features = false }
-jubjub = { path = "../jubjub", default-features = false }
-zcrypto = { package = "zero-chain-crypto", path = "../crypto", default-features = false }
+pairing = { package = "zero-chain-pairing", path = "../core/pairing", default-features = false }
+bellman-verifier = { path = "../core/bellman-verifier", default-features = false }
+zprimitives = { package = "zero-chain-primitives", path = "../core/primitives", default-features = false }
+jubjub = { path = "../core/jubjub", default-features = false }
+zcrypto = { package = "zero-chain-crypto", path = "../core/crypto", default-features = false }
+keys = { path = "../core/keys", default-features = false }
+hex-literal = "0.1.0"
+indices = { package = "srml-indices", path = "../modules/indices", default-features = false }
 
 [dependencies.aura]
 default_features = false
@@ -45,12 +48,6 @@ rev = '9112a28af677b75cd6f935dda34d283bb4f676e7'
 default_features = false
 git = 'https://github.com/paritytech/substrate.git'
 package = 'srml-fees'
-rev = '9112a28af677b75cd6f935dda34d283bb4f676e7'
-
-[dependencies.indices]
-default_features = false
-git = 'https://github.com/paritytech/substrate.git'
-package = 'srml-indices'
 rev = '9112a28af677b75cd6f935dda34d283bb4f676e7'
 
 [dependencies.parity-codec]
@@ -156,6 +153,7 @@ std = [
 	"bellman-verifier/std",
 	"zprimitives/std",
 	"jubjub/std",
+	"keys/std",
 ]
 
 [package]

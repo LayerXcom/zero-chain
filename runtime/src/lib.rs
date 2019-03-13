@@ -27,6 +27,7 @@ use version::NativeVersion;
 use zprimitives::{
 	signature::RedjubjubSignature,	
 	sig_vk::SigVerificationKey,
+	pkd_address::PkdAddress,
 };
 
 // A few exports that help ease life for downstream crates.
@@ -41,7 +42,8 @@ pub use support::{StorageValue, construct_runtime};
 
 /// Alias to Ed25519 pubkey that identifies an account on the chain.
 // pub type AccountId = primitives::H256;
-pub type AccountId = primitives::H256;
+pub type AccountId = SigVerificationKey;
+// pub type AccountId = PkdAddress;
 
 /// A hash of some data used by the chain.
 pub type Hash = primitives::H256;
@@ -148,6 +150,10 @@ impl indices::Trait for Runtime {
 	type IsDeadAccount = Balances;
 	/// The uniquitous event type.
 	type Event = Event;
+	// The account address
+	// type PkdAddress = PkdAddress;
+	// The account id which is equivalent to SigVerificationKey
+	// type AccountId = Self::AccountId;
 }
 
 impl timestamp::Trait for Runtime {
@@ -190,6 +196,7 @@ construct_runtime!(
 		NodeBlock = opaque::Block,
 		UncheckedExtrinsic = UncheckedExtrinsic
 	{
+		ConfTransfer: conf_transfer::{Module, Call, Storage, Event<T>, Config<T>},
 		System: system::{default, Log(ChangesTrieRoot)},
 		Timestamp: timestamp::{Module, Call, Storage, Config<T>, Inherent},
 		Consensus: consensus::{Module, Call, Storage, Config<T>, Log(AuthoritiesChange), Inherent},
@@ -197,15 +204,15 @@ construct_runtime!(
 		Indices: indices,
 		Balances: balances,
 		Sudo: sudo,
-		Fees: fees::{Module, Storage, Config<T>, Event<T>},				
-		ConfTransfer: conf_transfer::{Module, Call, Storage, Event<T>, Config<T>},
+		Fees: fees::{Module, Storage, Config<T>, Event<T>},						
 	}
 );
 
 /// The type used as a helper for interpreting the sender of transactions.
 type Context = system::ChainContext<Runtime>;
 /// The address format for describing accounts.
-type Address = <Indices as StaticLookup>::Source;
+type Address = <Indices as StaticLookup>::Source; // TODO: Chenge from PkdAddress to SigVerificationKey
+// type Address = AccountId;
 /// Block header type as expected by this runtime.
 pub type Header = generic::Header<BlockNumber, BlakeTwo256, Log>;
 /// Block type as expected by this runtime.
@@ -213,7 +220,8 @@ pub type Block = generic::Block<Header, UncheckedExtrinsic>;
 /// BlockId type as expected by this runtime.
 pub type BlockId = generic::BlockId<Block>;
 /// Unchecked extrinsic type as expected by this runtime.
-pub type UncheckedExtrinsic = generic::UncheckedMortalCompactExtrinsic<Address, Nonce, Call, Ed25519Signature>;
+// pub type UncheckedExtrinsic = generic::UncheckedMortalCompactExtrinsic<Address, Nonce, Call, Ed25519Signature>;
+pub type UncheckedExtrinsic = generic::UncheckedMortalCompactExtrinsic<Address, Nonce, Call, RedjubjubSignature>;
 /// Extrinsic type that has already been checked.
 pub type CheckedExtrinsic = generic::CheckedExtrinsic<AccountId, Nonce, Call>;
 /// Executive: handles dispatch to the various modules.
