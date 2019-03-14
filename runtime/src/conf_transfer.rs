@@ -169,7 +169,6 @@ decl_storage! {
         pub EncryptedBalance get(encrypted_balance) config() : map PkdAddress => Option<Ciphertext>; 
         // The verification key of zk proofs (only readable)
         pub VerifyingKey get(verifying_key) config(): PreparedVk;                 
-        pub Tmp1 get(tmp1) config(): Vec<u8>;
     }
 }
 
@@ -330,7 +329,7 @@ mod tests {
         let mut t = system::GenesisConfig::<Test>::default().build_storage().unwrap().0;
         t.extend(GenesisConfig::<Test>{
             encrypted_balance: vec![alice_init(), (PkdAddress::from_slice(b"Alice                           "), 
-                Ciphertext::from_slice(b"Alice                           Bob                             "))],
+                Ciphertext(b"Alice                           Bob                             ".to_vec()))],
             verifying_key: PreparedVk(vec![1]),
             _genesis_phantom_data: Default::default(),
         }.build_storage().unwrap().0);
@@ -343,7 +342,7 @@ mod tests {
             // let address: [u8; 32] = hex!("e19fc12085334a4b81ec58e9ea0c006c56a94f406d9afb78c34f24cd4c59ed85");
 
             assert_eq!(ConfTransfer::encrypted_balance(PkdAddress::from_slice(b"Alice                           ")), 
-                Some(Ciphertext::from_slice(b"Alice                           Bob                             ")));
+                Some(Ciphertext(b"Alice                           Bob                             ".to_vec())));
         })
     }
 }

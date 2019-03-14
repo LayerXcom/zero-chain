@@ -124,8 +124,7 @@ fn testnet_genesis(initial_authorities: Vec<Ed25519AuthorityId>, endowed_account
 		}),
 		conf_transfer: Some(ConfTransferConfig {
 			encrypted_balance: vec![alice_init(), (PkdAddress::from_slice(b"Alice                           "), Ciphertext(b"Alice                           Bob                             ".to_vec()))],
-			verifying_key: get_pvk(),							
-			tmp1: vec![177,92,217,151,91,158,50,233,125,6,233,62,87,40,78,232,177,92,217,151,91,158,50,233,125,6,233,62,87,40,78,232,177,92,217,151,91,158,50,233,125,6,233,62,87,40,78,232,177,92,217,151,91,158,50,233,125,6,233,62,87,40,78,232],
+			verifying_key: get_pvk(),										
 			_genesis_phantom_data: Default::default(),
 		})
 	}
@@ -161,11 +160,9 @@ fn alice_init() -> (PkdAddress, Ciphertext) {
     let address = viewing_key.into_payment_address(&JUBJUB);	
 	let enc_alice_val = elgamal::Ciphertext::encrypt(alice_value, r_fs, &address.0, p_g, &JUBJUB);
 
-	let ivk = viewing_key.ivk();
-	let mut buf = vec![];
-    ivk.into_repr().write_le(&mut buf).unwrap(); 	
+	let ivk = viewing_key.ivk();	
 
-	let dec_alice_val = enc_alice_val.decrypt(&buf[..], p_g, &JUBJUB).unwrap();
+	let dec_alice_val = enc_alice_val.decrypt(ivk, p_g, &JUBJUB).unwrap();
 	assert_eq!(dec_alice_val, alice_value);
 
 	(PkdAddress::from_payment_address(&address), Ciphertext::from_ciphertext(&enc_alice_val))
