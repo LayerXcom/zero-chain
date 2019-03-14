@@ -5,7 +5,6 @@ zprimitives = { package = "zero-chain-primitives", path = "../core/primitives", 
 jubjub = { path = "../core/jubjub", default-features = false }
 zcrypto = { package = "zero-chain-crypto", path = "../core/crypto", default-features = false }
 keys = { path = "../core/keys", default-features = false }
-hex-literal = "0.1.0"
 indices = { package = "srml-indices", path = "../modules/indices", default-features = false }
 rand = { version = "0.4", default-features = false }
 

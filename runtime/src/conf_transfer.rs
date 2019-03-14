@@ -7,7 +7,7 @@
 use support::{decl_module, decl_storage, decl_event, StorageValue, StorageMap, dispatch::Result, ensure, Parameter};
 use runtime_primitives::traits::{Member, SimpleArithmetic, Zero, StaticLookup, MaybeSerializeDebug, MaybeDisplay};
 use system::{ensure_signed, IsDeadAccount, OnNewAccount};
-
+use rstd::prelude::*;
 use bellman_verifier::{    
     verify_proof,           
 };
@@ -119,7 +119,7 @@ decl_module! {
 
             // Verify the balance
             ensure!(
-                Self::encrypted_balance(address_sender) == Some(balance_sender),
+                Self::encrypted_balance(address_sender) == Some(balance_sender.clone()),
                 "Invalid encrypted balance"
             );
 
@@ -143,14 +143,14 @@ decl_module! {
             
             // Update the sender's balance
             <EncryptedBalance<T>>::mutate(address_sender, |balance| {
-                let new_balance = balance.map(
+                let new_balance = balance.clone().map(
                     |_| Ciphertext::from_ciphertext(&bal_sender.sub_no_params(&svalue_sender)));
                 *balance = new_balance
             });
 
             // Update the recipient's balance
             <EncryptedBalance<T>>::mutate(address_recipient, |balance| {
-                let new_balance = balance.map(
+                let new_balance = balance.clone().map(
                     |_| Ciphertext::from_ciphertext(&bal_recipient.add_no_params(&svalue_recipient)));
                 *balance = new_balance
             });
@@ -168,7 +168,8 @@ decl_storage! {
         // The encrypted balance for each account
         pub EncryptedBalance get(encrypted_balance) config() : map PkdAddress => Option<Ciphertext>; 
         // The verification key of zk proofs (only readable)
-        pub VerifyingKey get(verifying_key) config(): PreparedVk;         
+        pub VerifyingKey get(verifying_key) config(): PreparedVk;                 
+        pub Tmp1 get(tmp1) config(): Vec<u8>;
     }
 }
 
@@ -275,7 +276,7 @@ mod tests {
     use rand::{ChaChaRng, SeedableRng, Rng, Rand};
     use jubjub::{curve::{JubjubBls12, FixedGenerators, fs, ToUniform}};    
     use zcrypto::elgamal::elgamal_extend;
-    use hex_literal::{hex, hex_impl};
+    // use hex_literal::{hex, hex_impl};
 
     impl_outer_origin! {
         pub enum Origin for Test {}
@@ -339,7 +340,7 @@ mod tests {
     #[test]
     fn it_works_for_default_value() {
         with_externalities(&mut new_test_ext(), || {
-            let address: [u8; 32] = hex!("e19fc12085334a4b81ec58e9ea0c006c56a94f406d9afb78c34f24cd4c59ed85");
+            // let address: [u8; 32] = hex!("e19fc12085334a4b81ec58e9ea0c006c56a94f406d9afb78c34f24cd4c59ed85");
 
             assert_eq!(ConfTransfer::encrypted_balance(PkdAddress::from_slice(b"Alice                           ")), 
                 Some(Ciphertext::from_slice(b"Alice                           Bob                             ")));

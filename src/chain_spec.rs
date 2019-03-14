@@ -123,8 +123,9 @@ fn testnet_genesis(initial_authorities: Vec<Ed25519AuthorityId>, endowed_account
 			transaction_byte_fee: 0,
 		}),
 		conf_transfer: Some(ConfTransferConfig {
-			encrypted_balance: vec![alice_init(), (PkdAddress::from_slice(b"Alice                           "), Ciphertext::from_slice(b"Alice                           Bob                             "))],
-			verifying_key: get_pvk(),								
+			encrypted_balance: vec![alice_init(), (PkdAddress::from_slice(b"Alice                           "), Ciphertext(b"Alice                           Bob                             ".to_vec()))],
+			verifying_key: get_pvk(),							
+			tmp1: vec![177,92,217,151,91,158,50,233,125,6,233,62,87,40,78,232,177,92,217,151,91,158,50,233,125,6,233,62,87,40,78,232,177,92,217,151,91,158,50,233,125,6,233,62,87,40,78,232,177,92,217,151,91,158,50,233,125,6,233,62,87,40,78,232],
 			_genesis_phantom_data: Default::default(),
 		})
 	}

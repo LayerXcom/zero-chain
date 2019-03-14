@@ -330,7 +330,7 @@ mod tests {
         let ciphetext1 = Ciphertext::encrypt(value, r_fs, &public_key, p_g, params);
 
         let mut v = vec![];
-        ciphetext1.write(&mut v).unwrap();
+        ciphetext1.write(&mut v).unwrap();        
         let ciphetext2 = Ciphertext::read(&mut v.as_slice(), params).unwrap();
         assert!(ciphetext1 == ciphetext2);
     }
