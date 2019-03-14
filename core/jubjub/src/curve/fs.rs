@@ -242,7 +242,7 @@ impl PrimeFieldRepr for FsRepr {
 }
 
 /// This is an element of the scalar field of the Jubjub curve.
-#[derive(Copy, Clone, PartialEq, Eq, Debug)]
+#[derive(Copy, Clone, PartialEq, Eq, Debug, Default)]
 pub struct Fs(FsRepr);
 
 impl std::fmt::Display for Fs

@@ -25,7 +25,7 @@ extern crate alloc;
 
 #[cfg(not(feature = "std"))]
 mod std {
-	pub use core::*;
+	pub use core::*; 
 	pub use alloc::vec;
 	pub use alloc::string;
 	pub use alloc::boxed;

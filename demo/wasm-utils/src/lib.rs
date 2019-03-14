@@ -15,16 +15,18 @@ use rand::{ChaChaRng, SeedableRng, Rng, Rand};
 use keys;
 use zpairing::{
     bls12_381::Bls12 as zBls12,
-    Field, PrimeField, PrimeFieldRepr,
+    Field, PrimeField as zPrimeField, PrimeFieldRepr as zPrimeFieldRepr,
 };
 use pairing::{
-    bls12_381::Bls12
+    bls12_381::Bls12, PrimeField
 };
 use zjubjub::{
     curve::{JubjubBls12 as zJubjubBls12, 
         FixedGenerators as zFixedGenerators, 
         JubjubParams as zJubjubParams, 
-        edwards::Point as zPoint},
+        edwards::Point as zPoint,
+        fs::Fs as zFs
+        },
     redjubjub::{h_star, Signature, PublicKey, write_scalar, read_scalar},
 };
 use scrypto::jubjub::{fs, FixedGenerators, ToUniform, JubjubBls12, JubjubParams};
@@ -95,7 +97,7 @@ pub fn gen_ivk(sk: &[u8]) -> JsValue {
 
     let mut buf = vec![];
     ivk.into_repr().write_le(&mut buf).unwrap();    
-    let ivk = Ivk(buf.to_vec());
+    let ivk = Ivk(buf);
     JsValue::from_serde(&ivk).expect("fails to write json")
 }
 
@@ -233,31 +235,83 @@ pub fn gen_call(
 }
 
 #[wasm_bindgen(catch)]
-pub fn decrypt_ca(mut ciphertext: &[u8], sk: &[u8]) -> Result<u32, JsValue> {
+pub fn decrypt_ca(mut ciphertext: &[u8], mut sk: &[u8]) -> Result<u32, JsValue> {
     let params = &zJubjubBls12::new();
-    let p_g = zFixedGenerators::ElGamal;
+    let p_g = zFixedGenerators::Diversifier;
 
     let ciphertext = zCiphertext::<zBls12>::read(&mut ciphertext, params).unwrap();
-    match ciphertext.decrypt(sk, p_g, params) {
+    let mut sk_repr = zFs::default().into_repr();    
+    sk_repr.read_le(&mut sk).unwrap();    
+
+    match ciphertext.decrypt(zFs::from_repr(sk_repr).unwrap(), p_g, params) {
         Some(v) => Ok(v),
-        None => Err(JsValue::from_str("fails to decrypt"))
+        None => {            
+            Err(JsValue::from_str("fails to decrypt"))
+        }
     }
 }
 
-#[wasm_bindgen]
-pub fn decrypt(mut ciphertext: &[u8], sk: &[u8]) -> JsValue {
-    let params = &zJubjubBls12::new();
-    let p_g = zFixedGenerators::ElGamal;
+// #[wasm_bindgen]
+// pub fn decrypt(mut ciphertext: &[u8], sk: &[u8]) -> JsValue {
+//     let params = &zJubjubBls12::new();
+//     let p_g = zFixedGenerators::ElGamal;
 
-    let ciphertext = zCiphertext::<zBls12>::read(&mut ciphertext, params).unwrap();
-    JsValue::from_serde(&ciphertext.decrypt(sk, p_g, params).unwrap()).expect("fails to write json")
+//     let ciphertext = zCiphertext::<zBls12>::read(&mut ciphertext, params).unwrap();
+//     // let mut sk_repr = Fs::Repr::default();
+//     // sk_repr.read_le(&mut )
+//     JsValue::from_serde(&ciphertext.decrypt(sk, p_g, params).unwrap()).expect("fails to write json")
+// }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use rand::XorShiftRng;
+    use scrypto::jubjub::{fs::Fs, ToUniform};
+    use pairing::{PrimeField, PrimeFieldRepr};
+
+    #[test]
+    fn test_decrypt() {
+        // let ciphertext: [u8; 64] = hex!("6e04f64094e32c2bd54dc4ec6d8a244c9b9209a8a7d07c7614b470fec59647e9b93debdba216fd8789f83ff58bb9fe2ba26e4862ed946406f5d984bde5302f48");
+        // let sk: [u8; 32] = hex!("888db2f97a1439fba5d37192a57618ae7599f57d01b9940a66572d18d0473e00");
+
+        let alice_seed = b"Alice                           ";
+        let params = &zJubjubBls12::new();
+        let p_g = zFixedGenerators::Diversifier;
+
+        let expsk = keys::ExpandedSpendingKey::<zBls12>::from_spending_key(alice_seed);        
+        let viewing_key = keys::ViewingKey::<zBls12>::from_expanded_spending_key(&expsk, params);    
+        let ivk = viewing_key.ivk();        
+        
+        let mut buf = vec![];
+        ivk.into_repr().write_le(&mut &mut buf).unwrap(); 	
+
+        let rng = &mut XorShiftRng::from_seed([0xbc4f6d47, 0xd62f276d, 0xb963afd3, 0x54558639]);    
+        let r_fs = zFs::rand(rng);
+
+        let value: u32 = 6 as u32;        
+        let address = viewing_key.into_payment_address(params);	 
+
+        let ciphetext = zCiphertext::encrypt(value, r_fs, &address.0, p_g, params);
+
+        let mut v = vec![];
+        ciphetext.write(&mut v).unwrap(); 
+
+        let res = decrypt_ca(&v[..], &buf[..]).unwrap();
+        println!("res:{}", res);
+    }
+
+    #[test]
+    fn test_fs_write_read() {
+        let rng = &mut XorShiftRng::from_seed([0xbc4f6d44, 0xd62f276c, 0xb963afd0, 0x5455863d]);
+
+        let fs = zFs::rand(rng);
+        let mut buf = vec![];
+        fs.into_repr().write_le(&mut &mut buf).unwrap();
+
+        let mut sk_repr = zFs::default().into_repr();
+        sk_repr.read_le(&mut &buf[..]).unwrap();
+
+        assert_eq!(fs, zFs::from_repr(sk_repr).unwrap());
+    }
 }
 
-#[test]
-fn test_decrypt() {
-    let ciphertext: [u8; 64] = hex!("e55cfc04843bd6124955434eff07291dcf7ee252919374f01df0050bb1223fe707a740b7edcfc1db745d97f7640273c30b2ee6bf35ed1ebce0f6ef23fcdf");
-    let sk: [u8; 32] = hex!("888db2f97a1439fba5d37192a57618ae7599f57d01b9940a66572d18d0473e00");
-
-    let res = decrypt_ca(&ciphertext, &sk).unwrap();
-    println!("res:{}", res);
-}
