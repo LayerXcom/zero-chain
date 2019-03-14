@@ -4,6 +4,8 @@ extern crate serde_derive;
 extern crate parity_codec as codec;
 #[macro_use]
 extern crate parity_codec_derive as codec_derive;
+#[macro_use]
+extern crate hex_literal;
 
 mod utils;
 use cfg_if::cfg_if;
@@ -231,7 +233,7 @@ pub fn gen_call(
 }
 
 #[wasm_bindgen(catch)]
-pub fn decrypt(mut ciphertext: &[u8], sk: &[u8]) -> Result<u32, JsValue> {
+pub fn decrypt_ca(mut ciphertext: &[u8], sk: &[u8]) -> Result<u32, JsValue> {
     let params = &zJubjubBls12::new();
     let p_g = zFixedGenerators::ElGamal;
 
@@ -240,4 +242,22 @@ pub fn decrypt(mut ciphertext: &[u8], sk: &[u8]) -> Result<u32, JsValue> {
         Some(v) => Ok(v),
         None => Err(JsValue::from_str("fails to decrypt"))
     }
+}
+
+#[wasm_bindgen]
+pub fn decrypt(mut ciphertext: &[u8], sk: &[u8]) -> JsValue {
+    let params = &zJubjubBls12::new();
+    let p_g = zFixedGenerators::ElGamal;
+
+    let ciphertext = zCiphertext::<zBls12>::read(&mut ciphertext, params).unwrap();
+    JsValue::from_serde(&ciphertext.decrypt(sk, p_g, params).unwrap()).expect("fails to write json")
+}
+
+#[test]
+fn test_decrypt() {
+    let ciphertext: [u8; 64] = hex!("e55cfc04843bd6124955434eff07291dcf7ee252919374f01df0050bb1223fe707a740b7edcfc1db745d97f7640273c30b2ee6bf35ed1ebce0f6ef23fcdf");
+    let sk: [u8; 32] = hex!("888db2f97a1439fba5d37192a57618ae7599f57d01b9940a66572d18d0473e00");
+
+    let res = decrypt_ca(&ciphertext, &sk).unwrap();
+    println!("res:{}", res);
 }

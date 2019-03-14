@@ -261,7 +261,88 @@ impl<T: Trait> Module<T> {
 // 	}
 // }
 
-// #[cfg(test)]
-// mod tests {
-//     use super::*;
-// }
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use runtime_io::with_externalities;
+    use support::{impl_outer_origin, assert_ok};
+    use primitives::{H256, Blake2Hasher};
+    use runtime_primitives::{
+        BuildStorage, traits::{BlakeTwo256, OnInitialise, OnFinalise, IdentityLookup},
+        testing::{Digest, DigestItem, Header}
+    };
+    use keys::{ExpandedSpendingKey, ViewingKey};
+    use rand::{ChaChaRng, SeedableRng, Rng, Rand};
+    use jubjub::{curve::{JubjubBls12, FixedGenerators, fs, ToUniform}};    
+    use zcrypto::elgamal::elgamal_extend;
+    use hex_literal::{hex, hex_impl};
+
+    impl_outer_origin! {
+        pub enum Origin for Test {}
+    }
+
+    #[derive(Clone, Eq, PartialEq)]
+    pub struct Test;
+
+    impl system::Trait for Test {
+        type Origin = Origin;
+        type Index = u64;
+        type BlockNumber = u64;
+        type Hash = H256;
+        type Hashing = BlakeTwo256;
+        type Digest = Digest;
+        type AccountId = u64;
+        type Lookup = IdentityLookup<u64>;
+        type Header = Header;
+        type Event = ();
+        type Log = DigestItem;
+    }
+    impl Trait for Test {
+        type Event = ();
+    }
+    type ConfTransfer = Module<Test>;
+
+    fn alice_init() -> (PkdAddress, Ciphertext) {
+        let alice_seed = b"Alice                           ";
+        // let alice_seed: [u8; 32] = hex!("b4a7109c67f24ad01fc553bcd1c81ad1995cc41751291f7bb9522f2870c8f7c1");
+        let alice_value = 1000 as u32;
+        let params = &JubjubBls12::new();
+        let rng = &mut ChaChaRng::new_unseeded();
+
+        let p_g = FixedGenerators::ElGamal;
+        let mut randomness = [0u8; 32];
+        
+        rng.fill_bytes(&mut randomness[..]);
+        
+        let r_fs = fs::Fs::to_uniform(elgamal_extend(&randomness).as_bytes());	
+
+        let expsk = ExpandedSpendingKey::<Bls12>::from_spending_key(alice_seed);        
+        let viewing_key = ViewingKey::<Bls12>::from_expanded_spending_key(&expsk, params);        
+        let address = viewing_key.into_payment_address(params);	
+
+        let enc_alice_val = elgamal::Ciphertext::encrypt(alice_value, r_fs, &address.0, p_g, params);
+
+        (PkdAddress::from_payment_address(&address), Ciphertext::from_ciphertext(&enc_alice_val))
+    }    
+
+    fn new_test_ext() -> runtime_io::TestExternalities<Blake2Hasher> {
+        let mut t = system::GenesisConfig::<Test>::default().build_storage().unwrap().0;
+        t.extend(GenesisConfig::<Test>{
+            encrypted_balance: vec![alice_init(), (PkdAddress::from_slice(b"Alice                           "), 
+                Ciphertext::from_slice(b"Alice                           Bob                             "))],
+            verifying_key: PreparedVk(vec![1]),
+            _genesis_phantom_data: Default::default(),
+        }.build_storage().unwrap().0);
+        t.into()
+    }
+
+    #[test]
+    fn it_works_for_default_value() {
+        with_externalities(&mut new_test_ext(), || {
+            let address: [u8; 32] = hex!("e19fc12085334a4b81ec58e9ea0c006c56a94f406d9afb78c34f24cd4c59ed85");
+
+            assert_eq!(ConfTransfer::encrypted_balance(PkdAddress::from_slice(b"Alice                           ")), 
+                Some(Ciphertext::from_slice(b"Alice                           Bob                             ")));
+        })
+    }
+}

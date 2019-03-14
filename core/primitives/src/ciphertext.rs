@@ -122,7 +122,7 @@ mod tests {
 
         let ciphertext1 = elgamal::Ciphertext::encrypt(value, r_fs, &public_key, p_g, params);                
 
-        let ciphertext_b = Ciphertext::from_ciphertext(&ciphertext1);        
+        let ciphertext_b = Ciphertext::from_ciphertext(&ciphertext1);            
         let ciphertext2 = ciphertext_b.into_ciphertext().unwrap();
 
         assert!(ciphertext1 == ciphertext2);
