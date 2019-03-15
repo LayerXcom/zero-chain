@@ -53,13 +53,16 @@ pub mod fs;
 pub mod tests;
 
 /// Point of unknown order.
+#[cfg_attr(feature = "std", derive(Debug))]
 pub enum Unknown { }
 
 /// Point of prime order.
+#[cfg_attr(feature = "std", derive(Debug))]
 pub enum PrimeOrder { }
 
 /// Fixed generators of the Jubjub curve of unknown
 /// exponent.
+#[cfg_attr(feature = "std", derive(Debug))]
 #[derive(Copy, Clone)]
 pub enum FixedGenerators {
     /// The prover will demonstrate knowledge of discrete log
@@ -141,6 +144,8 @@ impl JubjubEngine for Bls12 {
     type Params = JubjubBls12;
 }
 
+#[cfg_attr(feature = "std", derive(Debug))]
+#[derive(PartialEq)]
 pub struct JubjubBls12 {
     edwards_d: Fr,
     montgomery_a: Fr,
@@ -318,10 +323,10 @@ impl JubjubBls12 {
                 find_group_hash(&[], constants::PROOF_GENERATION_KEY_BASE_GENERATOR_PERSONALIZATION, &tmp_params);
 
             fixed_base_generators[FixedGenerators::Diversifier as usize] =
-                find_group_hash(b"r", constants::DIVERSIFIER_PERSONALIZATION, &tmp_params);
+                find_group_hash(b"r", constants::PEDERSEN_HASH_GENERATORS_PERSONALIZATION, &tmp_params);
 
             fixed_base_generators[FixedGenerators::ElGamal as usize] =
-                find_group_hash(&[], constants::ELGAMAL_PERSONALIZATION, &tmp_params);
+                find_group_hash(&[], constants::NULLIFIER_POSITION_IN_TREE_GENERATOR_PERSONALIZATION, &tmp_params);
 
             fixed_base_generators[FixedGenerators::ValueCommitmentValue as usize] =
                 find_group_hash(b"v", constants::VALUE_COMMITMENT_GENERATOR_PERSONALIZATION, &tmp_params);

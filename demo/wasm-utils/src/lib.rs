@@ -15,7 +15,7 @@ use rand::{ChaChaRng, SeedableRng, Rng, Rand};
 use keys;
 use zpairing::{
     bls12_381::Bls12 as zBls12,
-    Field, PrimeField as zPrimeField, PrimeFieldRepr as zPrimeFieldRepr,
+    Field as zField, PrimeField as zPrimeField, PrimeFieldRepr as zPrimeFieldRepr,
 };
 use pairing::{
     bls12_381::Bls12, PrimeField
@@ -27,7 +27,7 @@ use zjubjub::{
         edwards::Point as zPoint,
         fs::Fs as zFs
         },
-    redjubjub::{h_star, Signature, PublicKey, write_scalar, read_scalar},
+    redjubjub::{h_star, Signature, PublicKey as zPublicKey, write_scalar, read_scalar},
 };
 use scrypto::jubjub::{fs, FixedGenerators, ToUniform, JubjubBls12, JubjubParams};
 use proofs::{
@@ -51,26 +51,17 @@ cfg_if! {
 }
 
 #[derive(Serialize)]
-pub struct PkdAddress(pub(crate) [u8; 32]);
-
-impl From<keys::PaymentAddress<zBls12>> for PkdAddress {
-    fn from(address: keys::PaymentAddress<zBls12>) -> Self {
-        let mut writer = [0u8; 32];
-        address.write(&mut writer[..]).expect("fails to write payment address");
-        PkdAddress(writer)
-    }
+pub struct PkdAddress {
+    pub address: String,
 }
 
-#[derive(Serialize)]
-pub struct RedjubjubSignature(pub(crate) Vec<u8>);
-
-impl From<Signature> for RedjubjubSignature {
-    fn from(sig: Signature) -> Self {
-        let mut writer = [0u8; 64];
-        sig.write(&mut writer[..]).expect("fails to write signature");
-        RedjubjubSignature(writer.to_vec())
-    }
-}
+// impl From<keys::PaymentAddress<zBls12>> for PkdAddress {
+//     fn from(address: keys::PaymentAddress<zBls12>) -> Self {
+//         let mut writer = [0u8; 32];
+//         address.write(&mut writer[..]).expect("fails to write payment address");
+//         PkdAddress(writer)
+//     }
+// }
 
 #[wasm_bindgen]
 pub fn gen_account_id(sk: &[u8]) -> JsValue {
@@ -80,7 +71,12 @@ pub fn gen_account_id(sk: &[u8]) -> JsValue {
     let viewing_key = keys::ViewingKey::<zBls12>::from_expanded_spending_key(&exps, params);
     let address = viewing_key.into_payment_address(params);
 
-    let pkd_address = PkdAddress::from(address);
+    let mut v = vec![];
+    address.write(&mut &mut v[..]).expect("fails to write payment address");
+
+    println!("!AAA");
+
+    let pkd_address = PkdAddress { address: hex::encode(&v[..])};
     JsValue::from_serde(&pkd_address).expect("fails to write json")
 }
 
@@ -99,6 +95,19 @@ pub fn gen_ivk(sk: &[u8]) -> JsValue {
     ivk.into_repr().write_le(&mut buf).unwrap();    
     let ivk = Ivk(buf);
     JsValue::from_serde(&ivk).expect("fails to write json")
+}
+
+#[derive(Serialize, Deserialize, Debug)]
+pub struct RedjubjubSignature{
+    pub sig: Vec<u8>
+}
+
+impl From<Signature> for RedjubjubSignature {
+    fn from(sig: Signature) -> Self {
+        let mut writer = [0u8; 64];
+        sig.write(&mut writer[..]).expect("fails to write signature");
+        RedjubjubSignature{sig: writer.to_vec()}
+    }
 }
 
 #[wasm_bindgen]
@@ -131,8 +140,13 @@ pub fn sign(sk: &[u8], msg: &[u8], seed_slice: &[u32]) -> JsValue {
     write_scalar::<zBls12, &mut [u8]>(&s, &mut sbar[..])
         .expect("Jubjub scalars should serialize to 32 bytes");
 
+    println!("A!!!");
+
     let sig = Signature { rbar, sbar };
     let sig = RedjubjubSignature::from(sig);
+
+    println!("len: {:?}, sig: {:?}", sig.sig.len(), sig);
+
     JsValue::from_serde(&sig).expect("fails to write json")
 }
 
@@ -140,7 +154,7 @@ pub fn sign(sk: &[u8], msg: &[u8], seed_slice: &[u32]) -> JsValue {
 pub fn verify(vk: Vec<u8>, msg: &[u8], sig: Vec<u8>) -> bool {
     let params = &zJubjubBls12::new();    
 
-    let vk = PublicKey::<zBls12>::read(&mut &vk[..], params).unwrap();
+    let vk = zPublicKey::<zBls12>::read(&mut &vk[..], params).unwrap();
     let sig = Signature::read(&mut &sig[..]).unwrap();
 
     // c = H*(Rbar || M)
@@ -271,7 +285,16 @@ mod tests {
     use scrypto::jubjub::{fs::Fs, ToUniform};
     use pairing::{PrimeField, PrimeFieldRepr, Field};
     use zjubjub::redjubjub::PrivateKey as zPrivateKey;
-    use scrypto::redjubjub::{PrivateKey, PublicKey};
+    use scrypto::redjubjub::{PrivateKey, PublicKey};    
+
+    #[test]
+    fn test_gen_account_id() {
+        let rng = &mut XorShiftRng::from_seed([0xbc4f6d44, 0xd62f276c, 0xb963afd0, 0x5455863d]);
+        let sk: [u8;32]= rng.gen();
+        let account_id = gen_account_id(&sk);
+
+    }
+
 
     #[test]
     fn test_decrypt() {
@@ -321,35 +344,27 @@ mod tests {
     #[test]
     fn test_sign_verify() {
         let rsk: [u8; 32] = hex!("dcfd7a3cb8291764a4e1ab41f6831d2e285a98114cdc4a2d361a380de0e3cb07");
-        let rvk: [u8; 32] = hex!("d05a2394f5e5e3950ccd804c2bc31302d57c1ff07615f971a2d379c5aadfbe4b");
+        let rvk: [u8; 32] = hex!("791b91fae07feada7b6f6042b1e214bc75759b3921956053936c38a95271a834");
 
+        // let rng = &mut XorShiftRng::from_seed([0xbc4f6d44, 0xd62f276c, 0xb963afd0, 0x5455863d]);
         let rng = &mut XorShiftRng::from_seed([0xbc4f6d44, 0xd62f276c, 0xb963afd0, 0x5455863d]);
         let msg: [u8; 32] = rng.gen();
         let seed_slice: [u32; 8] = rng.gen();
 
-        let params = &JubjubBls12::new();    
-        let p_g = FixedGenerators::NoteCommitmentRandomness;
+        let params = &zJubjubBls12::new();   
+        let p_g = zFixedGenerators::Diversifier;        
 
-        // let alpha = Fs::zero();
-        // let sk = PrivateKey::<Bls12>(rng.gen());
-        // let vk = PublicKey::from_private(&sk, p_g, params);
+        let sig = sign(&rsk, &msg, &seed_slice);
 
-        // let rsk = sk.randomize(alpha);
-        // let rvk = vk.randomize(alpha, p_g, params);
-        
-        // let sig = rsk.sign(&msg, rng, p_g, params);
-        // let isValid = rvk.verify(&msg, &sig, p_g, params);
+        // let private_key = zPrivateKey::<zBls12>::read(&mut &rsk[..]).unwrap();
+        // let sig = private_key.sign(&msg, rng, p_g, params);
 
-        let private_key = PrivateKey::<Bls12>::read(&mut &rsk[..]).unwrap();
-        let sig = private_key.sign(&msg, rng, p_g, params);
+        // let public_key = zPublicKey::<zBls12>::read(&mut &rvk[..], params).unwrap();
+        // let isValid = public_key.verify(&msg, &sig, p_g, params);
 
-        let public_key = PublicKey::<Bls12>::read(&mut &rvk[..], params).unwrap();
-        let isValid = public_key.verify(&msg, &sig, p_g, params);
-
-        // println!("rng:{:?}", msg);
-
-        // let sig = sign(&rsk[..], &msg[..], &seed_slice[..]);
-        // let isValid = verify(rvk.to_vec(), &msg, sig.into_serde().unwrap());
-        assert!(isValid);
+        // let sig_a: RedjubjubSignature = sig.into_serde().unwrap();
+        // let isValid =  verify(rvk.to_vec(), &msg, sig_a.0);
+   
+        // assert!(isValid);
     }
 }

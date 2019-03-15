@@ -32,8 +32,10 @@ pub struct Signature {
     pub sbar: [u8; 32],
 }
 
+#[cfg_attr(feature = "std", derive(Debug))]
 pub struct PrivateKey<E: JubjubEngine>(pub E::Fs);
 
+#[cfg_attr(feature = "std", derive(Debug))]
 #[derive(Clone, PartialEq)]
 pub struct PublicKey<E: JubjubEngine>(pub Point<E, Unknown>);
 
@@ -144,6 +146,7 @@ impl<E: JubjubEngine> PublicKey<E> {
             Ok(s) => s,
             Err(_) => return false,
         };
+                
         // 0 = h_G(-S . P_G + R + c . vk)
         self.0.mul(c, params).add(&r, params).add(
             &params.generator(p_g).mul(s, params).negate().into(),
