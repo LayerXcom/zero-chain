@@ -309,7 +309,7 @@ mod tests {
         let params = &JubjubBls12::new();
         let rng = &mut ChaChaRng::new_unseeded();
 
-        let p_g = FixedGenerators::ElGamal;
+        let p_g = FixedGenerators::Diversifier;
         let mut randomness = [0u8; 32];
         
         rng.fill_bytes(&mut randomness[..]);

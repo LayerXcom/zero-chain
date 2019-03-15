@@ -127,7 +127,7 @@ mod tests {
         let r_fs = Fs::to_uniform(elgamal::elgamal_extend(&randomness).as_bytes());
 
         let params = &JubjubBls12::new();
-        let p_g = FixedGenerators::ElGamal;
+        let p_g = FixedGenerators::Diversifier;
 
         let public_key = params.generator(p_g).mul(sk_fs, params).into();
         let value: u32 = 5 as u32;
@@ -153,7 +153,7 @@ mod tests {
         let r_fs = Fs::to_uniform(elgamal::elgamal_extend(&randomness).as_bytes());
 
         let params = &JubjubBls12::new();
-        let p_g = FixedGenerators::ElGamal;
+        let p_g = FixedGenerators::Diversifier;
 
         let public_key = params.generator(p_g).mul(sk_fs, params).into();
         let value: u32 = 5 as u32;

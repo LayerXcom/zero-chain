@@ -73,7 +73,7 @@ impl Verify for RedjubjubSignature {
             None => return false
         };
 
-        let p_g = FixedGenerators::SpendingKeyGenerator;
+        let p_g = FixedGenerators::Diversifier;
 
         // Compute the signature's message for rk/auth_sig
         // let mut data_to_be_signed = [0u8; 64];
@@ -145,7 +145,7 @@ mod tests {
     #[test]
     fn test_sig_into_from() {
         let mut rng = &mut XorShiftRng::from_seed([0x3dbe6259, 0x8d313d76, 0x3237db17, 0xe5bc0654]);
-        let p_g = FixedGenerators::SpendingKeyGenerator;
+        let p_g = FixedGenerators::Diversifier;
         let params = &JubjubBls12::new();
 
         let sk = redjubjub::PrivateKey::<Bls12>(rng.gen());
@@ -165,7 +165,7 @@ mod tests {
     #[test]
     fn test_sig_encode_decode() {
         let mut rng = &mut XorShiftRng::from_seed([0x3dbe6259, 0x8d313d76, 0x3237db17, 0xe5bc0654]);
-        let p_g = FixedGenerators::SpendingKeyGenerator;
+        let p_g = FixedGenerators::Diversifier;
         let params = &JubjubBls12::new();
 
         let sk = redjubjub::PrivateKey::<Bls12>(rng.gen());

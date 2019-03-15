@@ -29,6 +29,7 @@ bellman-verifier = { path = "../../core/bellman-verifier"}
 parity-codec-derive = { version = "3.1" }
 parity-codec = { version = "3.1" }
 hex-literal = '0.1'
+hex = "0.3.2"
 
 # The `console_error_panic_hook` crate provides better debugging of panics by
 # logging them with `console.error`. This is great for development, but requires

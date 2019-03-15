@@ -105,7 +105,7 @@ pub fn gen_ivk(sk: &[u8]) -> JsValue {
 pub fn sign(sk: &[u8], msg: &[u8], seed_slice: &[u32]) -> JsValue {
     let params = &zJubjubBls12::new();
     let rng = &mut ChaChaRng::from_seed(seed_slice);
-    let g = params.generator(zFixedGenerators::SpendingKeyGenerator);
+    let g = params.generator(zFixedGenerators::Diversifier);
 
     let exps = keys::ExpandedSpendingKey::<zBls12>::from_spending_key(sk);
 
@@ -160,7 +160,7 @@ pub fn verify(vk: Vec<u8>, msg: &[u8], sig: Vec<u8>) -> bool {
     };
     // 0 = h_G(-S . P_G + R + c . vk)
     vk.0.mul(c, params).add(&r, params).add(
-        &params.generator(zFixedGenerators::SpendingKeyGenerator)
+        &params.generator(zFixedGenerators::Diversifier)
                 .mul(s, params)
                 .negate()
                 .into(),
@@ -192,7 +192,7 @@ pub fn gen_call(
 {
     let params = &JubjubBls12::new();
     let mut rng = &mut ChaChaRng::from_seed(seed_slice);
-    let p_g = FixedGenerators::NullifierPosition; // 2
+    let p_g = FixedGenerators::NoteCommitmentRandomness; // 1
     let remaining_balance = balance - value;
 
     let alpha = fs::Fs::rand(&mut rng);
@@ -269,7 +269,9 @@ mod tests {
     use super::*;
     use rand::XorShiftRng;
     use scrypto::jubjub::{fs::Fs, ToUniform};
-    use pairing::{PrimeField, PrimeFieldRepr};
+    use pairing::{PrimeField, PrimeFieldRepr, Field};
+    use zjubjub::redjubjub::PrivateKey as zPrivateKey;
+    use scrypto::redjubjub::{PrivateKey, PublicKey};
 
     #[test]
     fn test_decrypt() {
@@ -315,5 +317,39 @@ mod tests {
 
         assert_eq!(fs, zFs::from_repr(sk_repr).unwrap());
     }
-}
 
+    #[test]
+    fn test_sign_verify() {
+        let rsk: [u8; 32] = hex!("dcfd7a3cb8291764a4e1ab41f6831d2e285a98114cdc4a2d361a380de0e3cb07");
+        let rvk: [u8; 32] = hex!("d05a2394f5e5e3950ccd804c2bc31302d57c1ff07615f971a2d379c5aadfbe4b");
+
+        let rng = &mut XorShiftRng::from_seed([0xbc4f6d44, 0xd62f276c, 0xb963afd0, 0x5455863d]);
+        let msg: [u8; 32] = rng.gen();
+        let seed_slice: [u32; 8] = rng.gen();
+
+        let params = &JubjubBls12::new();    
+        let p_g = FixedGenerators::NoteCommitmentRandomness;
+
+        // let alpha = Fs::zero();
+        // let sk = PrivateKey::<Bls12>(rng.gen());
+        // let vk = PublicKey::from_private(&sk, p_g, params);
+
+        // let rsk = sk.randomize(alpha);
+        // let rvk = vk.randomize(alpha, p_g, params);
+        
+        // let sig = rsk.sign(&msg, rng, p_g, params);
+        // let isValid = rvk.verify(&msg, &sig, p_g, params);
+
+        let private_key = PrivateKey::<Bls12>::read(&mut &rsk[..]).unwrap();
+        let sig = private_key.sign(&msg, rng, p_g, params);
+
+        let public_key = PublicKey::<Bls12>::read(&mut &rvk[..], params).unwrap();
+        let isValid = public_key.verify(&msg, &sig, p_g, params);
+
+        // println!("rng:{:?}", msg);
+
+        // let sig = sign(&rsk[..], &msg[..], &seed_slice[..]);
+        // let isValid = verify(rvk.to_vec(), &msg, sig.into_serde().unwrap());
+        assert!(isValid);
+    }
+}

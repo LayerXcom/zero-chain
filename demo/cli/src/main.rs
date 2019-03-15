@@ -5,7 +5,7 @@ use proofs::{
     elgamal::{Ciphertext, elgamal_extend},
     };
 use substrate_primitives::hexdisplay::{HexDisplay, AsBytesRef};
-use pairing::bls12_381::Bls12;
+use pairing::{bls12_381::Bls12, Field};
 use scrypto::jubjub::{JubjubBls12, fs, ToUniform, JubjubParams, FixedGenerators};      
 use std::fs::File;
 use std::path::Path;
@@ -54,7 +54,8 @@ fn print_alice_tx(sender_seed: &[u8], recipient_seed: &[u8], mut proving_key_b: 
     let value = 10 as u32;
     let remaining_balance = 90 as u32;
     let balance = 100 as u32;
-    let alpha = fs::Fs::rand(rng); 
+    // let alpha = fs::Fs::rand(rng); 
+    let alpha = fs::Fs::zero();
 
     // let (proving_key, prepared_vk) = setup();   
     let proving_key =  Parameters::<Bls12>::read(&mut proving_key_b, true).unwrap();
@@ -67,9 +68,7 @@ fn print_alice_tx(sender_seed: &[u8], recipient_seed: &[u8], mut proving_key_b: 
 
     let address_recipient = viewing_key_r.into_payment_address(&params);
     
-    // let sk_fs = fs::Fs::to_uniform(elgamal_extend(&sender_seed).as_bytes()).into_repr();
-    let ivk = viewing_key_s.ivk();
-    let mut randomness = [0u8; 32];
+    let ivk = viewing_key_s.ivk();    
     
     let r_fs = fs::Fs::rand(rng);
 

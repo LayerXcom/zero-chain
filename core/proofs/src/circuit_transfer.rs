@@ -84,7 +84,7 @@ impl<'a, E: JubjubEngine> Circuit<E> for Transfer<'a, E> {
         // Multiply the value to the base point same as FixedGenerators::ElGamal.
         let value_g = ecc::fixed_base_multiplication(
             cs.namespace(|| format!("compute the value in the exponent")), 
-            FixedGenerators::NullifierPosition, 
+            FixedGenerators::NoteCommitmentRandomness, 
             &value_bits, 
             params
         )?;
@@ -142,7 +142,7 @@ impl<'a, E: JubjubEngine> Circuit<E> for Transfer<'a, E> {
         // Multiply the randomness to the base point same as FixedGenerators::ElGamal.
         let c_right = ecc::fixed_base_multiplication(
             cs.namespace(|| format!("compute the right elgamal component")), 
-            FixedGenerators::NullifierPosition, 
+            FixedGenerators::NoteCommitmentRandomness, 
             &rcv, 
             params
         )?;
@@ -242,7 +242,7 @@ impl<'a, E: JubjubEngine> Circuit<E> for Transfer<'a, E> {
         // Make the alpha on the curve
         let alpha_g = ecc::fixed_base_multiplication(
             cs.namespace(|| "computation of randomiation for the signing key"),
-            FixedGenerators::SpendingKeyGenerator,
+            FixedGenerators::NoteCommitmentRandomness,
             &alpha,
             self.params
         )?;
@@ -345,7 +345,7 @@ fn u32_into_boolean_vec_le<E, CS>(
         rng.fill_bytes(&mut randomness[..]);
         let r_fs = fs::Fs::to_uniform(elgamal_extend(&randomness).as_bytes());
 
-        let p_g = FixedGenerators::NullifierPosition;
+        let p_g = FixedGenerators::NoteCommitmentRandomness;
         let public_key = params.generator(p_g).mul(r_fs, params).into();
         let ciphetext = Ciphertext::encrypt(current_balance, r_fs, &public_key, p_g, params);
 

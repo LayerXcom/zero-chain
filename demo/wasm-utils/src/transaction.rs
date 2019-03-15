@@ -83,7 +83,7 @@ impl Transaction {
 		// let sk = fs::Fs::to_uniform(primitives::prf_extend_wo_t(sk).as_bytes());
 
 		// Generate the re-randomized sign key
-		let rsk: PrivateKey<Bls12> = PrivateKey(expsk.ask).randomize(alpha);
+		let rsk = PrivateKey::<Bls12>(expsk.ask).randomize(alpha);
 		let mut rsk_bytes = [0u8; 32];
 		rsk.write(&mut rsk_bytes[..]).map_err(|_| io::Error::InvalidData)?;
 		

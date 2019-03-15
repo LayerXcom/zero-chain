@@ -123,7 +123,7 @@ mod tests {
         let r_fs = Fs::to_uniform(elgamal_extend(&randomness).as_bytes());
 
         let params = &JubjubBls12::new();
-        let p_g = FixedGenerators::NullifierPosition;
+        let p_g = FixedGenerators::NoteCommitmentRandomness;
 
         let public_key = params.generator(p_g).mul(sk_fs, params).into();
         let value: u32 = 5 as u32;
@@ -152,7 +152,7 @@ mod tests {
         let r_fs2 = Fs::to_uniform(elgamal_extend(&randomness).as_bytes());
 
         let params = &JubjubBls12::new();
-        let p_g = FixedGenerators::NullifierPosition;
+        let p_g = FixedGenerators::NoteCommitmentRandomness;
 
         let public_key = params.generator(p_g).mul(sk_fs, params).into();
         let value20: u32 = 20 as u32;
@@ -200,7 +200,7 @@ mod tests {
         let r_fs2 = Fs::to_uniform(elgamal_extend(&randomness).as_bytes());
 
         let params = &JubjubBls12::new();
-        let p_g = FixedGenerators::NullifierPosition;
+        let p_g = FixedGenerators::NoteCommitmentRandomness;
 
         let public_key1 = params.generator(p_g).mul(sk_fs1, params).into();
         let public_key2 = params.generator(p_g).mul(sk_fs2, params).into();

@@ -65,7 +65,7 @@ impl<E: JubjubEngine> TransferProof<E> {
         let rk = PublicKey(proof_generation_key.ak.clone().into())
             .randomize(
                 alpha,
-                FixedGenerators::SpendingKeyGenerator,
+                FixedGenerators::NoteCommitmentRandomness,
                 params,
         );
 
@@ -91,7 +91,7 @@ impl<E: JubjubEngine> TransferProof<E> {
             value, 
             randomness, 
             &address_sender.0, 
-            FixedGenerators::NullifierPosition,
+            FixedGenerators::NoteCommitmentRandomness,
             params
         );
 
@@ -99,7 +99,7 @@ impl<E: JubjubEngine> TransferProof<E> {
             value, 
             randomness, 
             &address_recipient.0, 
-            FixedGenerators::NullifierPosition,
+            FixedGenerators::NoteCommitmentRandomness,
             params
         );
 
@@ -176,7 +176,7 @@ mod tests {
     fn test_gen_proof() {        
         let params = &JubjubBls12::new();
         let mut rng = XorShiftRng::from_seed([0x5dbe6259, 0x8d313d76, 0x3237db17, 0xe5bc0654]);
-        let p_g = FixedGenerators::NullifierPosition;
+        let p_g = FixedGenerators::NoteCommitmentRandomness;
 
         let value = 10 as u32;
         let remaining_balance = 30 as u32;
