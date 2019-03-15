@@ -177,6 +177,7 @@ struct Calls {
     value_recipient: Vec<u8>,
     balance_sender: Vec<u8>,
     rk: Vec<u8>,
+    rsk: Vec<u8>,
 }
 
 #[wasm_bindgen]
@@ -219,7 +220,7 @@ pub fn gen_call(
                 sk,
                 ciphertext_balance,                        
                 rng
-        ).expect("fails to generate the tx");
+        ).expect("fails to generate the tx");    
     
     let calls = Calls {
         zk_proof: tx.proof.to_vec(),
@@ -229,6 +230,7 @@ pub fn gen_call(
         value_recipient: tx.enc_val_recipient.to_vec(),
         balance_sender: tx.enc_bal_sender.to_vec(),
         rk: tx.rk.to_vec(),
+        rsk: tx.rsk.to_vec(),
     };
 
     JsValue::from_serde(&calls).expect("fails to write json")
@@ -271,8 +273,8 @@ mod tests {
 
     #[test]
     fn test_decrypt() {
-        // let ciphertext: [u8; 64] = hex!("6e04f64094e32c2bd54dc4ec6d8a244c9b9209a8a7d07c7614b470fec59647e9b93debdba216fd8789f83ff58bb9fe2ba26e4862ed946406f5d984bde5302f48");
-        // let sk: [u8; 32] = hex!("888db2f97a1439fba5d37192a57618ae7599f57d01b9940a66572d18d0473e00");
+        let v2: [u8; 64] = hex!("858220efbf556a23d7b8c1dc9e5b9cc8fac114a761b2ae502314b2cb21653b3c22f25054a1fb20c2c3e41a4da141c2a8dca612519009265dcaee3bb04e93b8e6");        
+        let buf2: [u8; 32] = hex!("1e3eee98dbb517f8452e88d84cc7119c0094699cfca8196f1521e33155622f04");       
 
         let alice_seed = b"Alice                           ";
         let params = &zJubjubBls12::new();
@@ -296,7 +298,7 @@ mod tests {
         let mut v = vec![];
         ciphetext.write(&mut v).unwrap(); 
 
-        let res = decrypt_ca(&v[..], &buf[..]).unwrap();
+        let res = decrypt_ca(&v2[..], &buf2[..]).unwrap();
         println!("res:{}", res);
     }
 

@@ -2,7 +2,10 @@ use bellman::groth16::Parameters;
 use bellman_verifier::Proof as zProof;
 use pairing::bls12_381::Bls12;
 use zpairing::io;
-use scrypto::jubjub::{JubjubBls12, fs};
+use scrypto::{
+	jubjub::{JubjubBls12, fs},
+	redjubjub::PrivateKey,
+	};
 use zjubjub::{
 	curve::JubjubBls12 as zJubjubBls12,
 	redjubjub::PublicKey as zPublicKey,
@@ -39,6 +42,7 @@ pub struct Transaction{
     pub enc_val_recipient: [u8; 64],    // 64 bytes
 	pub enc_val_sender: [u8; 64],       // 64 bytes
 	pub enc_bal_sender: [u8; 64],       // 64 bytes	
+	pub rsk: [u8; 32],                  // 32 bytes
 }
 
 impl Transaction {
@@ -79,8 +83,9 @@ impl Transaction {
 		// let sk = fs::Fs::to_uniform(primitives::prf_extend_wo_t(sk).as_bytes());
 
 		// Generate the re-randomized sign key
-		// let rsk: PrivateKey<Bls12> = PrivateKey(sk).randomize(alpha);		
-				
+		let rsk: PrivateKey<Bls12> = PrivateKey(expsk.ask).randomize(alpha);
+		let mut rsk_bytes = [0u8; 32];
+		rsk.write(&mut rsk_bytes[..]).map_err(|_| io::Error::InvalidData)?;
 		
 		let mut rk_bytes = [0u8; 32];
 		proof_output.rk.write(&mut rk_bytes[..]).map_err(|_| io::Error::InvalidData)?;
@@ -169,7 +174,7 @@ impl Transaction {
 			enc_val_recipient: env_val_rb,
 			enc_val_sender: env_val_sb,
 			enc_bal_sender: env_bal_sb,
-			// sig, 							
+			rsk: rsk_bytes,					
 		};
 
 		Ok(tx)

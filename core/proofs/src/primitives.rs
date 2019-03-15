@@ -46,8 +46,8 @@ pub fn prf_extend_wo_t(sk: &[u8]) -> Blake2bResult {
 
 #[derive(Debug, Clone, PartialEq)]
 pub struct ExpandedSpendingKey<E: JubjubEngine> {
-    ask: E::Fs,
-    nsk: E::Fs,
+    pub ask: E::Fs,
+    pub nsk: E::Fs,
 }
 
 impl<E: JubjubEngine> ExpandedSpendingKey<E> {
