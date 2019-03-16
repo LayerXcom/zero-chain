@@ -54,31 +54,41 @@ impl AsBytesRef for PreparedVk {
 }
 
 
+#[cfg(feature = "std")]
 #[cfg(test)]
 mod tests {
     use super::*;       
-    use parity_codec::{Encode, Decode};    
+    use parity_codec::{Encode, Decode};   
+    use std::path::Path;
+    use std::fs::File;
+    use std::io::{BufReader, Read}; 
 
-    #[test]
-    fn test_pvk_encode_decode() {
-        // let pvk_vec_u8: Vec<u8> = (&PVK).to_vec().into_iter().map(|e| e as u8).collect();        
-        // let pvk = PreparedVk(pvk_vec_u8);
-        // let encoded_pvk = pvk.encode();
-        // let decoded_pvk = PreparedVk::decode(&mut encoded_pvk.as_slice()).unwrap();
-        // assert_eq!(pvk, decoded_pvk);
+    fn get_pvk() -> PreparedVk {
+        let vk_path = Path::new("../../demo/cli/verification.params"); 
+        let vk_file = File::open(&vk_path).unwrap();
+        let mut vk_reader = BufReader::new(vk_file);
+
+        let mut buf_vk = vec![];
+        vk_reader.read_to_end(&mut buf_vk).unwrap();
+        
+        PreparedVk(buf_vk)
     }
 
-    // TODO
+    #[test]
+    fn test_pvk_encode_decode() {               
+        let pvk = get_pvk();
+        let encoded_pvk = pvk.encode();
+        let decoded_pvk = PreparedVk::decode(&mut encoded_pvk.as_slice()).unwrap();
+        assert_eq!(pvk, decoded_pvk);
+    }
+    
     #[test]
     fn test_pvk_into_from() {
-        // let pvk_vec_u8: Vec<u8> = (&PVK).to_vec().into_iter().map(|e| e as u8).collect();        
-        // let pvk = PreparedVk(pvk_vec_u8);
-        // println!("pvk:{:?}", pvk);
-        // let into_pvk = pvk.into_prepared_vk().unwrap();
-        // let from_pvk = PreparedVk::from_prepared_vk(&into_pvk);
+        let pvk = get_pvk();
         
-        // println!("from_pvk:{:?}", from_pvk);
+        let into_pvk = pvk.into_prepared_vk().unwrap();
+        let from_pvk = PreparedVk::from_prepared_vk(&into_pvk);                
                 
-        // assert_eq!(pvk, from_pvk);
+        assert_eq!(pvk, from_pvk);
     }
 }

@@ -8,6 +8,7 @@ keys = { path = "../core/keys", default-features = false }
 indices = { package = "srml-indices", path = "../modules/indices", default-features = false }
 rand = { version = "0.4", default-features = false }
 executive = { package = "srml-executive", path = "../modules/executive", default-features = false }
+hex-literal = '0.1'
 
 [dependencies.aura]
 default_features = false

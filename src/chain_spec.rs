@@ -11,13 +11,13 @@ use zprimitives::{
 	ciphertext::Ciphertext,	
 	};
 use keys::{ExpandedSpendingKey, ViewingKey};
-use rand::{OsRng, Rng, Rand};
-use jubjub::{curve::{JubjubBls12, FixedGenerators, fs, ToUniform}};
-use zpairing::{bls12_381::Bls12, PrimeField, PrimeFieldRepr};
-use zcrypto::elgamal::{self, elgamal_extend};
-use std::path::{Path, PathBuf};
+use rand::{OsRng, Rand};
+use jubjub::{curve::{JubjubBls12, FixedGenerators, fs}};
+use zpairing::bls12_381::Bls12;
+use zcrypto::elgamal;
+use std::path::Path;
 use std::fs::File;
-use std::io::{BufRead, BufReader, Read};
+use std::io::{BufReader, Read};
 
 lazy_static! {
     static ref JUBJUB: JubjubBls12 = { JubjubBls12::new() };
@@ -96,8 +96,7 @@ impl Alternative {
 
 fn testnet_genesis(initial_authorities: Vec<Ed25519AuthorityId>, endowed_accounts: Vec<AccountId>, root_key: AccountId) -> GenesisConfig {	
 	GenesisConfig {
-		consensus: Some(ConsensusConfig {
-			// code: include_bytes!("../runtime/wasm/target/wasm32-unknown-unknown/release/node_template_runtime_wasm.compact.wasm").to_vec(),
+		consensus: Some(ConsensusConfig {			
 			code: include_bytes!("../runtime/wasm/target/wasm32-unknown-unknown/release/zero_chain_runtime_wasm.compact.wasm").to_vec(),
 			authorities: initial_authorities.clone(),
 		}),

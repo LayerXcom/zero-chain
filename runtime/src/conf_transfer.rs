@@ -261,6 +261,7 @@ impl<T: Trait> Module<T> {
 // 	}
 // }
 
+#[cfg(feature = "std")]
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -275,7 +276,10 @@ mod tests {
     use rand::{ChaChaRng, SeedableRng, Rng, Rand};
     use jubjub::{curve::{JubjubBls12, FixedGenerators, fs, ToUniform}};    
     use zcrypto::elgamal::elgamal_extend;
-    // use hex_literal::{hex, hex_impl};
+    use hex_literal::{hex, hex_impl};
+    use std::path::Path;
+    use std::fs::File;
+    use std::io::{BufReader, Read};
 
     impl_outer_origin! {
         pub enum Origin for Test {}
@@ -303,46 +307,67 @@ mod tests {
     type ConfTransfer = Module<Test>;
 
     fn alice_init() -> (PkdAddress, Ciphertext) {
-        let alice_seed = b"Alice                           ";
-        // let alice_seed: [u8; 32] = hex!("b4a7109c67f24ad01fc553bcd1c81ad1995cc41751291f7bb9522f2870c8f7c1");
-        let alice_value = 1000 as u32;
+        let alice_seed = b"Alice                           ";        
+        let alice_balance = 100 as u32;
+
         let params = &JubjubBls12::new();
         let rng = &mut ChaChaRng::new_unseeded();
-
-        let p_g = FixedGenerators::Diversifier;
-        let mut randomness = [0u8; 32];
+        let p_g = FixedGenerators::Diversifier;                
         
-        rng.fill_bytes(&mut randomness[..]);
-        
-        let r_fs = fs::Fs::to_uniform(elgamal_extend(&randomness).as_bytes());	
+        let r_fs = fs::Fs::rand(rng);
 
         let expsk = ExpandedSpendingKey::<Bls12>::from_spending_key(alice_seed);        
         let viewing_key = ViewingKey::<Bls12>::from_expanded_spending_key(&expsk, params);        
         let address = viewing_key.into_payment_address(params);	
 
-        let enc_alice_val = elgamal::Ciphertext::encrypt(alice_value, r_fs, &address.0, p_g, params);
+        let enc_alice_bal = elgamal::Ciphertext::encrypt(alice_balance, r_fs, &address.0, p_g, params);        
 
-        (PkdAddress::from_payment_address(&address), Ciphertext::from_ciphertext(&enc_alice_val))
+        (PkdAddress::from_payment_address(&address), Ciphertext::from_ciphertext(&enc_alice_bal))
     }    
+
+    fn get_pvk() -> PreparedVk {
+        let vk_path = Path::new("../demo/cli/verification.params"); 
+        let vk_file = File::open(&vk_path).unwrap();
+        let mut vk_reader = BufReader::new(vk_file);
+
+        let mut buf_vk = vec![];
+        vk_reader.read_to_end(&mut buf_vk).unwrap();
+        
+        PreparedVk(buf_vk)
+    }
 
     fn new_test_ext() -> runtime_io::TestExternalities<Blake2Hasher> {
         let mut t = system::GenesisConfig::<Test>::default().build_storage().unwrap().0;
         t.extend(GenesisConfig::<Test>{
-            encrypted_balance: vec![alice_init(), (PkdAddress::from_slice(b"Alice                           "), 
-                Ciphertext(b"Alice                           Bob                             ".to_vec()))],
-            verifying_key: PreparedVk(vec![1]),
+            encrypted_balance: vec![alice_init()],
+            verifying_key: get_pvk(),
             _genesis_phantom_data: Default::default(),
         }.build_storage().unwrap().0);
         t.into()
     }
 
     #[test]
-    fn it_works_for_default_value() {
-        with_externalities(&mut new_test_ext(), || {
-            // let address: [u8; 32] = hex!("e19fc12085334a4b81ec58e9ea0c006c56a94f406d9afb78c34f24cd4c59ed85");
+    fn test_call_function() {        
+        with_externalities(&mut new_test_ext(), || {          
+            let a = get_pvk();  
+            let proof: [u8; 192] = hex!("8afc7f36d2e10b5fbe27ff3d3e7e5d968eee6cc684b6d9a5c16b881fc217c058757e351738929895cc82b1ffc0c474d58048bea055b685c9e927f8fc34ae7d9c187ff0ff3caa776d965f40448e6eb3a5a1eddfe06f02bdaf46b62b3bed6284c504fee06195ad029b880228c5f68a156b7aba7da7737a1240456a845429ef03ba17da83c0bc000ee6564d67a97010b99aa3200962ec89a8b56eb7d4b0a14934dfcdaa99a9ad73cefcff49db59983f41fcca12a5b3c5444c5aeb21f6fda30ca970");
+            let pkd_addr_alice: [u8; 32] = hex!("775e501abc59d035e71e16c6c6cd225d44a249289dd95c37516ce4754721d763");
+            let pkd_addr_bob: [u8; 32] = hex!("a23bb484f72b28a4179a71057c4528648dfb37974ccd84b38aa3e342f9598515");
+            let enc10_by_alice: [u8; 64] = hex!("5075bd479ec137895d66a859863d72d0f56d0b9a85c70d011f021b5e98075a0a5717f6554dc83aaed08432bfadc758e025d5933386eb6ecb1993626f2ccd783b");
+            let enc10_by_bob: [u8; 64] = hex!("1bccea377f1d555c9e40e59de63c03a5ef8c5ba8807415695d535d9ca295edf35717f6554dc83aaed08432bfadc758e025d5933386eb6ecb1993626f2ccd783b");
+            let enc100_by_alice: [u8; 64] = hex!("59b1dba273633cb7d7518a9e8c07f21352f96fd7ed95a197a7daab1177efa3e3b63db728219a435ccc95ee0c6fab3493f4ffd71821aefc701c047591e401922b");
+            let rvk: [u8; 32] = hex!("791b91fae07feada7b6f6042b1e214bc75759b3921956053936c38a95271a834");
 
-            assert_eq!(ConfTransfer::encrypted_balance(PkdAddress::from_slice(b"Alice                           ")), 
-                Some(Ciphertext(b"Alice                           Bob                             ".to_vec())));
+            assert_ok!(ConfTransfer::confidential_transfer(
+                Origin::signed(1),
+                Proof(proof.to_vec()),
+                PkdAddress::from_slice(&pkd_addr_alice),
+                PkdAddress::from_slice(&pkd_addr_bob),
+                Ciphertext(enc10_by_alice.to_vec()),
+                Ciphertext(enc10_by_bob.to_vec()),
+                Ciphertext(enc100_by_alice.to_vec()),
+                SigVerificationKey::from_slice(&rvk)
+            ));
         })
     }
 }
