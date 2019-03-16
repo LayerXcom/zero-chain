@@ -41,7 +41,7 @@ use proofs::{
     primitives::{ExpandedSpendingKey, ViewingKey, PaymentAddress},
     elgamal::{Ciphertext, elgamal_extend},
 };
-use bellman::groth16::Parameters;
+use bellman::groth16::{Parameters, PreparedVerifyingKey};
 use zcrypto::elgamal::Ciphertext as zCiphertext;
 
 pub mod transaction;
@@ -181,6 +181,7 @@ pub fn gen_call(
     value: u32, 
     balance: u32,
     mut proving_key: &[u8],
+    mut prepared_vk: &[u8],
     seed_slice: &[u32],
 ) -> JsValue 
 {
@@ -201,13 +202,14 @@ pub fn gen_call(
 
     let address_recipient = PaymentAddress::<Bls12>::read(&mut address_recipient, params).unwrap();
     let proving_key = Parameters::<Bls12>::read(&mut proving_key, true).unwrap();
+    let prepared_vk = PreparedVerifyingKey::<Bls12>::read(&mut prepared_vk).unwrap();
 
     let tx = Transaction::gen_tx(
                 value, 
                 remaining_balance, 
                 alpha,
                 &proving_key,
-                // &prepared_vk,
+                &prepared_vk,
                 &address_recipient,
                 sk,
                 ciphertext_balance,                        

@@ -1,4 +1,4 @@
-use bellman::groth16::Parameters;
+use bellman::groth16::{Parameters, PreparedVerifyingKey};
 use bellman_verifier::Proof as zProof;
 use pairing::bls12_381::Bls12;
 use zpairing::io;
@@ -45,7 +45,7 @@ impl Transaction {
         remaining_balance: u32,
         alpha: fs::Fs,
         proving_key: &Parameters<Bls12>,
-		// prepared_vk: &PreparedVerifyingKey<Bls12>,		
+		prepared_vk: &PreparedVerifyingKey<Bls12>,		
 		address_recipient: &PaymentAddress<Bls12>,		
 		sk: &[u8],
         ciphertext_balance: proofs::elgamal::Ciphertext<Bls12>,		
@@ -66,7 +66,7 @@ impl Transaction {
 			remaining_balance,        
 			alpha,			
 			proving_key, 
-			// prepared_vk,
+			prepared_vk,
 			proof_generation_key,
 			address_recipient.clone(),			
             ciphertext_balance.clone(),

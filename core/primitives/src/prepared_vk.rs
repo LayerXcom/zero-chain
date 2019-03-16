@@ -19,14 +19,19 @@ pub struct PreparedVk(
 
 impl PreparedVk {
     pub fn into_prepared_vk(&self) -> Option<bellman_verifier::PreparedVerifyingKey<Bls12>> {   
-        bellman_verifier::PreparedVerifyingKey::read(&mut &self.0[..]).ok()        
+        bellman_verifier::PreparedVerifyingKey::<Bls12>::read(&mut &self.0[..]).ok()        
     }
 
     pub fn from_prepared_vk(pvk: &bellman_verifier::PreparedVerifyingKey<Bls12>) -> Self {
-        // let mut writer = vec![];
-        let mut writer = vec![0u8; 41386];
+        let mut writer = vec![];
+        // let mut writer = vec![0u8; 41386]; // 41390
+        #[cfg(feature = "std")]
+        pvk.write(&mut &mut writer).unwrap();
+
+        #[cfg(not(feature = "std"))]
         pvk.write(&mut &mut writer[..]).unwrap();
-        PreparedVk(writer.to_vec())
+
+        PreparedVk(writer)
     }
 }
 
@@ -72,6 +77,17 @@ mod tests {
         vk_reader.read_to_end(&mut buf_vk).unwrap();
         
         PreparedVk(buf_vk)
+    }
+
+    #[test]
+    fn test_prepared_vk_rw() {
+        let prepared_vk_vec = get_pvk().0;
+        let prepared_vk = bellman_verifier::PreparedVerifyingKey::<Bls12>::read(&mut &prepared_vk_vec[..]).unwrap();
+
+        let mut buf = vec![];
+        prepared_vk.write(&mut &mut buf).unwrap();
+
+        assert_eq!(buf, prepared_vk_vec);
     }
 
     #[test]

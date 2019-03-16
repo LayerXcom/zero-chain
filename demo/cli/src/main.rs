@@ -12,7 +12,7 @@ use std::path::Path;
 use std::string::String;
 use std::io::{BufWriter, Write, BufReader, Read};
 use wasm_utils::transaction::Transaction;
-use bellman::groth16::Parameters;
+use bellman::groth16::{Parameters, PreparedVerifyingKey};
 
 mod setup;
 use setup::setup;
@@ -47,7 +47,7 @@ fn print_random_accounts(seed: &[u8; 32], num: i32) {
     }
 }
 
-fn print_alice_tx(sender_seed: &[u8], recipient_seed: &[u8], mut proving_key_b: &[u8]) {    
+fn print_alice_tx(sender_seed: &[u8], recipient_seed: &[u8], mut proving_key_b: &[u8], mut prepared_vk_b : &[u8]) {    
     let rng = &mut OsRng::new().expect("should be able to construct RNG");
     let p_g = FixedGenerators::NoteCommitmentRandomness; // 1
 
@@ -56,9 +56,9 @@ fn print_alice_tx(sender_seed: &[u8], recipient_seed: &[u8], mut proving_key_b: 
     let balance = 100 as u32;
     // let alpha = fs::Fs::rand(rng); 
     let alpha = fs::Fs::zero();
-
-    // let (proving_key, prepared_vk) = setup();   
+    
     let proving_key =  Parameters::<Bls12>::read(&mut proving_key_b, true).unwrap();
+    let prepared_vk = PreparedVerifyingKey::<Bls12>::read(&mut prepared_vk_b).unwrap();
     
     let ex_sk_s = ExpandedSpendingKey::<Bls12>::from_spending_key(&sender_seed[..]);
     let ex_sk_r = ExpandedSpendingKey::<Bls12>::from_spending_key(&recipient_seed[..]);
@@ -80,7 +80,7 @@ fn print_alice_tx(sender_seed: &[u8], recipient_seed: &[u8], mut proving_key_b: 
                     remaining_balance, 
                     alpha,
                     &proving_key,
-                    // &prepared_vk,
+                    &prepared_vk,
                     &address_recipient,
                     sender_seed,
                     ciphertext_balance,                    
@@ -158,6 +158,15 @@ fn cli() -> Result<(), String> {
                 .required(false)
                 .default_value(PROVING_KEY_PATH)
             )
+            .arg(Arg::with_name("verification-key-path")
+                .short("v")
+                .long("verification-key-path")
+                .help("Path of the generated verification key file")
+                .value_name("FILE")
+                .takes_value(true)
+                .required(false)
+                .default_value(VERIFICATION_KEY_PATH)
+            )
         )
         .get_matches();
 
@@ -214,16 +223,26 @@ fn cli() -> Result<(), String> {
 
             print_random_accounts(&seed, 2);                        
 
-            let pk_path = Path::new(sub_matches.value_of("proving-key-path").unwrap());
+            let pk_path = Path::new(sub_matches.value_of("proving-key-path").unwrap());            
+            let vk_path = Path::new(sub_matches.value_of("verification-key-path").unwrap());
+
             let pk_file = File::open(&pk_path)
                 .map_err(|why| format!("couldn't open {}: {}", pk_path.display(), why))?;
+            let vk_file = File::open(&vk_path)
+                .map_err(|why| format!("couldn't open {}: {}", vk_path.display(), why))?;
 
-            let mut reader = BufReader::new(pk_file);
+            let mut reader_pk = BufReader::new(pk_file);
+            let mut reader_vk = BufReader::new(vk_file);
+
             let mut buf_pk = vec![];
-            reader.read_to_end(&mut buf_pk)
+            reader_pk.read_to_end(&mut buf_pk)
                 .map_err(|why| format!("couldn't read {}: {}", pk_path.display(), why))?;
+
+            let mut buf_vk = vec![];
+            reader_vk.read_to_end(&mut buf_vk)
+                .map_err(|why| format!("couldn't read {}: {}", vk_path.display(), why))?;
             
-            print_alice_tx(alice_seed, bob_seed, &buf_pk[..]);
+            print_alice_tx(alice_seed, bob_seed, &buf_pk[..], &buf_vk[..]);
 
         },
         _ => unreachable!()

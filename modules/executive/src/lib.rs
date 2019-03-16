@@ -272,151 +272,151 @@ impl<
 	}
 }
 
-#[cfg(test)]
-mod tests {
-	use super::*;
-	// use balances::Call;
-	use runtime_io::with_externalities;
-	use primitives::{H256, Blake2Hasher};
-	use runtime_primitives::BuildStorage;
-	use runtime_primitives::traits::{Header as HeaderT, BlakeTwo256, IdentityLookup};
-	use runtime_primitives::testing::{Digest, DigestItem, Header, Block};
-	use support::{traits::Currency, impl_outer_origin, impl_outer_event};
-	use system;
-	// use fees;
-	use hex_literal::{hex, hex_impl};
+// #[cfg(test)]
+// mod tests {
+// 	use super::*;
+// 	use balances::Call;
+// 	use runtime_io::with_externalities;
+// 	use primitives::{H256, Blake2Hasher};
+// 	use runtime_primitives::BuildStorage;
+// 	use runtime_primitives::traits::{Header as HeaderT, BlakeTwo256, IdentityLookup};
+// 	use runtime_primitives::testing::{Digest, DigestItem, Header, Block};
+// 	use support::{traits::Currency, impl_outer_origin, impl_outer_event};
+// 	use system;
+// 	// use fees;
+// 	use hex_literal::{hex, hex_impl};
 
-	impl_outer_origin! {
-		pub enum Origin for Runtime {
-		}
-	}
+// 	impl_outer_origin! {
+// 		pub enum Origin for Runtime {
+// 		}
+// 	}
 
-	// impl_outer_event!{
-	// 	pub enum MetaEvent for Runtime {
-	// 		balances<T>, fees<T>,
-	// 	}
-	// }
+// 	impl_outer_event!{
+// 		pub enum MetaEvent for Runtime {
+// 			balances<T>,
+// 		}
+// 	}
 
-	// Workaround for https://github.com/rust-lang/rust/issues/26925 . Remove when sorted.
-	#[derive(Clone, Eq, PartialEq)]
-	pub struct Runtime;
-	impl system::Trait for Runtime {
-		type Origin = Origin;
-		type Index = u64;
-		type BlockNumber = u64;
-		type Hash = substrate_primitives::H256;
-		type Hashing = BlakeTwo256;
-		type Digest = Digest;
-		type AccountId = u64;
-		type Lookup = IdentityLookup<u64>;
-		type Header = Header;
-		type Event = MetaEvent;
-		type Log = DigestItem;
-	}
-	// impl balances::Trait for Runtime {
-	// 	type Balance = u64;
-	// 	type OnFreeBalanceZero = ();
-	// 	type OnNewAccount = ();
-	// 	type EnsureAccountLiquid = ();
-	// 	type Event = MetaEvent;
-	// }
-	// impl fees::Trait for Runtime {
-	// 	type Event = MetaEvent;
-	// 	type TransferAsset = balances::Module<Runtime>;
-	// }
+// 	// Workaround for https://github.com/rust-lang/rust/issues/26925 . Remove when sorted.
+// 	#[derive(Clone, Eq, PartialEq)]
+// 	pub struct Runtime;
+// 	impl system::Trait for Runtime {
+// 		type Origin = Origin;
+// 		type Index = u64;
+// 		type BlockNumber = u64;
+// 		type Hash = primitives::H256;
+// 		type Hashing = BlakeTwo256;
+// 		type Digest = Digest;
+// 		type AccountId = u64;
+// 		type Lookup = IdentityLookup<u64>;
+// 		type Header = Header;
+// 		type Event = MetaEvent;
+// 		type Log = DigestItem;
+// 	}
+// 	// impl balances::Trait for Runtime {
+// 	// 	type Balance = u64;
+// 	// 	type OnFreeBalanceZero = ();
+// 	// 	type OnNewAccount = ();
+// 	// 	type EnsureAccountLiquid = ();
+// 	// 	type Event = MetaEvent;
+// 	// }
+// 	// impl fees::Trait for Runtime {
+// 	// 	type Event = MetaEvent;
+// 	// 	type TransferAsset = balances::Module<Runtime>;
+// 	// }
 
-	type TestXt = primitives::testing::TestXt<Call<Runtime>>;
-	type Executive = super::Executive<Runtime, Block<TestXt>, system::ChainContext<Runtime>, ()>;
+// 	type TestXt = runtime_primitives::testing::TestXt<Call<Runtime>>;
+// 	type Executive = super::Executive<Runtime, Block<TestXt>, system::ChainContext<Runtime>, ()>;
 
-	#[test]
-	fn block_import_works() {
-		with_externalities(&mut new_test_ext(), || {
-			Executive::execute_block(Block {
-				header: Header {
-					parent_hash: [69u8; 32].into(),
-					number: 1,
-					state_root: hex!("6651861f40a8f42c033b3e937cb3513e6dbaf4be6bafb1561a19f884be3f58dd").into(),
-					extrinsics_root: hex!("03170a2e7597b7b7e3d84c05391d139a62b157e78786d8c082f29dcf4c111314").into(),
-					digest: Digest { logs: vec![], },
-				},
-				extrinsics: vec![],
-			});
-		});
-	}
+// 	#[test]
+// 	fn block_import_works() {
+// 		with_externalities(&mut new_test_ext(), || {
+// 			Executive::execute_block(Block {
+// 				header: Header {
+// 					parent_hash: [69u8; 32].into(),
+// 					number: 1,
+// 					state_root: hex!("6651861f40a8f42c033b3e937cb3513e6dbaf4be6bafb1561a19f884be3f58dd").into(),
+// 					extrinsics_root: hex!("03170a2e7597b7b7e3d84c05391d139a62b157e78786d8c082f29dcf4c111314").into(),
+// 					digest: Digest { logs: vec![], },
+// 				},
+// 				extrinsics: vec![],
+// 			});
+// 		});
+// 	}
 
-	#[test]
-	#[should_panic]
-	fn block_import_of_bad_state_root_fails() {
-		with_externalities(&mut new_test_ext(), || {
-			Executive::execute_block(Block {
-				header: Header {
-					parent_hash: [69u8; 32].into(),
-					number: 1,
-					state_root: [0u8; 32].into(),
-					extrinsics_root: hex!("03170a2e7597b7b7e3d84c05391d139a62b157e78786d8c082f29dcf4c111314").into(),
-					digest: Digest { logs: vec![], },
-				},
-				extrinsics: vec![],
-			});
-		});
-	}
+// 	#[test]
+// 	#[should_panic]
+// 	fn block_import_of_bad_state_root_fails() {
+// 		with_externalities(&mut new_test_ext(), || {
+// 			Executive::execute_block(Block {
+// 				header: Header {
+// 					parent_hash: [69u8; 32].into(),
+// 					number: 1,
+// 					state_root: [0u8; 32].into(),
+// 					extrinsics_root: hex!("03170a2e7597b7b7e3d84c05391d139a62b157e78786d8c082f29dcf4c111314").into(),
+// 					digest: Digest { logs: vec![], },
+// 				},
+// 				extrinsics: vec![],
+// 			});
+// 		});
+// 	}
 
-	#[test]
-	#[should_panic]
-	fn block_import_of_bad_extrinsic_root_fails() {
-		with_externalities(&mut new_test_ext(), || {
-			Executive::execute_block(Block {
-				header: Header {
-					parent_hash: [69u8; 32].into(),
-					number: 1,
-					state_root: hex!("6651861f40a8f42c033b3e937cb3513e6dbaf4be6bafb1561a19f884be3f58dd").into(),
-					extrinsics_root: [0u8; 32].into(),
-					digest: Digest { logs: vec![], },
-				},
-				extrinsics: vec![],
-			});
-		});
-	}
+// 	#[test]
+// 	#[should_panic]
+// 	fn block_import_of_bad_extrinsic_root_fails() {
+// 		with_externalities(&mut new_test_ext(), || {
+// 			Executive::execute_block(Block {
+// 				header: Header {
+// 					parent_hash: [69u8; 32].into(),
+// 					number: 1,
+// 					state_root: hex!("6651861f40a8f42c033b3e937cb3513e6dbaf4be6bafb1561a19f884be3f58dd").into(),
+// 					extrinsics_root: [0u8; 32].into(),
+// 					digest: Digest { logs: vec![], },
+// 				},
+// 				extrinsics: vec![],
+// 			});
+// 		});
+// 	}
 
-	#[test]
-	fn bad_extrinsic_not_inserted() {
-		let mut t = new_test_ext();
-		let xt = primitives::testing::TestXt(Some(1), 42, Call::transfer(33, 69));
-		with_externalities(&mut t, || {
-			Executive::initialise_block(&Header::new(1, H256::default(), H256::default(), [69u8; 32].into(), Digest::default()));
-			assert!(Executive::apply_extrinsic(xt).is_err());
-			assert_eq!(<system::Module<Runtime>>::extrinsic_index(), Some(0));
-		});
-	}
+// 	#[test]
+// 	fn bad_extrinsic_not_inserted() {
+// 		let mut t = new_test_ext();
+// 		let xt = runtime_primitives::testing::TestXt(Some(1), 42, Call::transfer(33, 69));
+// 		with_externalities(&mut t, || {
+// 			Executive::initialise_block(&Header::new(1, H256::default(), H256::default(), [69u8; 32].into(), Digest::default()));
+// 			assert!(Executive::apply_extrinsic(xt).is_err());
+// 			assert_eq!(<system::Module<Runtime>>::extrinsic_index(), Some(0));
+// 		});
+// 	}
 
-	#[test]
-	fn block_size_limit_enforced() {
-		let run_test = |should_fail: bool| {
-			let mut t = new_test_ext();
-			let xt = primitives::testing::TestXt(Some(1), 0, Call::transfer(33, 69));
-			let xt2 = primitives::testing::TestXt(Some(1), 1, Call::transfer(33, 69));
-			let encoded = xt2.encode();
-			let len = if should_fail { (internal::MAX_TRANSACTIONS_SIZE - 1) as usize } else { encoded.len() };
-			with_externalities(&mut t, || {
-				Executive::initialise_block(&Header::new(1, H256::default(), H256::default(), [69u8; 32].into(), Digest::default()));
-				assert_eq!(<system::Module<Runtime>>::all_extrinsics_len(), 0);
+// 	#[test]
+// 	fn block_size_limit_enforced() {
+// 		let run_test = |should_fail: bool| {
+// 			let mut t = new_test_ext();
+// 			let xt = runtime_primitives::testing::TestXt(Some(1), 0, Call::transfer(33, 69));
+// 			let xt2 = runtime_primitives::testing::TestXt(Some(1), 1, Call::transfer(33, 69));
+// 			let encoded = xt2.encode();
+// 			let len = if should_fail { (internal::MAX_TRANSACTIONS_SIZE - 1) as usize } else { encoded.len() };
+// 			with_externalities(&mut t, || {
+// 				Executive::initialise_block(&Header::new(1, H256::default(), H256::default(), [69u8; 32].into(), Digest::default()));
+// 				assert_eq!(<system::Module<Runtime>>::all_extrinsics_len(), 0);
 
-				Executive::apply_extrinsic(xt).unwrap();
-				let res = Executive::apply_extrinsic_with_len(xt2, len, Some(encoded));
+// 				Executive::apply_extrinsic(xt).unwrap();
+// 				let res = Executive::apply_extrinsic_with_len(xt2, len, Some(encoded));
 
-				if should_fail {
-					assert!(res.is_err());
-					assert_eq!(<system::Module<Runtime>>::all_extrinsics_len(), 28);
-					assert_eq!(<system::Module<Runtime>>::extrinsic_index(), Some(1));
-				} else {
-					assert!(res.is_ok());
-					assert_eq!(<system::Module<Runtime>>::all_extrinsics_len(), 56);
-					assert_eq!(<system::Module<Runtime>>::extrinsic_index(), Some(2));
-				}
-			});
-		};
+// 				if should_fail {
+// 					assert!(res.is_err());
+// 					assert_eq!(<system::Module<Runtime>>::all_extrinsics_len(), 28);
+// 					assert_eq!(<system::Module<Runtime>>::extrinsic_index(), Some(1));
+// 				} else {
+// 					assert!(res.is_ok());
+// 					assert_eq!(<system::Module<Runtime>>::all_extrinsics_len(), 56);
+// 					assert_eq!(<system::Module<Runtime>>::extrinsic_index(), Some(2));
+// 				}
+// 			});
+// 		};
 
-		run_test(false);
-		run_test(true);
-	}
-}
+// 		run_test(false);
+// 		run_test(true);
+// 	}
+// }

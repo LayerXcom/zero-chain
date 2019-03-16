@@ -349,7 +349,7 @@ mod tests {
     #[test]
     fn test_call_function() {        
         with_externalities(&mut new_test_ext(), || {          
-            let a = get_pvk();  
+            let a = get_pvk();              
             let proof: [u8; 192] = hex!("8afc7f36d2e10b5fbe27ff3d3e7e5d968eee6cc684b6d9a5c16b881fc217c058757e351738929895cc82b1ffc0c474d58048bea055b685c9e927f8fc34ae7d9c187ff0ff3caa776d965f40448e6eb3a5a1eddfe06f02bdaf46b62b3bed6284c504fee06195ad029b880228c5f68a156b7aba7da7737a1240456a845429ef03ba17da83c0bc000ee6564d67a97010b99aa3200962ec89a8b56eb7d4b0a14934dfcdaa99a9ad73cefcff49db59983f41fcca12a5b3c5444c5aeb21f6fda30ca970");
             let pkd_addr_alice: [u8; 32] = hex!("775e501abc59d035e71e16c6c6cd225d44a249289dd95c37516ce4754721d763");
             let pkd_addr_bob: [u8; 32] = hex!("a23bb484f72b28a4179a71057c4528648dfb37974ccd84b38aa3e342f9598515");

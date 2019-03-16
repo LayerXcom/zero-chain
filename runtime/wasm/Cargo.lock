@@ -1390,6 +1390,7 @@ dependencies = [
  "sr-io 0.1.0 (git+https://github.com/paritytech/substrate.git?rev=9112a28af677b75cd6f935dda34d283bb4f676e7)",
  "sr-primitives 0.1.0 (git+https://github.com/paritytech/substrate.git?rev=9112a28af677b75cd6f935dda34d283bb4f676e7)",
  "sr-std 0.1.0 (git+https://github.com/paritytech/substrate.git?rev=9112a28af677b75cd6f935dda34d283bb4f676e7)",
+ "srml-balances 0.1.0 (git+https://github.com/paritytech/substrate.git?rev=9112a28af677b75cd6f935dda34d283bb4f676e7)",
  "srml-indices 0.1.0",
  "srml-support 0.1.0 (git+https://github.com/paritytech/substrate.git?rev=9112a28af677b75cd6f935dda34d283bb4f676e7)",
  "srml-system 0.1.0 (git+https://github.com/paritytech/substrate.git?rev=9112a28af677b75cd6f935dda34d283bb4f676e7)",
@@ -2214,6 +2215,7 @@ name = "zero-chain-runtime"
 version = "0.9.0"
 dependencies = [
  "bellman-verifier 0.1.0",
+ "hex-literal 0.1.1 (registry+https://github.com/rust-lang/crates.io-index)",
  "jubjub 0.1.0",
  "keys 0.1.0",
  "parity-codec 3.1.0 (registry+https://github.com/rust-lang/crates.io-index)",

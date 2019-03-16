@@ -164,7 +164,7 @@ impl<E: Engine> PreparedVerifyingKey<E> {
             reader.read(g1_repr.as_mut())?;            
             let g1 = g1_repr
                         .into_affine()
-                        .map_err(|_| io::Error::InvalidData) // here
+                        .map_err(|_| io::Error::InvalidData) 
                         .and_then(|e| if e.is_zero() {                            
                             Err(io::Error::PointInfinity)
                         } else {
@@ -331,8 +331,7 @@ impl From<io::Error> for SynthesisError {
 #[cfg(test)]
 mod test_proof_write_read {
     use super::*;            
-    use pairing::bls12_381::{G1Affine, G2Affine, Fq, FqRepr, Fq2, Bls12};
-    use proofs::circuit_transfer::Transfer;
+    use pairing::bls12_381::{G1Affine, G2Affine, Fq, FqRepr, Fq2, Bls12};    
     use rand::OsRng;
 
     #[test]
