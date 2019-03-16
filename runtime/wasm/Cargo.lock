@@ -1382,15 +1382,18 @@ dependencies = [
 [[package]]
 name = "srml-executive"
 version = "0.1.0"
-source = "git+https://github.com/paritytech/substrate.git?rev=9112a28af677b75cd6f935dda34d283bb4f676e7#9112a28af677b75cd6f935dda34d283bb4f676e7"
 dependencies = [
+ "hex-literal 0.1.1 (registry+https://github.com/rust-lang/crates.io-index)",
  "parity-codec 3.1.0 (registry+https://github.com/rust-lang/crates.io-index)",
+ "parity-codec-derive 3.1.0 (registry+https://github.com/rust-lang/crates.io-index)",
  "serde 1.0.85 (registry+https://github.com/rust-lang/crates.io-index)",
  "sr-io 0.1.0 (git+https://github.com/paritytech/substrate.git?rev=9112a28af677b75cd6f935dda34d283bb4f676e7)",
  "sr-primitives 0.1.0 (git+https://github.com/paritytech/substrate.git?rev=9112a28af677b75cd6f935dda34d283bb4f676e7)",
  "sr-std 0.1.0 (git+https://github.com/paritytech/substrate.git?rev=9112a28af677b75cd6f935dda34d283bb4f676e7)",
+ "srml-indices 0.1.0",
  "srml-support 0.1.0 (git+https://github.com/paritytech/substrate.git?rev=9112a28af677b75cd6f935dda34d283bb4f676e7)",
  "srml-system 0.1.0 (git+https://github.com/paritytech/substrate.git?rev=9112a28af677b75cd6f935dda34d283bb4f676e7)",
+ "substrate-primitives 0.1.0 (git+https://github.com/paritytech/substrate.git?rev=9112a28af677b75cd6f935dda34d283bb4f676e7)",
 ]
 
 [[package]]
@@ -2226,7 +2229,7 @@ dependencies = [
  "srml-aura 0.1.0 (git+https://github.com/paritytech/substrate.git?rev=9112a28af677b75cd6f935dda34d283bb4f676e7)",
  "srml-balances 0.1.0 (git+https://github.com/paritytech/substrate.git?rev=9112a28af677b75cd6f935dda34d283bb4f676e7)",
  "srml-consensus 0.1.0 (git+https://github.com/paritytech/substrate.git?rev=9112a28af677b75cd6f935dda34d283bb4f676e7)",
- "srml-executive 0.1.0 (git+https://github.com/paritytech/substrate.git?rev=9112a28af677b75cd6f935dda34d283bb4f676e7)",
+ "srml-executive 0.1.0",
  "srml-fees 0.1.0 (git+https://github.com/paritytech/substrate.git?rev=9112a28af677b75cd6f935dda34d283bb4f676e7)",
  "srml-indices 0.1.0",
  "srml-sudo 0.1.0 (git+https://github.com/paritytech/substrate.git?rev=9112a28af677b75cd6f935dda34d283bb4f676e7)",
@@ -2407,7 +2410,6 @@ dependencies = [
 "checksum srml-aura 0.1.0 (git+https://github.com/paritytech/substrate.git?rev=9112a28af677b75cd6f935dda34d283bb4f676e7)" = "<none>"
 "checksum srml-balances 0.1.0 (git+https://github.com/paritytech/substrate.git?rev=9112a28af677b75cd6f935dda34d283bb4f676e7)" = "<none>"
 "checksum srml-consensus 0.1.0 (git+https://github.com/paritytech/substrate.git?rev=9112a28af677b75cd6f935dda34d283bb4f676e7)" = "<none>"
-"checksum srml-executive 0.1.0 (git+https://github.com/paritytech/substrate.git?rev=9112a28af677b75cd6f935dda34d283bb4f676e7)" = "<none>"
 "checksum srml-fees 0.1.0 (git+https://github.com/paritytech/substrate.git?rev=9112a28af677b75cd6f935dda34d283bb4f676e7)" = "<none>"
 "checksum srml-metadata 0.1.0 (git+https://github.com/paritytech/substrate.git?rev=9112a28af677b75cd6f935dda34d283bb4f676e7)" = "<none>"
 "checksum srml-session 0.1.0 (git+https://github.com/paritytech/substrate.git?rev=9112a28af677b75cd6f935dda34d283bb4f676e7)" = "<none>"

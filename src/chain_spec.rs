@@ -1,7 +1,7 @@
 use primitives::{Ed25519AuthorityId, ed25519, H256};
 use zero_chain_runtime::{
 	AccountId, GenesisConfig, ConsensusConfig, TimestampConfig, BalancesConfig,
-	SudoConfig, IndicesConfig, FeesConfig, ConfTransferConfig
+	SudoConfig, IndicesConfig, ConfTransferConfig
 };
 use substrate_service;
 
@@ -118,10 +118,10 @@ fn testnet_genesis(initial_authorities: Vec<Ed25519AuthorityId>, endowed_account
 		sudo: Some(SudoConfig {
 			key: root_key,
 		}),
-		fees: Some(FeesConfig {
-			transaction_base_fee: 1,
-			transaction_byte_fee: 0,
-		}),
+		// fees: Some(FeesConfig {
+		// 	transaction_base_fee: 1,
+		// 	transaction_byte_fee: 0,
+		// }),
 		conf_transfer: Some(ConfTransferConfig {
 			encrypted_balance: vec![alice_init(), (PkdAddress::from_slice(b"Alice                           "), Ciphertext(b"Alice                           Bob                             ".to_vec()))],
 			verifying_key: get_pvk(),										

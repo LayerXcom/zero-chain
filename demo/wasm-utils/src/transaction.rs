@@ -23,12 +23,6 @@ use proofs::{
 use zcrypto::elgamal::Ciphertext as zCiphertext;
 use rand::Rng;
 
-// use zprimitives::{
-// 		ciphertext::Ciphertext as pCiphertext,
-// 		pkd_address::PkdAddress,
-// 		proof::Proof as pProof,
-// 		sig_vk::{SigVerificationKey as pSigVerificationKey},		
-// 	};
 use keys::PaymentAddress as zPaymentAddress;
 
 // #[derive(Eq, PartialEq, Clone, Encode, Decode)]
@@ -129,42 +123,7 @@ impl Transaction {
 		ciphertext_balance.write(&mut env_bal_sb[..]).map_err(|_| io::Error::InvalidData)?;
 		// Read the sender's balance encrypted by the sender key as a no_std type
 		// let zenc_bal_sender = zCiphertext::read(&mut &env_bal_sb[..], &zparams)?;
-		// let enc_bal_sender = pCiphertext::from_ciphertext(&zenc_bal_sender);				
-
-	
-		// let mut msg = vec![];
-
-		// BigEndian::write_u64(&mut msg[..], nonce);
-		// // The index of confidential transfer module is fixed at 0x00
-		// msg.push(0);
-		// msg.push(0);
-
-		// // The index of confidential_transfer function in the module is fixed at 0x00
-		// msg.push(0);
-		// msg.push(0);
-
-		// // The arugments
-		// msg.append(&mut proof.0);		
-		// msg.append(&mut address_sender.as_bytes().to_vec());
-		// msg.append(&mut address_recipient.as_bytes().to_vec());		
-		// msg.append(&mut enc_val_sender.as_bytes().to_vec());
-		// msg.append(&mut enc_val_recipient.as_bytes().to_vec());
-		// msg.append(&mut enc_bal_sender.as_bytes().to_vec());
-		// msg.append(&mut rk.as_bytes().to_vec());  // TODO: Temporally added to use rk explicitly.
-
-
-		// // let mut h = Blake2b::with_params(32, &[], &[], constants::SIGHASH_PERSONALIZATION);		
-		// // h.update(&msg);
-		// // let sighash_value = h.finalize().as_ref().to_vec();
-				
-		// let p_g = FixedGenerators::SpendingKeyGenerator;
-		// let sig = rsk.sign(&msg, rng, p_g, &params);	
-
-		// let mut sig_bytes = [0u8; 64];
-		// sig.write(&mut sig_bytes[..]).map_err(|_| io::Error::InvalidData)?;		
-		// // Read Signature as a no_std type		
-		// let zsig = zSignature::read(&sig_bytes[..])?;	
-		// let sig = pRedjubjubSignature::from_signature(&zsig);
+		// let enc_bal_sender = pCiphertext::from_ciphertext(&zenc_bal_sender);						
 
 		let tx = Transaction {		
 			proof: proof_bytes,		           			 
@@ -180,4 +139,3 @@ impl Transaction {
 		Ok(tx)
 	}
 }
-
