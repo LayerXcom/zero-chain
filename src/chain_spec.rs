@@ -13,11 +13,11 @@ use zprimitives::{
 use keys::{ExpandedSpendingKey, ViewingKey};
 use rand::{OsRng, Rand};
 use jubjub::{curve::{JubjubBls12, FixedGenerators, fs}};
-use zpairing::bls12_381::Bls12;
+use zpairing::{bls12_381::Bls12, Field};
 use zcrypto::elgamal;
 use std::path::Path;
 use std::fs::File;
-use std::io::{BufReader, Read};
+use std::io::{BufReader, Read, BufWriter, Write};
 
 lazy_static! {
     static ref JUBJUB: JubjubBls12 = { JubjubBls12::new() };
@@ -143,25 +143,23 @@ fn get_pvk() -> PreparedVk {
 }
 
 fn alice_init() -> (PkdAddress, Ciphertext) {
-	let alice_seed = b"Alice                           ";
-	// let alice_seed: [u8; 32] = hex!("b4a7109c67f24ad01fc553bcd1c81ad1995cc41751291f7bb9522f2870c8f7c1");
+	let alice_seed = b"Alice                           ";	
 	let alice_value = 100 as u32;
 
-	let p_g = FixedGenerators::Diversifier; // 1 same as NoteCommitmentRandomness
-	let rng = &mut OsRng::new().expect("should be able to construct RNG");	
-	
-	let r_fs = fs::Fs::rand(rng);
+	let p_g = FixedGenerators::Diversifier; // 1 same as NoteCommitmentRandomness;
 
 	let expsk = ExpandedSpendingKey::<Bls12>::from_spending_key(alice_seed);        
     let viewing_key = ViewingKey::<Bls12>::from_expanded_spending_key(&expsk, &JUBJUB);    
 	
     let address = viewing_key.into_payment_address(&JUBJUB);	
-	let enc_alice_bal = elgamal::Ciphertext::encrypt(alice_value, r_fs, &address.0, p_g, &JUBJUB);
+
+	// The default balance is not encrypted with randomness.
+	let enc_alice_bal = elgamal::Ciphertext::encrypt(alice_value, fs::Fs::one(), &address.0, p_g, &JUBJUB);
 
 	let ivk = viewing_key.ivk();	
 
 	let dec_alice_bal = enc_alice_bal.decrypt(ivk, p_g, &JUBJUB).unwrap();
-	assert_eq!(dec_alice_bal, alice_value);
+	assert_eq!(dec_alice_bal, alice_value);	
 
 	(PkdAddress::from_payment_address(&address), Ciphertext::from_ciphertext(&enc_alice_bal))
 }

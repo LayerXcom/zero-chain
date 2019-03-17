@@ -5,7 +5,7 @@ use proofs::{
     elgamal::{Ciphertext, elgamal_extend},
     };
 use substrate_primitives::hexdisplay::{HexDisplay, AsBytesRef};
-use pairing::{bls12_381::Bls12, Field};
+use pairing::{bls12_381::Bls12, Field, PrimeField, PrimeFieldRepr};
 use scrypto::jubjub::{JubjubBls12, fs, ToUniform, JubjubParams, FixedGenerators};      
 use std::fs::File;
 use std::path::Path;
@@ -47,32 +47,38 @@ fn print_random_accounts(seed: &[u8; 32], num: i32) {
     }
 }
 
-fn print_alice_tx(sender_seed: &[u8], recipient_seed: &[u8], mut proving_key_b: &[u8], mut prepared_vk_b : &[u8], value: u32, balance: u32) {    
+fn print_alice_tx(
+    sender_seed: &[u8], 
+    recipient_seed: &[u8], 
+    mut proving_key_b: &[u8], 
+    mut prepared_vk_b : &[u8], 
+    value: u32, 
+    balance: u32,
+) 
+{    
     let rng = &mut OsRng::new().expect("should be able to construct RNG");
-    let p_g = FixedGenerators::NoteCommitmentRandomness; // 1
-    
-    let remaining_balance = balance - value as u32;
+    let p_g = FixedGenerators::NoteCommitmentRandomness; // 1        
     
     // let alpha = fs::Fs::rand(rng); 
     let alpha = fs::Fs::zero();
         
     let proving_key =  Parameters::<Bls12>::read(&mut proving_key_b, true).unwrap();    
     let prepared_vk = PreparedVerifyingKey::<Bls12>::read(&mut prepared_vk_b).unwrap(); 
-    
+        
     let ex_sk_s = ExpandedSpendingKey::<Bls12>::from_spending_key(&sender_seed[..]);
     let ex_sk_r = ExpandedSpendingKey::<Bls12>::from_spending_key(&recipient_seed[..]);
-   
-    let viewing_key_s = ViewingKey::<Bls12>::from_expanded_spending_key(&ex_sk_s, &params);
+
+    let viewing_key_s = ViewingKey::<Bls12>::from_expanded_spending_key(&ex_sk_s, &params);       
     let viewing_key_r = ViewingKey::<Bls12>::from_expanded_spending_key(&ex_sk_r, &params);
 
-    let address_recipient = viewing_key_r.into_payment_address(&params);
+    let address_recipient = viewing_key_r.into_payment_address(&params);        
     
-    let ivk = viewing_key_s.ivk();    
-    
-    let r_fs = fs::Fs::rand(rng);
-
+    let ivk = viewing_key_s.ivk();
     let public_key = params.generator(p_g).mul(ivk, &params).into();
-    let ciphertext_balance = Ciphertext::encrypt(balance, r_fs, &public_key, p_g, &params);        
+
+    let ciphertext_balance = Ciphertext::encrypt(balance, fs::Fs::one(), &public_key, p_g, &params);   
+
+    let remaining_balance = balance - value as u32;   
 
     let tx = Transaction::gen_tx(
                     value, 
@@ -93,7 +99,7 @@ fn print_alice_tx(sender_seed: &[u8], recipient_seed: &[u8], mut proving_key_b: 
         \naddress_recipient(Alice): 0x{}
         \nvalue_sender(Alice): 0x{}
         \nvalue_recipient(Alice): 0x{}
-        \nbalance_sender(Alice)(only for off-chain test): 0x{}
+        \nbalance_sender(Alice): 0x{}
         \nrvk(Alice): 0x{}           
         \nrsk(Alice): 0x{}           
         ",        
@@ -118,7 +124,9 @@ fn main() {
 
 fn cli() -> Result<(), String> {
     const VERIFICATION_KEY_PATH: &str = "verification.params";
-    const PROVING_KEY_PATH: &str = "proving.params";
+    const PROVING_KEY_PATH: &str = "proving.params";    
+    const DEFAULT_AMOUNT: &str = "10";
+    const DEFAULT_BALANCE: &str = "100";
 
     let matches = App::new("Zerochain")
         .setting(AppSettings::SubcommandRequiredElseHelp)
@@ -165,6 +173,22 @@ fn cli() -> Result<(), String> {
                 .takes_value(true)
                 .required(false)
                 .default_value(VERIFICATION_KEY_PATH)
+            )            
+            .arg(Arg::with_name("amount")
+                .short("a")
+                .long("amount")
+                .help("The coin amount for the confidential transfer. (default: 10)")                
+                .takes_value(true)
+                .required(false)
+                .default_value(DEFAULT_AMOUNT)
+            )
+            .arg(Arg::with_name("balance")
+                .short("b")
+                .long("balance")
+                .help("The coin balance for the confidential transfer. (default: 100)")                
+                .takes_value(true)
+                .required(false)
+                .default_value(DEFAULT_BALANCE)
             )
         )
         .get_matches();
@@ -222,15 +246,15 @@ fn cli() -> Result<(), String> {
             print_random_accounts(&seed, 2);                        
 
             let pk_path = Path::new(sub_matches.value_of("proving-key-path").unwrap());            
-            let vk_path = Path::new(sub_matches.value_of("verification-key-path").unwrap());
+            let vk_path = Path::new(sub_matches.value_of("verification-key-path").unwrap());            
 
             let pk_file = File::open(&pk_path)
                 .map_err(|why| format!("couldn't open {}: {}", pk_path.display(), why))?;
             let vk_file = File::open(&vk_path)
-                .map_err(|why| format!("couldn't open {}: {}", vk_path.display(), why))?;
+                .map_err(|why| format!("couldn't open {}: {}", vk_path.display(), why))?;            
 
             let mut reader_pk = BufReader::new(pk_file);
-            let mut reader_vk = BufReader::new(vk_file);
+            let mut reader_vk = BufReader::new(vk_file);            
 
             let mut buf_pk = vec![];
             reader_pk.read_to_end(&mut buf_pk)
@@ -238,12 +262,16 @@ fn cli() -> Result<(), String> {
 
             let mut buf_vk = vec![];
             reader_vk.read_to_end(&mut buf_vk)
-                .map_err(|why| format!("couldn't read {}: {}", vk_path.display(), why))?;     
+                .map_err(|why| format!("couldn't read {}: {}", vk_path.display(), why))?;             
 
-            let value = 10 as u32;
-            let balance = 100 as u32;
+            
+            let amount_str = sub_matches.value_of("amount").unwrap();
+            let amount: u32 = amount_str.parse().unwrap();
 
-            print_alice_tx(alice_seed, bob_seed, &buf_pk[..], &buf_vk[..], value, balance);
+            let balance_str = sub_matches.value_of("balance").unwrap();
+            let balance: u32 = balance_str.parse().unwrap();
+
+            print_alice_tx(alice_seed, bob_seed, &buf_pk[..], &buf_vk[..], amount, balance);
 
         },
         _ => unreachable!()

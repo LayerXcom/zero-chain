@@ -113,10 +113,7 @@ decl_module! {
                     &srk,                    
                 ),
                 "Invalid zkproof"
-            );
-
-            println!("addr: {:?}", Self::encrypted_balance(address_sender).unwrap());
-            println!("addr2: {:?}", balance_sender.clone());
+            );            
 
             // Verify the balance
             ensure!(
@@ -305,25 +302,30 @@ mod tests {
         type Event = ();
     }
     type ConfTransfer = Module<Test>;
+    
 
     fn alice_init() -> (PkdAddress, Ciphertext) {
-        let alice_seed = b"Alice                           ";        
-        let alice_balance = 100 as u32;
+        let alice_seed = b"Alice                           ";	
+        let alice_value = 100 as u32;
 
         let params = &JubjubBls12::new();
-        let rng = &mut ChaChaRng::new_unseeded();
-        let p_g = FixedGenerators::Diversifier;                
-        
-        let r_fs = fs::Fs::rand(rng);
+        let p_g = FixedGenerators::Diversifier; // 1 same as NoteCommitmentRandomness;
 
         let expsk = ExpandedSpendingKey::<Bls12>::from_spending_key(alice_seed);        
-        let viewing_key = ViewingKey::<Bls12>::from_expanded_spending_key(&expsk, params);        
+        let viewing_key = ViewingKey::<Bls12>::from_expanded_spending_key(&expsk, params);    
+        
         let address = viewing_key.into_payment_address(params);	
 
-        let enc_alice_bal = elgamal::Ciphertext::encrypt(alice_balance, r_fs, &address.0, p_g, params);        
+        // The default balance is not encrypted with randomness.
+        let enc_alice_bal = elgamal::Ciphertext::encrypt(alice_value, fs::Fs::one(), &address.0, p_g, params);
+
+        let ivk = viewing_key.ivk();	
+
+        let dec_alice_bal = enc_alice_bal.decrypt(ivk, p_g, params).unwrap();
+        assert_eq!(dec_alice_bal, alice_value);	
 
         (PkdAddress::from_payment_address(&address), Ciphertext::from_ciphertext(&enc_alice_bal))
-    }    
+    }
 
     fn get_pvk() -> PreparedVk {
         let vk_path = Path::new("../demo/cli/verification.params"); 
@@ -346,27 +348,5 @@ mod tests {
         t.into()
     }
 
-    #[test]
-    fn test_call_function() {        
-        with_externalities(&mut new_test_ext(), || {          
-            let a = get_pvk();              
-            let proof: [u8; 192] = hex!("95652b9080b8bc6ab7d117607055e575664370d69da74d75be93c3b4d3aa43d9e705d71b528e49af93f6885ff00a264f94c6edaacd1f1f08ce44e5754f085c7b4664e51bd28037641b9dae447d51e67c454d5b78e11c6d5fc4848a88ca6ecf0d0c5edd486cccb18e92ba45d5f2b34d26f4321c6ce46e2c0ddcdcfc5b8f2b6e5593c5dc48f20afafc45fb576bd810cddcb1219769b58f2c0c21c8075992a3bbf1a67eecc4f39c9b8d1df9e20585b1f6e79e46a04c6ce8adf24dd0efbc208634ac");
-            let pkd_addr_alice: [u8; 32] = hex!("775e501abc59d035e71e16c6c6cd225d44a249289dd95c37516ce4754721d763");
-            let pkd_addr_bob: [u8; 32] = hex!("a23bb484f72b28a4179a71057c4528648dfb37974ccd84b38aa3e342f9598515");
-            let enc10_by_alice: [u8; 64] = hex!("d8debb5b19fb48865a3137bb7a9bde4c205e10bbc7e79d1b3329eaf821a1213f36904121d409f99c60a7379dff670b4ffe6616e353aaae1676b4c0dab479b7b8");
-            let enc10_by_bob: [u8; 64] = hex!("b83f849d431aac219159ab0e5ab39859bb58279d5ea1ebb9077099609b3d89b336904121d409f99c60a7379dff670b4ffe6616e353aaae1676b4c0dab479b7b8");            
-            let rvk: [u8; 32] = hex!("791b91fae07feada7b6f6042b1e214bc75759b3921956053936c38a95271a834");
-
-            assert_ok!(ConfTransfer::confidential_transfer(
-                Origin::signed(1),
-                Proof(proof.to_vec()),
-                PkdAddress::from_slice(&pkd_addr_alice),
-                PkdAddress::from_slice(&pkd_addr_bob),
-                Ciphertext(enc10_by_alice.to_vec()),
-                Ciphertext(enc10_by_bob.to_vec()),
-                ConfTransfer::encrypted_balance(PkdAddress::from_slice(&pkd_addr_alice[..])).unwrap(),
-                SigVerificationKey::from_slice(&rvk)
-            ));
-        })
-    }
+    
 }
