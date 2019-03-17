@@ -106,6 +106,7 @@ impl<E: Engine> Proof<E> {
     }
 }
 
+#[cfg_attr(feature = "std", derive(Debug))]
 pub struct PreparedVerifyingKey<E: Engine> {
     /// Pairing result of alpha*beta
     alpha_g1_beta_g2: E::Fqk,

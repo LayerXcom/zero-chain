@@ -7,9 +7,7 @@ use bellman::{
 use scrypto::jubjub::{
     JubjubEngine,
     FixedGenerators,
-    PrimeOrder,
-    JubjubParams,
-    ToUniform,
+    PrimeOrder,    
 };
 
 use crate::primitives::{    
@@ -303,7 +301,7 @@ fn u32_into_boolean_vec_le<E, CS>(
     use pairing::{PrimeField, bls12_381::*};
     use rand::{SeedableRng, Rng, XorShiftRng};    
     use super::circuit_test::TestConstraintSystem;
-    use scrypto::jubjub::{JubjubBls12, fs, edwards};  
+    use scrypto::jubjub::{JubjubBls12, fs, edwards, JubjubParams, ToUniform};  
     use crate::elgamal::elgamal_extend;         
 
     

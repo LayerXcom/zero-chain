@@ -159,22 +159,12 @@ mod tests {
     use scrypto::jubjub::{fs, ToUniform, JubjubParams, JubjubBls12};
     use crate::elgamal::elgamal_extend;
     use pairing::{PrimeField, bls12_381::Bls12};
-    use std::path::{Path, PathBuf};
+    use std::path::Path;
     use std::fs::File;
-    use std::io::{BufRead, BufReader, Read};
-    
+    use std::io::{BufReader, Read};
+    use hex_literal::{hex, hex_impl};    
 
-    #[test]
-    fn test_gen_proof() {        
-        let params = &JubjubBls12::new();
-        let mut rng = &mut XorShiftRng::from_seed([0x5dbe6259, 0x8d313d76, 0x3237db17, 0xe5bc0654]);
-        let p_g = FixedGenerators::NoteCommitmentRandomness;
-
-        let value = 10 as u32;
-        let remaining_balance = 30 as u32;
-        let balance = 40 as u32;
-        let alpha = fs::Fs::rand(rng);         
-
+    fn get_pk_and_vk() -> (Parameters<Bls12>, PreparedVerifyingKey<Bls12>) {
         let pk_path = Path::new("../../demo/cli/proving.params");        
         let vk_path = Path::new("../../demo/cli/verification.params");        
 
@@ -190,11 +180,25 @@ mod tests {
         let mut buf_vk = vec![];
         vk_reader.read_to_end(&mut buf_vk).unwrap();
 
-        let proving_key = Parameters::<Bls12>::read(&mut &buf_pk[..], true).unwrap();
+        let proving_key = Parameters::<Bls12>::read(&mut &buf_pk[..], true).unwrap();        
         let prepared_vk = PreparedVerifyingKey::<Bls12>::read(&mut &buf_vk[..]).unwrap();
 
-        let mut sender_seed: [u8; 32] = rng.gen();
-        let mut recipient_seed: [u8; 32] = rng.gen();       
+        (proving_key, prepared_vk)
+    }
+
+    #[test]
+    fn test_gen_proof() {        
+        let params = &JubjubBls12::new();
+        let mut rng = &mut XorShiftRng::from_seed([0x5dbe6259, 0x8d313d76, 0x3237db17, 0xe5bc0654]);
+        let p_g = FixedGenerators::NoteCommitmentRandomness;
+
+        let value = 10 as u32;
+        let remaining_balance = 30 as u32;
+        let balance = 40 as u32;
+        let alpha = fs::Fs::rand(rng);                 
+
+        let sender_seed: [u8; 32] = rng.gen();
+        let recipient_seed: [u8; 32] = rng.gen();       
 
         let ex_sk_s = ExpandedSpendingKey::<Bls12>::from_spending_key(&sender_seed[..]);
         let ex_sk_r = ExpandedSpendingKey::<Bls12>::from_spending_key(&recipient_seed[..]);
@@ -209,7 +213,8 @@ mod tests {
         let public_key = params.generator(p_g).mul(sk_fs, params).into();
         let ciphertext_balance = Ciphertext::encrypt(balance, r_fs, &public_key, p_g, params);
 
-             
+        let (proving_key, prepared_vk) = get_pk_and_vk();     
+
         let _proofs = TransferProof::gen_proof(
             value, 
             remaining_balance, 
@@ -220,6 +225,46 @@ mod tests {
             address_recipient, 
             ciphertext_balance, 
             &mut rng,
+            params
+        );
+    }
+
+    #[test]
+    fn test_gen_proof_from_cli() {
+        let proof: [u8; 192] = hex!("95652b9080b8bc6ab7d117607055e575664370d69da74d75be93c3b4d3aa43d9e705d71b528e49af93f6885ff00a264f94c6edaacd1f1f08ce44e5754f085c7b4664e51bd28037641b9dae447d51e67c454d5b78e11c6d5fc4848a88ca6ecf0d0c5edd486cccb18e92ba45d5f2b34d26f4321c6ce46e2c0ddcdcfc5b8f2b6e5593c5dc48f20afafc45fb576bd810cddcb1219769b58f2c0c21c8075992a3bbf1a67eecc4f39c9b8d1df9e20585b1f6e79e46a04c6ce8adf24dd0efbc208634ac");
+        let pkd_addr_alice: [u8; 32] = hex!("775e501abc59d035e71e16c6c6cd225d44a249289dd95c37516ce4754721d763");
+        let pkd_addr_bob: [u8; 32] = hex!("a23bb484f72b28a4179a71057c4528648dfb37974ccd84b38aa3e342f9598515");
+        let enc10_by_alice: [u8; 64] = hex!("d8debb5b19fb48865a3137bb7a9bde4c205e10bbc7e79d1b3329eaf821a1213f36904121d409f99c60a7379dff670b4ffe6616e353aaae1676b4c0dab479b7b8");
+        let enc10_by_bob: [u8; 64] = hex!("b83f849d431aac219159ab0e5ab39859bb58279d5ea1ebb9077099609b3d89b336904121d409f99c60a7379dff670b4ffe6616e353aaae1676b4c0dab479b7b8");
+        let enc100_by_alice: [u8; 64] = hex!("845fb16c79f6358a7fa98850924b19fe169ebc62c83fabf80a8291964f9194f0e6a0f69d50db76ff917947c8376a683fc5373f9f29b5f58cd4434aab3142a089");
+        let rvk: [u8; 32] = hex!("791b91fae07feada7b6f6042b1e214bc75759b3921956053936c38a95271a834");
+
+        let params = &JubjubBls12::new();
+        let rng = &mut XorShiftRng::from_seed([0x5dbe6259, 0x8d313d76, 0x3237db17, 0xe5bc0654]);
+        let p_g = FixedGenerators::NoteCommitmentRandomness;
+
+        let value = 10 as u32;
+        let remaining_balance = 90 as u32;
+        let alpha = fs::Fs::zero();
+        let (proving_key, prepared_vk) = get_pk_and_vk();  
+
+        let alice_seed = b"Alice                           ";
+        let ex_sk_s = ExpandedSpendingKey::<Bls12>::from_spending_key(&alice_seed[..]);
+        let proof_generation_key = ex_sk_s.into_proof_generation_key(params);
+
+        let ciphertext_balance = Ciphertext::<Bls12>::read(&mut &enc100_by_alice[..], params).unwrap();
+        let address_recipient = PaymentAddress::<Bls12>::read(&mut &pkd_addr_bob[..], params).unwrap();
+
+        let _proofs = TransferProof::gen_proof(
+            value, 
+            remaining_balance, 
+            alpha, 
+            &proving_key, 
+            &prepared_vk, 
+            proof_generation_key, 
+            address_recipient, 
+            ciphertext_balance, 
+            rng,
             params
         );
     }

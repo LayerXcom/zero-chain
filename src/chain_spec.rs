@@ -51,6 +51,8 @@ impl Alternative {
 					ed25519::Pair::from_seed(b"Alice                           ").public().into(),
 				], vec![
 					ed25519::Pair::from_seed(b"Alice                           ").public().0.into(),
+					ed25519::Pair::from_seed(b"Bob                             ").public().0.into(),
+					ed25519::Pair::from_seed(b"Charlie                         ").public().0.into(),
 				],
 					ed25519::Pair::from_seed(b"Alice                           ").public().0.into()
 				),
@@ -154,12 +156,12 @@ fn alice_init() -> (PkdAddress, Ciphertext) {
     let viewing_key = ViewingKey::<Bls12>::from_expanded_spending_key(&expsk, &JUBJUB);    
 	
     let address = viewing_key.into_payment_address(&JUBJUB);	
-	let enc_alice_val = elgamal::Ciphertext::encrypt(alice_value, r_fs, &address.0, p_g, &JUBJUB);
+	let enc_alice_bal = elgamal::Ciphertext::encrypt(alice_value, r_fs, &address.0, p_g, &JUBJUB);
 
 	let ivk = viewing_key.ivk();	
 
-	let dec_alice_val = enc_alice_val.decrypt(ivk, p_g, &JUBJUB).unwrap();
-	assert_eq!(dec_alice_val, alice_value);
+	let dec_alice_bal = enc_alice_bal.decrypt(ivk, p_g, &JUBJUB).unwrap();
+	assert_eq!(dec_alice_bal, alice_value);
 
-	(PkdAddress::from_payment_address(&address), Ciphertext::from_ciphertext(&enc_alice_val))
+	(PkdAddress::from_payment_address(&address), Ciphertext::from_ciphertext(&enc_alice_bal))
 }

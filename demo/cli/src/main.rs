@@ -47,22 +47,21 @@ fn print_random_accounts(seed: &[u8; 32], num: i32) {
     }
 }
 
-fn print_alice_tx(sender_seed: &[u8], recipient_seed: &[u8], mut proving_key_b: &[u8], mut prepared_vk_b : &[u8]) {    
+fn print_alice_tx(sender_seed: &[u8], recipient_seed: &[u8], mut proving_key_b: &[u8], mut prepared_vk_b : &[u8], value: u32, balance: u32) {    
     let rng = &mut OsRng::new().expect("should be able to construct RNG");
     let p_g = FixedGenerators::NoteCommitmentRandomness; // 1
-
-    let value = 10 as u32;
-    let remaining_balance = 90 as u32;
-    let balance = 100 as u32;
+    
+    let remaining_balance = balance - value as u32;
+    
     // let alpha = fs::Fs::rand(rng); 
     let alpha = fs::Fs::zero();
-    
-    let proving_key =  Parameters::<Bls12>::read(&mut proving_key_b, true).unwrap();
-    let prepared_vk = PreparedVerifyingKey::<Bls12>::read(&mut prepared_vk_b).unwrap();
+        
+    let proving_key =  Parameters::<Bls12>::read(&mut proving_key_b, true).unwrap();    
+    let prepared_vk = PreparedVerifyingKey::<Bls12>::read(&mut prepared_vk_b).unwrap(); 
     
     let ex_sk_s = ExpandedSpendingKey::<Bls12>::from_spending_key(&sender_seed[..]);
     let ex_sk_r = ExpandedSpendingKey::<Bls12>::from_spending_key(&recipient_seed[..]);
-    
+   
     let viewing_key_s = ViewingKey::<Bls12>::from_expanded_spending_key(&ex_sk_s, &params);
     let viewing_key_r = ViewingKey::<Bls12>::from_expanded_spending_key(&ex_sk_r, &params);
 
@@ -94,7 +93,7 @@ fn print_alice_tx(sender_seed: &[u8], recipient_seed: &[u8], mut proving_key_b: 
         \naddress_recipient(Alice): 0x{}
         \nvalue_sender(Alice): 0x{}
         \nvalue_recipient(Alice): 0x{}
-        \nbalance_sender(Alice): 0x{}
+        \nbalance_sender(Alice)(only for off-chain test): 0x{}
         \nrvk(Alice): 0x{}           
         \nrsk(Alice): 0x{}           
         ",        
@@ -207,13 +206,12 @@ fn cli() -> Result<(), String> {
         ("generate-tx", Some(sub_matches)) => {
             println!("Generate transaction...");
 
-            let mut seed = [0u8; 32];
-            if let Ok(mut e) = OsRng::new() {
-                e.fill_bytes(&mut seed[..]);
-            }    
-
             let alice_seed = b"Alice                           ";
             let bob_seed = b"Bob                             ";
+
+            let rng = &mut OsRng::new().expect("should be able to construct RNG");
+            let seed: [u8; 32] = rng.gen();            
+            
             let alice_address = get_address(alice_seed);
 
             println!("Secret Key(Alice): 0x{}\nAddress(Alice): 0x{}\n",        
@@ -240,9 +238,12 @@ fn cli() -> Result<(), String> {
 
             let mut buf_vk = vec![];
             reader_vk.read_to_end(&mut buf_vk)
-                .map_err(|why| format!("couldn't read {}: {}", vk_path.display(), why))?;
-            
-            print_alice_tx(alice_seed, bob_seed, &buf_pk[..], &buf_vk[..]);
+                .map_err(|why| format!("couldn't read {}: {}", vk_path.display(), why))?;     
+
+            let value = 10 as u32;
+            let balance = 100 as u32;
+
+            print_alice_tx(alice_seed, bob_seed, &buf_pk[..], &buf_vk[..], value, balance);
 
         },
         _ => unreachable!()

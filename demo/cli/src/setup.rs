@@ -48,11 +48,14 @@ mod tests {
         let (_, vk) = setup();
         let mut v = vec![];
         vk.write(&mut &mut v).unwrap();   
-        let prepared_vk = zPreparedVk::<zBls12>::read(&mut &v[..]).unwrap();
+        
+        let prepared_vk_a = PreparedVerifyingKey::<Bls12>::read(&mut &v[..]).unwrap();
         
         let mut buf = vec![];
-        prepared_vk.write(&mut &mut buf).unwrap();
+        prepared_vk_a.write(&mut &mut buf).unwrap();
 
-        assert_eq!(buf, v);
+        let prepared_vk_b = PreparedVerifyingKey::<Bls12>::read(&mut &buf[..]).unwrap();
+
+        assert_eq!(prepared_vk_a, prepared_vk_b);
     }
 }

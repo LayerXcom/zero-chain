@@ -209,7 +209,7 @@ pub trait CurveAffine:
     type Scalar: PrimeField + SqrtField + ::std::fmt::Debug;
     type Base: SqrtField;
     type Projective: CurveProjective<Affine = Self, Scalar = Self::Scalar>;
-    type Prepared: Clone + Send + Sync + 'static + RW;
+    type Prepared: Clone + Send + Sync + 'static + RW + ::std::fmt::Debug;
     type Uncompressed: EncodedPoint<Affine = Self>;
     type Compressed: EncodedPoint<Affine = Self>;
     type Pair: CurveAffine<Pair = Self>;
