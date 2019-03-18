@@ -65,7 +65,7 @@ fn print_alice_tx(
     let proving_key =  Parameters::<Bls12>::read(&mut proving_key_b, true).unwrap();    
     let prepared_vk = PreparedVerifyingKey::<Bls12>::read(&mut prepared_vk_b).unwrap(); 
         
-    let ex_sk_s = ExpandedSpendingKey::<Bls12>::from_spending_key(&sender_seed[..]);
+    let ex_sk_s = ExpandedSpendingKey::<Bls12>::from_spending_key(sender_seed);
     let ex_sk_r = ExpandedSpendingKey::<Bls12>::from_spending_key(&recipient_seed[..]);
 
     let viewing_key_s = ViewingKey::<Bls12>::from_expanded_spending_key(&ex_sk_s, &params);       
@@ -78,7 +78,7 @@ fn print_alice_tx(
 
     let ciphertext_balance = Ciphertext::encrypt(balance, fs::Fs::one(), &public_key, p_g, &params);   
 
-    let remaining_balance = balance - value as u32;   
+    let remaining_balance = balance - value;       
 
     let tx = Transaction::gen_tx(
                     value, 
@@ -87,7 +87,7 @@ fn print_alice_tx(
                     &proving_key,
                     &prepared_vk,
                     &address_recipient,
-                    sender_seed,
+                    &ex_sk_s,
                     ciphertext_balance,                    
                     rng
             ).expect("fails to generate the tx");
@@ -191,6 +191,23 @@ fn cli() -> Result<(), String> {
                 .default_value(DEFAULT_BALANCE)
             )
         )
+        .subcommand(SubCommand::with_name("decrypt")
+            .about("Decrypt the elgamal encryption")
+            .arg(Arg::with_name("encrypted-value")
+                .short("e")
+                .long("encrypted-value")
+                .help("Encrypted transfer amount or balance (w/o 0x prefix)")
+                .takes_value(true)
+                .required(true)
+            )
+            .arg(Arg::with_name("private-key")
+                .short("p")
+                .long("private-key")
+                .help("The private key for decryption")
+                .takes_value(true)
+                .required(true)
+            )
+        )
         .get_matches();
 
     match matches.subcommand() {
@@ -273,6 +290,23 @@ fn cli() -> Result<(), String> {
 
             print_alice_tx(alice_seed, bob_seed, &buf_pk[..], &buf_vk[..], amount, balance);
 
+        },
+        ("decrypt", Some(sub_matches)) => {
+            println!("Decrypting the data...");
+            let p_g = FixedGenerators::NoteCommitmentRandomness; // 1  
+
+            let enc = sub_matches.value_of("encrypted-value").unwrap();
+            let enc_vec = hex::decode(enc).unwrap();
+            let enc_c = Ciphertext::<Bls12>::read(&mut &enc_vec[..], &params).expect("Invalid data");
+
+            let pk = sub_matches.value_of("private-key").unwrap();
+            let pk_vec = hex::decode(pk).unwrap();
+
+            let mut pk_repr = fs::Fs::default().into_repr();    
+            pk_repr.read_le(&mut &pk_vec[..]).unwrap(); 
+
+            let dec = enc_c.decrypt(fs::Fs::from_repr(pk_repr).unwrap(), p_g, &params).unwrap();
+            println!("Decrypted value is {}", dec);
         },
         _ => unreachable!()
     }

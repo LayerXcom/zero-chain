@@ -211,7 +211,7 @@ pub fn gen_call(
                 &proving_key,
                 &prepared_vk,
                 &address_recipient,
-                sk,
+                &ex_sk_s,
                 ciphertext_balance,                        
                 rng
         ).expect("fails to generate the tx");    

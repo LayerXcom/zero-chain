@@ -82,12 +82,6 @@ impl Into<Ciphertext> for elgamal::Ciphertext<Bls12> {
     }
 }
 
-// impl From<H512> for Ciphertext {
-//     fn from(h: H512) -> Self {
-//         Ciphertext(h)
-//     }
-// }
-
 #[cfg(feature = "std")]
 impl fmt::Display for Ciphertext {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
