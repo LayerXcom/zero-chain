@@ -5,8 +5,10 @@ zprimitives = { package = "zero-chain-primitives", path = "../core/primitives", 
 jubjub = { path = "../core/jubjub", default-features = false }
 zcrypto = { package = "zero-chain-crypto", path = "../core/crypto", default-features = false }
 keys = { path = "../core/keys", default-features = false }
-hex-literal = "0.1.0"
 indices = { package = "srml-indices", path = "../modules/indices", default-features = false }
+rand = { version = "0.4", default-features = false }
+executive = { package = "srml-executive", path = "../modules/executive", default-features = false }
+hex-literal = '0.1'
 
 [dependencies.aura]
 default_features = false
@@ -36,12 +38,6 @@ rev = '9112a28af677b75cd6f935dda34d283bb4f676e7'
 default_features = false
 git = 'https://github.com/paritytech/substrate.git'
 package = 'substrate-consensus-aura-primitives'
-rev = '9112a28af677b75cd6f935dda34d283bb4f676e7'
-
-[dependencies.executive]
-default_features = false
-git = 'https://github.com/paritytech/substrate.git'
-package = 'srml-executive'
 rev = '9112a28af677b75cd6f935dda34d283bb4f676e7'
 
 [dependencies.fees]
@@ -138,8 +134,7 @@ std = [
     'fees/std',
     'executive/std',
     'aura/std',
-    'indices/std',
-    'primitives/std',
+    'indices/std',    
     'system/std',
     'timestamp/std',
     'sudo/std',
@@ -154,6 +149,7 @@ std = [
 	"zprimitives/std",
 	"jubjub/std",
 	"keys/std",
+    "rand/std",
 ]
 
 [package]

@@ -1,7 +1,7 @@
 use primitives::{Ed25519AuthorityId, ed25519, H256};
 use zero_chain_runtime::{
 	AccountId, GenesisConfig, ConsensusConfig, TimestampConfig, BalancesConfig,
-	SudoConfig, IndicesConfig, FeesConfig, ConfTransferConfig
+	SudoConfig, IndicesConfig, ConfTransferConfig
 };
 use substrate_service;
 
@@ -11,13 +11,13 @@ use zprimitives::{
 	ciphertext::Ciphertext,	
 	};
 use keys::{ExpandedSpendingKey, ViewingKey};
-use rand::{OsRng, Rng};
-use jubjub::{curve::{JubjubBls12, FixedGenerators, fs, ToUniform}};
-use zpairing::bls12_381::Bls12;
-use zcrypto::elgamal::{self, elgamal_extend};
-use std::path::{Path, PathBuf};
+use rand::{OsRng, Rand};
+use jubjub::{curve::{JubjubBls12, FixedGenerators, fs}};
+use zpairing::{bls12_381::Bls12, Field};
+use zcrypto::elgamal;
+use std::path::Path;
 use std::fs::File;
-use std::io::{BufRead, BufReader, Read};
+use std::io::{BufReader, Read, BufWriter, Write};
 
 lazy_static! {
     static ref JUBJUB: JubjubBls12 = { JubjubBls12::new() };
@@ -51,6 +51,8 @@ impl Alternative {
 					ed25519::Pair::from_seed(b"Alice                           ").public().into(),
 				], vec![
 					ed25519::Pair::from_seed(b"Alice                           ").public().0.into(),
+					ed25519::Pair::from_seed(b"Bob                             ").public().0.into(),
+					ed25519::Pair::from_seed(b"Charlie                         ").public().0.into(),
 				],
 					ed25519::Pair::from_seed(b"Alice                           ").public().0.into()
 				),
@@ -96,14 +98,13 @@ impl Alternative {
 
 fn testnet_genesis(initial_authorities: Vec<Ed25519AuthorityId>, endowed_accounts: Vec<AccountId>, root_key: AccountId) -> GenesisConfig {	
 	GenesisConfig {
-		consensus: Some(ConsensusConfig {
-			// code: include_bytes!("../runtime/wasm/target/wasm32-unknown-unknown/release/node_template_runtime_wasm.compact.wasm").to_vec(),
+		consensus: Some(ConsensusConfig {			
 			code: include_bytes!("../runtime/wasm/target/wasm32-unknown-unknown/release/zero_chain_runtime_wasm.compact.wasm").to_vec(),
 			authorities: initial_authorities.clone(),
 		}),
 		system: None,
 		timestamp: Some(TimestampConfig {
-			period: 5,					// 5 second block time.
+			period: 10,					// 10 second block time.
 		}),
 		indices: Some(IndicesConfig {
 			ids: endowed_accounts.clone(),
@@ -118,13 +119,13 @@ fn testnet_genesis(initial_authorities: Vec<Ed25519AuthorityId>, endowed_account
 		sudo: Some(SudoConfig {
 			key: root_key,
 		}),
-		fees: Some(FeesConfig {
-			transaction_base_fee: 1,
-			transaction_byte_fee: 0,
-		}),
+		// fees: Some(FeesConfig {
+		// 	transaction_base_fee: 1,
+		// 	transaction_byte_fee: 0,
+		// }),
 		conf_transfer: Some(ConfTransferConfig {
-			encrypted_balance: vec![alice_init(), (PkdAddress::from_slice(b"Alice                           "), Ciphertext::from_slice(b"Alice                           Bob                             "))],
-			verifying_key: get_pvk(),								
+			encrypted_balance: vec![alice_init(), (PkdAddress::from_slice(b"Alice                           "), Ciphertext(b"Alice                           Bob                             ".to_vec()))],
+			verifying_key: get_pvk(),										
 			_genesis_phantom_data: Default::default(),
 		})
 	}
@@ -142,23 +143,23 @@ fn get_pvk() -> PreparedVk {
 }
 
 fn alice_init() -> (PkdAddress, Ciphertext) {
-	// let alice_seed = b"Alice                           ";
-	let alice_seed: [u8; 32] = hex!("b4a7109c67f24ad01fc553bcd1c81ad1995cc41751291f7bb9522f2870c8f7c1");
-	let alice_value = 1000 as u32;
+	let alice_seed = b"Alice                           ";	
+	let alice_value = 100 as u32;
 
-	let p_g = FixedGenerators::ElGamal;
-	let mut randomness = [0u8; 32];
+	let p_g = FixedGenerators::Diversifier; // 1 same as NoteCommitmentRandomness;
 
-	if let Ok(mut e) = OsRng::new() {
-		e.fill_bytes(&mut randomness[..]);
-	}
-	let r_fs = fs::Fs::to_uniform(elgamal_extend(&randomness).as_bytes());	
-
-	let expsk = ExpandedSpendingKey::<Bls12>::from_spending_key(&alice_seed);        
-    let viewing_key = ViewingKey::<Bls12>::from_expanded_spending_key(&expsk, &JUBJUB);        
+	let expsk = ExpandedSpendingKey::<Bls12>::from_spending_key(alice_seed);        
+    let viewing_key = ViewingKey::<Bls12>::from_expanded_spending_key(&expsk, &JUBJUB);    
+	
     let address = viewing_key.into_payment_address(&JUBJUB);	
 
-	let enc_alice_val = elgamal::Ciphertext::encrypt(alice_value, r_fs, &address.0, p_g, &JUBJUB);
+	// The default balance is not encrypted with randomness.
+	let enc_alice_bal = elgamal::Ciphertext::encrypt(alice_value, fs::Fs::one(), &address.0, p_g, &JUBJUB);
 
-	(PkdAddress::from_payment_address(&address), Ciphertext::from_ciphertext(&enc_alice_val))
+	let ivk = viewing_key.ivk();	
+
+	let dec_alice_bal = enc_alice_bal.decrypt(ivk, p_g, &JUBJUB).unwrap();
+	assert_eq!(dec_alice_bal, alice_value);	
+
+	(PkdAddress::from_payment_address(&address), Ciphertext::from_ciphertext(&enc_alice_bal))
 }

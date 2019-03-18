@@ -19,14 +19,19 @@ pub struct PreparedVk(
 
 impl PreparedVk {
     pub fn into_prepared_vk(&self) -> Option<bellman_verifier::PreparedVerifyingKey<Bls12>> {   
-        bellman_verifier::PreparedVerifyingKey::read(&mut &self.0[..]).ok()        
+        bellman_verifier::PreparedVerifyingKey::<Bls12>::read(&mut &self.0[..]).ok()        
     }
 
     pub fn from_prepared_vk(pvk: &bellman_verifier::PreparedVerifyingKey<Bls12>) -> Self {
-        // let mut writer = vec![];
-        let mut writer = vec![0u8; 41386];
+        let mut writer = vec![];
+        // let mut writer = vec![0u8; 41386]; // 41390
+        #[cfg(feature = "std")]
+        pvk.write(&mut &mut writer).unwrap();
+
+        #[cfg(not(feature = "std"))]
         pvk.write(&mut &mut writer[..]).unwrap();
-        PreparedVk(writer.to_vec())
+
+        PreparedVk(writer)
     }
 }
 
@@ -54,32 +59,52 @@ impl AsBytesRef for PreparedVk {
 }
 
 
+#[cfg(feature = "std")]
 #[cfg(test)]
 mod tests {
-    use super::*;   
-    use crate::pvk::PVK; 
-    use parity_codec::{Encode, Decode};    
+    use super::*;       
+    use parity_codec::{Encode, Decode};   
+    use std::path::Path;
+    use std::fs::File;
+    use std::io::{BufReader, Read}; 
+
+    fn get_pvk() -> PreparedVk {
+        let vk_path = Path::new("../../demo/cli/verification.params"); 
+        let vk_file = File::open(&vk_path).unwrap();
+        let mut vk_reader = BufReader::new(vk_file);
+
+        let mut buf_vk = vec![];
+        vk_reader.read_to_end(&mut buf_vk).unwrap();
+        
+        PreparedVk(buf_vk)
+    }
 
     #[test]
-    fn test_pvk_encode_decode() {
-        let pvk_vec_u8: Vec<u8> = (&PVK).to_vec().into_iter().map(|e| e as u8).collect();        
-        let pvk = PreparedVk(pvk_vec_u8);
+    fn test_prepared_vk_rw() {
+        let prepared_vk_vec = get_pvk().0;
+        let prepared_vk = bellman_verifier::PreparedVerifyingKey::<Bls12>::read(&mut &prepared_vk_vec[..]).unwrap();
+
+        let mut buf = vec![];
+        prepared_vk.write(&mut &mut buf).unwrap();
+
+        assert_eq!(buf, prepared_vk_vec);
+    }
+
+    #[test]
+    fn test_pvk_encode_decode() {               
+        let pvk = get_pvk();
         let encoded_pvk = pvk.encode();
         let decoded_pvk = PreparedVk::decode(&mut encoded_pvk.as_slice()).unwrap();
         assert_eq!(pvk, decoded_pvk);
     }
-
-    // TODO
+    
     #[test]
     fn test_pvk_into_from() {
-        // let pvk_vec_u8: Vec<u8> = (&PVK).to_vec().into_iter().map(|e| e as u8).collect();        
-        // let pvk = PreparedVk(pvk_vec_u8);
-        // println!("pvk:{:?}", pvk);
-        // let into_pvk = pvk.into_prepared_vk().unwrap();
-        // let from_pvk = PreparedVk::from_prepared_vk(&into_pvk);
+        let pvk = get_pvk();
         
-        // println!("from_pvk:{:?}", from_pvk);
+        let into_pvk = pvk.into_prepared_vk().unwrap();
+        let from_pvk = PreparedVk::from_prepared_vk(&into_pvk);                
                 
-        // assert_eq!(pvk, from_pvk);
+        assert_eq!(pvk, from_pvk);
     }
 }

@@ -4,6 +4,8 @@ extern crate serde_derive;
 extern crate parity_codec as codec;
 #[macro_use]
 extern crate parity_codec_derive as codec_derive;
+#[macro_use]
+extern crate hex_literal;
 
 mod utils;
 use cfg_if::cfg_if;
@@ -13,24 +15,33 @@ use rand::{ChaChaRng, SeedableRng, Rng, Rand};
 use keys;
 use zpairing::{
     bls12_381::Bls12 as zBls12,
-    Field, PrimeField, PrimeFieldRepr,
+    Field as zField, PrimeField as zPrimeField, PrimeFieldRepr as zPrimeFieldRepr,
 };
 use pairing::{
-    bls12_381::Bls12
+    bls12_381::Bls12, PrimeField, Field, PrimeFieldRepr
 };
 use zjubjub::{
     curve::{JubjubBls12 as zJubjubBls12, 
         FixedGenerators as zFixedGenerators, 
         JubjubParams as zJubjubParams, 
-        edwards::Point as zPoint},
-    redjubjub::{h_star, Signature, PublicKey, write_scalar, read_scalar},
+        edwards::Point as zPoint,
+        fs::Fs as zFs
+        },
+    redjubjub::{h_star as zh_star, 
+                Signature as zSignature, 
+                PublicKey as zPublicKey, 
+                write_scalar as zwrite_scalar, 
+                read_scalar as zread_scalar},
 };
-use scrypto::jubjub::{fs, FixedGenerators, ToUniform, JubjubBls12, JubjubParams};
+use scrypto::{
+    jubjub::{fs::Fs, FixedGenerators, ToUniform, JubjubBls12, JubjubParams, edwards::Point},
+    redjubjub::{Signature, PublicKey, h_star, write_scalar, read_scalar},
+};
 use proofs::{
     primitives::{ExpandedSpendingKey, ViewingKey, PaymentAddress},
     elgamal::{Ciphertext, elgamal_extend},
 };
-use bellman::groth16::Parameters;
+use bellman::groth16::{Parameters, PreparedVerifyingKey};
 use zcrypto::elgamal::Ciphertext as zCiphertext;
 
 pub mod transaction;
@@ -47,26 +58,7 @@ cfg_if! {
 }
 
 #[derive(Serialize)]
-pub struct PkdAddress(pub(crate) [u8; 32]);
-
-impl From<keys::PaymentAddress<zBls12>> for PkdAddress {
-    fn from(address: keys::PaymentAddress<zBls12>) -> Self {
-        let mut writer = [0u8; 32];
-        address.write(&mut writer[..]).expect("fails to write payment address");
-        PkdAddress(writer)
-    }
-}
-
-#[derive(Serialize)]
-pub struct RedjubjubSignature(pub(crate) Vec<u8>);
-
-impl From<Signature> for RedjubjubSignature {
-    fn from(sig: Signature) -> Self {
-        let mut writer = [0u8; 64];
-        sig.write(&mut writer[..]).expect("fails to write signature");
-        RedjubjubSignature(writer.to_vec())
-    }
-}
+pub struct PkdAddress(pub Vec<u8>);
 
 #[wasm_bindgen]
 pub fn gen_account_id(sk: &[u8]) -> JsValue {
@@ -76,12 +68,15 @@ pub fn gen_account_id(sk: &[u8]) -> JsValue {
     let viewing_key = keys::ViewingKey::<zBls12>::from_expanded_spending_key(&exps, params);
     let address = viewing_key.into_payment_address(params);
 
-    let pkd_address = PkdAddress::from(address);
+    let mut v = [0u8; 32];
+    address.write(&mut v[..]).expect("fails to write payment address");    
+
+    let pkd_address = PkdAddress(v.to_vec());
     JsValue::from_serde(&pkd_address).expect("fails to write json")
 }
 
-#[derive(Serialize)]
-pub struct Ivk(pub(crate) Vec<u8>);
+#[derive(Serialize, Deserialize)]
+pub struct Ivk(pub Vec<u8>);
 
 #[wasm_bindgen]
 pub fn gen_ivk(sk: &[u8]) -> JsValue {
@@ -93,17 +88,19 @@ pub fn gen_ivk(sk: &[u8]) -> JsValue {
 
     let mut buf = vec![];
     ivk.into_repr().write_le(&mut buf).unwrap();    
-    let ivk = Ivk(buf.to_vec());
+    let ivk = Ivk(buf);
     JsValue::from_serde(&ivk).expect("fails to write json")
 }
 
 #[wasm_bindgen]
-pub fn sign(sk: &[u8], msg: &[u8], seed_slice: &[u32]) -> JsValue {
+pub fn sign(mut sk: &[u8], msg: &[u8], seed_slice: &[u32]) -> Vec<u8> {
     let params = &zJubjubBls12::new();
     let rng = &mut ChaChaRng::from_seed(seed_slice);
-    let g = params.generator(zFixedGenerators::SpendingKeyGenerator);
-
-    let exps = keys::ExpandedSpendingKey::<zBls12>::from_spending_key(sk);
+    let p_g = zFixedGenerators::Diversifier;
+    
+    let mut ask_repr = zFs::default().into_repr();    
+    ask_repr.read_le(&mut sk).unwrap();       
+    let ask = zFs::from_repr(ask_repr).unwrap();
 
     // T = (l_H + 128) bits of randomness
     // For H*, l_H = 512 bits
@@ -111,36 +108,40 @@ pub fn sign(sk: &[u8], msg: &[u8], seed_slice: &[u32]) -> JsValue {
     rng.fill_bytes(&mut t[..]);
 
     // r = H*(T || M)
-    let r = h_star::<zBls12>(&t[..], msg);
+    let r = zh_star::<zBls12>(&t[..], msg);
 
     // R = r . P_G
-    let r_g = g.mul(r, params);
+    let r_g = params.generator(p_g).mul(r, params);
     let mut rbar = [0u8; 32];
     r_g.write(&mut &mut rbar[..])
         .expect("Jubjub points should serialize to 32 bytes");
 
     // S = r + H*(Rbar || M) . sk
-    let mut s = h_star::<zBls12>(&rbar[..], msg);
-    s.mul_assign(&exps.ask);
+    let mut s = zh_star::<zBls12>(&rbar[..], msg);
+    s.mul_assign(&ask);
     s.add_assign(&r);
     let mut sbar = [0u8; 32];
-    write_scalar::<zBls12, &mut [u8]>(&s, &mut sbar[..])
-        .expect("Jubjub scalars should serialize to 32 bytes");
+    zwrite_scalar::<zBls12, &mut [u8]>(&s, &mut sbar[..])
+        .expect("Jubjub scalars should serialize to 32 bytes");    
 
-    let sig = Signature { rbar, sbar };
-    let sig = RedjubjubSignature::from(sig);
-    JsValue::from_serde(&sig).expect("fails to write json")
+    let sig = zSignature { rbar, sbar };     
+
+    let mut writer = [0u8; 64];
+    sig.write(&mut writer[..]).expect("fails to write signature");
+  
+    writer.to_vec()    
 }
 
 #[wasm_bindgen]
-pub fn verify(vk: Vec<u8>, msg: &[u8], sig: Vec<u8>) -> bool {
+pub fn verify(mut vk: &[u8], msg: &[u8], mut sig: &[u8]) -> bool {
     let params = &zJubjubBls12::new();    
+    let p_g = zFixedGenerators::Diversifier;
 
-    let vk = PublicKey::<zBls12>::read(&mut &vk[..], params).unwrap();
-    let sig = Signature::read(&mut &sig[..]).unwrap();
+    let vk = zPublicKey::<zBls12>::read(&mut vk, params).unwrap();
+    let sig = zSignature::read(&mut sig).unwrap();
 
     // c = H*(Rbar || M)
-    let c = h_star::<zBls12>(&sig.rbar[..], msg);
+    let c = zh_star::<zBls12>(&sig.rbar[..], msg);
 
     // Signature checks:
     // R != invalid
@@ -150,16 +151,13 @@ pub fn verify(vk: Vec<u8>, msg: &[u8], sig: Vec<u8>) -> bool {
     };
     // S < order(G)
     // (E::Fs guarantees its representation is in the field)
-    let s = match read_scalar::<zBls12, &[u8]>(&sig.sbar[..]) {
+    let s = match zread_scalar::<zBls12, &[u8]>(&sig.sbar[..]) {
         Ok(s) => s,
         Err(_) => return false,
     };
     // 0 = h_G(-S . P_G + R + c . vk)
     vk.0.mul(c, params).add(&r, params).add(
-        &params.generator(zFixedGenerators::SpendingKeyGenerator)
-                .mul(s, params)
-                .negate()
-                .into(),
+        &params.generator(p_g).mul(s, params).negate().into(),
         params
     ).mul_by_cofactor(params).eq(&zPoint::zero())
 }
@@ -173,6 +171,7 @@ struct Calls {
     value_recipient: Vec<u8>,
     balance_sender: Vec<u8>,
     rk: Vec<u8>,
+    rsk: Vec<u8>,
 }
 
 #[wasm_bindgen]
@@ -182,40 +181,40 @@ pub fn gen_call(
     value: u32, 
     balance: u32,
     mut proving_key: &[u8],
+    mut prepared_vk: &[u8],
     seed_slice: &[u32],
 ) -> JsValue 
 {
     let params = &JubjubBls12::new();
     let mut rng = &mut ChaChaRng::from_seed(seed_slice);
-    let p_g = FixedGenerators::NullifierPosition; // 2
+    let p_g = FixedGenerators::NoteCommitmentRandomness; // 1
     let remaining_balance = balance - value;
 
-    let alpha = fs::Fs::rand(&mut rng);
+    let alpha = Fs::rand(&mut rng);
 
     let ex_sk_s = ExpandedSpendingKey::<Bls12>::from_spending_key(&sk[..]);
     let viewing_key_s = ViewingKey::<Bls12>::from_expanded_spending_key(&ex_sk_s, &params);
-    let ivk = viewing_key_s.ivk();
-    let mut randomness = [0u8; 32];
-
-    rng.fill_bytes(&mut randomness[..]);
-    let r_fs = fs::Fs::to_uniform(elgamal_extend(&randomness).as_bytes());
+    let ivk = viewing_key_s.ivk();    
+    
+    let r_fs = Fs::rand(&mut rng);
     let public_key = params.generator(p_g).mul(ivk, &params).into();
     let ciphertext_balance = Ciphertext::encrypt(balance, r_fs, &public_key, p_g, &params);
 
     let address_recipient = PaymentAddress::<Bls12>::read(&mut address_recipient, params).unwrap();
     let proving_key = Parameters::<Bls12>::read(&mut proving_key, true).unwrap();
+    let prepared_vk = PreparedVerifyingKey::<Bls12>::read(&mut prepared_vk).unwrap();
 
     let tx = Transaction::gen_tx(
                 value, 
                 remaining_balance, 
                 alpha,
                 &proving_key,
-                // &prepared_vk,
+                &prepared_vk,
                 &address_recipient,
-                sk,
+                &ex_sk_s,
                 ciphertext_balance,                        
                 rng
-        ).expect("fails to generate the tx");
+        ).expect("fails to generate the tx");    
     
     let calls = Calls {
         zk_proof: tx.proof.to_vec(),
@@ -225,19 +224,49 @@ pub fn gen_call(
         value_recipient: tx.enc_val_recipient.to_vec(),
         balance_sender: tx.enc_bal_sender.to_vec(),
         rk: tx.rk.to_vec(),
+        rsk: tx.rsk.to_vec(),
     };
 
     JsValue::from_serde(&calls).expect("fails to write json")
 }
 
 #[wasm_bindgen(catch)]
-pub fn decrypt(mut ciphertext: &[u8], sk: &[u8]) -> Result<u32, JsValue> {
+pub fn decrypt_ca(mut ciphertext: &[u8], mut sk: &[u8]) -> Result<u32, JsValue> {
     let params = &zJubjubBls12::new();
-    let p_g = zFixedGenerators::ElGamal;
+    let p_g = zFixedGenerators::Diversifier;
 
     let ciphertext = zCiphertext::<zBls12>::read(&mut ciphertext, params).unwrap();
-    match ciphertext.decrypt(sk, p_g, params) {
+    let mut sk_repr = zFs::default().into_repr();    
+    sk_repr.read_le(&mut sk).unwrap();    
+
+    match ciphertext.decrypt(zFs::from_repr(sk_repr).unwrap(), p_g, params) {
         Some(v) => Ok(v),
-        None => Err(JsValue::from_str("fails to decrypt"))
+        None => {            
+            Err(JsValue::from_str("fails to decrypt"))
+        }
     }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use rand::XorShiftRng;
+    use scrypto::jubjub::{fs::Fs, ToUniform};
+    use pairing::{PrimeField, PrimeFieldRepr, Field};
+    use zjubjub::redjubjub::PrivateKey as zPrivateKey;
+    use scrypto::redjubjub::{PrivateKey, PublicKey};           
+
+    #[test]
+    fn test_fs_write_read() {
+        let rng = &mut XorShiftRng::from_seed([0xbc4f6d44, 0xd62f276c, 0xb963afd0, 0x5455863d]);
+
+        let fs = zFs::rand(rng);
+        let mut buf = vec![];
+        fs.into_repr().write_le(&mut &mut buf).unwrap();
+
+        let mut sk_repr = zFs::default().into_repr();
+        sk_repr.read_le(&mut &buf[..]).unwrap();
+
+        assert_eq!(fs, zFs::from_repr(sk_repr).unwrap());
+    }    
 }

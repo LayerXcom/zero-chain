@@ -106,6 +106,7 @@ impl<E: Engine> Proof<E> {
     }
 }
 
+#[cfg_attr(feature = "std", derive(Debug))]
 pub struct PreparedVerifyingKey<E: Engine> {
     /// Pairing result of alpha*beta
     alpha_g1_beta_g2: E::Fqk,
@@ -148,11 +149,11 @@ impl<E: Engine> PreparedVerifyingKey<E> {
         use byteorder::{ByteOrder, BigEndian}; 
         
         let mut g1_repr = <E::G1Affine as CurveAffine>::Uncompressed::empty();
-
         let alpha_g1_beta_g2 = E::Fqk::read(reader)?;
+        
         let neg_gamma_g2 = <E::G2Affine as CurveAffine>::Prepared::read(reader)?;
         let neg_delta_g2 = <E::G2Affine as CurveAffine>::Prepared::read(reader)?;
-
+        
         let mut buf = [0u8; 4];
         reader.read(&mut buf)?;
 
@@ -160,12 +161,12 @@ impl<E: Engine> PreparedVerifyingKey<E> {
         
         let mut ic = vec![];
 
-        for _ in 0..ic_len {
-            reader.read(g1_repr.as_mut())?;
+        for _ in 0..ic_len {            
+            reader.read(g1_repr.as_mut())?;            
             let g1 = g1_repr
                         .into_affine()
-                        .map_err(|_| io::Error::InvalidData)
-                        .and_then(|e| if e.is_zero() {
+                        .map_err(|_| io::Error::InvalidData) 
+                        .and_then(|e| if e.is_zero() {                            
                             Err(io::Error::PointInfinity)
                         } else {
                             Ok(e)
@@ -331,7 +332,8 @@ impl From<io::Error> for SynthesisError {
 #[cfg(test)]
 mod test_proof_write_read {
     use super::*;            
-    use pairing::bls12_381::{G1Affine, G2Affine, Fq, FqRepr, Fq2, Bls12};
+    use pairing::bls12_381::{G1Affine, G2Affine, Fq, FqRepr, Fq2, Bls12};    
+    use rand::OsRng;
 
     #[test]
     fn byte_cast() {        
@@ -366,5 +368,5 @@ mod test_proof_write_read {
 
         let de_proof = Proof::read(&v[..]).unwrap();
         assert!(proof == de_proof);      
-    }
+    }    
 }

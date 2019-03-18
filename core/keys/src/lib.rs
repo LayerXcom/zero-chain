@@ -76,7 +76,7 @@ impl<E: JubjubEngine> ExpandedSpendingKey<E> {
 
     pub fn into_proof_generation_key(&self, params: &E::Params) -> ProofGenerationKey<E> {
         ProofGenerationKey {
-            ak: params.generator(FixedGenerators::ProofGenerationKey).mul(self.ask, params),
+            ak: params.generator(FixedGenerators::Diversifier).mul(self.ask, params),
             nsk: self.nsk,
         }
     }
@@ -105,39 +105,6 @@ impl<E: JubjubEngine> ExpandedSpendingKey<E> {
     }
 } 
 
-#[derive(Clone, Default)]
-pub struct ValueCommitment<E: JubjubEngine> {
-    pub value: u64,
-    pub randomness: E::Fs,
-    pub is_negative: bool,
-}
-
-impl<E: JubjubEngine> ValueCommitment<E> {
-    /// Generate pedersen commitment from the value and randomness parameters
-    pub fn cm(
-        &self,
-        params: &E::Params,        
-    ) -> edwards::Point<E, PrimeOrder>
-    {
-        params.generator(FixedGenerators::ValueCommitmentValue)
-            .mul(self.value, params)
-            .add(
-                &params.generator(FixedGenerators::ValueCommitmentRandomness)
-                .mul(self.randomness, params),
-                params
-            )
-    }   
-
-    /// Change the value from the positive representation to negative one.
-    pub fn change_sign(&self) -> Self {
-        ValueCommitment {
-            value: self.value,
-            randomness: self.randomness,
-            is_negative: !self.is_negative,
-        }
-    }
-}
-
 #[derive(Clone)]
 pub struct ProofGenerationKey<E: JubjubEngine> {
     pub ak: edwards::Point<E, PrimeOrder>,
@@ -149,7 +116,7 @@ impl<E: JubjubEngine> ProofGenerationKey<E> {
     pub fn into_viewing_key(&self, params: &E::Params) -> ViewingKey<E> {
         ViewingKey {
             ak: self.ak.clone(),
-            nk: params.generator(FixedGenerators::ProofGenerationKey).mul(self.nsk, params)
+            nk: params.generator(FixedGenerators::Diversifier).mul(self.nsk, params)
         }
     }
 }
@@ -169,10 +136,10 @@ impl<E: JubjubEngine> ViewingKey<E> {
     {
         ViewingKey {
             ak: params
-                .generator(FixedGenerators::SpendingKeyGenerator)
+                .generator(FixedGenerators::Diversifier)
                 .mul(expsk.ask, params),
             nk: params
-                .generator(FixedGenerators::SpendingKeyGenerator)
+                .generator(FixedGenerators::Diversifier)
                 .mul(expsk.nsk, params),
         }
     }
@@ -184,7 +151,7 @@ impl<E: JubjubEngine> ViewingKey<E> {
         params: &E::Params
     ) -> edwards::Point<E, PrimeOrder> {
         self.ak.add(
-            &params.generator(FixedGenerators::SpendingKeyGenerator).mul(ar, params),
+            &params.generator(FixedGenerators::Diversifier).mul(ar, params),
             params
         )
     }

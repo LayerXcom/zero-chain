@@ -36,3 +36,26 @@ pub fn setup() -> (Parameters<Bls12>, PreparedVerifyingKey<Bls12>) {
 
     (proving_key, prepared_vk)
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use bellman_verifier::PreparedVerifyingKey as zPreparedVk;
+    use zpairing::bls12_381::Bls12 as zBls12;
+
+    #[test]
+    fn test_preparedvk_rw() {
+        let (_, vk) = setup();
+        let mut v = vec![];
+        vk.write(&mut &mut v).unwrap();   
+        
+        let prepared_vk_a = PreparedVerifyingKey::<Bls12>::read(&mut &v[..]).unwrap();
+        
+        let mut buf = vec![];
+        prepared_vk_a.write(&mut &mut buf).unwrap();
+
+        let prepared_vk_b = PreparedVerifyingKey::<Bls12>::read(&mut &buf[..]).unwrap();
+
+        assert_eq!(prepared_vk_a, prepared_vk_b);
+    }
+}

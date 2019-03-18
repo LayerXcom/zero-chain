@@ -7,9 +7,7 @@ use bellman::{
 use scrypto::jubjub::{
     JubjubEngine,
     FixedGenerators,
-    PrimeOrder,
-    JubjubParams,
-    ToUniform,
+    PrimeOrder,    
 };
 
 use crate::primitives::{    
@@ -84,7 +82,7 @@ impl<'a, E: JubjubEngine> Circuit<E> for Transfer<'a, E> {
         // Multiply the value to the base point same as FixedGenerators::ElGamal.
         let value_g = ecc::fixed_base_multiplication(
             cs.namespace(|| format!("compute the value in the exponent")), 
-            FixedGenerators::NullifierPosition, 
+            FixedGenerators::NoteCommitmentRandomness, 
             &value_bits, 
             params
         )?;
@@ -122,7 +120,7 @@ impl<'a, E: JubjubEngine> Circuit<E> for Transfer<'a, E> {
             params
         )?;    
         
-        val_rlr.inputize(cs.namespace(|| format!("inputize pk_d_recipient")))?; 
+        recipient_pk_d_v.inputize(cs.namespace(|| format!("inputize pk_d_recipient")))?; 
 
 
         // Generate the left elgamal component for sender in circuit
@@ -142,7 +140,7 @@ impl<'a, E: JubjubEngine> Circuit<E> for Transfer<'a, E> {
         // Multiply the randomness to the base point same as FixedGenerators::ElGamal.
         let c_right = ecc::fixed_base_multiplication(
             cs.namespace(|| format!("compute the right elgamal component")), 
-            FixedGenerators::NullifierPosition, 
+            FixedGenerators::NoteCommitmentRandomness, 
             &rcv, 
             params
         )?;
@@ -176,38 +174,38 @@ impl<'a, E: JubjubEngine> Circuit<E> for Transfer<'a, E> {
                 params
             )?;
 
-            let left = self.encrypted_balance.clone().map(|e| e.left.into_xy());
-            let right = self.encrypted_balance.map(|e| e.right.into_xy());
+            // let left = self.encrypted_balance.clone().map(|e| e.left.into_xy());
+            // let right = self.encrypted_balance.map(|e| e.right.into_xy());
 
-            let numxl = AllocatedNum::alloc(cs.namespace(|| "numxl"), || {
-                Ok(left.get()?.0)
-            })?;
-            let numyl = AllocatedNum::alloc(cs.namespace(|| "numyl"), || {
-                Ok(left.get()?.1)
-            })?;
-            let numxr = AllocatedNum::alloc(cs.namespace(|| "numxr"), || {
-                Ok(right.get()?.0)
-            })?;
-            let numyr = AllocatedNum::alloc(cs.namespace(|| "numyr"), || {
-                Ok(right.get()?.1)
-            })?;
+            // let numxl = AllocatedNum::alloc(cs.namespace(|| "numxl"), || {
+            //     Ok(left.get()?.0)
+            // })?;
+            // let numyl = AllocatedNum::alloc(cs.namespace(|| "numyl"), || {
+            //     Ok(left.get()?.1)
+            // })?;
+            // let numxr = AllocatedNum::alloc(cs.namespace(|| "numxr"), || {
+            //     Ok(right.get()?.0)
+            // })?;
+            // let numyr = AllocatedNum::alloc(cs.namespace(|| "numyr"), || {
+            //     Ok(right.get()?.1)
+            // })?;
 
-            let pointl = EdwardsPoint::interpret(
-                cs.namespace(|| format!("interpret to pointl")), 
-                &numxl, 
-                &numyl, 
-                params
-            )?;
+            // let pointl = EdwardsPoint::interpret(
+            //     cs.namespace(|| format!("interpret to pointl")), 
+            //     &numxl, 
+            //     &numyl, 
+            //     params
+            // )?;
 
-            let pointr = EdwardsPoint::interpret(
-                cs.namespace(|| format!("interpret to pointr")), 
-                &numxr, 
-                &numyr, 
-                params
-            )?;
+            // let pointr = EdwardsPoint::interpret(
+            //     cs.namespace(|| format!("interpret to pointr")), 
+            //     &numxr, 
+            //     &numyr, 
+            //     params
+            // )?;
 
-            pointl.inputize(cs.namespace(|| format!("inputize pointl")))?;
-            pointr.inputize(cs.namespace(|| format!("inputize pointr")))?;
+            // pointl.inputize(cs.namespace(|| format!("inputize pointl")))?;
+            // pointr.inputize(cs.namespace(|| format!("inputize pointr")))?;
 
             // TODO:
             // The balance encryption validity. 
@@ -242,7 +240,7 @@ impl<'a, E: JubjubEngine> Circuit<E> for Transfer<'a, E> {
         // Make the alpha on the curve
         let alpha_g = ecc::fixed_base_multiplication(
             cs.namespace(|| "computation of randomiation for the signing key"),
-            FixedGenerators::SpendingKeyGenerator,
+            FixedGenerators::NoteCommitmentRandomness,
             &alpha,
             self.params
         )?;
@@ -303,7 +301,7 @@ fn u32_into_boolean_vec_le<E, CS>(
     use pairing::{PrimeField, bls12_381::*};
     use rand::{SeedableRng, Rng, XorShiftRng};    
     use super::circuit_test::TestConstraintSystem;
-    use scrypto::jubjub::{JubjubBls12, fs, edwards};  
+    use scrypto::jubjub::{JubjubBls12, fs, edwards, JubjubParams, ToUniform};  
     use crate::elgamal::elgamal_extend;         
 
     
@@ -345,7 +343,7 @@ fn u32_into_boolean_vec_le<E, CS>(
         rng.fill_bytes(&mut randomness[..]);
         let r_fs = fs::Fs::to_uniform(elgamal_extend(&randomness).as_bytes());
 
-        let p_g = FixedGenerators::NullifierPosition;
+        let p_g = FixedGenerators::NoteCommitmentRandomness;
         let public_key = params.generator(p_g).mul(r_fs, params).into();
         let ciphetext = Ciphertext::encrypt(current_balance, r_fs, &public_key, p_g, params);
 

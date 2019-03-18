@@ -36,7 +36,7 @@ pub const VALUE_COMMITMENT_GENERATOR_PERSONALIZATION: &'static [u8; 8]
           = b"Zcash_cv";
 
 /// BLAKE2s Personalization for the value encryption generator 
-pub const ELGAMAL_PERSONALIZATION: &'static [u8; 8]
+pub const NULLIFIER_POSITION_IN_TREE_GENERATOR_PERSONALIZATION: &'static [u8; 8]
           = b"Zcash_J_";
 
 pub const DIVERSIFIER_PERSONALIZATION: &'static [u8; 8]

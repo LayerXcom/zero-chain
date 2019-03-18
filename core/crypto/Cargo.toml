@@ -8,6 +8,7 @@ edition = "2018"
 jubjub = { path = "../jubjub", default-features = false }
 pairing = { package = "zero-chain-pairing", path = "../pairing", default-features = false }
 rand = { version = "0.4", default-features = false }
+keys = { path = "../keys", default-features = false }
 
 [dependencies.blake2-rfc]
 git = "https://github.com/gtank/blake2-rfc"
@@ -20,4 +21,5 @@ std = [
     "pairing/std",
     "jubjub/std",
     "rand/std",
+    "keys/std"
 ]
