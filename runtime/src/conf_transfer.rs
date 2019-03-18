@@ -4,7 +4,7 @@
 #![cfg_attr(not(feature = "std"), no_std)]
 #![cfg_attr(not(feature = "std"), feature(alloc))]
 
-use support::{decl_module, decl_storage, decl_event, StorageValue, StorageMap, dispatch::Result, ensure};
+use support::{decl_module, decl_storage, decl_event, StorageMap, dispatch::Result, ensure};
 use rstd::prelude::*;
 use bellman_verifier::{    
     verify_proof,           
@@ -256,13 +256,11 @@ mod tests {
     use support::{impl_outer_origin, assert_ok};
     use primitives::{H256, Blake2Hasher};
     use runtime_primitives::{
-        BuildStorage, traits::{BlakeTwo256, OnInitialise, OnFinalise, IdentityLookup},
+        BuildStorage, traits::{BlakeTwo256, IdentityLookup},
         testing::{Digest, DigestItem, Header}
     };
-    use keys::{ExpandedSpendingKey, ViewingKey};
-    use rand::{ChaChaRng, SeedableRng, Rng, Rand};
-    use jubjub::{curve::{JubjubBls12, FixedGenerators, fs, ToUniform}};    
-    use zcrypto::elgamal::elgamal_extend;
+    use keys::{ExpandedSpendingKey, ViewingKey};    
+    use jubjub::{curve::{JubjubBls12, FixedGenerators, fs}};        
     use hex_literal::{hex, hex_impl};
     use std::path::Path;
     use std::fs::File;
@@ -343,11 +341,11 @@ mod tests {
     #[test]    
     fn test_call_function() {        
         with_externalities(&mut new_test_ext(), || {                 
-            let proof: [u8; 192] = hex!("b2a2ea9cfae5327f73783ae4b88723c2c2c8a0944783ad3cd0488e673ef4524527de2594e161331907e9df063b43c268935712d2209e3d15c7a0e3ad402ae0149563a520ff2cd8ec6dba4696c177547a2d24d51ca35e31cdd45bc4e12a3079091476e4b2a4a39540ad4d17a07fabd5f4f2e979490bd5f492abcb5587e933f9f106c435f3913267657f1ecca866cc74a98219690d2fba448d5abee3ea989255fad04ea0669c75e45c2d37093151fe5267d6867b90f85aed0ada3fd7e8e5e55060");
+            let proof: [u8; 192] = hex!("a97fd1cb914a07033e277f5562351eda7648a29edc3b65f28fe8221f21cb3e94c64f726f6944173662fa98c2980eafc095b9dd7542ed13cb30ce4bbdddf974a8028e9c91ea3a5ab88d5fa684ad49652fd651147c7cf42975f7435e71e238c88611a14b1cda6b7cde218f1b90d272262ac042f8426e748b1cd7efe7917a4cc9b6a7bae60fb089c59af7ce0e23cb9745d592530edeab7ec1869dea11f31c842e168898eb2ce9f77be4597ba2b8367ccfd70d375ebd3c5547c58244163e3e16ef03");
             let pkd_addr_alice: [u8; 32] = hex!("775e501abc59d035e71e16c6c6cd225d44a249289dd95c37516ce4754721d763");
             let pkd_addr_bob: [u8; 32] = hex!("a23bb484f72b28a4179a71057c4528648dfb37974ccd84b38aa3e342f9598515");
-            let enc10_by_alice: [u8; 64] = hex!("349728028d775714b19943f2024511d37a8fa305dcfe35bf91f8f3763badbc31c65701ad0fb5864f367bf2b21700e529f5efb8aa1ca63c572f7a5a189704de25");
-            let enc10_by_bob: [u8; 64] = hex!("d5385b817d16b2dd918fcf59b526b4a2390f74c270f47bc754ec46c27d4182dac65701ad0fb5864f367bf2b21700e529f5efb8aa1ca63c572f7a5a189704de25");            
+            let enc10_by_alice: [u8; 64] = hex!("d6544e8aebd4f9a41c80fd6669077805a402418fcf2fa18e01e86b6d2ab1313a592c414431f34c45d4b494cc2eb43a0b50de7b717a0a092f3db2aa71ad4c5286");
+            let enc10_by_bob: [u8; 64] = hex!("3d74a2b5e9ee19e7e88a0e8b12e39ca68f818911cb4bc5decda6b29143c986a3592c414431f34c45d4b494cc2eb43a0b50de7b717a0a092f3db2aa71ad4c5286");            
             let enc100_by_alice: [u8; 64] = hex!("3f101bd6575876bbf772e25ed84728e012295b51f1be37b8451553184b458aeeac776c796563fcd44cc49cfaea8bb796952c266e47779d94574c10ad01754b11");            
             let rvk: [u8; 32] = hex!("791b91fae07feada7b6f6042b1e214bc75759b3921956053936c38a95271a834");
 
@@ -362,78 +360,5 @@ mod tests {
                 SigVerificationKey::from_slice(&rvk)
             ));
         })
-    }
-    
-    #[test]    
-    fn test_verify_proof() {
-        let proof: [u8; 192] = hex!("967b50be25a9c66b73663751f0c2de4e243ba1eff00a79732398edb0a8bdd8bdd4ca77422a15dc4bba8c86917bcd8348b75cf805efe312fb1a63441cf1c529b6c8a80de7e3cf2167b2fe2b316b6b011ef82580d9c334b49afacf448d48f0b6c313e627cabc031b862dde09017dd4f450d27662a571669af7edeb1d6821b83edbbe5db64d0b5a7bca6ecac98dbe6ffa7aaa859a877c42caf6f844f2d98c802d985d3f963bdbb9c8f3d0a7f2727ac3baf71dada67661e392285be0ca364822a9c0");
-        let pkd_addr_alice: [u8; 32] = hex!("775e501abc59d035e71e16c6c6cd225d44a249289dd95c37516ce4754721d763");
-        let pkd_addr_bob: [u8; 32] = hex!("a23bb484f72b28a4179a71057c4528648dfb37974ccd84b38aa3e342f9598515");
-        let enc10_by_alice: [u8; 64] = hex!("e706a710426fdf380835163830594a95e1c087c191f33e7be1d540940fff796717eece72bc1652347807693b08acb6abcbd5a8f894c0badcab6c7c7416930fce");
-        let enc10_by_bob: [u8; 64] = hex!("a5176c76543b1c816a606462cb60a4703a40654eaab0ae5430da4c23e998c9af17eece72bc1652347807693b08acb6abcbd5a8f894c0badcab6c7c7416930fce");            
-        let enc100_by_alice: [u8; 64] = hex!("3f101bd6575876bbf772e25ed84728e012295b51f1be37b8451553184b458aeeac776c796563fcd44cc49cfaea8bb796952c266e47779d94574c10ad01754b11");            
-        let rvk: [u8; 32] = hex!("791b91fae07feada7b6f6042b1e214bc75759b3921956053936c38a95271a834");
-
-        let params = &JubjubBls12::new();
-
-        let pvk = get_pvk().into_prepared_vk().unwrap();
-        let zkproof = bellman_verifier::Proof::read(&mut &proof[..]).unwrap();
-
-        let address_sender = PaymentAddress::<Bls12>::read(&mut &pkd_addr_alice[..], &params).unwrap();
-        let address_recipient = PaymentAddress::<Bls12>::read(&mut &pkd_addr_bob[..], &params).unwrap();
-        let value_sender = elgamal::Ciphertext::<Bls12>::read(&mut &enc10_by_alice[..], &params).unwrap();
-        let value_recipient = elgamal::Ciphertext::<Bls12>::read(&mut &enc10_by_bob[..], &params).unwrap();
-        let balance_sender = elgamal::Ciphertext::<Bls12>::read(&mut &enc100_by_alice[..], &params).unwrap();
-        let rk = PublicKey::<Bls12>::read(&mut &rvk[..], &params).unwrap();
-
-        let mut public_input = [Fr::zero(); 12];
-
-        {
-            let (x, y) = address_sender.0.into_xy();
-            public_input[0] = x;
-            public_input[1] = y;
-        }
-        {
-            let (x, y) = address_recipient.0.into_xy();
-            public_input[2] = x;
-            public_input[3] = y;
-        }
-        {
-            let (x, y) = value_sender.left.into_xy();
-            public_input[4] = x;
-            public_input[5] = y;
-        }
-        {
-            let (x, y) = value_recipient.left.into_xy();
-            public_input[6] = x;
-            public_input[7] = y;
-        }
-        {
-            let (x, y) = value_sender.right.into_xy();
-            public_input[8] = x;
-            public_input[9] = y;
-        }
-        // {
-        //     let (x, y) = balance_sender.left.into_xy();
-        //     public_input[10] = x;
-        //     public_input[11] = y;
-        // }
-        // {
-        //     let (x, y) = balance_sender.right.into_xy();
-        //     public_input[12] = x;
-        //     public_input[13] = y;
-        // }
-        {
-            let (x, y) = rk.0.into_xy();
-            public_input[10] = x;
-            public_input[11] = y;
-        }
-
-        let isValid = match verify_proof(&pvk, &zkproof, &public_input[..]) {            
-            Ok(true) => true,
-            _ => false,                
-        };
-
-        assert!(isValid);
-    }
+    }        
 }
