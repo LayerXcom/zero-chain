@@ -56,21 +56,7 @@ decl_module! {
             rk: SigVerificationKey  // TODO: Extract from origin            
         ) -> Result {
             // Temporally removed the signature verification.
-			// let rk = ensure_signed(origin)?;
-
-            // Verify the zk proof
-            ensure!(
-                Self::validate_proof(
-                    &szkproof,
-                    &saddr_sender,
-                    &saddr_recipient,
-                    &svalue_sender,
-                    &svalue_recipient,
-                    &sbalance_sender,
-                    &srk,                    
-                ),
-                "Invalid zkproof"
-            );  
+			// let rk = ensure_signed(origin)?;            
             
             // Get zkproofs with the type
             let szkproof = match zkproof.into_proof() {
@@ -113,6 +99,20 @@ decl_module! {
                 Some(v) => v,
                 None => return Err("Invalid rk"),
             };                      
+
+            // Verify the zk proof
+            ensure!(
+                Self::validate_proof(
+                    &szkproof,
+                    &saddr_sender,
+                    &saddr_recipient,
+                    &svalue_sender,
+                    &svalue_recipient,
+                    &sbalance_sender,
+                    &srk,                    
+                ),
+                "Invalid zkproof"
+            );  
 
             // Verify the balance
             ensure!(
@@ -190,7 +190,7 @@ impl<T: Trait> Module<T> {
         rk: &PublicKey<Bls12>,                 
     ) -> bool {
         // Construct public input for circuit
-        let mut public_input = [Fr::zero(); 16];
+        let mut public_input = [Fr::zero(); 12];
 
         {
             let (x, y) = address_sender.0.into_xy();
@@ -217,20 +217,20 @@ impl<T: Trait> Module<T> {
             public_input[8] = x;
             public_input[9] = y;
         }
-        {
-            let (x, y) = balance_sender.left.into_xy();
-            public_input[10] = x;
-            public_input[11] = y;
-        }
-        {
-            let (x, y) = balance_sender.right.into_xy();
-            public_input[12] = x;
-            public_input[13] = y;
-        }
+        // {
+        //     let (x, y) = balance_sender.left.into_xy();
+        //     public_input[10] = x;
+        //     public_input[11] = y;
+        // }
+        // {
+        //     let (x, y) = balance_sender.right.into_xy();
+        //     public_input[12] = x;
+        //     public_input[13] = y;
+        // }
         {
             let (x, y) = rk.0.into_xy();
-            public_input[14] = x;
-            public_input[15] = y;
+            public_input[10] = x;
+            public_input[11] = y;
         }
 
         let pvk = Self::verifying_key().into_prepared_vk().unwrap();        
@@ -340,8 +340,7 @@ mod tests {
         t.into()
     }
 
-    #[test]
-    #[should_panic]
+    #[test]    
     fn test_call_function() {        
         with_externalities(&mut new_test_ext(), || {                 
             let proof: [u8; 192] = hex!("b2a2ea9cfae5327f73783ae4b88723c2c2c8a0944783ad3cd0488e673ef4524527de2594e161331907e9df063b43c268935712d2209e3d15c7a0e3ad402ae0149563a520ff2cd8ec6dba4696c177547a2d24d51ca35e31cdd45bc4e12a3079091476e4b2a4a39540ad4d17a07fabd5f4f2e979490bd5f492abcb5587e933f9f106c435f3913267657f1ecca866cc74a98219690d2fba448d5abee3ea989255fad04ea0669c75e45c2d37093151fe5267d6867b90f85aed0ada3fd7e8e5e55060");
@@ -365,14 +364,13 @@ mod tests {
         })
     }
     
-    #[test]
-    #[should_panic]
+    #[test]    
     fn test_verify_proof() {
-        let proof: [u8; 192] = hex!("b2a2ea9cfae5327f73783ae4b88723c2c2c8a0944783ad3cd0488e673ef4524527de2594e161331907e9df063b43c268935712d2209e3d15c7a0e3ad402ae0149563a520ff2cd8ec6dba4696c177547a2d24d51ca35e31cdd45bc4e12a3079091476e4b2a4a39540ad4d17a07fabd5f4f2e979490bd5f492abcb5587e933f9f106c435f3913267657f1ecca866cc74a98219690d2fba448d5abee3ea989255fad04ea0669c75e45c2d37093151fe5267d6867b90f85aed0ada3fd7e8e5e55060");
+        let proof: [u8; 192] = hex!("967b50be25a9c66b73663751f0c2de4e243ba1eff00a79732398edb0a8bdd8bdd4ca77422a15dc4bba8c86917bcd8348b75cf805efe312fb1a63441cf1c529b6c8a80de7e3cf2167b2fe2b316b6b011ef82580d9c334b49afacf448d48f0b6c313e627cabc031b862dde09017dd4f450d27662a571669af7edeb1d6821b83edbbe5db64d0b5a7bca6ecac98dbe6ffa7aaa859a877c42caf6f844f2d98c802d985d3f963bdbb9c8f3d0a7f2727ac3baf71dada67661e392285be0ca364822a9c0");
         let pkd_addr_alice: [u8; 32] = hex!("775e501abc59d035e71e16c6c6cd225d44a249289dd95c37516ce4754721d763");
         let pkd_addr_bob: [u8; 32] = hex!("a23bb484f72b28a4179a71057c4528648dfb37974ccd84b38aa3e342f9598515");
-        let enc10_by_alice: [u8; 64] = hex!("349728028d775714b19943f2024511d37a8fa305dcfe35bf91f8f3763badbc31c65701ad0fb5864f367bf2b21700e529f5efb8aa1ca63c572f7a5a189704de25");
-        let enc10_by_bob: [u8; 64] = hex!("d5385b817d16b2dd918fcf59b526b4a2390f74c270f47bc754ec46c27d4182dac65701ad0fb5864f367bf2b21700e529f5efb8aa1ca63c572f7a5a189704de25");            
+        let enc10_by_alice: [u8; 64] = hex!("e706a710426fdf380835163830594a95e1c087c191f33e7be1d540940fff796717eece72bc1652347807693b08acb6abcbd5a8f894c0badcab6c7c7416930fce");
+        let enc10_by_bob: [u8; 64] = hex!("a5176c76543b1c816a606462cb60a4703a40654eaab0ae5430da4c23e998c9af17eece72bc1652347807693b08acb6abcbd5a8f894c0badcab6c7c7416930fce");            
         let enc100_by_alice: [u8; 64] = hex!("3f101bd6575876bbf772e25ed84728e012295b51f1be37b8451553184b458aeeac776c796563fcd44cc49cfaea8bb796952c266e47779d94574c10ad01754b11");            
         let rvk: [u8; 32] = hex!("791b91fae07feada7b6f6042b1e214bc75759b3921956053936c38a95271a834");
 
@@ -388,7 +386,7 @@ mod tests {
         let balance_sender = elgamal::Ciphertext::<Bls12>::read(&mut &enc100_by_alice[..], &params).unwrap();
         let rk = PublicKey::<Bls12>::read(&mut &rvk[..], &params).unwrap();
 
-        let mut public_input = [Fr::zero(); 16];
+        let mut public_input = [Fr::zero(); 12];
 
         {
             let (x, y) = address_sender.0.into_xy();
@@ -415,20 +413,20 @@ mod tests {
             public_input[8] = x;
             public_input[9] = y;
         }
-        {
-            let (x, y) = balance_sender.left.into_xy();
-            public_input[10] = x;
-            public_input[11] = y;
-        }
-        {
-            let (x, y) = balance_sender.right.into_xy();
-            public_input[12] = x;
-            public_input[13] = y;
-        }
+        // {
+        //     let (x, y) = balance_sender.left.into_xy();
+        //     public_input[10] = x;
+        //     public_input[11] = y;
+        // }
+        // {
+        //     let (x, y) = balance_sender.right.into_xy();
+        //     public_input[12] = x;
+        //     public_input[13] = y;
+        // }
         {
             let (x, y) = rk.0.into_xy();
-            public_input[14] = x;
-            public_input[15] = y;
+            public_input[10] = x;
+            public_input[11] = y;
         }
 
         let isValid = match verify_proof(&pvk, &zkproof, &public_input[..]) {            

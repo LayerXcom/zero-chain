@@ -51,8 +51,7 @@ impl Transaction {
 	{		
 		// The pramaters from std environment
 		let params = JubjubBls12::new();
-
-		// let expsk = ExpandedSpendingKey::<Bls12>::from_spending_key(sk);
+		
 		let proof_generation_key = ex_sk_sender.into_proof_generation_key(&params);
 
 		// Generate the zk proof
@@ -67,7 +66,7 @@ impl Transaction {
             ciphertext_balance.clone(),
 			rng,
 			&params,
-		);		
+		).unwrap();		
 
 		// Generate the re-randomized sign key
 		let rsk = PrivateKey::<Bls12>(ex_sk_sender.ask).randomize(alpha);
@@ -93,7 +92,7 @@ impl Transaction {
 		proof_output.cipher_val_s.write(&mut enc_val_sender[..]).map_err(|_| io::Error::InvalidData)?;
 
 		let mut enc_bal_sender = [0u8; 64];
-		ciphertext_balance.write(&mut enc_bal_sender[..]).map_err(|_| io::Error::InvalidData)?;					
+		proof_output.cipher_balance.write(&mut enc_bal_sender[..]).map_err(|_| io::Error::InvalidData)?;					
 
 		let tx = Transaction {		
 			proof: proof_bytes,		           			 

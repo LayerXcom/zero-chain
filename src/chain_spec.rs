@@ -104,7 +104,7 @@ fn testnet_genesis(initial_authorities: Vec<Ed25519AuthorityId>, endowed_account
 		}),
 		system: None,
 		timestamp: Some(TimestampConfig {
-			period: 5,					// 5 second block time.
+			period: 10,					// 10 second block time.
 		}),
 		indices: Some(IndicesConfig {
 			ids: endowed_accounts.clone(),

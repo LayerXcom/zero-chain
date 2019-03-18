@@ -30,6 +30,7 @@ pub struct TransferProof<E: JubjubEngine> {
     pub address_recipient: PaymentAddress<E>,
     pub cipher_val_s: Ciphertext<E>,
     pub cipher_val_r: Ciphertext<E>,    
+    pub cipher_balance: Ciphertext<E>,    
 }
 
 impl<E: JubjubEngine> TransferProof<E> {    
@@ -44,7 +45,7 @@ impl<E: JubjubEngine> TransferProof<E> {
         ciphertext_balance: Ciphertext<E>,
         rng: &mut R,  
         params: &E::Params,        
-    ) -> Self
+    ) -> Result<Self, &'static str>
     {
         let randomness = E::Fs::rand(rng);   
         
@@ -76,7 +77,7 @@ impl<E: JubjubEngine> TransferProof<E> {
         let proof = create_random_proof(instance, proving_key, rng)
             .expect("proving should not fail");
         
-        let mut public_input = [E::Fr::zero(); 16];
+        let mut public_input = [E::Fr::zero(); 12];
 
         let cipher_val_s = Ciphertext::encrypt(
             value, 
@@ -119,24 +120,25 @@ impl<E: JubjubEngine> TransferProof<E> {
             public_input[8] = x;
             public_input[9] = y;
         }
-        {
-            let (x, y) = ciphertext_balance.left.into_xy();
-            public_input[10] = x;
-            public_input[11] = y;            
-        }
-        {
-            let (x, y) = ciphertext_balance.right.into_xy();
-            public_input[12] = x;
-            public_input[13] = y;
-        }
+        // {
+        //     let (x, y) = ciphertext_balance.left.into_xy();
+        //     public_input[0] = x;
+        //     public_input[1] = y;            
+        // }
+        // {
+        //     let (x, y) = ciphertext_balance.right.into_xy();
+        //     public_input[2] = x;
+        //     public_input[3] = y;
+        // }
         {
             let (x, y) = rk.0.into_xy();
-            public_input[14] = x;
-            public_input[15] = y;
+            public_input[10] = x;
+            public_input[11] = y;
         }                             
 
-        verify_proof(prepared_vk, &proof, &public_input[..])
-            .expect("verifying should not fail");
+        if let Err(_) = verify_proof(prepared_vk, &proof, &public_input[..]) {
+            return Err("Invalid zk proof")
+        }            
 
         let transfer_proof = TransferProof {
             proof: proof,        
@@ -144,10 +146,11 @@ impl<E: JubjubEngine> TransferProof<E> {
             address_sender: address_sender,  
             address_recipient: address_recipient,          
             cipher_val_s: cipher_val_s,
-            cipher_val_r: cipher_val_r,            
+            cipher_val_r: cipher_val_r,
+            cipher_balance: ciphertext_balance,
         };
 
-        transfer_proof
+        Ok(transfer_proof)
     }    
 }
 
@@ -194,7 +197,7 @@ mod tests {
 
         let value = 10 as u32;
         let remaining_balance = 30 as u32;
-        let balance = 40 as u32;
+        let balance = 100 as u32;
         let alpha = fs::Fs::rand(rng);                 
 
         let sender_seed: [u8; 32] = rng.gen();
@@ -215,7 +218,7 @@ mod tests {
 
         let (proving_key, prepared_vk) = get_pk_and_vk();     
 
-        let _proofs = TransferProof::gen_proof(
+        let proofs = TransferProof::gen_proof(
             value, 
             remaining_balance, 
             alpha, 
@@ -227,6 +230,8 @@ mod tests {
             &mut rng,
             params
         );
+
+        assert!(proofs.is_ok());
     }
 
     #[test]
@@ -255,7 +260,7 @@ mod tests {
         let ciphertext_balance = Ciphertext::<Bls12>::read(&mut &enc100_by_alice[..], params).unwrap();
         let address_recipient = PaymentAddress::<Bls12>::read(&mut &pkd_addr_bob[..], params).unwrap();
 
-        let _proofs = TransferProof::gen_proof(
+        let proofs = TransferProof::gen_proof(
             value, 
             remaining_balance, 
             alpha, 
@@ -267,6 +272,8 @@ mod tests {
             rng,
             params
         );
+
+        assert!(proofs.is_ok());
     }
 
     #[test]

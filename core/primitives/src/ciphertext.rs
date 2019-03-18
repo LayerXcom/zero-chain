@@ -1,7 +1,6 @@
 #[cfg(feature = "std")]
 use serde::{Serialize, Serializer, Deserialize, Deserializer};
 use fixed_hash::construct_fixed_hash;
-// use primitive_types::H512;
 use crate::JUBJUB;
 
 #[cfg(feature = "std")]
@@ -104,7 +103,7 @@ impl AsBytesRef for Ciphertext {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use rand::{Rng, SeedableRng, XorShiftRng};    
+    use rand::{Rng, SeedableRng, XorShiftRng, Rand};    
     use pairing::PrimeField;
     use jubjub::curve::{FixedGenerators, JubjubBls12, fs::Fs, ToUniform, JubjubParams};        
 
@@ -160,5 +159,28 @@ mod tests {
         let decoded_cipher = Ciphertext::decode(&mut encoded_cipher.as_slice()).unwrap();
         assert_eq!(ciphertext_b, decoded_cipher);
     }    
+
+    #[test]
+    fn test_ciphertext_rw() {
+        let params = &JubjubBls12::new();
+        let p_g = FixedGenerators::Diversifier;
+
+        let rng = &mut XorShiftRng::from_seed([0x3dbe6259, 0x8d313d76, 0x3237db17, 0xe5bc0654]);
+        let sk_fs = Fs::rand(rng);
+        let r_fs = Fs::rand(rng);
+
+        let public_key = params.generator(p_g).mul(sk_fs, params);
+        let value = 10 as u32;
+
+        let ciphertext = elgamal::Ciphertext::encrypt(value, r_fs, &public_key, p_g, params);
+
+        let mut buf = [0u8; 64];
+        ciphertext.write(&mut &mut buf[..]).unwrap();
+
+        let ciphertext_a = Ciphertext(buf.to_vec());
+        let ciphertext_b = Ciphertext::from_ciphertext(&ciphertext);
+
+        assert_eq!(ciphertext_a, ciphertext_b);
+    }
 }
 
