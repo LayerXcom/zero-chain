@@ -5,16 +5,14 @@
 extern crate wasm_bindgen_test;
 use wasm_bindgen_test::*;
 
-use zerochain_wasm_utils::{decrypt_ca, gen_account_id, gen_ivk, sign, verify};
-
-
+use zerochain_wasm_utils::{decrypt_ca, gen_account_id, gen_ivk, sign, verify, gen_call};
 use rand::{SeedableRng, Rng, Rand, XorShiftRng};
 use keys;
 use zpairing::{
     bls12_381::Bls12 as zBls12,
     PrimeField as zPrimeField, PrimeFieldRepr as zPrimeFieldRepr,
 };
-use pairing::{PrimeField, PrimeFieldRepr};
+use pairing::{PrimeField, PrimeFieldRepr, bls12_381::Bls12};
 use zjubjub::{
     curve::{JubjubBls12 as zJubjubBls12, 
         FixedGenerators as zFixedGenerators,                 
@@ -22,11 +20,42 @@ use zjubjub::{
         },
     redjubjub::{PublicKey as zPublicKey, PrivateKey as zPrivateKey},
 };
-
 use zcrypto::elgamal::Ciphertext as zCiphertext;
+use bellman::groth16::{Parameters, PreparedVerifyingKey};
+use std::path::Path;
+use std::fs::File;
+use std::io::{BufReader, Read};  
 #[macro_use]
 extern crate hex_literal;
+#[macro_use]
+extern crate lazy_static;
 
+lazy_static! {
+    static ref PROVINGKEY: Vec<u8> = {
+        use std::path::Path;
+use std::fs::File;
+use std::io::{BufReader, Read};  
+        let pk_path = Path::new("../cli/proving.params");                      
+        let pk_file = File::open(&pk_path).unwrap();        
+        let mut pk_reader = BufReader::new(pk_file);        
+
+        let mut buf_pk = vec![];
+        pk_reader.read_to_end(&mut buf_pk).unwrap();
+        
+        buf_pk
+    };
+
+    static ref VERIFYINGKEY: Vec<u8> = {
+        let vk_path = Path::new("../cli/verification.params");  
+        let vk_file = File::open(&vk_path).unwrap();
+        let mut vk_reader = BufReader::new(vk_file);
+
+        let mut buf_vk = vec![];
+        vk_reader.read_to_end(&mut buf_vk).unwrap();
+
+        buf_vk
+    };
+}
 
 wasm_bindgen_test_configure!(run_in_browser);
 
@@ -80,7 +109,28 @@ fn test_sign_verify() {
 
     let sig = sign(&rsk, msg, &seed_slice);
 
-    let isValid = verify(&rvk, msg, &sig[..]);
+    let is_valid = verify(&rvk, msg, &sig[..]);
 
-    assert!(isValid);
+    assert!(is_valid);
+}
+
+#[wasm_bindgen_test]
+fn test_gen_call() {
+    let rng = &mut XorShiftRng::from_seed([0xbc4f6d44, 0xd62f276c, 0xb963afd0, 0x5455863d]);
+    let balance = 100 as u32;
+    let amount = 10 as u32;
+
+    let alice_seed = b"Alice                           ";
+    let address_recipient: [u8; 32] = hex!("a23bb484f72b28a4179a71057c4528648dfb37974ccd84b38aa3e342f9598515");
+    let random_seed: [u32; 8] = rng.gen();        
+
+    let call = gen_call(
+            alice_seed, 
+            &address_recipient[..], 
+            amount, 
+            balance, 
+            &PROVINGKEY[..], 
+            &VERIFYINGKEY[..], 
+            &random_seed[..]
+        );
 }

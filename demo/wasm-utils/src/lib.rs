@@ -183,14 +183,15 @@ pub fn gen_call(
     mut proving_key: &[u8],
     mut prepared_vk: &[u8],
     seed_slice: &[u32],
-) -> JsValue 
+) -> JsValue
 {
     let params = &JubjubBls12::new();
     let mut rng = &mut ChaChaRng::from_seed(seed_slice);
     let p_g = FixedGenerators::NoteCommitmentRandomness; // 1
     let remaining_balance = balance - value;
 
-    let alpha = Fs::rand(&mut rng);
+    // let alpha = Fs::rand(&mut rng);
+    let alpha = Fs::zero();
 
     let ex_sk_s = ExpandedSpendingKey::<Bls12>::from_spending_key(&sk[..]);
     let viewing_key_s = ViewingKey::<Bls12>::from_expanded_spending_key(&ex_sk_s, &params);
@@ -227,7 +228,8 @@ pub fn gen_call(
         rsk: tx.rsk.to_vec(),
     };
 
-    JsValue::from_serde(&calls).expect("fails to write json")
+    JsValue::from_serde(&calls).expect("fails to write json")    
+    // JsValue::from_str("Hey")
 }
 
 #[wasm_bindgen(catch)]
@@ -254,7 +256,26 @@ mod tests {
     use scrypto::jubjub::{fs::Fs, ToUniform};
     use pairing::{PrimeField, PrimeFieldRepr, Field};
     use zjubjub::redjubjub::PrivateKey as zPrivateKey;
-    use scrypto::redjubjub::{PrivateKey, PublicKey};           
+    use scrypto::redjubjub::{PrivateKey, PublicKey};      
+
+    fn get_pk_and_vk() -> (Vec<u8>, Vec<u8>) {
+        let pk_path = Path::new("../cli/proving.params");        
+        let vk_path = Path::new("../cli/verification.params");        
+
+        let pk_file = File::open(&pk_path).unwrap();
+        let vk_file = File::open(&vk_path).unwrap();
+
+        let mut pk_reader = BufReader::new(pk_file);
+        let mut vk_reader = BufReader::new(vk_file);
+
+        let mut buf_pk = vec![];
+        pk_reader.read_to_end(&mut buf_pk).unwrap();
+
+        let mut buf_vk = vec![];
+        vk_reader.read_to_end(&mut buf_vk).unwrap();
+
+        (buf_pk, buf_vk)
+    }
 
     #[test]
     fn test_fs_write_read() {
@@ -268,5 +289,5 @@ mod tests {
         sk_repr.read_le(&mut &buf[..]).unwrap();
 
         assert_eq!(fs, zFs::from_repr(sk_repr).unwrap());
-    }    
+    }     
 }

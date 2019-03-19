@@ -215,6 +215,8 @@ impl<'a, E: JubjubEngine> Circuit<E> for Transfer<'a, E> {
             // rbar is the current_balance randomness   
             // Enc_sender(sender_balance).cl - Enc_sender(value).cl 
             //     == (remaining_balance)G + ivk(Enc_sender(sender_balance).cr - Enc(random))
+
+            // let neg_left_sender = 
         }
 
 

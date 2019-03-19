@@ -24,7 +24,7 @@ lazy_static! {
     pub static ref params: JubjubBls12 = { JubjubBls12::new() };
 }
 
-fn get_address(seed: &[u8; 32]) -> Vec<u8> { 
+fn get_address(seed: &[u8]) -> Vec<u8> { 
     let expsk = ExpandedSpendingKey::<Bls12>::from_spending_key(seed);     
     let viewing_key = ViewingKey::<Bls12>::from_expanded_spending_key(&expsk, &params);        
     let address = viewing_key.into_payment_address(&params);
@@ -34,18 +34,18 @@ fn get_address(seed: &[u8; 32]) -> Vec<u8> {
     address_bytes
 }
 
-fn print_random_accounts(seed: &[u8; 32], num: i32) {    
-    for i in 0..num {
-        let address_bytes = get_address(seed);
+// fn print_random_accounts(seed: &[u8], num: i32) {    
+//     for i in 0..num {
+//         let address_bytes = get_address(seed);
 
-        println!("Secret Key{}: 0x{}\n Address{}: 0x{}\n", 
-            i,
-            HexDisplay::from(seed),
-            i,
-            HexDisplay::from(&address_bytes),
-        );
-    }
-}
+//         println!("Secret Key{}: 0x{}\n Address{}: 0x{}\n", 
+//             i,
+//             HexDisplay::from(seed),
+//             i,
+//             HexDisplay::from(&address_bytes),
+//         );
+//     }
+// }
 
 fn print_alice_tx(
     sender_seed: &[u8], 
@@ -127,6 +127,8 @@ fn cli() -> Result<(), String> {
     const PROVING_KEY_PATH: &str = "proving.params";    
     const DEFAULT_AMOUNT: &str = "10";
     const DEFAULT_BALANCE: &str = "100";
+    const ALICESEED: &str = "416c696365202020202020202020202020202020202020202020202020202020";
+    const BOBSEED: &str = "426f622020202020202020202020202020202020202020202020202020202020";
 
     let matches = App::new("Zerochain")
         .setting(AppSettings::SubcommandRequiredElseHelp)
@@ -190,6 +192,22 @@ fn cli() -> Result<(), String> {
                 .required(false)
                 .default_value(DEFAULT_BALANCE)
             )
+            .arg(Arg::with_name("sender-privatekey")
+                .short("s")
+                .long("sender-privatekey")
+                .help("Sender's private key. (default: Alice)")                
+                .takes_value(true)
+                .required(false)
+                .default_value(ALICESEED)
+            )
+            .arg(Arg::with_name("recipient-privatekey")
+                .short("r")
+                .long("recipient-privatekey")
+                .help("Recipient's private key. (default: Bob)")                
+                .takes_value(true)
+                .required(false)
+                .default_value(BOBSEED)
+            )
         )
         .subcommand(SubCommand::with_name("decrypt")
             .about("Decrypt the elgamal encryption")
@@ -247,20 +265,26 @@ fn cli() -> Result<(), String> {
         ("generate-tx", Some(sub_matches)) => {
             println!("Generate transaction...");
 
-            let alice_seed = b"Alice                           ";
-            let bob_seed = b"Bob                             ";
+            let sender_seed = hex::decode(sub_matches.value_of("sender-privatekey").unwrap()).unwrap();
+            let recipient_seed  = hex::decode(sub_matches.value_of("recipient-privatekey").unwrap()).unwrap();                    
 
             let rng = &mut OsRng::new().expect("should be able to construct RNG");
             let seed: [u8; 32] = rng.gen();            
             
-            let alice_address = get_address(alice_seed);
+            let sender_address = get_address(&sender_seed[..]);
+            let recipient_address = get_address(&recipient_seed[..]);
 
-            println!("Secret Key(Alice): 0x{}\nAddress(Alice): 0x{}\n",        
-                HexDisplay::from(alice_seed),        
-                HexDisplay::from(&alice_address),
+            println!("Private Key(Sender): 0x{}\nAddress(Recipient): 0x{}\n",        
+                HexDisplay::from(&sender_seed),        
+                HexDisplay::from(&sender_address),
             );
 
-            print_random_accounts(&seed, 2);                        
+            println!("Private Key(Bob): 0x{}\nAddress(Recipient): 0x{}\n",        
+                HexDisplay::from(&recipient_seed),        
+                HexDisplay::from(&recipient_address),
+            );
+
+            // print_random_accounts(&seed, 1);                        
 
             let pk_path = Path::new(sub_matches.value_of("proving-key-path").unwrap());            
             let vk_path = Path::new(sub_matches.value_of("verification-key-path").unwrap());            
@@ -288,7 +312,8 @@ fn cli() -> Result<(), String> {
             let balance_str = sub_matches.value_of("balance").unwrap();
             let balance: u32 = balance_str.parse().unwrap();
 
-            print_alice_tx(alice_seed, bob_seed, &buf_pk[..], &buf_vk[..], amount, balance);
+            println!("Transaction >>");
+            print_alice_tx(&sender_seed[..], &recipient_seed[..], &buf_pk[..], &buf_vk[..], amount, balance);
 
         },
         ("decrypt", Some(sub_matches)) => {
