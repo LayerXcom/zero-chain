@@ -94,24 +94,36 @@ fn print_alice_tx(
 
     println!(
         "
-        \nzkProof(Alice): 0x{}
-        \naddress_sender(Alice): 0x{}
-        \naddress_recipient(Alice): 0x{}
-        \nvalue_sender(Alice): 0x{}
-        \nvalue_recipient(Alice): 0x{}
-        \nbalance_sender(Alice): 0x{}
-        \nrvk(Alice): 0x{}           
-        \nrsk(Alice): 0x{}           
+        \nzkProof: 0x{}                
+        \nEncrypted value by sender: 0x{}
+        \nEncrypted value by recipient: 0x{}
+        \nnEncrypted balance bysender: 0x{}         
         ",        
-        HexDisplay::from(&&tx.proof[..] as &AsBytesRef),    
-        HexDisplay::from(&tx.address_sender as &AsBytesRef),    
-        HexDisplay::from(&tx.address_recipient as &AsBytesRef),        
+        HexDisplay::from(&&tx.proof[..] as &AsBytesRef),           
         HexDisplay::from(&tx.enc_val_sender as &AsBytesRef),
         HexDisplay::from(&tx.enc_val_recipient as &AsBytesRef),
-        HexDisplay::from(&tx.enc_bal_sender as &AsBytesRef),     
-        HexDisplay::from(&tx.rk as &AsBytesRef),
-        HexDisplay::from(&tx.rsk as &AsBytesRef),
+        HexDisplay::from(&tx.enc_bal_sender as &AsBytesRef),
     );
+    // println!(
+    //     "
+    //     \nzkProof(Alice): 0x{}
+    //     \naddress_sender(Alice): 0x{}
+    //     \naddress_recipient(Alice): 0x{}
+    //     \nvalue_sender(Alice): 0x{}
+    //     \nvalue_recipient(Alice): 0x{}
+    //     \nbalance_sender(Alice): 0x{}
+    //     \nrvk(Alice): 0x{}           
+    //     \nrsk(Alice): 0x{}           
+    //     ",        
+    //     HexDisplay::from(&&tx.proof[..] as &AsBytesRef),    
+    //     HexDisplay::from(&tx.address_sender as &AsBytesRef),    
+    //     HexDisplay::from(&tx.address_recipient as &AsBytesRef),        
+    //     HexDisplay::from(&tx.enc_val_sender as &AsBytesRef),
+    //     HexDisplay::from(&tx.enc_val_recipient as &AsBytesRef),
+    //     HexDisplay::from(&tx.enc_bal_sender as &AsBytesRef),     
+    //     HexDisplay::from(&tx.rk as &AsBytesRef),
+    //     HexDisplay::from(&tx.rsk as &AsBytesRef),
+    // );
 }
     
 fn main() {   
@@ -274,12 +286,12 @@ fn cli() -> Result<(), String> {
             let sender_address = get_address(&sender_seed[..]);
             let recipient_address = get_address(&recipient_seed[..]);
 
-            println!("Private Key(Sender): 0x{}\nAddress(Recipient): 0x{}\n",        
+            println!("Private Key(Sender): 0x{}\nAddress(Sender): 0x{}\n",        
                 HexDisplay::from(&sender_seed),        
                 HexDisplay::from(&sender_address),
             );
 
-            println!("Private Key(Bob): 0x{}\nAddress(Recipient): 0x{}\n",        
+            println!("Private Key(Recipient): 0x{}\nAddress(Recipient): 0x{}\n",        
                 HexDisplay::from(&recipient_seed),        
                 HexDisplay::from(&recipient_address),
             );

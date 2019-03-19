@@ -13,7 +13,6 @@ rustup update stable
 rustup update nightly
 rustup target add wasm32-unknown-unknown --toolchain nightly
 cargo +nightly install --git https://github.com/alexcrichton/wasm-gc
-
 ```
 You will also need to install the following packages:
 - Mac:

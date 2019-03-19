@@ -79,7 +79,7 @@ pub fn gen_account_id(sk: &[u8]) -> JsValue {
 pub struct Ivk(pub Vec<u8>);
 
 #[wasm_bindgen]
-pub fn gen_ivk(sk: &[u8]) -> JsValue {
+pub fn gen_ivk(sk: &[u8]) -> Vec<u8> {
     let params = &zJubjubBls12::new();
     let exps = keys::ExpandedSpendingKey::<zBls12>::from_spending_key(sk);
 
@@ -88,8 +88,34 @@ pub fn gen_ivk(sk: &[u8]) -> JsValue {
 
     let mut buf = vec![];
     ivk.into_repr().write_le(&mut buf).unwrap();    
-    let ivk = Ivk(buf);
-    JsValue::from_serde(&ivk).expect("fails to write json")
+
+    buf
+    // let ivk = Ivk(buf);
+    // JsValue::from_serde(&ivk).expect("fails to write json")
+}
+
+#[wasm_bindgen]
+pub fn gen_rsk(sk: &[u8]) -> Vec<u8> {
+    let params = &zJubjubBls12::new();
+    let exps = keys::ExpandedSpendingKey::<zBls12>::from_spending_key(sk);
+
+    let mut buf = vec![];
+    exps.ask.into_repr().write_le(&mut buf).unwrap();
+
+    buf
+}
+
+#[wasm_bindgen]
+pub fn gen_rvk(sk: &[u8]) -> Vec<u8> {
+    let params = &zJubjubBls12::new();
+    let exps = keys::ExpandedSpendingKey::<zBls12>::from_spending_key(sk);
+
+    let viewing_key = keys::ViewingKey::<zBls12>::from_expanded_spending_key(&exps, params);
+
+    let mut buf = vec![];
+    viewing_key.ak.write(&mut buf).unwrap();
+
+    buf
 }
 
 #[wasm_bindgen]
