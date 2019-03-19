@@ -95,8 +95,8 @@ fn print_alice_tx(
     println!(
         "
         \nzkProof: 0x{}                
-        \nEncrypted value by sender: 0x{}
-        \nEncrypted value by recipient: 0x{}
+        \nEncrypted amount by sender: 0x{}
+        \nEncrypted amount by recipient: 0x{}
         \nnEncrypted balance bysender: 0x{}         
         ",        
         HexDisplay::from(&&tx.proof[..] as &AsBytesRef),           

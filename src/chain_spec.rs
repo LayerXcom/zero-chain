@@ -1,4 +1,4 @@
-use primitives::{Ed25519AuthorityId, ed25519, H256};
+use primitives::{Ed25519AuthorityId, ed25519};
 use zero_chain_runtime::{
 	AccountId, GenesisConfig, ConsensusConfig, TimestampConfig, BalancesConfig,
 	SudoConfig, IndicesConfig, ConfTransferConfig
@@ -11,13 +11,12 @@ use zprimitives::{
 	ciphertext::Ciphertext,	
 	};
 use keys::{ExpandedSpendingKey, ViewingKey};
-use rand::{OsRng, Rand};
 use jubjub::{curve::{JubjubBls12, FixedGenerators, fs}};
 use zpairing::{bls12_381::Bls12, Field};
 use zcrypto::elgamal;
 use std::path::Path;
 use std::fs::File;
-use std::io::{BufReader, Read, BufWriter, Write};
+use std::io::{BufReader, Read};
 
 lazy_static! {
     static ref JUBJUB: JubjubBls12 = { JubjubBls12::new() };

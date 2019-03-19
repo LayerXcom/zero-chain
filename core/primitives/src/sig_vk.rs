@@ -1,7 +1,6 @@
 #[cfg(feature = "std")]
 use serde::{Serialize, Serializer, Deserialize, Deserializer};
 use fixed_hash::construct_fixed_hash;
-// use primitive_types::H256;
 use jubjub::curve::JubjubBls12;
 use jubjub::redjubjub;
 use crate::JUBJUB;
@@ -12,11 +11,6 @@ use substrate_primitives::bytes;
 #[cfg(feature = "std")]
 use substrate_primitives::hexdisplay::AsBytesRef;
 
-#[cfg(feature = "std")]
-use std::{fmt, write};
-#[cfg(not(feature = "std"))]
-use core::{fmt, write};
-
 const SIZE: usize = 32;
 
 construct_fixed_hash! {
@@ -26,18 +20,6 @@ construct_fixed_hash! {
 pub type SigVerificationKey = H256;
 
 use parity_codec::{Encode, Decode, Input};
-
-// #[derive(Eq, PartialEq, Clone, Default, Encode, Decode, PartialOrd, Ord)]
-// #[cfg_attr(feature = "std", derive(Debug, Serialize, Deserialize))]
-// pub struct SigVerificationKey(pub H256);
-
-// #[cfg(feature = "std")]
-// impl std::fmt::Display for SigVerificationKey {
-//     fn fmt(&self, f: &mut std::fmt::Formatter) -> std::fmt::Result {  
-//         let a = &self.0;
-//         write!(f, "{}", std::string::String::from_utf8(a.to_owned()).unwrap())
-//     }
-// }
 
 #[cfg(feature = "std")]
 impl Serialize for SigVerificationKey {

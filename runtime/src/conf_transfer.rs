@@ -1,9 +1,4 @@
 //! A simple module for dealing with confidential transfer of fungible assets.
-
-// Ensure we're `no_std` when compiling for Wasm.
-#![cfg_attr(not(feature = "std"), no_std)]
-#![cfg_attr(not(feature = "std"), feature(alloc))]
-
 use support::{decl_module, decl_storage, decl_event, StorageMap, dispatch::Result, ensure};
 use rstd::prelude::*;
 use bellman_verifier::{    
@@ -341,11 +336,11 @@ mod tests {
     #[test]    
     fn test_call_function() {        
         with_externalities(&mut new_test_ext(), || {                 
-            let proof: [u8; 192] = hex!("a97fd1cb914a07033e277f5562351eda7648a29edc3b65f28fe8221f21cb3e94c64f726f6944173662fa98c2980eafc095b9dd7542ed13cb30ce4bbdddf974a8028e9c91ea3a5ab88d5fa684ad49652fd651147c7cf42975f7435e71e238c88611a14b1cda6b7cde218f1b90d272262ac042f8426e748b1cd7efe7917a4cc9b6a7bae60fb089c59af7ce0e23cb9745d592530edeab7ec1869dea11f31c842e168898eb2ce9f77be4597ba2b8367ccfd70d375ebd3c5547c58244163e3e16ef03");
+            let proof: [u8; 192] = hex!("822c672b8794e2e9c03a2747b5b69dee34e7f8e2087dc76e12a1de6bde5a0586abb8f5aae6fd3e9c2603e6c07754fdecb289004a7754deb36eb76f1f7a7ec9d1120e9d037f70e2432f92d5d4cc844b642939354a3727c533b0af4ba8238e57e4110ddb446f381f3a9118f76dcfce9ad2480a86c41608461a85eb4d5d5d4325093a1f352499e769336107b5d0774412308356fd1f729da65dd70283c3d78b7c5a08caca709ed1b261a9805762a7ba4437a2c3d8b05b95e4103c7be4655440f96c");
             let pkd_addr_alice: [u8; 32] = hex!("775e501abc59d035e71e16c6c6cd225d44a249289dd95c37516ce4754721d763");
             let pkd_addr_bob: [u8; 32] = hex!("a23bb484f72b28a4179a71057c4528648dfb37974ccd84b38aa3e342f9598515");
-            let enc10_by_alice: [u8; 64] = hex!("d6544e8aebd4f9a41c80fd6669077805a402418fcf2fa18e01e86b6d2ab1313a592c414431f34c45d4b494cc2eb43a0b50de7b717a0a092f3db2aa71ad4c5286");
-            let enc10_by_bob: [u8; 64] = hex!("3d74a2b5e9ee19e7e88a0e8b12e39ca68f818911cb4bc5decda6b29143c986a3592c414431f34c45d4b494cc2eb43a0b50de7b717a0a092f3db2aa71ad4c5286");            
+            let enc10_by_alice: [u8; 64] = hex!("287eb41d2bdc9c7b84362e44c1492679b7a89fe0daded426e0a2b3e710009b4e30426fcb4de4ec53e811c3876dd396f280773a0084733c6711431e5be854381c");
+            let enc10_by_bob: [u8; 64] = hex!("7ca04d4202ac9e012bc6e0f58b075b6c176cddf19ce5aec08286efa1dbaca98530426fcb4de4ec53e811c3876dd396f280773a0084733c6711431e5be854381c");            
             let enc100_by_alice: [u8; 64] = hex!("3f101bd6575876bbf772e25ed84728e012295b51f1be37b8451553184b458aeeac776c796563fcd44cc49cfaea8bb796952c266e47779d94574c10ad01754b11");            
             let rvk: [u8; 32] = hex!("791b91fae07feada7b6f6042b1e214bc75759b3921956053936c38a95271a834");
 
