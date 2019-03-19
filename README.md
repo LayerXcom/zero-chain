@@ -1,4 +1,7 @@
 # zero-chain
+A privacy-oriented blockchain on Substrate
+
+## Status
 Work in progress... :muscle:
 
 ## Usage
@@ -47,6 +50,9 @@ Generate the Alice's transaction
 cargo run --release generate-tx
 ```
 
+### Interact with the blockchain
+See here: 
+https://github.com/LayerXcom/zero-chain-ui
 
 ## Design philosophy
 - Efficient confidentiality
