@@ -80,13 +80,7 @@ decl_module! {
             let svalue_recipient = match value_recipient.into_ciphertext() {
                 Some(v) => v,
                 None => return Err("Invalid value_recipient"),
-            };
-
-            // // Get balance_sender with the type
-            // let sbalance_sender = Self::encrypted_balance(address_sender)
-            //     .map_or(elgamal::Ciphertext::zero(), |v| v.into_ciphertext()
-            //     .expect("Invalid sender's balance")
-            //     );                      
+            };                   
 
             // Get rk with the type
             let srk = match rk.into_verification_key() {
@@ -178,7 +172,7 @@ impl<T: Trait> Module<T> {
         rk: &PublicKey<Bls12>,                 
     ) -> bool {
         // Construct public input for circuit
-        let mut public_input = [Fr::zero(); 12];
+        let mut public_input = [Fr::zero(); 16];
 
         {
             let (x, y) = address_sender.0.into_xy();
@@ -205,20 +199,20 @@ impl<T: Trait> Module<T> {
             public_input[8] = x;
             public_input[9] = y;
         }
-        // {
-        //     let (x, y) = balance_sender.left.into_xy();
-        //     public_input[10] = x;
-        //     public_input[11] = y;
-        // }
-        // {
-        //     let (x, y) = balance_sender.right.into_xy();
-        //     public_input[12] = x;
-        //     public_input[13] = y;
-        // }
         {
-            let (x, y) = rk.0.into_xy();
+            let (x, y) = balance_sender.left.into_xy();
             public_input[10] = x;
             public_input[11] = y;
+        }
+        {
+            let (x, y) = balance_sender.right.into_xy();
+            public_input[12] = x;
+            public_input[13] = y;
+        }
+        {
+            let (x, y) = rk.0.into_xy();
+            public_input[14] = x;
+            public_input[15] = y;
         }
 
         let pvk = Self::verifying_key().into_prepared_vk().unwrap();        
@@ -329,11 +323,11 @@ mod tests {
     #[test]    
     fn test_call_function() {        
         with_externalities(&mut new_test_ext(), || {                 
-            let proof: [u8; 192] = hex!("8338e663eb0603efcff5a50f757ae511bde3afa6c32e4038552f562fabe42f055969ef643ddc90cbee5f90f6db85bb1fb8dfaacb50cd83f75746e16d67147082cab528297b213e48106956cd9155a247393b171dad468efc530e637caea483b119a9fc4495ee8b3989b551d979a50dadaddcc5be9d7b91900d12f0fb905ac5a6ffb2d388d45acf4ae5ec2a71d30b28c699be6433c3c5d05d3db6f95554a7ef72d26bdf2ca93bd74c517ae29376d3604950033df0c2b91f7e502f948b6f173b83");
+            let proof: [u8; 192] = hex!("8919fba653b60269fb0da014e8063060994407465afe7fdaf47f474321159c92d64cd47767a677db3f594f7cddf26031937651c26f009199ba139d39839a96e8023a8e7480256022de4b2b72015c355d563222a1e1577c5e65c46fb390cff826060ddc0d79b34d6db1044bf3a9e9707930b34ceab7f1c82c8e8450214b2b15fff204f584c06f187865f82b4ce550ca4eb732fe4982234ced15b0bcb342ad184918d8d5767eecfc442d31bd99d53698174c34c2bcf8e1b424d2de86dccb4cd034");
             let pkd_addr_alice: [u8; 32] = hex!("775e501abc59d035e71e16c6c6cd225d44a249289dd95c37516ce4754721d763");
             let pkd_addr_bob: [u8; 32] = hex!("a23bb484f72b28a4179a71057c4528648dfb37974ccd84b38aa3e342f9598515");
-            let enc10_by_alice: [u8; 64] = hex!("523116f4f5698eba56dd64142b4629c7e1ee958a6ddf667b582d54b92be08a93c0a7ac09adb02283219d712170d072f17ec217c3cba7c64fd80495d796f123b9");
-            let enc10_by_bob: [u8; 64] = hex!("4b95edfdecc654143c1765d00925193081032de0b524ead0359947b84ce80366c0a7ac09adb02283219d712170d072f17ec217c3cba7c64fd80495d796f123b9");                        
+            let enc10_by_alice: [u8; 64] = hex!("62bd7c94d8a44a90291bcb70561a26eaee50659d5fa1ef0044e935773e7003cec940746920d4a99a733f39f0c232578173beabb85f5baac32e99fa359f9a0723");
+            let enc10_by_bob: [u8; 64] = hex!("3dd5bf88ee4982567232345538428b3883fba6cc1938e4b892a69daa7591c86cc940746920d4a99a733f39f0c232578173beabb85f5baac32e99fa359f9a0723");                        
             let rvk: [u8; 32] = hex!("791b91fae07feada7b6f6042b1e214bc75759b3921956053936c38a95271a834");
 
             assert_ok!(ConfTransfer::confidential_transfer(

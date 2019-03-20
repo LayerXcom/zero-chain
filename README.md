@@ -1,8 +1,22 @@
 # zero-chain
+[![Build Status](https://travis-ci.com/LayerXcom/zero-chain.svg?branch=master)](https://travis-ci.com/LayerXcom/zero-chain)
+[![Gitter](https://badges.gitter.im/LayerXcom/Zerochain.svg)](https://gitter.im/LayerXcom/Zerochain?utm_source=badge&utm_medium=badge&utm_campaign=pr-badge)
 A privacy-oriented blockchain on Substrate
 
 ## Status
-Work in progress... :muscle:
+For now, only supported for the confidential payment PoC.
+
+- Balances of each accounts are encrypted
+<div align="center">
+<img src="https://user-images.githubusercontent.com/20852667/54678399-6d00ac80-4b48-11e9-9c8d-d1ec2b668761.png" width="800px">
+</div>
+
+- Transfer amounts are encrypted
+<div align="center">
+<img src="https://user-images.githubusercontent.com/20852667/54678984-9cfc7f80-4b49-11e9-9784-576dcaa35ca9.png" width="800px">
+</div>
+
+More features will be added... :muscle:
 
 ## Usage
 ### Initial Setup
@@ -36,28 +50,41 @@ cargo build --release
 ```
 ./target/release/zero-chain --dev
 ```
-
-### Cli
-Generate the zk-SNARKs proving key and veifying key
+- If you want to clear your old chain's history:
 ```
-cd demo/cli
-cargo run --release setup
+./target/release/zero-chain purge-chain --dev
 ```
 
-Generate the Alice's transaction
-```
-cargo run --release generate-tx
-```
+### Sending transactions
+This tutorial will explain the basic confidential transfer on Zerochain. Alice has the **encrypted** balance of 100 coins and sends **encrypted** 10 coins to Bob. So, Alice's encrypted balance will be 90 coins and Bob will get the encrypted 10 coins. All operations are done encrypted by ElGamal encryption and zk-SNARKs.
 
-### Interact with the blockchain
-See here: 
+1. Run the UI apps
+The UI repository is here:
 https://github.com/LayerXcom/zero-chain-ui
+
+2. Generate the transaction components from CLI
+- Get the proving key and the veifying key for zk-SNARKs
+```
+./target/release/zerochain-cli setup
+```
+
+- Generate the transaction components (Executing the zero knowledge proving and the encryption)
+```
+./target/release/zero-chain-cli generate-tx
+```
+
+3. Fill out the form
+You can send the transaction from firefox browser.
+
+<div align="center">
+<img src="https://user-images.githubusercontent.com/20852667/54687970-228b2a00-4b60-11e9-8c26-fdfbbb3a17d8.png" width="1000px">
+</div>
+
 
 ## Design philosophy
 - Efficient confidentiality
 - Various computation
 - Modular cryptography
-
 
 ### Maintainers
 - [Osuke](https://twitter.com/zoom_zoomzo)

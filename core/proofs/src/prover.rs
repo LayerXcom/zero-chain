@@ -77,7 +77,7 @@ impl<E: JubjubEngine> TransferProof<E> {
         let proof = create_random_proof(instance, proving_key, rng)
             .expect("proving should not fail");
         
-        let mut public_input = [E::Fr::zero(); 12];
+        let mut public_input = [E::Fr::zero(); 16];
 
         let cipher_val_s = Ciphertext::encrypt(
             value, 
@@ -120,20 +120,20 @@ impl<E: JubjubEngine> TransferProof<E> {
             public_input[8] = x;
             public_input[9] = y;
         }
-        // {
-        //     let (x, y) = ciphertext_balance.left.into_xy();
-        //     public_input[0] = x;
-        //     public_input[1] = y;            
-        // }
-        // {
-        //     let (x, y) = ciphertext_balance.right.into_xy();
-        //     public_input[2] = x;
-        //     public_input[3] = y;
-        // }
+        {
+            let (x, y) = ciphertext_balance.left.into_xy();
+            public_input[10] = x;
+            public_input[11] = y;            
+        }
+        {
+            let (x, y) = ciphertext_balance.right.into_xy();
+            public_input[12] = x;
+            public_input[13] = y;
+        }
         {
             let (x, y) = rk.0.into_xy();
-            public_input[10] = x;
-            public_input[11] = y;
+            public_input[14] = x;
+            public_input[15] = y;
         }                             
 
         if let Err(_) = verify_proof(prepared_vk, &proof, &public_input[..]) {
