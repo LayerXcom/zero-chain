@@ -46,8 +46,7 @@ decl_module! {
             address_sender: PkdAddress, 
             address_recipient: PkdAddress,
             value_sender: Ciphertext,
-            value_recipient: Ciphertext,
-            balance_sender: Ciphertext,       
+            value_recipient: Ciphertext,                  
             rk: SigVerificationKey  // TODO: Extract from origin            
         ) -> Result {
             // Temporally removed the signature verification.
@@ -83,17 +82,26 @@ decl_module! {
                 None => return Err("Invalid value_recipient"),
             };
 
-            // Get balance_sender with the type
-            let sbalance_sender = match balance_sender.into_ciphertext() {
-                Some(v) => v,
-                None => return Err("Invalid balance_sender"),
-            };
+            // // Get balance_sender with the type
+            // let sbalance_sender = Self::encrypted_balance(address_sender)
+            //     .map_or(elgamal::Ciphertext::zero(), |v| v.into_ciphertext()
+            //     .expect("Invalid sender's balance")
+            //     );                      
 
             // Get rk with the type
             let srk = match rk.into_verification_key() {
                 Some(v) => v,
                 None => return Err("Invalid rk"),
-            };                      
+            };                 
+
+            // Get balance_sender with the type
+            let bal_sender = match Self::encrypted_balance(address_sender) {
+                Some(b) => match b.into_ciphertext() {
+                    Some(c) => c,
+                    None => return Err("Invalid ciphertext of sender balance"),
+                },
+                None => return Err("Invalid sender balance"),
+            };     
 
             // Verify the zk proof
             ensure!(
@@ -103,29 +111,14 @@ decl_module! {
                     &saddr_recipient,
                     &svalue_sender,
                     &svalue_recipient,
-                    &sbalance_sender,
+                    &bal_sender,
                     &srk,                    
                 ),
                 "Invalid zkproof"
-            );  
-
-            // Verify the balance
-            ensure!(
-                Self::encrypted_balance(address_sender).unwrap() == balance_sender.clone(),
-                "Invalid encrypted balance"
-            );
-
-            // Get balance_sender with the type
-            let bal_sender = match Self::encrypted_balance(address_sender) {
-                Some(b) => match b.into_ciphertext() {
-                    Some(c) => c,
-                    None => return Err("Invalid ciphertext of sender balance"),
-                },
-                None => return Err("Invalid sender balance"),
-            };
+            );                        
 
             // Get balance_recipient with the option type
-            let bal_recipient = match Self::encrypted_balance(address_recipient) {
+            let bal_recipient = match Self::encrypted_balance(address_recipient) { 
                 Some(b) => b.into_ciphertext(),
                 _ => None
             };            
@@ -147,7 +140,7 @@ decl_module! {
             });
 
             // TODO: tempolaly removed address_sender and address_recipient because of mismatched types
-            Self::deposit_event(RawEvent::ConfTransfer(zkproof, value_sender, value_recipient, balance_sender, rk));
+            Self::deposit_event(RawEvent::ConfTransfer(zkproof, value_sender, value_recipient, Ciphertext::from_ciphertext(&bal_sender), rk));
 
             Ok(())         			            
 		}		
@@ -234,7 +227,7 @@ impl<T: Trait> Module<T> {
         match verify_proof(&pvk, &zkproof, &public_input[..]) {
             // No error, and proof verification successful
             Ok(true) => true,
-            _ => {runtime_io::print("Invalid proof!!!!!!!!!!!!!!"); false},                
+            _ => {runtime_io::print("Invalid proof!!!!!!"); false},                
         }        
     } 
 
@@ -336,12 +329,11 @@ mod tests {
     #[test]    
     fn test_call_function() {        
         with_externalities(&mut new_test_ext(), || {                 
-            let proof: [u8; 192] = hex!("822c672b8794e2e9c03a2747b5b69dee34e7f8e2087dc76e12a1de6bde5a0586abb8f5aae6fd3e9c2603e6c07754fdecb289004a7754deb36eb76f1f7a7ec9d1120e9d037f70e2432f92d5d4cc844b642939354a3727c533b0af4ba8238e57e4110ddb446f381f3a9118f76dcfce9ad2480a86c41608461a85eb4d5d5d4325093a1f352499e769336107b5d0774412308356fd1f729da65dd70283c3d78b7c5a08caca709ed1b261a9805762a7ba4437a2c3d8b05b95e4103c7be4655440f96c");
+            let proof: [u8; 192] = hex!("8338e663eb0603efcff5a50f757ae511bde3afa6c32e4038552f562fabe42f055969ef643ddc90cbee5f90f6db85bb1fb8dfaacb50cd83f75746e16d67147082cab528297b213e48106956cd9155a247393b171dad468efc530e637caea483b119a9fc4495ee8b3989b551d979a50dadaddcc5be9d7b91900d12f0fb905ac5a6ffb2d388d45acf4ae5ec2a71d30b28c699be6433c3c5d05d3db6f95554a7ef72d26bdf2ca93bd74c517ae29376d3604950033df0c2b91f7e502f948b6f173b83");
             let pkd_addr_alice: [u8; 32] = hex!("775e501abc59d035e71e16c6c6cd225d44a249289dd95c37516ce4754721d763");
             let pkd_addr_bob: [u8; 32] = hex!("a23bb484f72b28a4179a71057c4528648dfb37974ccd84b38aa3e342f9598515");
-            let enc10_by_alice: [u8; 64] = hex!("287eb41d2bdc9c7b84362e44c1492679b7a89fe0daded426e0a2b3e710009b4e30426fcb4de4ec53e811c3876dd396f280773a0084733c6711431e5be854381c");
-            let enc10_by_bob: [u8; 64] = hex!("7ca04d4202ac9e012bc6e0f58b075b6c176cddf19ce5aec08286efa1dbaca98530426fcb4de4ec53e811c3876dd396f280773a0084733c6711431e5be854381c");            
-            let enc100_by_alice: [u8; 64] = hex!("3f101bd6575876bbf772e25ed84728e012295b51f1be37b8451553184b458aeeac776c796563fcd44cc49cfaea8bb796952c266e47779d94574c10ad01754b11");            
+            let enc10_by_alice: [u8; 64] = hex!("523116f4f5698eba56dd64142b4629c7e1ee958a6ddf667b582d54b92be08a93c0a7ac09adb02283219d712170d072f17ec217c3cba7c64fd80495d796f123b9");
+            let enc10_by_bob: [u8; 64] = hex!("4b95edfdecc654143c1765d00925193081032de0b524ead0359947b84ce80366c0a7ac09adb02283219d712170d072f17ec217c3cba7c64fd80495d796f123b9");                        
             let rvk: [u8; 32] = hex!("791b91fae07feada7b6f6042b1e214bc75759b3921956053936c38a95271a834");
 
             assert_ok!(ConfTransfer::confidential_transfer(
@@ -350,8 +342,7 @@ mod tests {
                 PkdAddress::from_slice(&pkd_addr_alice),
                 PkdAddress::from_slice(&pkd_addr_bob),
                 Ciphertext(enc10_by_alice.to_vec()),
-                Ciphertext(enc10_by_bob.to_vec()),
-                Ciphertext(enc100_by_alice.to_vec()),                
+                Ciphertext(enc10_by_bob.to_vec()),                       
                 SigVerificationKey::from_slice(&rvk)
             ));
         })

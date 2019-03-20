@@ -3,8 +3,7 @@ use jubjub::curve::{
         JubjubParams,
         edwards,
         PrimeOrder,
-        FixedGenerators,
-        ToUniform,
+        FixedGenerators,        
 };
 
 #[cfg(feature = "std")]
@@ -15,7 +14,7 @@ use crate::std::u32;
 use blake2_rfc::{
     blake2b::{Blake2b, Blake2bResult}
 };
-use pairing::{io, PrimeFieldRepr, PrimeField};
+use pairing::io;
 
 pub const ELGAMAL_EXTEND_PERSONALIZATION: &'static [u8; 16] = b"zech_elgamal_ext";
 
@@ -34,6 +33,13 @@ impl<E: JubjubEngine> Ciphertext<E> {
         Ciphertext {
             left,
             right,
+        }
+    }
+
+    pub fn zero() -> Self {
+        Ciphertext {
+            left: edwards::Point::zero(),
+            right: edwards::Point::zero()
         }
     }
 
@@ -166,7 +172,7 @@ pub fn elgamal_extend(sk: &[u8]) -> Blake2bResult {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use rand::{Rng, SeedableRng, XorShiftRng, Rand};
+    use rand::{SeedableRng, XorShiftRng, Rand};
     use jubjub::curve::{JubjubBls12, fs::Fs};
     use pairing::bls12_381::Bls12;
     use keys::{ViewingKey, ExpandedSpendingKey};

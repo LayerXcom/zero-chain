@@ -47,7 +47,7 @@ fn get_address(seed: &[u8]) -> Vec<u8> {
 //     }
 // }
 
-fn print_alice_tx(
+fn print_tx(
     sender_seed: &[u8], 
     recipient_seed: &[u8], 
     mut proving_key_b: &[u8], 
@@ -92,38 +92,38 @@ fn print_alice_tx(
                     rng
             ).expect("fails to generate the tx");
 
-    println!(
-        "
-        \nzkProof: 0x{}                
-        \nEncrypted amount by sender: 0x{}
-        \nEncrypted amount by recipient: 0x{}
-        \nnEncrypted balance bysender: 0x{}         
-        ",        
-        HexDisplay::from(&&tx.proof[..] as &AsBytesRef),           
-        HexDisplay::from(&tx.enc_val_sender as &AsBytesRef),
-        HexDisplay::from(&tx.enc_val_recipient as &AsBytesRef),
-        HexDisplay::from(&tx.enc_bal_sender as &AsBytesRef),
-    );
     // println!(
     //     "
-    //     \nzkProof(Alice): 0x{}
-    //     \naddress_sender(Alice): 0x{}
-    //     \naddress_recipient(Alice): 0x{}
-    //     \nvalue_sender(Alice): 0x{}
-    //     \nvalue_recipient(Alice): 0x{}
-    //     \nbalance_sender(Alice): 0x{}
-    //     \nrvk(Alice): 0x{}           
-    //     \nrsk(Alice): 0x{}           
+    //     \nzkProof: 0x{}                
+    //     \nEncrypted amount by sender: 0x{}
+    //     \nEncrypted amount by recipient: 0x{}
+    //     \nnEncrypted balance bysender: 0x{}         
     //     ",        
-    //     HexDisplay::from(&&tx.proof[..] as &AsBytesRef),    
-    //     HexDisplay::from(&tx.address_sender as &AsBytesRef),    
-    //     HexDisplay::from(&tx.address_recipient as &AsBytesRef),        
+    //     HexDisplay::from(&&tx.proof[..] as &AsBytesRef),           
     //     HexDisplay::from(&tx.enc_val_sender as &AsBytesRef),
     //     HexDisplay::from(&tx.enc_val_recipient as &AsBytesRef),
-    //     HexDisplay::from(&tx.enc_bal_sender as &AsBytesRef),     
-    //     HexDisplay::from(&tx.rk as &AsBytesRef),
-    //     HexDisplay::from(&tx.rsk as &AsBytesRef),
+    //     HexDisplay::from(&tx.enc_bal_sender as &AsBytesRef),
     // );
+    println!(
+        "
+        \nzkProof(Alice): 0x{}
+        \naddress_sender(Alice): 0x{}
+        \naddress_recipient(Alice): 0x{}
+        \nvalue_sender(Alice): 0x{}
+        \nvalue_recipient(Alice): 0x{}
+        \nbalance_sender(Alice): 0x{}
+        \nrvk(Alice): 0x{}           
+        \nrsk(Alice): 0x{}           
+        ",        
+        HexDisplay::from(&&tx.proof[..] as &AsBytesRef),    
+        HexDisplay::from(&tx.address_sender as &AsBytesRef),    
+        HexDisplay::from(&tx.address_recipient as &AsBytesRef),        
+        HexDisplay::from(&tx.enc_val_sender as &AsBytesRef),
+        HexDisplay::from(&tx.enc_val_recipient as &AsBytesRef),
+        HexDisplay::from(&tx.enc_bal_sender as &AsBytesRef),     
+        HexDisplay::from(&tx.rk as &AsBytesRef),
+        HexDisplay::from(&tx.rsk as &AsBytesRef),
+    );
 }
     
 fn main() {   
@@ -141,6 +141,7 @@ fn cli() -> Result<(), String> {
     const DEFAULT_BALANCE: &str = "100";
     const ALICESEED: &str = "416c696365202020202020202020202020202020202020202020202020202020";
     const BOBSEED: &str = "426f622020202020202020202020202020202020202020202020202020202020";
+    const DEFAULT_ENCRYPTED_BALANCE: &str = "3f101bd6575876bbf772e25ed84728e012295b51f1be37b8451553184b458aeeac776c796563fcd44cc49cfaea8bb796952c266e47779d94574c10ad01754b11";
 
     let matches = App::new("Zerochain")
         .setting(AppSettings::SubcommandRequiredElseHelp)
@@ -219,6 +220,14 @@ fn cli() -> Result<(), String> {
                 .takes_value(true)
                 .required(false)
                 .default_value(BOBSEED)
+            )
+            .arg(Arg::with_name("encrypted-balance")
+                .short("e")
+                .long("encrypted-balance")
+                .help("Encrypted balance by sender stored in on-chain")                
+                .takes_value(true)
+                .required(false)
+                .default_value(DEFAULT_ENCRYPTED_BALANCE)
             )
         )
         .subcommand(SubCommand::with_name("decrypt")
@@ -325,7 +334,73 @@ fn cli() -> Result<(), String> {
             let balance: u32 = balance_str.parse().unwrap();
 
             println!("Transaction >>");
-            print_alice_tx(&sender_seed[..], &recipient_seed[..], &buf_pk[..], &buf_vk[..], amount, balance);
+            // print_tx(&sender_seed[..], &recipient_seed[..], &buf_pk[..], &buf_vk[..], amount, balance);
+
+            let rng = &mut OsRng::new().expect("should be able to construct RNG");
+            // let p_g = FixedGenerators::NoteCommitmentRandomness; // 1        
+            
+            // let alpha = fs::Fs::rand(rng); 
+            let alpha = fs::Fs::zero();
+                
+            let proving_key =  Parameters::<Bls12>::read(&mut &buf_pk[..], true).unwrap();    
+            let prepared_vk = PreparedVerifyingKey::<Bls12>::read(&mut &buf_vk[..]).unwrap(); 
+                
+            let ex_sk_s = ExpandedSpendingKey::<Bls12>::from_spending_key(&sender_seed[..]);
+            let ex_sk_r = ExpandedSpendingKey::<Bls12>::from_spending_key(&recipient_seed[..]);
+                  
+            let viewing_key_r = ViewingKey::<Bls12>::from_expanded_spending_key(&ex_sk_r, &params);
+            let address_recipient = viewing_key_r.into_payment_address(&params);                    
+
+            let ciphertext_balance_a = sub_matches.value_of("encrypted-balance").unwrap();
+            let ciphertext_balance_v = hex::decode(ciphertext_balance_a).unwrap();
+            let ciphertext_balance = Ciphertext::read(&mut &ciphertext_balance_v[..], &params as &JubjubBls12).unwrap();
+
+            let remaining_balance = balance - amount;       
+
+            let tx = Transaction::gen_tx(
+                            amount, 
+                            remaining_balance, 
+                            alpha,
+                            &proving_key,
+                            &prepared_vk,
+                            &address_recipient,
+                            &ex_sk_s,
+                            ciphertext_balance,                    
+                            rng
+                    ).expect("fails to generate the tx");
+
+            // println!(
+            //     "
+            //     \nzkProof: 0x{}                
+            //     \nEncrypted amount by sender: 0x{}
+            //     \nEncrypted amount by recipient: 0x{}
+            //     \nnEncrypted balance bysender: 0x{}         
+            //     ",        
+            //     HexDisplay::from(&&tx.proof[..] as &AsBytesRef),           
+            //     HexDisplay::from(&tx.enc_val_sender as &AsBytesRef),
+            //     HexDisplay::from(&tx.enc_val_recipient as &AsBytesRef),
+            //     HexDisplay::from(&tx.enc_bal_sender as &AsBytesRef),
+            // );
+            println!(
+                "
+                \nzkProof(Alice): 0x{}
+                \naddress_sender(Alice): 0x{}
+                \naddress_recipient(Alice): 0x{}
+                \nvalue_sender(Alice): 0x{}
+                \nvalue_recipient(Alice): 0x{}
+                \nbalance_sender(Alice): 0x{}
+                \nrvk(Alice): 0x{}           
+                \nrsk(Alice): 0x{}           
+                ",        
+                HexDisplay::from(&&tx.proof[..] as &AsBytesRef),    
+                HexDisplay::from(&tx.address_sender as &AsBytesRef),    
+                HexDisplay::from(&tx.address_recipient as &AsBytesRef),        
+                HexDisplay::from(&tx.enc_val_sender as &AsBytesRef),
+                HexDisplay::from(&tx.enc_val_recipient as &AsBytesRef),
+                HexDisplay::from(&tx.enc_bal_sender as &AsBytesRef),     
+                HexDisplay::from(&tx.rk as &AsBytesRef),
+                HexDisplay::from(&tx.rsk as &AsBytesRef),
+            );
 
         },
         ("decrypt", Some(sub_matches)) => {
