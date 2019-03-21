@@ -2,7 +2,8 @@
 [![Build Status](https://travis-ci.com/LayerXcom/zero-chain.svg?branch=master)](https://travis-ci.com/LayerXcom/zero-chain)
 [![Gitter](https://badges.gitter.im/LayerXcom/Zerochain.svg)](https://gitter.im/LayerXcom/Zerochain?utm_source=badge&utm_medium=badge&utm_campaign=pr-badge)
 
-Zerochain is a privacy-oriented blockchain on Substrate.
+Zerochain is a privacy-oriented blockchain on substrate. 
+It is desineged to get efficient zero-knowledge proving, reduce the on-chain storage cost and bring the flexibility for developing applications.
 
 ## Status
 **WARNING: Zerochain is alpha quality software, improvements and fixes are made frequently, and documentation for technical details doesn't yet exist.**
@@ -59,7 +60,7 @@ cargo build --release
 ```
 
 ## A brief tutorial for Sending transactions
-This tutorial will explain the basic confidential transfer on Zerochain. Alice has the **encrypted** balance of 100 coins and sends **encrypted** 10 coins to Bob. So, Alice's encrypted balance will be 90 coins and Bob will get the encrypted 10 coins. All operations are done encrypted by ElGamal encryption and zk-SNARKs.
+This tutorial will explain the basic confidential transfer on Zerochain. Alice has the **encrypted** balance of 100 coins and sends **encrypted** 10 coins to Bob. So, Alice's balance will be 90 coins and Bob will get the 10 coins. All operations are done encrypted by ElGamal encryption and zk-SNARKs.
 
 1. Run the UI apps
 
@@ -69,7 +70,7 @@ https://github.com/LayerXcom/zero-chain-ui
 2. Generate the transaction components from CLI
 - Get the proving key and the veifying key for zk-SNARKs
 ```
-./target/release/zerochain-cli setup
+./target/release/zero-chain-cli setup
 ```
 
 - Generate the transaction components (Executing the zero knowledge proving and the encryption)
@@ -77,7 +78,8 @@ https://github.com/LayerXcom/zero-chain-ui
 ./target/release/zero-chain-cli generate-tx
 ```
 
-3. Fill out the form
+3. Fill out the form:
+
 You can send the transaction from firefox browser.
 
 <div align="center">

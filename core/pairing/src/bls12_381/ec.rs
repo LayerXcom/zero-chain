@@ -936,10 +936,10 @@ pub mod g1 {
 
     // WARNING: SHOULD NOT BE USED
     impl RW for G1Prepared {
-        fn write<W: ::io::Write>(&self, writer: &mut W) -> ::io::Result<()> {               
+        fn write<W: ::io::Write>(&self, _writer: &mut W) -> ::io::Result<()> {               
             unimplemented!();
         }
-        fn read<R: ::io::Read>(reader: &mut R) -> ::io::Result<Self> {
+        fn read<R: ::io::Read>(_reader: &mut R) -> ::io::Result<Self> {
             unimplemented!();
         }
     }

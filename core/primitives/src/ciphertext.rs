@@ -59,7 +59,7 @@ mod tests {
     use rand::{Rng, SeedableRng, XorShiftRng, Rand};    
     use pairing::PrimeField;
     use jubjub::curve::{FixedGenerators, JubjubBls12, fs::Fs, ToUniform, JubjubParams};     
-    use parity_codec::{Encode, Decode, Input};  
+    use parity_codec::{Encode, Decode};  
 
     #[test]
     fn test_ciphertext_into_from() {

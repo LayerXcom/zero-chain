@@ -8,7 +8,7 @@ edition = "2018"
 rand = "0.4"
 proofs = { package = "zero-chain-proofs", path = "../../core/proofs" }
 clap = "~2.32"
-substrate-primitives = { git = "https://github.com/paritytech/substrate", rev = '9112a28af677b75cd6f935dda34d283bb4f676e7' }
+primitives = { package = "substrate-primitives", git = "https://github.com/paritytech/substrate", rev = '9112a28af677b75cd6f935dda34d283bb4f676e7' }
 zpairing = { package = "zero-chain-pairing", path = "../../core/pairing" }
 pairing = { git = "https://github.com/LayerXcom/librustzcash", branch = "zero-chain" }
 bellman = { git = "https://github.com/LayerXcom/librustzcash", branch = "zero-chain" }

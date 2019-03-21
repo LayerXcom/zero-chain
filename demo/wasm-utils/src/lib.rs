@@ -1,11 +1,6 @@
 extern crate cfg_if;
 #[macro_use]
 extern crate serde_derive;
-extern crate parity_codec as codec;
-#[macro_use]
-extern crate parity_codec_derive as codec_derive;
-#[macro_use]
-extern crate hex_literal;
 
 mod utils;
 use cfg_if::cfg_if;
@@ -18,7 +13,7 @@ use zpairing::{
     Field as zField, PrimeField as zPrimeField, PrimeFieldRepr as zPrimeFieldRepr,
 };
 use pairing::{
-    bls12_381::Bls12, PrimeField, Field, PrimeFieldRepr
+    bls12_381::Bls12, Field
 };
 use zjubjub::{
     curve::{JubjubBls12 as zJubjubBls12, 
@@ -34,12 +29,11 @@ use zjubjub::{
                 read_scalar as zread_scalar},
 };
 use scrypto::{
-    jubjub::{fs::Fs, FixedGenerators, ToUniform, JubjubBls12, JubjubParams, edwards::Point},
-    redjubjub::{Signature, PublicKey, h_star, write_scalar, read_scalar},
+    jubjub::{fs::Fs, FixedGenerators, JubjubBls12, JubjubParams},    
 };
 use proofs::{
     primitives::{ExpandedSpendingKey, ViewingKey, PaymentAddress},
-    elgamal::{Ciphertext, elgamal_extend},
+    elgamal::Ciphertext,
 };
 use bellman::groth16::{Parameters, PreparedVerifyingKey};
 use zcrypto::elgamal::Ciphertext as zCiphertext;
@@ -89,14 +83,11 @@ pub fn gen_ivk(sk: &[u8]) -> Vec<u8> {
     let mut buf = vec![];
     ivk.into_repr().write_le(&mut buf).unwrap();    
 
-    buf
-    // let ivk = Ivk(buf);
-    // JsValue::from_serde(&ivk).expect("fails to write json")
+    buf    
 }
 
 #[wasm_bindgen]
-pub fn gen_rsk(sk: &[u8]) -> Vec<u8> {
-    let params = &zJubjubBls12::new();
+pub fn gen_rsk(sk: &[u8]) -> Vec<u8> {    
     let exps = keys::ExpandedSpendingKey::<zBls12>::from_spending_key(sk);
 
     let mut buf = vec![];

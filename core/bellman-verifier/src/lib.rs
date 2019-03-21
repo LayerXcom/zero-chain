@@ -332,8 +332,7 @@ impl From<io::Error> for SynthesisError {
 #[cfg(test)]
 mod test_proof_write_read {
     use super::*;            
-    use pairing::bls12_381::{G1Affine, G2Affine, Fq, FqRepr, Fq2, Bls12};    
-    use rand::OsRng;
+    use pairing::bls12_381::{G1Affine, G2Affine, Fq, FqRepr, Fq2, Bls12};        
 
     #[test]
     fn byte_cast() {        
