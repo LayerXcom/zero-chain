@@ -83,9 +83,7 @@ pub fn gen_ivk(sk: &[u8]) -> Vec<u8> {
     let mut buf = vec![];
     ivk.into_repr().write_le(&mut buf).unwrap();    
 
-    buf
-    // let ivk = Ivk(buf);
-    // JsValue::from_serde(&ivk).expect("fails to write json")
+    buf    
 }
 
 #[wasm_bindgen]
