@@ -79,7 +79,7 @@ pub fn gen_account_id(sk: &[u8]) -> JsValue {
 pub struct Ivk(pub Vec<u8>);
 
 #[wasm_bindgen]
-pub fn gen_ivk(sk: &[u8]) -> JsValue {
+pub fn gen_ivk(sk: &[u8]) -> Vec<u8> {
     let params = &zJubjubBls12::new();
     let exps = keys::ExpandedSpendingKey::<zBls12>::from_spending_key(sk);
 
@@ -88,8 +88,34 @@ pub fn gen_ivk(sk: &[u8]) -> JsValue {
 
     let mut buf = vec![];
     ivk.into_repr().write_le(&mut buf).unwrap();    
-    let ivk = Ivk(buf);
-    JsValue::from_serde(&ivk).expect("fails to write json")
+
+    buf
+    // let ivk = Ivk(buf);
+    // JsValue::from_serde(&ivk).expect("fails to write json")
+}
+
+#[wasm_bindgen]
+pub fn gen_rsk(sk: &[u8]) -> Vec<u8> {
+    let params = &zJubjubBls12::new();
+    let exps = keys::ExpandedSpendingKey::<zBls12>::from_spending_key(sk);
+
+    let mut buf = vec![];
+    exps.ask.into_repr().write_le(&mut buf).unwrap();
+
+    buf
+}
+
+#[wasm_bindgen]
+pub fn gen_rvk(sk: &[u8]) -> Vec<u8> {
+    let params = &zJubjubBls12::new();
+    let exps = keys::ExpandedSpendingKey::<zBls12>::from_spending_key(sk);
+
+    let viewing_key = keys::ViewingKey::<zBls12>::from_expanded_spending_key(&exps, params);
+
+    let mut buf = vec![];
+    viewing_key.ak.write(&mut buf).unwrap();
+
+    buf
 }
 
 #[wasm_bindgen]
@@ -183,14 +209,15 @@ pub fn gen_call(
     mut proving_key: &[u8],
     mut prepared_vk: &[u8],
     seed_slice: &[u32],
-) -> JsValue 
+) -> JsValue
 {
     let params = &JubjubBls12::new();
     let mut rng = &mut ChaChaRng::from_seed(seed_slice);
     let p_g = FixedGenerators::NoteCommitmentRandomness; // 1
     let remaining_balance = balance - value;
 
-    let alpha = Fs::rand(&mut rng);
+    // let alpha = Fs::rand(&mut rng);
+    let alpha = Fs::zero();
 
     let ex_sk_s = ExpandedSpendingKey::<Bls12>::from_spending_key(&sk[..]);
     let viewing_key_s = ViewingKey::<Bls12>::from_expanded_spending_key(&ex_sk_s, &params);
@@ -227,7 +254,8 @@ pub fn gen_call(
         rsk: tx.rsk.to_vec(),
     };
 
-    JsValue::from_serde(&calls).expect("fails to write json")
+    JsValue::from_serde(&calls).expect("fails to write json")    
+    // JsValue::from_str("Hey")
 }
 
 #[wasm_bindgen(catch)]
@@ -254,7 +282,26 @@ mod tests {
     use scrypto::jubjub::{fs::Fs, ToUniform};
     use pairing::{PrimeField, PrimeFieldRepr, Field};
     use zjubjub::redjubjub::PrivateKey as zPrivateKey;
-    use scrypto::redjubjub::{PrivateKey, PublicKey};           
+    use scrypto::redjubjub::{PrivateKey, PublicKey};      
+
+    fn get_pk_and_vk() -> (Vec<u8>, Vec<u8>) {
+        let pk_path = Path::new("../cli/proving.params");        
+        let vk_path = Path::new("../cli/verification.params");        
+
+        let pk_file = File::open(&pk_path).unwrap();
+        let vk_file = File::open(&vk_path).unwrap();
+
+        let mut pk_reader = BufReader::new(pk_file);
+        let mut vk_reader = BufReader::new(vk_file);
+
+        let mut buf_pk = vec![];
+        pk_reader.read_to_end(&mut buf_pk).unwrap();
+
+        let mut buf_vk = vec![];
+        vk_reader.read_to_end(&mut buf_vk).unwrap();
+
+        (buf_pk, buf_vk)
+    }
 
     #[test]
     fn test_fs_write_read() {
@@ -268,5 +315,5 @@ mod tests {
         sk_repr.read_le(&mut &buf[..]).unwrap();
 
         assert_eq!(fs, zFs::from_repr(sk_repr).unwrap());
-    }    
+    }     
 }

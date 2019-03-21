@@ -7,7 +7,7 @@ use bellman::groth16::{
 };
 use rand::OsRng;
 use proofs::circuit_transfer::Transfer;
-use crate::params;
+use crate::PARAMS;
 
 pub fn setup() -> (Parameters<Bls12>, PreparedVerifyingKey<Bls12>) {
     let rng = &mut OsRng::new().expect("should be able to construct RNG");
@@ -15,7 +15,7 @@ pub fn setup() -> (Parameters<Bls12>, PreparedVerifyingKey<Bls12>) {
     // Create parameters for the confidential transfer circuit
     let proving_key = {
         let c = Transfer::<Bls12> {
-            params: &params,
+            params: &PARAMS,
             value: None,
             remaining_balance: None,
             randomness: None,

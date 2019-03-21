@@ -1,12 +1,12 @@
 use clap::{Arg, App, SubCommand, AppSettings};
-use rand::{OsRng, Rng, Rand};
+use rand::OsRng;
 use proofs::{
     primitives::{ExpandedSpendingKey, ViewingKey},     
-    elgamal::{Ciphertext, elgamal_extend},
+    elgamal::Ciphertext,
     };
 use substrate_primitives::hexdisplay::{HexDisplay, AsBytesRef};
 use pairing::{bls12_381::Bls12, Field, PrimeField, PrimeFieldRepr};
-use scrypto::jubjub::{JubjubBls12, fs, ToUniform, JubjubParams, FixedGenerators};      
+use scrypto::jubjub::{JubjubBls12, fs, FixedGenerators};      
 use std::fs::File;
 use std::path::Path;
 use std::string::String;
@@ -21,97 +21,17 @@ use setup::setup;
 extern crate lazy_static;
 
 lazy_static! {
-    pub static ref params: JubjubBls12 = { JubjubBls12::new() };
+    pub static ref PARAMS: JubjubBls12 = { JubjubBls12::new() };
 }
 
-fn get_address(seed: &[u8; 32]) -> Vec<u8> { 
+fn get_address(seed: &[u8]) -> Vec<u8> { 
     let expsk = ExpandedSpendingKey::<Bls12>::from_spending_key(seed);     
-    let viewing_key = ViewingKey::<Bls12>::from_expanded_spending_key(&expsk, &params);        
-    let address = viewing_key.into_payment_address(&params);
+    let viewing_key = ViewingKey::<Bls12>::from_expanded_spending_key(&expsk, &PARAMS);        
+    let address = viewing_key.into_payment_address(&PARAMS);
 
     let mut address_bytes = vec![];
     address.write(&mut address_bytes).unwrap();
     address_bytes
-}
-
-fn print_random_accounts(seed: &[u8; 32], num: i32) {    
-    for i in 0..num {
-        let address_bytes = get_address(seed);
-
-        println!("Secret Key{}: 0x{}\n Address{}: 0x{}\n", 
-            i,
-            HexDisplay::from(seed),
-            i,
-            HexDisplay::from(&address_bytes),
-        );
-    }
-}
-
-fn print_alice_tx(
-    sender_seed: &[u8], 
-    recipient_seed: &[u8], 
-    mut proving_key_b: &[u8], 
-    mut prepared_vk_b : &[u8], 
-    value: u32, 
-    balance: u32,
-) 
-{    
-    let rng = &mut OsRng::new().expect("should be able to construct RNG");
-    let p_g = FixedGenerators::NoteCommitmentRandomness; // 1        
-    
-    // let alpha = fs::Fs::rand(rng); 
-    let alpha = fs::Fs::zero();
-        
-    let proving_key =  Parameters::<Bls12>::read(&mut proving_key_b, true).unwrap();    
-    let prepared_vk = PreparedVerifyingKey::<Bls12>::read(&mut prepared_vk_b).unwrap(); 
-        
-    let ex_sk_s = ExpandedSpendingKey::<Bls12>::from_spending_key(sender_seed);
-    let ex_sk_r = ExpandedSpendingKey::<Bls12>::from_spending_key(&recipient_seed[..]);
-
-    let viewing_key_s = ViewingKey::<Bls12>::from_expanded_spending_key(&ex_sk_s, &params);       
-    let viewing_key_r = ViewingKey::<Bls12>::from_expanded_spending_key(&ex_sk_r, &params);
-
-    let address_recipient = viewing_key_r.into_payment_address(&params);        
-    
-    let ivk = viewing_key_s.ivk();
-    let public_key = params.generator(p_g).mul(ivk, &params).into();
-
-    let ciphertext_balance = Ciphertext::encrypt(balance, fs::Fs::one(), &public_key, p_g, &params);   
-
-    let remaining_balance = balance - value;       
-
-    let tx = Transaction::gen_tx(
-                    value, 
-                    remaining_balance, 
-                    alpha,
-                    &proving_key,
-                    &prepared_vk,
-                    &address_recipient,
-                    &ex_sk_s,
-                    ciphertext_balance,                    
-                    rng
-            ).expect("fails to generate the tx");
-
-    println!(
-        "
-        \nzkProof(Alice): 0x{}
-        \naddress_sender(Alice): 0x{}
-        \naddress_recipient(Alice): 0x{}
-        \nvalue_sender(Alice): 0x{}
-        \nvalue_recipient(Alice): 0x{}
-        \nbalance_sender(Alice): 0x{}
-        \nrvk(Alice): 0x{}           
-        \nrsk(Alice): 0x{}           
-        ",        
-        HexDisplay::from(&&tx.proof[..] as &AsBytesRef),    
-        HexDisplay::from(&tx.address_sender as &AsBytesRef),    
-        HexDisplay::from(&tx.address_recipient as &AsBytesRef),        
-        HexDisplay::from(&tx.enc_val_sender as &AsBytesRef),
-        HexDisplay::from(&tx.enc_val_recipient as &AsBytesRef),
-        HexDisplay::from(&tx.enc_bal_sender as &AsBytesRef),     
-        HexDisplay::from(&tx.rk as &AsBytesRef),
-        HexDisplay::from(&tx.rsk as &AsBytesRef),
-    );
 }
     
 fn main() {   
@@ -127,8 +47,11 @@ fn cli() -> Result<(), String> {
     const PROVING_KEY_PATH: &str = "proving.params";    
     const DEFAULT_AMOUNT: &str = "10";
     const DEFAULT_BALANCE: &str = "100";
+    const ALICESEED: &str = "416c696365202020202020202020202020202020202020202020202020202020";
+    const BOBSEED: &str = "426f622020202020202020202020202020202020202020202020202020202020";
+    const DEFAULT_ENCRYPTED_BALANCE: &str = "3f101bd6575876bbf772e25ed84728e012295b51f1be37b8451553184b458aeeac776c796563fcd44cc49cfaea8bb796952c266e47779d94574c10ad01754b11";
 
-    let matches = App::new("Zerochain")
+    let matches = App::new("zero-chain-cli")
         .setting(AppSettings::SubcommandRequiredElseHelp)
         .version("0.1.0")
         .author("Osuke Sudo")
@@ -190,6 +113,30 @@ fn cli() -> Result<(), String> {
                 .required(false)
                 .default_value(DEFAULT_BALANCE)
             )
+            .arg(Arg::with_name("sender-privatekey")
+                .short("s")
+                .long("sender-privatekey")
+                .help("Sender's private key. (default: Alice)")                
+                .takes_value(true)
+                .required(false)
+                .default_value(ALICESEED)
+            )
+            .arg(Arg::with_name("recipient-privatekey")
+                .short("r")
+                .long("recipient-privatekey")
+                .help("Recipient's private key. (default: Bob)")                
+                .takes_value(true)
+                .required(false)
+                .default_value(BOBSEED)
+            )
+            .arg(Arg::with_name("encrypted-balance")
+                .short("e")
+                .long("encrypted-balance")
+                .help("Encrypted balance by sender stored in on-chain")                
+                .takes_value(true)
+                .required(false)
+                .default_value(DEFAULT_ENCRYPTED_BALANCE)
+            )
         )
         .subcommand(SubCommand::with_name("decrypt")
             .about("Decrypt the elgamal encryption")
@@ -247,20 +194,23 @@ fn cli() -> Result<(), String> {
         ("generate-tx", Some(sub_matches)) => {
             println!("Generate transaction...");
 
-            let alice_seed = b"Alice                           ";
-            let bob_seed = b"Bob                             ";
-
-            let rng = &mut OsRng::new().expect("should be able to construct RNG");
-            let seed: [u8; 32] = rng.gen();            
+            let sender_seed = hex::decode(sub_matches.value_of("sender-privatekey").unwrap()).unwrap();
+            let recipient_seed  = hex::decode(sub_matches.value_of("recipient-privatekey").unwrap()).unwrap();                                          
             
-            let alice_address = get_address(alice_seed);
+            let sender_address = get_address(&sender_seed[..]);
+            let recipient_address = get_address(&recipient_seed[..]);
 
-            println!("Secret Key(Alice): 0x{}\nAddress(Alice): 0x{}\n",        
-                HexDisplay::from(alice_seed),        
-                HexDisplay::from(&alice_address),
+            println!("Private Key(Sender): 0x{}\nAddress(Sender): 0x{}\n",        
+                HexDisplay::from(&sender_seed),        
+                HexDisplay::from(&sender_address),
             );
 
-            print_random_accounts(&seed, 2);                        
+            println!("Private Key(Recipient): 0x{}\nAddress(Recipient): 0x{}\n",        
+                HexDisplay::from(&recipient_seed),        
+                HexDisplay::from(&recipient_address),
+            );
+
+            // print_random_accounts(&seed, 1);                        
 
             let pk_path = Path::new(sub_matches.value_of("proving-key-path").unwrap());            
             let vk_path = Path::new(sub_matches.value_of("verification-key-path").unwrap());            
@@ -288,7 +238,71 @@ fn cli() -> Result<(), String> {
             let balance_str = sub_matches.value_of("balance").unwrap();
             let balance: u32 = balance_str.parse().unwrap();
 
-            print_alice_tx(alice_seed, bob_seed, &buf_pk[..], &buf_vk[..], amount, balance);
+            println!("Transaction >>");
+            // print_tx(&sender_seed[..], &recipient_seed[..], &buf_pk[..], &buf_vk[..], amount, balance);
+
+            let rng = &mut OsRng::new().expect("should be able to construct RNG");                  
+            
+            // let alpha = fs::Fs::rand(rng); 
+            let alpha = fs::Fs::zero();
+                
+            let proving_key =  Parameters::<Bls12>::read(&mut &buf_pk[..], true).unwrap();    
+            let prepared_vk = PreparedVerifyingKey::<Bls12>::read(&mut &buf_vk[..]).unwrap(); 
+                
+            let ex_sk_s = ExpandedSpendingKey::<Bls12>::from_spending_key(&sender_seed[..]);
+            let ex_sk_r = ExpandedSpendingKey::<Bls12>::from_spending_key(&recipient_seed[..]);
+                  
+            let viewing_key_r = ViewingKey::<Bls12>::from_expanded_spending_key(&ex_sk_r, &PARAMS);
+            let address_recipient = viewing_key_r.into_payment_address(&PARAMS);                    
+
+            let ciphertext_balance_a = sub_matches.value_of("encrypted-balance").unwrap();
+            let ciphertext_balance_v = hex::decode(ciphertext_balance_a).unwrap();
+            let ciphertext_balance = Ciphertext::read(&mut &ciphertext_balance_v[..], &PARAMS as &JubjubBls12).unwrap();
+
+            let remaining_balance = balance - amount;       
+
+            let tx = Transaction::gen_tx(
+                            amount, 
+                            remaining_balance, 
+                            alpha,
+                            &proving_key,
+                            &prepared_vk,
+                            &address_recipient,
+                            &ex_sk_s,
+                            ciphertext_balance,                    
+                            rng
+                    ).expect("fails to generate the tx");
+
+            println!(
+                "
+                \nzkProof: 0x{}                
+                \nEncrypted amount by sender: 0x{}
+                \nEncrypted amount by recipient: 0x{}                
+                ",        
+                HexDisplay::from(&&tx.proof[..] as &AsBytesRef),           
+                HexDisplay::from(&tx.enc_val_sender as &AsBytesRef),
+                HexDisplay::from(&tx.enc_val_recipient as &AsBytesRef),                
+            );
+            // println!(
+            //     "
+            //     \nzkProof(Alice): 0x{}
+            //     \naddress_sender(Alice): 0x{}
+            //     \naddress_recipient(Alice): 0x{}
+            //     \nvalue_sender(Alice): 0x{}
+            //     \nvalue_recipient(Alice): 0x{}
+            //     \nbalance_sender(Alice): 0x{}
+            //     \nrvk(Alice): 0x{}           
+            //     \nrsk(Alice): 0x{}           
+            //     ",        
+            //     HexDisplay::from(&&tx.proof[..] as &AsBytesRef),    
+            //     HexDisplay::from(&tx.address_sender as &AsBytesRef),    
+            //     HexDisplay::from(&tx.address_recipient as &AsBytesRef),        
+            //     HexDisplay::from(&tx.enc_val_sender as &AsBytesRef),
+            //     HexDisplay::from(&tx.enc_val_recipient as &AsBytesRef),
+            //     HexDisplay::from(&tx.enc_bal_sender as &AsBytesRef),     
+            //     HexDisplay::from(&tx.rk as &AsBytesRef),
+            //     HexDisplay::from(&tx.rsk as &AsBytesRef),
+            // );
 
         },
         ("decrypt", Some(sub_matches)) => {
@@ -297,7 +311,7 @@ fn cli() -> Result<(), String> {
 
             let enc = sub_matches.value_of("encrypted-value").unwrap();
             let enc_vec = hex::decode(enc).unwrap();
-            let enc_c = Ciphertext::<Bls12>::read(&mut &enc_vec[..], &params).expect("Invalid data");
+            let enc_c = Ciphertext::<Bls12>::read(&mut &enc_vec[..], &PARAMS).expect("Invalid data");
 
             let pk = sub_matches.value_of("private-key").unwrap();
             let pk_vec = hex::decode(pk).unwrap();
@@ -305,7 +319,7 @@ fn cli() -> Result<(), String> {
             let mut pk_repr = fs::Fs::default().into_repr();    
             pk_repr.read_le(&mut &pk_vec[..]).unwrap(); 
 
-            let dec = enc_c.decrypt(fs::Fs::from_repr(pk_repr).unwrap(), p_g, &params).unwrap();
+            let dec = enc_c.decrypt(fs::Fs::from_repr(pk_repr).unwrap(), p_g, &PARAMS).unwrap();
             println!("Decrypted value is {}", dec);
         },
         _ => unreachable!()

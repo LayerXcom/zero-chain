@@ -174,38 +174,38 @@ impl<'a, E: JubjubEngine> Circuit<E> for Transfer<'a, E> {
                 params
             )?;
 
-            // let left = self.encrypted_balance.clone().map(|e| e.left.into_xy());
-            // let right = self.encrypted_balance.map(|e| e.right.into_xy());
+            let left = self.encrypted_balance.clone().map(|e| e.left.into_xy());
+            let right = self.encrypted_balance.map(|e| e.right.into_xy());
 
-            // let numxl = AllocatedNum::alloc(cs.namespace(|| "numxl"), || {
-            //     Ok(left.get()?.0)
-            // })?;
-            // let numyl = AllocatedNum::alloc(cs.namespace(|| "numyl"), || {
-            //     Ok(left.get()?.1)
-            // })?;
-            // let numxr = AllocatedNum::alloc(cs.namespace(|| "numxr"), || {
-            //     Ok(right.get()?.0)
-            // })?;
-            // let numyr = AllocatedNum::alloc(cs.namespace(|| "numyr"), || {
-            //     Ok(right.get()?.1)
-            // })?;
+            let numxl = AllocatedNum::alloc(cs.namespace(|| "numxl"), || {
+                Ok(left.get()?.0)
+            })?;
+            let numyl = AllocatedNum::alloc(cs.namespace(|| "numyl"), || {
+                Ok(left.get()?.1)
+            })?;
+            let numxr = AllocatedNum::alloc(cs.namespace(|| "numxr"), || {
+                Ok(right.get()?.0)
+            })?;
+            let numyr = AllocatedNum::alloc(cs.namespace(|| "numyr"), || {
+                Ok(right.get()?.1)
+            })?;
 
-            // let pointl = EdwardsPoint::interpret(
-            //     cs.namespace(|| format!("interpret to pointl")), 
-            //     &numxl, 
-            //     &numyl, 
-            //     params
-            // )?;
+            let pointl = EdwardsPoint::interpret(
+                cs.namespace(|| format!("interpret to pointl")), 
+                &numxl, 
+                &numyl, 
+                params
+            )?;
 
-            // let pointr = EdwardsPoint::interpret(
-            //     cs.namespace(|| format!("interpret to pointr")), 
-            //     &numxr, 
-            //     &numyr, 
-            //     params
-            // )?;
+            let pointr = EdwardsPoint::interpret(
+                cs.namespace(|| format!("interpret to pointr")), 
+                &numxr, 
+                &numyr, 
+                params
+            )?;
 
-            // pointl.inputize(cs.namespace(|| format!("inputize pointl")))?;
-            // pointr.inputize(cs.namespace(|| format!("inputize pointr")))?;
+            pointl.inputize(cs.namespace(|| format!("inputize pointl")))?;
+            pointr.inputize(cs.namespace(|| format!("inputize pointr")))?;
 
             // TODO:
             // The balance encryption validity. 
@@ -215,6 +215,8 @@ impl<'a, E: JubjubEngine> Circuit<E> for Transfer<'a, E> {
             // rbar is the current_balance randomness   
             // Enc_sender(sender_balance).cl - Enc_sender(value).cl 
             //     == (remaining_balance)G + ivk(Enc_sender(sender_balance).cr - Enc(random))
+
+            // let neg_left_sender = 
         }
 
 

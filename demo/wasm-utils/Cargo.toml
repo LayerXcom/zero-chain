@@ -25,7 +25,6 @@ proofs = { package = "zero-chain-proofs", path = "../../core/proofs" }
 bellman = { git = "https://github.com/LayerXcom/librustzcash", branch = "zero-chain" }
 zcrypto = { package = "zero-chain-crypto", path = "../../core/crypto"}
 bellman-verifier = { path = "../../core/bellman-verifier"}
-# zprimitives = { package = "zero-chain-primitives", path = "../../core/primitives" }
 parity-codec-derive = { version = "3.1" }
 parity-codec = { version = "3.1" }
 hex-literal = '0.1'
@@ -43,6 +42,7 @@ console_error_panic_hook = { version = "0.1.1", optional = true }
 #
 # Unfortunately, `wee_alloc` requires nightly Rust when targeting wasm for now.
 wee_alloc = { version = "0.4.2", optional = true }
+lazy_static = "1.3.0"
 
 [dev-dependencies]
 wasm-bindgen-test = "0.2"

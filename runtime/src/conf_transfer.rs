@@ -1,9 +1,4 @@
 //! A simple module for dealing with confidential transfer of fungible assets.
-
-// Ensure we're `no_std` when compiling for Wasm.
-#![cfg_attr(not(feature = "std"), no_std)]
-#![cfg_attr(not(feature = "std"), feature(alloc))]
-
 use support::{decl_module, decl_storage, decl_event, StorageMap, dispatch::Result, ensure};
 use rstd::prelude::*;
 use bellman_verifier::{    
@@ -51,8 +46,7 @@ decl_module! {
             address_sender: PkdAddress, 
             address_recipient: PkdAddress,
             value_sender: Ciphertext,
-            value_recipient: Ciphertext,
-            balance_sender: Ciphertext,       
+            value_recipient: Ciphertext,                  
             rk: SigVerificationKey  // TODO: Extract from origin            
         ) -> Result {
             // Temporally removed the signature verification.
@@ -86,19 +80,22 @@ decl_module! {
             let svalue_recipient = match value_recipient.into_ciphertext() {
                 Some(v) => v,
                 None => return Err("Invalid value_recipient"),
-            };
-
-            // Get balance_sender with the type
-            let sbalance_sender = match balance_sender.into_ciphertext() {
-                Some(v) => v,
-                None => return Err("Invalid balance_sender"),
-            };
+            };                   
 
             // Get rk with the type
             let srk = match rk.into_verification_key() {
                 Some(v) => v,
                 None => return Err("Invalid rk"),
-            };                      
+            };                 
+
+            // Get balance_sender with the type
+            let bal_sender = match Self::encrypted_balance(address_sender) {
+                Some(b) => match b.into_ciphertext() {
+                    Some(c) => c,
+                    None => return Err("Invalid ciphertext of sender balance"),
+                },
+                None => return Err("Invalid sender balance"),
+            };     
 
             // Verify the zk proof
             ensure!(
@@ -108,29 +105,14 @@ decl_module! {
                     &saddr_recipient,
                     &svalue_sender,
                     &svalue_recipient,
-                    &sbalance_sender,
+                    &bal_sender,
                     &srk,                    
                 ),
                 "Invalid zkproof"
-            );  
-
-            // Verify the balance
-            ensure!(
-                Self::encrypted_balance(address_sender).unwrap() == balance_sender.clone(),
-                "Invalid encrypted balance"
-            );
-
-            // Get balance_sender with the type
-            let bal_sender = match Self::encrypted_balance(address_sender) {
-                Some(b) => match b.into_ciphertext() {
-                    Some(c) => c,
-                    None => return Err("Invalid ciphertext of sender balance"),
-                },
-                None => return Err("Invalid sender balance"),
-            };
+            );                        
 
             // Get balance_recipient with the option type
-            let bal_recipient = match Self::encrypted_balance(address_recipient) {
+            let bal_recipient = match Self::encrypted_balance(address_recipient) { 
                 Some(b) => b.into_ciphertext(),
                 _ => None
             };            
@@ -152,7 +134,7 @@ decl_module! {
             });
 
             // TODO: tempolaly removed address_sender and address_recipient because of mismatched types
-            Self::deposit_event(RawEvent::ConfTransfer(zkproof, value_sender, value_recipient, balance_sender, rk));
+            Self::deposit_event(RawEvent::ConfTransfer(zkproof, value_sender, value_recipient, Ciphertext::from_ciphertext(&bal_sender), rk));
 
             Ok(())         			            
 		}		
@@ -190,7 +172,7 @@ impl<T: Trait> Module<T> {
         rk: &PublicKey<Bls12>,                 
     ) -> bool {
         // Construct public input for circuit
-        let mut public_input = [Fr::zero(); 12];
+        let mut public_input = [Fr::zero(); 16];
 
         {
             let (x, y) = address_sender.0.into_xy();
@@ -217,20 +199,20 @@ impl<T: Trait> Module<T> {
             public_input[8] = x;
             public_input[9] = y;
         }
-        // {
-        //     let (x, y) = balance_sender.left.into_xy();
-        //     public_input[10] = x;
-        //     public_input[11] = y;
-        // }
-        // {
-        //     let (x, y) = balance_sender.right.into_xy();
-        //     public_input[12] = x;
-        //     public_input[13] = y;
-        // }
         {
-            let (x, y) = rk.0.into_xy();
+            let (x, y) = balance_sender.left.into_xy();
             public_input[10] = x;
             public_input[11] = y;
+        }
+        {
+            let (x, y) = balance_sender.right.into_xy();
+            public_input[12] = x;
+            public_input[13] = y;
+        }
+        {
+            let (x, y) = rk.0.into_xy();
+            public_input[14] = x;
+            public_input[15] = y;
         }
 
         let pvk = Self::verifying_key().into_prepared_vk().unwrap();        
@@ -239,7 +221,7 @@ impl<T: Trait> Module<T> {
         match verify_proof(&pvk, &zkproof, &public_input[..]) {
             // No error, and proof verification successful
             Ok(true) => true,
-            _ => {runtime_io::print("Invalid proof!!!!!!!!!!!!!!"); false},                
+            _ => {runtime_io::print("Invalid proof!!!!!!"); false},                
         }        
     } 
 
@@ -341,12 +323,11 @@ mod tests {
     #[test]    
     fn test_call_function() {        
         with_externalities(&mut new_test_ext(), || {                 
-            let proof: [u8; 192] = hex!("a97fd1cb914a07033e277f5562351eda7648a29edc3b65f28fe8221f21cb3e94c64f726f6944173662fa98c2980eafc095b9dd7542ed13cb30ce4bbdddf974a8028e9c91ea3a5ab88d5fa684ad49652fd651147c7cf42975f7435e71e238c88611a14b1cda6b7cde218f1b90d272262ac042f8426e748b1cd7efe7917a4cc9b6a7bae60fb089c59af7ce0e23cb9745d592530edeab7ec1869dea11f31c842e168898eb2ce9f77be4597ba2b8367ccfd70d375ebd3c5547c58244163e3e16ef03");
+            let proof: [u8; 192] = hex!("8919fba653b60269fb0da014e8063060994407465afe7fdaf47f474321159c92d64cd47767a677db3f594f7cddf26031937651c26f009199ba139d39839a96e8023a8e7480256022de4b2b72015c355d563222a1e1577c5e65c46fb390cff826060ddc0d79b34d6db1044bf3a9e9707930b34ceab7f1c82c8e8450214b2b15fff204f584c06f187865f82b4ce550ca4eb732fe4982234ced15b0bcb342ad184918d8d5767eecfc442d31bd99d53698174c34c2bcf8e1b424d2de86dccb4cd034");
             let pkd_addr_alice: [u8; 32] = hex!("775e501abc59d035e71e16c6c6cd225d44a249289dd95c37516ce4754721d763");
             let pkd_addr_bob: [u8; 32] = hex!("a23bb484f72b28a4179a71057c4528648dfb37974ccd84b38aa3e342f9598515");
-            let enc10_by_alice: [u8; 64] = hex!("d6544e8aebd4f9a41c80fd6669077805a402418fcf2fa18e01e86b6d2ab1313a592c414431f34c45d4b494cc2eb43a0b50de7b717a0a092f3db2aa71ad4c5286");
-            let enc10_by_bob: [u8; 64] = hex!("3d74a2b5e9ee19e7e88a0e8b12e39ca68f818911cb4bc5decda6b29143c986a3592c414431f34c45d4b494cc2eb43a0b50de7b717a0a092f3db2aa71ad4c5286");            
-            let enc100_by_alice: [u8; 64] = hex!("3f101bd6575876bbf772e25ed84728e012295b51f1be37b8451553184b458aeeac776c796563fcd44cc49cfaea8bb796952c266e47779d94574c10ad01754b11");            
+            let enc10_by_alice: [u8; 64] = hex!("62bd7c94d8a44a90291bcb70561a26eaee50659d5fa1ef0044e935773e7003cec940746920d4a99a733f39f0c232578173beabb85f5baac32e99fa359f9a0723");
+            let enc10_by_bob: [u8; 64] = hex!("3dd5bf88ee4982567232345538428b3883fba6cc1938e4b892a69daa7591c86cc940746920d4a99a733f39f0c232578173beabb85f5baac32e99fa359f9a0723");                        
             let rvk: [u8; 32] = hex!("791b91fae07feada7b6f6042b1e214bc75759b3921956053936c38a95271a834");
 
             assert_ok!(ConfTransfer::confidential_transfer(
@@ -355,8 +336,7 @@ mod tests {
                 PkdAddress::from_slice(&pkd_addr_alice),
                 PkdAddress::from_slice(&pkd_addr_bob),
                 Ciphertext(enc10_by_alice.to_vec()),
-                Ciphertext(enc10_by_bob.to_vec()),
-                Ciphertext(enc100_by_alice.to_vec()),                
+                Ciphertext(enc10_by_bob.to_vec()),                       
                 SigVerificationKey::from_slice(&rvk)
             ));
         })

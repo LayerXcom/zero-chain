@@ -3,8 +3,7 @@ use scrypto::jubjub::{
         JubjubParams,
         edwards,
         PrimeOrder,
-        FixedGenerators,
-        ToUniform,
+        FixedGenerators,        
 };
 
 use blake2_rfc::{

@@ -1,5 +1,6 @@
 //! The Substrate Zerochain runtime. This can be compiled with `#[no_std]`, ready for Wasm.
 
+// Ensure we're `no_std` when compiling for Wasm.
 #![cfg_attr(not(feature = "std"), no_std)]
 #![cfg_attr(not(feature = "std"), feature(alloc))]
 // `construct_runtime!` does a lot of recursion and requires us to increase the limit to 256.
