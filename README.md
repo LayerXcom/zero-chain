@@ -59,7 +59,7 @@ cargo build --release
 ```
 
 ## A brief tutorial for Sending transactions
-This tutorial will explain the basic confidential transfer on Zerochain. Alice has the **encrypted** balance of 100 coins and sends **encrypted** 10 coins to Bob. So, Alice's encrypted balance will be 90 coins and Bob will get the encrypted 10 coins. All operations are done encrypted by ElGamal encryption and zk-SNARKs.
+This tutorial will explain the basic confidential transfer on Zerochain. Alice has the **encrypted** balance of 100 coins and sends **encrypted** 10 coins to Bob. So, Alice's balance will be 90 coins and Bob will get the 10 coins. All operations are done encrypted by ElGamal encryption and zk-SNARKs.
 
 1. Run the UI apps
 
@@ -77,7 +77,8 @@ https://github.com/LayerXcom/zero-chain-ui
 ./target/release/zero-chain-cli generate-tx
 ```
 
-3. Fill out the form
+3. Fill out the form:
+
 You can send the transaction from firefox browser.
 
 <div align="center">

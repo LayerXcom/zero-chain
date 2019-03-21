@@ -25,9 +25,6 @@ proofs = { package = "zero-chain-proofs", path = "../../core/proofs" }
 bellman = { git = "https://github.com/LayerXcom/librustzcash", branch = "zero-chain" }
 zcrypto = { package = "zero-chain-crypto", path = "../../core/crypto"}
 bellman-verifier = { path = "../../core/bellman-verifier"}
-parity-codec-derive = { version = "3.1" }
-parity-codec = { version = "3.1" }
-hex-literal = '0.1'
 hex = "0.3.2"
 
 # The `console_error_panic_hook` crate provides better debugging of panics by

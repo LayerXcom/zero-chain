@@ -29,6 +29,9 @@ bellman = { git = "https://github.com/LayerXcom/librustzcash", branch = "zero-ch
 pairing = { git = "https://github.com/LayerXcom/librustzcash", branch = "zero-chain" }
 rand = "0.4"
 lazy_static = "1.3.0"
+wasm-utils = {package = "zerochain-wasm-utils", path = "demo/wasm-utils"}
+hex = "0.3.2"
+clap = "~2.32"
 
 [dependencies.basic-authorship]
 git = 'https://github.com/paritytech/substrate.git'
@@ -101,6 +104,10 @@ version = '0.9.0'
 [[bin]]
 name = 'zero-chain'
 path = 'src/main.rs'
+
+[[bin]]
+name = 'zero-chain-cli'
+path = 'demo/cli/src/main.rs'
 
 [workspace]
 members = [

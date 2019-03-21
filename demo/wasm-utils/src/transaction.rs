@@ -1,16 +1,10 @@
 use bellman::groth16::{Parameters, PreparedVerifyingKey};
-use bellman_verifier::Proof as zProof;
 use pairing::bls12_381::Bls12;
 use zpairing::io;
 use scrypto::{
 	jubjub::{JubjubBls12, fs},
 	redjubjub::PrivateKey,
 	};
-use zjubjub::{
-	curve::JubjubBls12 as zJubjubBls12,
-	redjubjub::PublicKey as zPublicKey,
-};
-
 use proofs::{
     self,
 	primitives::{		
@@ -19,11 +13,7 @@ use proofs::{
 		},
 	prover::TransferProof,	   
 };
-
-use zcrypto::elgamal::Ciphertext as zCiphertext;
 use rand::Rng;
-
-use keys::PaymentAddress as zPaymentAddress;
 
 pub struct Transaction{    
     pub rk: [u8; 32],                    // 32 bytes

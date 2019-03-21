@@ -4,7 +4,7 @@ use proofs::{
     primitives::{ExpandedSpendingKey, ViewingKey},     
     elgamal::Ciphertext,
     };
-use substrate_primitives::hexdisplay::{HexDisplay, AsBytesRef};
+use primitives::hexdisplay::{HexDisplay, AsBytesRef};
 use pairing::{bls12_381::Bls12, Field, PrimeField, PrimeFieldRepr};
 use scrypto::jubjub::{JubjubBls12, fs, FixedGenerators};      
 use std::fs::File;
