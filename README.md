@@ -1,22 +1,25 @@
-# zero-chain
+# Zerochain
 [![Build Status](https://travis-ci.com/LayerXcom/zero-chain.svg?branch=master)](https://travis-ci.com/LayerXcom/zero-chain)
 [![Gitter](https://badges.gitter.im/LayerXcom/Zerochain.svg)](https://gitter.im/LayerXcom/Zerochain?utm_source=badge&utm_medium=badge&utm_campaign=pr-badge)
-A privacy-oriented blockchain on Substrate
+
+Zerochain is a privacy-oriented blockchain on Substrate.
 
 ## Status
-For now, only supported for the confidential payment PoC.
+**WARNING: Zerochain is alpha quality software, improvements and fixes are made frequently, and documentation for technical details doesn't yet exist.**
 
-- Balances of each accounts are encrypted
+For now, only supported for the "confidential payment PoC".
+
+- Balance for each account is encrypted
 <div align="center">
-<img src="https://user-images.githubusercontent.com/20852667/54678399-6d00ac80-4b48-11e9-9c8d-d1ec2b668761.png" width="800px">
+<img src="https://user-images.githubusercontent.com/20852667/54678399-6d00ac80-4b48-11e9-9c8d-d1ec2b668761.png" width="400px">
 </div>
 
-- Transfer amounts are encrypted
+- Transfer amount is encrypted
 <div align="center">
-<img src="https://user-images.githubusercontent.com/20852667/54678984-9cfc7f80-4b49-11e9-9784-576dcaa35ca9.png" width="800px">
+<img src="https://user-images.githubusercontent.com/20852667/54678984-9cfc7f80-4b49-11e9-9784-576dcaa35ca9.png" width="400px">
 </div>
 
-More features will be added... :muscle:
+More features will be added... :muscle::muscle:
 
 ## Usage
 ### Initial Setup
@@ -55,10 +58,11 @@ cargo build --release
 ./target/release/zero-chain purge-chain --dev
 ```
 
-### Sending transactions
+## A brief tutorial for Sending transactions
 This tutorial will explain the basic confidential transfer on Zerochain. Alice has the **encrypted** balance of 100 coins and sends **encrypted** 10 coins to Bob. So, Alice's encrypted balance will be 90 coins and Bob will get the encrypted 10 coins. All operations are done encrypted by ElGamal encryption and zk-SNARKs.
 
 1. Run the UI apps
+
 The UI repository is here:
 https://github.com/LayerXcom/zero-chain-ui
 
@@ -77,14 +81,15 @@ https://github.com/LayerXcom/zero-chain-ui
 You can send the transaction from firefox browser.
 
 <div align="center">
-<img src="https://user-images.githubusercontent.com/20852667/54687970-228b2a00-4b60-11e9-8c26-fdfbbb3a17d8.png" width="1000px">
+<img src="https://user-images.githubusercontent.com/20852667/54687970-228b2a00-4b60-11e9-8c26-fdfbbb3a17d8.png" width="1100px">
 </div>
 
+### Technical details
+TODO:
 
-## Design philosophy
-- Efficient confidentiality
-- Various computation
-- Modular cryptography
+## Contributing
+- Feel free to submit your own issues and PRs
+- For further discussions and questions talk to us on [Gitter](https://gitter.im/LayerXcom/Zerochain)
 
 ### Maintainers
 - [Osuke](https://twitter.com/zoom_zoomzo)
