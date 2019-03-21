@@ -206,7 +206,7 @@ pub fn batch_verify<'a, E: JubjubEngine, R: Rng>(
 #[cfg(test)]
 mod tests {
     use pairing::bls12_381::Bls12;    
-    use rand::{Rand, Rng, SeedableRng, XorShiftRng};
+    use rand::{Rng, SeedableRng, XorShiftRng};
 
     use crate::curve::{JubjubBls12, fs::Fs, edwards};
 

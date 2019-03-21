@@ -235,18 +235,12 @@ mod tests {
     }
 
     #[test]
-    fn test_gen_proof_from_cli() {
-        let proof: [u8; 192] = hex!("8e7b55a0a7bf1e34fc9a031a883dd1b3c7217a325388b0fe38acb8294632c63d14c95bb2d596a5bfd3b887211b1ba726949b91456d17d0648d2981c44b6e53636c98f155789b69b793b06be8f83a18120253ae004ff607eb396c8e5492325a4d02cd84adc379b91638e5a1a2cafcd25311e9efd082136eaa8f7a4e4eb8214d2ea08eae54a30508c176596746b0ada2218ebc3cb934504345f89c21e3d3c011196002ef65218989f6bfc1b7aa6a69be7d339d7d11b7a7c336cc836367e216ab54");
-        let pkd_addr_alice: [u8; 32] = hex!("775e501abc59d035e71e16c6c6cd225d44a249289dd95c37516ce4754721d763");
-        let pkd_addr_bob: [u8; 32] = hex!("a23bb484f72b28a4179a71057c4528648dfb37974ccd84b38aa3e342f9598515");
-        let enc10_by_alice: [u8; 64] = hex!("3cb68dc440d1f2196a028b4585256f6249db13ad088fe59e7dc473d0a28b29e3a85654bc08d6ba9ef1dd9cb1b77aebf91ab2d89454354a1f181d72481969e11f");
-        let enc10_by_bob: [u8; 64] = hex!("1c9a74b14851acc056f497b8636b04205d620d6d4b16bc162cc255829f6ab445a85654bc08d6ba9ef1dd9cb1b77aebf91ab2d89454354a1f181d72481969e11f");            
-        let enc100_by_alice: [u8; 64] = hex!("3f101bd6575876bbf772e25ed84728e012295b51f1be37b8451553184b458aeeac776c796563fcd44cc49cfaea8bb796952c266e47779d94574c10ad01754b11");            
-        let rvk: [u8; 32] = hex!("791b91fae07feada7b6f6042b1e214bc75759b3921956053936c38a95271a834");
+    fn test_gen_proof_from_cli() {                
+        let pkd_addr_bob: [u8; 32] = hex!("a23bb484f72b28a4179a71057c4528648dfb37974ccd84b38aa3e342f9598515");                
+        let enc100_by_alice: [u8; 64] = hex!("3f101bd6575876bbf772e25ed84728e012295b51f1be37b8451553184b458aeeac776c796563fcd44cc49cfaea8bb796952c266e47779d94574c10ad01754b11");                    
 
         let params = &JubjubBls12::new();
-        let rng = &mut XorShiftRng::from_seed([0x5dbe6259, 0x8d313d76, 0x3237db17, 0xe5bc0654]);
-        let p_g = FixedGenerators::NoteCommitmentRandomness;
+        let rng = &mut XorShiftRng::from_seed([0x5dbe6259, 0x8d313d76, 0x3237db17, 0xe5bc0654]);        
 
         let value = 10 as u32;
         let remaining_balance = 90 as u32;
@@ -289,6 +283,6 @@ mod tests {
         pk_reader.read_to_end(&mut buf).unwrap();
         println!("{:?}", buf.len());
         
-        let proving_key = Parameters::<Bls12>::read(&mut &buf[..], true).unwrap();
+        let _proving_key = Parameters::<Bls12>::read(&mut &buf[..], true).unwrap();
     }
 }

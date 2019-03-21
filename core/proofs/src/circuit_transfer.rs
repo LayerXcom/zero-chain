@@ -3,23 +3,20 @@ use bellman::{
     ConstraintSystem,
     Circuit,
 };
-
 use scrypto::jubjub::{
     JubjubEngine,
     FixedGenerators,
-    PrimeOrder,    
+    PrimeOrder,  
+    edwards  
 };
-
 use crate::primitives::{    
     ProofGenerationKey,     
 };
-
 use scrypto::circuit::{    
     boolean::{self, Boolean},
     ecc::{self, EdwardsPoint},      
     num::AllocatedNum,
 };
-
 use crate::{elgamal::Ciphertext, Assignment};
 
 // An instance of the Transfer circuit.
@@ -300,9 +297,11 @@ fn u32_into_boolean_vec_le<E, CS>(
 }
 
 #[cfg(test)]
-    use pairing::{PrimeField, bls12_381::*};
+mod tests {
+    use super::*;
+    use pairing::bls12_381::Bls12;
     use rand::{SeedableRng, Rng, XorShiftRng};    
-    use super::circuit_test::TestConstraintSystem;
+    use crate::circuit_test::TestConstraintSystem;
     use scrypto::jubjub::{JubjubBls12, fs, edwards, JubjubParams, ToUniform};  
     use crate::elgamal::elgamal_extend;         
 
@@ -382,3 +381,4 @@ fn u32_into_boolean_vec_le<E, CS>(
         // assert_eq!(cs.get_input(5, "rk/x/input variable"), rk.0);
         // assert_eq!(cs.get_input(6, "rk/y/input variable"), rk.1);        
     }
+}    

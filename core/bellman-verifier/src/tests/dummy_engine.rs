@@ -29,7 +29,7 @@ impl RW for Fr {
         Ok(())
     }
 
-    fn read<R: io::Read>(reader: &mut R) -> io::Result<Self> {
+    fn read<R: io::Read>(_reader: &mut R) -> io::Result<Self> {
         unimplemented!();
     }
 }

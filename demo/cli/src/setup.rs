@@ -39,9 +39,7 @@ pub fn setup() -> (Parameters<Bls12>, PreparedVerifyingKey<Bls12>) {
 
 #[cfg(test)]
 mod tests {
-    use super::*;
-    use bellman_verifier::PreparedVerifyingKey as zPreparedVk;
-    use zpairing::bls12_381::Bls12 as zBls12;
+    use super::*;    
 
     #[test]
     fn test_preparedvk_rw() {
