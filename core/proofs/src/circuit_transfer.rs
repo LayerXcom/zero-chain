@@ -349,12 +349,10 @@ fn u32_into_boolean_vec_le<E, CS>(
 #[cfg(test)]
 mod tests {
     use super::*;
-    use pairing::bls12_381::Bls12;
-    use rand::{SeedableRng, Rng, XorShiftRng};    
+    use pairing::{bls12_381::{Bls12, Fr}, Field};
+    use rand::{SeedableRng, Rng, XorShiftRng, Rand};    
     use crate::circuit_test::TestConstraintSystem;
-    use scrypto::jubjub::{JubjubBls12, fs, edwards, JubjubParams, ToUniform};  
-    use crate::elgamal::elgamal_extend;         
-
+    use scrypto::jubjub::{JubjubBls12, fs, edwards, JubjubParams};           
     
     #[test]
     fn test_circuit_transfer() {        
@@ -382,28 +380,37 @@ mod tests {
         };
 
         let viewing_key_r = proof_generation_key_r.into_viewing_key(params);
+        let ivk_r: fs::Fs = viewing_key_r.ivk();
+
         let address_recipient = viewing_key_r.into_payment_address(params);  
         let address_sender_xy = viewing_key_s.into_payment_address(params).0.into_xy(); 
         let address_recipient_xy = address_recipient.0.into_xy();                       
         
-        let ar: fs::Fs = rng.gen();
+        let alpha: fs::Fs = rng.gen();
 
         let value = 10 as u32;
         let remaining_balance = 17 as u32;
         let current_balance = 27 as u32;
-
-        let mut randomness = [0u8; 32];
-        rng.fill_bytes(&mut randomness[..]);
-        let r_fs = fs::Fs::to_uniform(elgamal_extend(&randomness).as_bytes());
+        
+        let r_fs_b = fs::Fs::rand(rng);
+        let r_fs_v = fs::Fs::rand(rng);        
 
         let p_g = FixedGenerators::NoteCommitmentRandomness;
         let public_key_s = params.generator(p_g).mul(ivk_s, params).into();
-        let ciphetext_balance = Ciphertext::encrypt(current_balance, r_fs, &public_key_s, p_g, params);
+        let ciphetext_balance = Ciphertext::encrypt(current_balance, r_fs_b, &public_key_s, p_g, params);
+        
+        let c_bal_left = ciphetext_balance.left.into_xy();
+        let c_bal_right = ciphetext_balance.right.into_xy();
+    
+        let ciphertext_value_sender = Ciphertext::encrypt(value, r_fs_v, &public_key_s, p_g, params);
+        let c_val_s_left = ciphertext_value_sender.left.into_xy();
+        let c_val_right = ciphertext_value_sender.right.into_xy();
 
+        let public_key_r = params.generator(p_g).mul(ivk_r, params).into();
+        let ciphertext_value_recipient = Ciphertext::encrypt(value, r_fs_v, &public_key_r, p_g, params);
+        let c_val_r_left = ciphertext_value_recipient.left.into_xy();
 
-
-        let rk = viewing_key_s.rk(ar, params).into_xy();
-        let randomness: fs::Fs = rng.gen();
+        let rk = viewing_key_s.rk(alpha, params).into_xy();        
 
         let mut cs = TestConstraintSystem::<Bls12>::new();
 
@@ -411,8 +418,8 @@ mod tests {
             params: params,
             value: Some(value),
             remaining_balance: Some(remaining_balance),
-            randomness: Some(randomness.clone()),
-            alpha: Some(ar.clone()),
+            randomness: Some(r_fs_v.clone()),
+            alpha: Some(alpha.clone()),
             proof_generation_key: Some(proof_generation_key_s.clone()),
             ivk: Some(ivk_s.clone()),
             pk_d_recipient: Some(address_recipient.0.clone()),
@@ -421,18 +428,27 @@ mod tests {
 
         instance.synthesize(&mut cs).unwrap();        
         
-        println!("transfer_constraints: {:?}", cs.num_constraints());
         assert!(cs.is_satisfied());
-        // assert_eq!(cs.num_constraints(), 75415);
-        // assert_eq!(cs.hash(), "3ff9338cc95b878a20b0974490633219e032003ced1d3d917cde4f50bc902a12");
+        assert_eq!(cs.num_constraints(), 18278);
+        assert_eq!(cs.hash(), "6858d345922e8a5f173dafb61264ea237b9f0fad75f51c656461cd43fdd3db34");
         
-        // assert_eq!(cs.num_inputs(), 16);
-        // assert_eq!(cs.get_input(0, "ONE"), Fr::one());
-        // assert_eq!(cs.get_input(1, "inputize pk_d_sender/x/input variable"), address_sender_xy.0);
-        // assert_eq!(cs.get_input(2, "inputize pk_d_sender/y/input variable"), address_sender_xy.1);
-        // assert_eq!(cs.get_input(3, "inputize pk_d_recipient/x/input variable"), address_recipient_xy.0);
-        // assert_eq!(cs.get_input(4, "inputize pk_d_recipient/y/input variable"), address_recipient_xy.1);        
-        // assert_eq!(cs.get_input(5, "c_left_sender/x/input variable"), rk.0);
-        // assert_eq!(cs.get_input(6, "c_left_sender/y/input variable"), rk.1);        
+        assert_eq!(cs.num_inputs(), 17);
+        assert_eq!(cs.get_input(0, "ONE"), Fr::one());
+        assert_eq!(cs.get_input(1, "inputize pk_d_sender/x/input variable"), address_sender_xy.0);
+        assert_eq!(cs.get_input(2, "inputize pk_d_sender/y/input variable"), address_sender_xy.1);
+        assert_eq!(cs.get_input(3, "inputize pk_d_recipient/x/input variable"), address_recipient_xy.0);
+        assert_eq!(cs.get_input(4, "inputize pk_d_recipient/y/input variable"), address_recipient_xy.1);        
+        assert_eq!(cs.get_input(5, "c_left_sender/x/input variable"), c_val_s_left.0);
+        assert_eq!(cs.get_input(6, "c_left_sender/y/input variable"), c_val_s_left.1);        
+        assert_eq!(cs.get_input(7, "c_left_recipient/x/input variable"), c_val_r_left.0);
+        assert_eq!(cs.get_input(8, "c_left_recipient/y/input variable"), c_val_r_left.1);        
+        assert_eq!(cs.get_input(9, "c_right/x/input variable"), c_val_right.0);
+        assert_eq!(cs.get_input(10, "c_right/y/input variable"), c_val_right.1);        
+        assert_eq!(cs.get_input(11, "inputize pointl/x/input variable"), c_bal_left.0);
+        assert_eq!(cs.get_input(12, "inputize pointl/y/input variable"), c_bal_left.1);        
+        assert_eq!(cs.get_input(13, "inputize pointr/x/input variable"), c_bal_right.0);
+        assert_eq!(cs.get_input(14, "inputize pointr/y/input variable"), c_bal_right.1);        
+        assert_eq!(cs.get_input(15, "rk/x/input variable"), rk.0);
+        assert_eq!(cs.get_input(16, "rk/y/input variable"), rk.1);        
     }
 }    

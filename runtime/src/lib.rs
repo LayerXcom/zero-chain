@@ -14,7 +14,7 @@ use rstd::prelude::*;
 use primitives::bytes;
 use primitives::{Ed25519AuthorityId, OpaqueMetadata};
 use runtime_primitives::{
-	ApplyResult, transaction_validity::TransactionValidity, Ed25519Signature, generic,
+	ApplyResult, transaction_validity::TransactionValidity, generic,
 	traits::{self, BlakeTwo256, Block as BlockT, StaticLookup}, create_runtime_str
 };
 use client::{
