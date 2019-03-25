@@ -2,8 +2,8 @@
 [![Build Status](https://travis-ci.com/LayerXcom/zero-chain.svg?branch=master)](https://travis-ci.com/LayerXcom/zero-chain)
 [![Gitter](https://badges.gitter.im/LayerXcom/Zerochain.svg)](https://gitter.im/LayerXcom/Zerochain?utm_source=badge&utm_medium=badge&utm_campaign=pr-badge)
 
-Zerochain is a privacy-oriented blockchain on substrate. 
-It is desineged to get efficient zero-knowledge proving, reduce the on-chain storage cost and bring the flexibility for developing applications.
+Zerochain is a privacy-preserving blockchain on substrate. 
+It is designed to get efficient zero-knowledge proving, reduce the on-chain storage cost and bring the flexibility for developing applications.
 
 ## Status
 **WARNING: Zerochain is alpha quality software, improvements and fixes are made frequently, and documentation for technical details doesn't yet exist.**
@@ -86,8 +86,8 @@ You can send the transaction from firefox browser.
 <img src="https://user-images.githubusercontent.com/20852667/54687970-228b2a00-4b60-11e9-8c26-fdfbbb3a17d8.png" width="1100px">
 </div>
 
-### Technical details
-TODO:
+### Documentations
+- [Announcing Zerochain: Applying zk-SNARKs to Substrate](https://medium.com/layerx/announcing-zerochain-5b08e158355d)
 
 ## Contributing
 - Feel free to submit your own issues and PRs
