@@ -41,13 +41,13 @@ impl<'a, E: JubjubEngine> Circuit<E> for Transfer<'a, E> {
         let params = self.params;
 
         // Ensure the value is u32.        
-        u32_into_boolean_vec_le(
+        let value_bits = u32_into_boolean_vec_le(
             cs.namespace(|| "range proof of value"), 
             self.value
         )?;
 
         // Ensure the remaining balance is u32.
-        u32_into_boolean_vec_le(
+        let rem_bal_bits = u32_into_boolean_vec_le(
             cs.namespace(|| "range proof of remaining_balance"), 
             self.remaining_balance
         )?;            
@@ -60,21 +60,14 @@ impl<'a, E: JubjubEngine> Circuit<E> for Transfer<'a, E> {
 
         // Ensure the validity of pk_d_sender
         let pk_d_sender_v = ecc::fixed_base_multiplication(
-            cs.namespace(|| "compute pk_d_sender"),
+            cs.namespace(|| format!("compute pk_d_sender")),
             FixedGenerators::NoteCommitmentRandomness,
             &ivk_v,
             params
         )?;        
 
         // Expose the pk_d_sender publicly
-        pk_d_sender_v.inputize(cs.namespace(|| format!("inputize pk_d_sender")))?;        
-
-
-        // Generate the amount into the circuit
-        let value_bits = u32_into_boolean_vec_le(
-            cs.namespace(|| format!("value bits")), 
-            self.value
-        )?;
+        pk_d_sender_v.inputize(cs.namespace(|| format!("inputize pk_d_sender")))?;                
 
         // Multiply the value to the base point same as FixedGenerators::ElGamal.
         let value_g = ecc::fixed_base_multiplication(
@@ -147,7 +140,11 @@ impl<'a, E: JubjubEngine> Circuit<E> for Transfer<'a, E> {
         c_left_recipient.inputize(cs.namespace(|| format!("c_left_recipient")))?;
         c_right.inputize(cs.namespace(|| format!("c_right")))?;
 
-        
+
+        // The balance encryption validity. 
+        // It is a bit complicated bacause we can not know the randomness of balance.  
+        // Enc_sender(sender_balance).cl - Enc_sender(value).cl 
+        //     == (remaining_balance)G + ivk(Enc_sender(sender_balance).cr - (random)G)
         {
             let bal_gl = ecc::EdwardsPoint::witness(
                 cs.namespace(|| "balance left"), 
@@ -199,21 +196,74 @@ impl<'a, E: JubjubEngine> Circuit<E> for Transfer<'a, E> {
                 &numxr, 
                 &numyr, 
                 params
+            )?;                              
+
+            //  ivk * (random)G
+            let ivk_random = c_right.mul(
+                cs.namespace(|| format!("c_right mul by ivk")),
+                &ivk_v, 
+                params
+                )?;
+            
+            // Enc_sender(sender_balance).cl + ivk * (random)G
+            let bi_left = pointl.add(
+                cs.namespace(|| format!("pointl add ivk_pointl")), 
+                &ivk_random, 
+                params
+                )?;
+            
+            // ivk * Enc_sender(sender_balance).cr
+            let ivk_pointr = pointr.mul(
+                cs.namespace(|| format!("c_left_sender mul by ivk")),
+                &ivk_v,
+                params
+                )?;
+
+            // Compute (remaining_balance)G
+            let rem_bal_g = ecc::fixed_base_multiplication(
+                cs.namespace(|| format!("compute the remaining balance in the exponent")), 
+                FixedGenerators::NoteCommitmentRandomness, 
+                &rem_bal_bits, 
+                params
+                )?;
+
+            // Enc_sender(value).cl + (remaining_balance)G
+            let val_rem_bal = c_left_sender.add(
+                cs.namespace(|| format!("c_left_sender add rem_bal_g")), 
+                &rem_bal_g, 
+                params
+                )?;
+ 
+            // Enc_sender(value).cl + (remaining_balance)G + ivk * Enc_sender(sender_balance).cr
+            let bi_right = val_rem_bal.add(
+                cs.namespace(|| format!("val_rem_bal add ")), 
+                &ivk_pointr, 
+                params
+                )?;
+
+            // The left hand for balance integrity into representation
+            let bi_left_repr = bi_left.repr(
+                cs.namespace(|| format!("bi_left into a representation"))
             )?;
 
+            // The right hand for balance integrity into representation
+            let bi_right_repr = bi_right.repr(
+                cs.namespace(|| format!("bi_right into a representation"))
+            )?;      
+
+            let iter = bi_left_repr.iter().zip(bi_right_repr.iter());
+
+            // Ensure for the sender's balance integrity
+            for (i, (a, b)) in iter.enumerate() {
+                Boolean::enforce_equal(
+                    cs.namespace(|| format!("bi_left equals bi_right {}", i)), 
+                    &a, 
+                    &b
+                )?;                
+            }
+            
             pointl.inputize(cs.namespace(|| format!("inputize pointl")))?;
             pointr.inputize(cs.namespace(|| format!("inputize pointr")))?;
-
-            // TODO:
-            // The balance encryption validity. 
-            // It is a bit complicated bacause we can not know the randomness of balance.
-            // { (current_balance)G - (value)G } + (rbar - random)pk_d_sender  
-            //   == (remaining_balance)G + (ivk){ (rbar)G - (random)G }
-            // rbar is the current_balance randomness   
-            // Enc_sender(sender_balance).cl - Enc_sender(value).cl 
-            //     == (remaining_balance)G + ivk(Enc_sender(sender_balance).cr - Enc(random))
-
-            // let neg_left_sender = 
         }
 
 
@@ -299,12 +349,10 @@ fn u32_into_boolean_vec_le<E, CS>(
 #[cfg(test)]
 mod tests {
     use super::*;
-    use pairing::bls12_381::Bls12;
-    use rand::{SeedableRng, Rng, XorShiftRng};    
+    use pairing::{bls12_381::{Bls12, Fr}, Field};
+    use rand::{SeedableRng, Rng, XorShiftRng, Rand};    
     use crate::circuit_test::TestConstraintSystem;
-    use scrypto::jubjub::{JubjubBls12, fs, edwards, JubjubParams, ToUniform};  
-    use crate::elgamal::elgamal_extend;         
-
+    use scrypto::jubjub::{JubjubBls12, fs, edwards, JubjubParams};           
     
     #[test]
     fn test_circuit_transfer() {        
@@ -332,24 +380,37 @@ mod tests {
         };
 
         let viewing_key_r = proof_generation_key_r.into_viewing_key(params);
-        let address_recipient = viewing_key_r.into_payment_address(params);                          
+        let ivk_r: fs::Fs = viewing_key_r.ivk();
+
+        let address_recipient = viewing_key_r.into_payment_address(params);  
+        let address_sender_xy = viewing_key_s.into_payment_address(params).0.into_xy(); 
+        let address_recipient_xy = address_recipient.0.into_xy();                       
         
-        let ar: fs::Fs = rng.gen();
+        let alpha: fs::Fs = rng.gen();
 
         let value = 10 as u32;
         let remaining_balance = 17 as u32;
         let current_balance = 27 as u32;
-
-        let mut randomness = [0u8; 32];
-        rng.fill_bytes(&mut randomness[..]);
-        let r_fs = fs::Fs::to_uniform(elgamal_extend(&randomness).as_bytes());
+        
+        let r_fs_b = fs::Fs::rand(rng);
+        let r_fs_v = fs::Fs::rand(rng);        
 
         let p_g = FixedGenerators::NoteCommitmentRandomness;
-        let public_key = params.generator(p_g).mul(r_fs, params).into();
-        let ciphetext = Ciphertext::encrypt(current_balance, r_fs, &public_key, p_g, params);
+        let public_key_s = params.generator(p_g).mul(ivk_s, params).into();
+        let ciphetext_balance = Ciphertext::encrypt(current_balance, r_fs_b, &public_key_s, p_g, params);
+        
+        let c_bal_left = ciphetext_balance.left.into_xy();
+        let c_bal_right = ciphetext_balance.right.into_xy();
+    
+        let ciphertext_value_sender = Ciphertext::encrypt(value, r_fs_v, &public_key_s, p_g, params);
+        let c_val_s_left = ciphertext_value_sender.left.into_xy();
+        let c_val_right = ciphertext_value_sender.right.into_xy();
 
-        let rk = viewing_key_s.rk(ar, params).into_xy();
-        let randomness: fs::Fs = rng.gen();
+        let public_key_r = params.generator(p_g).mul(ivk_r, params).into();
+        let ciphertext_value_recipient = Ciphertext::encrypt(value, r_fs_v, &public_key_r, p_g, params);
+        let c_val_r_left = ciphertext_value_recipient.left.into_xy();
+
+        let rk = viewing_key_s.rk(alpha, params).into_xy();        
 
         let mut cs = TestConstraintSystem::<Bls12>::new();
 
@@ -357,28 +418,37 @@ mod tests {
             params: params,
             value: Some(value),
             remaining_balance: Some(remaining_balance),
-            randomness: Some(randomness.clone()),
-            alpha: Some(ar.clone()),
+            randomness: Some(r_fs_v.clone()),
+            alpha: Some(alpha.clone()),
             proof_generation_key: Some(proof_generation_key_s.clone()),
             ivk: Some(ivk_s.clone()),
             pk_d_recipient: Some(address_recipient.0.clone()),
-            encrypted_balance: Some(ciphetext.clone())            
+            encrypted_balance: Some(ciphetext_balance.clone())            
         };        
 
         instance.synthesize(&mut cs).unwrap();        
         
-        println!("transfer_constraints: {:?}", cs.num_constraints());
         assert!(cs.is_satisfied());
-        // assert_eq!(cs.num_constraints(), 75415);
-        // assert_eq!(cs.hash(), "3ff9338cc95b878a20b0974490633219e032003ced1d3d917cde4f50bc902a12");
+        assert_eq!(cs.num_constraints(), 18278);
+        assert_eq!(cs.hash(), "6858d345922e8a5f173dafb61264ea237b9f0fad75f51c656461cd43fdd3db34");
         
-        // assert_eq!(cs.num_inputs(), 7);
-        // assert_eq!(cs.get_input(0, "ONE"), Fr::one());
-        // assert_eq!(cs.get_input(1, "balance commitment/balance commitment point/x/input variable"), expected_balance_cm.0);
-        // assert_eq!(cs.get_input(2, "balance commitment/balance commitment point/y/input variable"), expected_balance_cm.1);
-        // assert_eq!(cs.get_input(3, "transfer commitment/transfer commitment point/x/input variable"), expected_transfer_cm.0);
-        // assert_eq!(cs.get_input(4, "transfer commitment/transfer commitment point/y/input variable"), expected_transfer_cm.1);        
-        // assert_eq!(cs.get_input(5, "rk/x/input variable"), rk.0);
-        // assert_eq!(cs.get_input(6, "rk/y/input variable"), rk.1);        
+        assert_eq!(cs.num_inputs(), 17);
+        assert_eq!(cs.get_input(0, "ONE"), Fr::one());
+        assert_eq!(cs.get_input(1, "inputize pk_d_sender/x/input variable"), address_sender_xy.0);
+        assert_eq!(cs.get_input(2, "inputize pk_d_sender/y/input variable"), address_sender_xy.1);
+        assert_eq!(cs.get_input(3, "inputize pk_d_recipient/x/input variable"), address_recipient_xy.0);
+        assert_eq!(cs.get_input(4, "inputize pk_d_recipient/y/input variable"), address_recipient_xy.1);        
+        assert_eq!(cs.get_input(5, "c_left_sender/x/input variable"), c_val_s_left.0);
+        assert_eq!(cs.get_input(6, "c_left_sender/y/input variable"), c_val_s_left.1);        
+        assert_eq!(cs.get_input(7, "c_left_recipient/x/input variable"), c_val_r_left.0);
+        assert_eq!(cs.get_input(8, "c_left_recipient/y/input variable"), c_val_r_left.1);        
+        assert_eq!(cs.get_input(9, "c_right/x/input variable"), c_val_right.0);
+        assert_eq!(cs.get_input(10, "c_right/y/input variable"), c_val_right.1);        
+        assert_eq!(cs.get_input(11, "inputize pointl/x/input variable"), c_bal_left.0);
+        assert_eq!(cs.get_input(12, "inputize pointl/y/input variable"), c_bal_left.1);        
+        assert_eq!(cs.get_input(13, "inputize pointr/x/input variable"), c_bal_right.0);
+        assert_eq!(cs.get_input(14, "inputize pointr/y/input variable"), c_bal_right.1);        
+        assert_eq!(cs.get_input(15, "rk/x/input variable"), rk.0);
+        assert_eq!(cs.get_input(16, "rk/y/input variable"), rk.1);        
     }
 }    

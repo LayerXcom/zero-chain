@@ -39,12 +39,11 @@ fn main() {
         println!("{}", e);
         std::process::exit(1);
     });
-
 }
 
 fn cli() -> Result<(), String> {
-    const VERIFICATION_KEY_PATH: &str = "verification.params";
-    const PROVING_KEY_PATH: &str = "proving.params";    
+    const VERIFICATION_KEY_PATH: &str = "demo/cli/verification.params";
+    const PROVING_KEY_PATH: &str = "demo/cli/proving.params";    
     const DEFAULT_AMOUNT: &str = "10";
     const DEFAULT_BALANCE: &str = "100";
     const ALICESEED: &str = "416c696365202020202020202020202020202020202020202020202020202020";
