@@ -50,7 +50,16 @@ cd zero-chain
 cargo build --release
 ```
 
-### Running the client
+## A brief tutorial for Sending transactions
+This tutorial will explain the basic confidential transfer on Zerochain. Alice has the **encrypted** balance of 100 coins and sends **encrypted** 10 coins to Bob. So, Alice's balance will be 90 coins and Bob will get the 10 coins. All operations are done encrypted by ElGamal encryption and zk-SNARKs.
+
+1. Setup for zkSNARKs from CLI
+- Get the proving key and the veifying key for zk-SNARKs
+```
+./target/release/zero-chain-cli setup
+```
+
+2. Run the nodes
 ```
 ./target/release/zero-chain --dev
 ```
@@ -59,26 +68,23 @@ cargo build --release
 ./target/release/zero-chain purge-chain --dev
 ```
 
-## A brief tutorial for Sending transactions
-This tutorial will explain the basic confidential transfer on Zerochain. Alice has the **encrypted** balance of 100 coins and sends **encrypted** 10 coins to Bob. So, Alice's balance will be 90 coins and Bob will get the 10 coins. All operations are done encrypted by ElGamal encryption and zk-SNARKs.
-
-1. Run the UI apps
+3. Run the UI apps
 
 The UI repository is here:
 https://github.com/LayerXcom/zero-chain-ui
 
-2. Generate the transaction components from CLI
-- Get the proving key and the veifying key for zk-SNARKs
-```
-./target/release/zero-chain-cli setup
-```
-
-- Generate the transaction components (Executing the zero knowledge proving and the encryption)
+4. Generate the transaction from CLI
+- Generate the transaction components (Computing a zero-knowledge proofs and an encryption)
 ```
 ./target/release/zero-chain-cli generate-tx
 ```
 
-3. Fill out the form:
+- For more information (if you want to set the customized amount and address)
+```
+./target/release/zero-chain-cli generate-tx --help
+```
+
+5. Fill out the form:
 
 You can send the transaction from firefox browser.
 
