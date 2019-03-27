@@ -48,8 +48,7 @@ decl_module! {
             value_sender: Ciphertext,
             value_recipient: Ciphertext,                  
             rk: SigVerificationKey  // TODO: Extract from origin            
-        ) -> Result {
-            // Temporally removed the signature verification.
+        ) -> Result {            
 			// let rk = ensure_signed(origin)?;            
             
             // Get zkproofs with the type
@@ -221,7 +220,7 @@ impl<T: Trait> Module<T> {
         match verify_proof(&pvk, &zkproof, &public_input[..]) {
             // No error, and proof verification successful
             Ok(true) => true,
-            _ => {runtime_io::print("Invalid proof!!!!!!"); false},                
+            _ => {runtime_io::print("Invalid proof!!!!"); false},                
         }        
     } 
 

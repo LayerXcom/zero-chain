@@ -32,7 +32,7 @@ use scrypto::{
     jubjub::{fs::Fs, FixedGenerators, JubjubBls12, JubjubParams},    
 };
 use proofs::{
-    primitives::{ExpandedSpendingKey, ViewingKey, PaymentAddress},
+    primitives::{ProofGenerationKey, EncryptionKey},
     elgamal::Ciphertext,
 };
 use bellman::groth16::{Parameters, PreparedVerifyingKey};
@@ -57,10 +57,9 @@ pub struct PkdAddress(pub Vec<u8>);
 #[wasm_bindgen]
 pub fn gen_account_id(sk: &[u8]) -> JsValue {
     let params = &zJubjubBls12::new();
-    let exps = keys::ExpandedSpendingKey::<zBls12>::from_spending_key(sk);
-
-    let viewing_key = keys::ViewingKey::<zBls12>::from_expanded_spending_key(&exps, params);
-    let address = viewing_key.into_payment_address(params);
+    
+    let pgk = keys::ProofGenerationKey::from_ok_bytes(sk, params);
+    let address = pgk.into_encryption_key(params);    
 
     let mut v = [0u8; 32];
     address.write(&mut v[..]).expect("fails to write payment address");    
@@ -69,26 +68,22 @@ pub fn gen_account_id(sk: &[u8]) -> JsValue {
     JsValue::from_serde(&pkd_address).expect("fails to write json")
 }
 
-#[derive(Serialize, Deserialize)]
-pub struct Ivk(pub Vec<u8>);
-
 #[wasm_bindgen]
-pub fn gen_ivk(sk: &[u8]) -> Vec<u8> {
+pub fn gen_bdk(sk: &[u8]) -> Vec<u8> {
     let params = &zJubjubBls12::new();
-    let exps = keys::ExpandedSpendingKey::<zBls12>::from_spending_key(sk);
 
-    let viewing_key = keys::ViewingKey::<zBls12>::from_expanded_spending_key(&exps, params);
-    let ivk = viewing_key.ivk();
+    let pgk = keys::ProofGenerationKey::from_ok_bytes(sk, params);
+    let bdk = pgk.bdk();       
 
     let mut buf = vec![];
-    ivk.into_repr().write_le(&mut buf).unwrap();    
+    bdk.into_repr().write_le(&mut buf).unwrap();    
 
     buf    
 }
 
 #[wasm_bindgen]
 pub fn gen_rsk(sk: &[u8]) -> Vec<u8> {    
-    let exps = keys::ExpandedSpendingKey::<zBls12>::from_spending_key(sk);
+    let pgk = ProofGenerationKey::from_ok_bytes(sk, params);
 
     let mut buf = vec![];
     exps.ask.into_repr().write_le(&mut buf).unwrap();
@@ -99,12 +94,10 @@ pub fn gen_rsk(sk: &[u8]) -> Vec<u8> {
 #[wasm_bindgen]
 pub fn gen_rvk(sk: &[u8]) -> Vec<u8> {
     let params = &zJubjubBls12::new();
-    let exps = keys::ExpandedSpendingKey::<zBls12>::from_spending_key(sk);
-
-    let viewing_key = keys::ViewingKey::<zBls12>::from_expanded_spending_key(&exps, params);
+    let pgk = ProofGenerationKey::from_ok_bytes(sk, params);    
 
     let mut buf = vec![];
-    viewing_key.ak.write(&mut buf).unwrap();
+    pgk.0.write(&mut buf).unwrap();
 
     buf
 }

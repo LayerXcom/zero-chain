@@ -1,7 +1,6 @@
 #[cfg(feature = "std")]
 use serde::{Serialize, Serializer, Deserialize, Deserializer};
-// use primitive_types::H256;
-use keys::PaymentAddress;
+use keys::EncryptionKey;
 use fixed_hash::construct_fixed_hash;
 use pairing::bls12_381::Bls12;
 use crate::JUBJUB;
@@ -20,12 +19,6 @@ construct_fixed_hash! {
 }
 
 pub type PkdAddress = H256;
-
-// #[derive(Eq, PartialEq, Clone, Default, Encode, Decode, Copy)]
-// #[cfg_attr(feature = "std", derive(Debug, Serialize, Deserialize))]
-// pub struct PkdAddress(pub H256);
-// pub struct PkdAddress(pub [u8; 32]);
-
 
 #[cfg(feature = "std")]
 impl Serialize for PkdAddress {
@@ -59,29 +52,22 @@ impl Decode for PkdAddress {
 }
 
 impl PkdAddress {
-    pub fn into_payment_address(&self) -> Option<PaymentAddress<Bls12>> {         
-        PaymentAddress::<Bls12>::read(&mut &self.0[..], &JUBJUB).ok()
+    pub fn into_encryption_key(&self) -> Option<EncryptionKey<Bls12>> {         
+        EncryptionKey::<Bls12>::read(&mut &self.0[..], &JUBJUB).ok()
     }
 
-    pub fn from_payment_address(address: &PaymentAddress<Bls12>) -> Self {
+    pub fn from_encryption_key(address: &EncryptionKey<Bls12>) -> Self {
         let mut writer = [0u8; 32];
-        address.write(&mut writer[..]).unwrap();
-        // PkdAddress::from_slice(&writer)      
+        address.write(&mut writer[..]).unwrap();        
         H256::from_slice(&writer)
     }
 }
 
-impl Into<PkdAddress> for PaymentAddress<Bls12> {
+impl Into<PkdAddress> for EncryptionKey<Bls12> {
     fn into(self) -> PkdAddress {
-        PkdAddress::from_payment_address(&self)
+        PkdAddress::from_encryption_key(&self)
     }
 }
-
-// impl From<H256> for PkdAddress {
-//     fn from(h: H256) -> Self {
-//         PkdAddress(h)
-//     }
-// }
 
 #[cfg(feature = "std")]
 impl AsBytesRef for PkdAddress {
@@ -105,12 +91,10 @@ mod tests {
 
         let ex_sk = ExpandedSpendingKey::<Bls12>::from_spending_key(&seed[..]);
         let viewing_key = ViewingKey::<Bls12>::from_expanded_spending_key(&ex_sk, &JUBJUB);        
-        let addr1 = viewing_key.into_payment_address(&JUBJUB);
+        let addr1 = viewing_key.into_encryption_key(&JUBJUB);
 
-        let account_id = PkdAddress::from_payment_address(&addr1);
-        println!("account_id: {:?}", account_id);
-        println!("pkd_address: {:?}", PkdAddress::from_slice(b"Alice                           "));
-        let addr2 = account_id.into_payment_address().unwrap();
+        let account_id = PkdAddress::from_encryption_key(&addr1); 
+        let addr2 = account_id.into_encryption_key().unwrap();
         assert!(addr1 == addr2);
     }
 }

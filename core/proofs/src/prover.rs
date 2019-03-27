@@ -18,7 +18,7 @@ use scrypto::{
 };
 use crate::circuit_transfer::Transfer;
 use crate::primitives::{    
-    PaymentAddress, 
+    EncryptionKey, 
     ProofGenerationKey,     
 };
 use crate::elgamal::Ciphertext;
@@ -26,8 +26,8 @@ use crate::elgamal::Ciphertext;
 pub struct TransferProof<E: JubjubEngine> {
     pub proof: Proof<E>,
     pub rk: PublicKey<E>, // re-randomization sig-verifying key    
-    pub address_sender: PaymentAddress<E>,    
-    pub address_recipient: PaymentAddress<E>,
+    pub address_sender: EncryptionKey<E>,    
+    pub address_recipient: EncryptionKey<E>,
     pub cipher_val_s: Ciphertext<E>,
     pub cipher_val_r: Ciphertext<E>,    
     pub cipher_balance: Ciphertext<E>,    
@@ -41,20 +41,18 @@ impl<E: JubjubEngine> TransferProof<E> {
         proving_key: &Parameters<E>, 
         prepared_vk: &PreparedVerifyingKey<E>,
         proof_generation_key: ProofGenerationKey<E>,
-        address_recipient: PaymentAddress<E>,   
+        address_recipient: EncryptionKey<E>,   
         ciphertext_balance: Ciphertext<E>,
         rng: &mut R,  
         params: &E::Params,        
     ) -> Result<Self, &'static str>
     {
         let randomness = E::Fs::rand(rng);   
-        
-        let viewing_key = proof_generation_key.into_viewing_key(params);
-        let ivk = viewing_key.ivk();
+                
+        let dbk = proof_generation_key.dbk();
+        let ek_sender = proof_generation_key.into_encryption_key(params);        
 
-        let address_sender = viewing_key.into_payment_address(params);
-
-        let rk = PublicKey(proof_generation_key.ak.clone().into())
+        let rk = PublicKey(proof_generation_key.0.clone().into())
             .randomize(
                 alpha,
                 FixedGenerators::NoteCommitmentRandomness,
@@ -68,7 +66,7 @@ impl<E: JubjubEngine> TransferProof<E> {
             randomness: Some(randomness.clone()),
             alpha: Some(alpha.clone()),
             proof_generation_key: Some(proof_generation_key.clone()),
-            ivk: Some(ivk.clone()),
+            decryption_key: Some(dbk.clone()),
             pk_d_recipient: Some(address_recipient.0.clone()),
             encrypted_balance: Some(ciphertext_balance.clone())            
         };
@@ -82,7 +80,7 @@ impl<E: JubjubEngine> TransferProof<E> {
         let cipher_val_s = Ciphertext::encrypt(
             value, 
             randomness, 
-            &address_sender.0, 
+            &ek_sender.0, 
             FixedGenerators::NoteCommitmentRandomness,
             params
         );
@@ -96,7 +94,7 @@ impl<E: JubjubEngine> TransferProof<E> {
         );
 
         {
-            let (x, y) = address_sender.0.into_xy();
+            let (x, y) = ek_sender.0.into_xy();
             public_input[0] = x;
             public_input[1] = y;
         }
@@ -143,7 +141,7 @@ impl<E: JubjubEngine> TransferProof<E> {
         let transfer_proof = TransferProof {
             proof: proof,        
             rk: rk,             
-            address_sender: address_sender,  
+            address_sender: ek_sender,  
             address_recipient: address_recipient,          
             cipher_val_s: cipher_val_s,
             cipher_val_r: cipher_val_r,
@@ -200,20 +198,15 @@ mod tests {
         let balance = 100 as u32;
         let alpha = fs::Fs::rand(rng);                 
 
-        let sender_seed: [u8; 32] = rng.gen();
-        let recipient_seed: [u8; 32] = rng.gen();       
+        let sender_ok = fs::Fs::rand(rng);
+        let recipient_ok = fs::Fs::rand(rng);       
 
-        let ex_sk_s = ExpandedSpendingKey::<Bls12>::from_spending_key(&sender_seed[..]);
-        let ex_sk_r = ExpandedSpendingKey::<Bls12>::from_spending_key(&recipient_seed[..]);
-
-        let proof_generation_key = ex_sk_s.into_proof_generation_key(params);
-        let viewing_key_r = ViewingKey::<Bls12>::from_expanded_spending_key(&ex_sk_r, params);
-        let address_recipient = viewing_key_r.into_payment_address(params);
-        
-        let sk_fs = fs::Fs::to_uniform(elgamal_extend(&sender_seed).as_bytes()).into_repr();
+        let pgk_sender = ProofGenerationKey::from_origin_key(sender_ok, params);
+        let ek_recipient = EncryptionKey::from_origin_key(recipient_ok, params);        
+        let dbk = pgk_sender.dbk();
         
         let r_fs = fs::Fs::rand(rng);
-        let public_key = params.generator(p_g).mul(sk_fs, params).into();
+        let public_key = params.generator(p_g).mul(dbk, params).into();
         let ciphertext_balance = Ciphertext::encrypt(balance, r_fs, &public_key, p_g, params);
 
         let (proving_key, prepared_vk) = get_pk_and_vk();     
@@ -225,50 +218,14 @@ mod tests {
             &proving_key, 
             &prepared_vk, 
             proof_generation_key, 
-            address_recipient, 
+            ek_recipient, 
             ciphertext_balance, 
             &mut rng,
             params
         );
 
         assert!(proofs.is_ok());
-    }
-
-    #[test]
-    fn test_gen_proof_from_cli() {                
-        let pkd_addr_bob: [u8; 32] = hex!("a23bb484f72b28a4179a71057c4528648dfb37974ccd84b38aa3e342f9598515");                
-        let enc100_by_alice: [u8; 64] = hex!("3f101bd6575876bbf772e25ed84728e012295b51f1be37b8451553184b458aeeac776c796563fcd44cc49cfaea8bb796952c266e47779d94574c10ad01754b11");                    
-
-        let params = &JubjubBls12::new();
-        let rng = &mut XorShiftRng::from_seed([0x5dbe6259, 0x8d313d76, 0x3237db17, 0xe5bc0654]);        
-
-        let value = 10 as u32;
-        let remaining_balance = 90 as u32;
-        let alpha = fs::Fs::zero();
-        let (proving_key, prepared_vk) = get_pk_and_vk();  
-
-        let alice_seed = b"Alice                           ";
-        let ex_sk_s = ExpandedSpendingKey::<Bls12>::from_spending_key(&alice_seed[..]);
-        let proof_generation_key = ex_sk_s.into_proof_generation_key(params);
-
-        let ciphertext_balance = Ciphertext::<Bls12>::read(&mut &enc100_by_alice[..], params).unwrap();
-        let address_recipient = PaymentAddress::<Bls12>::read(&mut &pkd_addr_bob[..], params).unwrap();
-
-        let proofs = TransferProof::gen_proof(
-            value, 
-            remaining_balance, 
-            alpha, 
-            &proving_key, 
-            &prepared_vk, 
-            proof_generation_key, 
-            address_recipient, 
-            ciphertext_balance, 
-            rng,
-            params
-        );
-
-        assert!(proofs.is_ok());
-    }
+    }   
 
     #[test]
     fn test_read_proving_key() {
