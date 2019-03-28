@@ -146,7 +146,14 @@ decl_storage! {
         // The encrypted balance for each account
         pub EncryptedBalance get(encrypted_balance) config() : map PkdAddress => Option<Ciphertext>; 
         // The verification key of zk proofs (only readable)
-        pub VerifyingKey get(verifying_key) config(): PreparedVk;                 
+        pub VerifyingKey get(verifying_key) config(): PreparedVk;
+
+        // The fee required to make a confidential transfer
+        pub ConfTransferFee get(conf_transfer_fee) config() : u64;
+        // The fee to be paid for making a transaction; the base.
+        // pub ConfTransactionBaseFee get(conf_transaction_base_fee) config() : T::Balance;
+        // The fee to be paid for making a transaction; the per-byte portion.
+        // pub ConfTransactionByteFee get(conf_transaction_byte_fee) config() : T::Balance;
     }
 }
 
