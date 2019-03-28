@@ -13,10 +13,15 @@ use pairing::{
 };
 use jubjub::{     
         redjubjub::{        
-            PublicKey,             
+            PublicKey,
         },
+        curve::{
+            FixedGenerators,
+            fs::Fs,
+            JubjubBls12,
+        }
     };
-
+use rand::{SeedableRng, XorShiftRng, Rand};
 use zprimitives::{
     pkd_address::PkdAddress, 
     ciphertext::Ciphertext, 
@@ -26,6 +31,7 @@ use zprimitives::{
 };
 use keys::PaymentAddress;
 use zcrypto::elgamal;
+use zcrypto::elgamal::Ciphertext as zCiphertext;
 use runtime_io;
 
 
@@ -109,7 +115,22 @@ decl_module! {
                     &srk,                    
                 ),
                 "Invalid zkproof"
-            );                        
+            );
+
+            // Get transaction fee
+            let tx_fee = Self::conf_transfer_fee();
+            let params = &JubjubBls12::new();
+            let rng = &mut XorShiftRng::from_seed([0xbc4f6d44, 0xd62f276c, 0xb963afd0, 0x5455863d]);
+            let r_fs = Fs::rand(rng);
+            let p_g = FixedGenerators::Diversifier;
+            let enc_tx_fee = zCiphertext::encrypt(tx_fee, r_fs, &saddr_sender.0, p_g, params);
+
+            // Charge transaction fee
+            <EncryptedBalance<T>>::mutate(address_sender, |balance| {
+                let charged_balance = balance.clone().map(
+                    |_| Ciphertext::from_ciphertext(&bal_sender.sub_no_params(&enc_tx_fee)));
+                *balance = charged_balance
+            });
 
             // Get balance_recipient with the option type
             let bal_recipient = match Self::encrypted_balance(address_recipient) { 
@@ -149,7 +170,7 @@ decl_storage! {
         pub VerifyingKey get(verifying_key) config(): PreparedVk;
 
         // The fee required to make a confidential transfer
-        pub ConfTransferFee get(conf_transfer_fee) config() : u64;
+        pub ConfTransferFee get(conf_transfer_fee) build(|_| return 1) : u32;
         // The fee to be paid for making a transaction; the base.
         // pub ConfTransactionBaseFee get(conf_transaction_base_fee) config() : T::Balance;
         // The fee to be paid for making a transaction; the per-byte portion.
@@ -235,6 +256,7 @@ impl<T: Trait> Module<T> {
     // fn is_small_order<Order>(p: &edwards::Point<Bls12, Order>, params: &JubjubBls12) -> bool {
     //     p.double(params).double(params).double(params) == edwards::Point::zero()
     // }
+
 }
 
 #[cfg(feature = "std")]
