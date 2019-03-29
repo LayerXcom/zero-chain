@@ -156,7 +156,7 @@ impl<E: JubjubEngine> TransferProof<E> {
 mod tests {
     use super::*;
     use rand::{SeedableRng, XorShiftRng, Rng};
-    use crate::primitives::{ExpandedSpendingKey, ViewingKey};
+    use crate::primitives::{ProofGenerationKey, EncryptionKey};
     use scrypto::jubjub::{fs, ToUniform, JubjubParams, JubjubBls12};
     use crate::elgamal::elgamal_extend;
     use pairing::{PrimeField, bls12_381::Bls12};
@@ -201,12 +201,14 @@ mod tests {
         let sender_ok = fs::Fs::rand(rng);
         let recipient_ok = fs::Fs::rand(rng);       
 
-        let pgk_sender = ProofGenerationKey::from_origin_key(sender_ok, params);
-        let ek_recipient = EncryptionKey::from_origin_key(recipient_ok, params);        
-        let dbk = pgk_sender.dbk();
+        let proof_generation_key = ProofGenerationKey::<Bls12>::from_origin_key(&sender_ok, params);
+
+        let pgk_sender = ProofGenerationKey::<Bls12>::from_origin_key(&sender_ok, params);
+        let ek_recipient = EncryptionKey::<Bls12>::from_origin_key(&recipient_ok, params);        
+        let bdk = pgk_sender.bdk();
         
         let r_fs = fs::Fs::rand(rng);
-        let public_key = params.generator(p_g).mul(dbk, params).into();
+        let public_key = params.generator(p_g).mul(bdk, params).into();
         let ciphertext_balance = Ciphertext::encrypt(balance, r_fs, &public_key, p_g, params);
 
         let (proving_key, prepared_vk) = get_pk_and_vk();     

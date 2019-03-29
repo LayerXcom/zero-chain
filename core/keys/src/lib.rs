@@ -33,92 +33,12 @@ use jubjub::{
 
 use blake2_rfc::{
     blake2s::Blake2s, 
-    blake2b::{Blake2b, Blake2bResult}
+    blake2b::Blake2b
 };
 
 pub const PRF_EXPAND_PERSONALIZATION: &'static [u8; 16] = b"zech_ExpandSeed_";
 pub const CRH_BDK_PERSONALIZATION: &'static [u8; 8] = b"zech_bdk";
 pub const KEY_DIVERSIFICATION_PERSONALIZATION: &'static [u8; 8] = b"zech_div";
-
-// fn prf_expand(sk: &[u8], t: &[u8]) -> Blake2bResult {
-//     prf_expand_vec(sk, &vec![t])
-// }
-
-// fn prf_expand_vec(sk: &[u8], ts: &[&[u8]]) -> Blake2bResult {
-//     let mut h = Blake2b::with_params(64, &[], &[], PRF_EXPAND_PERSONALIZATION);
-//     h.update(sk);
-//     for t in ts {
-//         h.update(t);
-//     }
-//     h.finalize()
-// }
-
-// /// Extend the secret key to 64 bits for the scalar field generation.
-// pub fn prf_extend_wo_t(sk: &[u8]) -> Blake2bResult {
-//     let mut h = Blake2b::with_params(64, &[], &[], PRF_EXPAND_PERSONALIZATION);
-//     h.update(sk);
-//     h.finalize()
-// }
-
-// #[derive(Debug, Clone, PartialEq)]
-// pub struct ExpandedSpendingKey<E: JubjubEngine> {
-//     pub ask: E::Fs,
-//     pub nsk: E::Fs,
-// }
-
-// impl<E: JubjubEngine> ExpandedSpendingKey<E> {
-//     /// Generate the 64bytes extend_spending_key from the 32bytes spending key.
-//     pub fn from_spending_key(sk: &[u8]) -> Self {
-//         let ask = E::Fs::to_uniform(prf_expand(sk, &[0x00]).as_bytes());
-//         let nsk = E::Fs::to_uniform(prf_expand(sk, &[0x01]).as_bytes());
-//         ExpandedSpendingKey { ask, nsk }
-//     }
-
-//     pub fn into_proof_generation_key(&self, params: &E::Params) -> ProofGenerationKey<E> {
-//         ProofGenerationKey {
-//             ak: params.generator(FixedGenerators::Diversifier).mul(self.ask, params),
-//             nsk: self.nsk,
-//         }
-//     }
-
-//     pub fn write<W: io::Write>(&self, mut writer: W) -> io::Result<()> {
-//         self.ask.into_repr().write_le(&mut writer)?;
-//         self.nsk.into_repr().write_le(&mut writer)?;
-//         Ok(())
-//     }
-
-//     pub fn read<R: io::Read>(mut reader: R) -> io::Result<Self> {
-//         let mut ask_repr = <E::Fs as PrimeField>::Repr::default();
-//         ask_repr.read_le(&mut reader)?;
-//         let ask = E::Fs::from_repr(ask_repr)
-//             .map_err(|_| io::Error::InvalidData)?;
-
-//         let mut nsk_repr = <E::Fs as PrimeField>::Repr::default();
-//         nsk_repr.read_le(&mut reader)?;
-//         let nsk = E::Fs::from_repr(nsk_repr)
-//             .map_err(|_| io::Error::InvalidData)?;
-
-//         Ok(ExpandedSpendingKey {
-//             ask,
-//             nsk,
-//         })
-//     }
-// } 
-
-// #[derive(Clone)]
-// pub struct ProofGenerationKey<E: JubjubEngine> (
-//     edwards::Point<E, PrimeOrder>
-// );   
-
-// impl<E: JubjubEngine> ProofGenerationKey<E> {
-//     /// Generate viewing key from proof generation key.
-//     pub fn into_viewing_key(&self, params: &E::Params) -> ViewingKey<E> {
-//         ViewingKey {
-//             ak: self.ak.clone(),
-//             nk: params.generator(FixedGenerators::Diversifier).mul(self.nsk, params)
-//         }
-//     }
-// }
 
 pub fn bytes_to_fs<E: JubjubEngine>(bytes: &[u8]) -> E::Fs {
     let mut h = Blake2b::with_params(64, &[], &[], PRF_EXPAND_PERSONALIZATION);
@@ -236,7 +156,7 @@ impl<E: JubjubEngine> EncryptionKey<E> {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use rand::{Rng, SeedableRng, XorShiftRng};
+    use rand::{Rng, SeedableRng, XorShiftRng, Rand};
     use jubjub::curve::{JubjubBls12, fs};
     use pairing::bls12_381::Bls12;
     
@@ -246,7 +166,7 @@ mod tests {
         let rng = &mut XorShiftRng::from_seed([0x3dbe6259, 0x8d313d76, 0x3237db17, 0xe5bc0654]);
 
         let origin_key = fs::Fs::rand(rng);   
-        let addr1 = EncryptionKey::from_origin_key(origin_key, params);
+        let addr1 = EncryptionKey::from_origin_key(&origin_key, params);
 
         let mut v = vec![];
         addr1.write(&mut v).unwrap();

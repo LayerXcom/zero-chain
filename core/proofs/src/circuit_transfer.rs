@@ -352,38 +352,25 @@ mod tests {
     use pairing::{bls12_381::{Bls12, Fr}, Field};
     use rand::{SeedableRng, Rng, XorShiftRng, Rand};    
     use crate::circuit_test::TestConstraintSystem;
-    use scrypto::jubjub::{JubjubBls12, fs, edwards, JubjubParams};           
+    use scrypto::jubjub::{JubjubBls12, fs, edwards, JubjubParams};    
+    use crate::primitives::EncryptionKey;       
     
     #[test]
     fn test_circuit_transfer() {        
         let params = &JubjubBls12::new();
         let rng = &mut XorShiftRng::from_seed([0x3dbe6258, 0x8d313d76, 0x3237db17, 0xe5bc0654]);        
 
-        let nsk_s: fs::Fs = rng.gen();
-        let ak_s = edwards::Point::rand(rng, params).mul_by_cofactor(params);
+        let sk_fs_s: fs::Fs = rng.gen();
+        let sk_fs_r: fs::Fs = rng.gen();
 
-        let proof_generation_key_s = ProofGenerationKey {
-            ak: ak_s.clone(),
-            nsk: nsk_s.clone()
-        };
-
-        let viewing_key_s = proof_generation_key_s.into_viewing_key(params);
-        let decryption_key_s: fs::Fs = viewing_key_s.dbk();
-                     
-        let nsk_r: fs::Fs = rng.gen();
+        let proof_generation_key_s = ProofGenerationKey::<Bls12>::from_origin_key(&sk_fs_s, params);
+        let proof_generation_key_r = ProofGenerationKey::<Bls12>::from_origin_key(&sk_fs_r, params);
         
-        let ak_r = edwards::Point::rand(rng, params).mul_by_cofactor(params);
+        let decryption_key_s: fs::Fs = proof_generation_key_s.bdk();                                             
+        let decryption_key_r: fs::Fs = proof_generation_key_r.bdk();                                                             
 
-        let proof_generation_key_r = ProofGenerationKey {
-            ak: ak_r.clone(),
-            nsk: nsk_r.clone()
-        };
-
-        let viewing_key_r = proof_generation_key_r.into_viewing_key(params);
-        let ecryption_key_r: fs::Fs = viewing_key_r.dbk();
-
-        let address_recipient = viewing_key_r.into_payment_address(params);  
-        let address_sender_xy = viewing_key_s.into_payment_address(params).0.into_xy(); 
+        let address_recipient = EncryptionKey::from_origin_key(&sk_fs_r, params);
+        let address_sender_xy = proof_generation_key_s.into_encryption_key(params).0.into_xy(); 
         let address_recipient_xy = address_recipient.0.into_xy();                       
         
         let alpha: fs::Fs = rng.gen();
@@ -396,7 +383,7 @@ mod tests {
         let r_fs_v = fs::Fs::rand(rng);        
 
         let p_g = FixedGenerators::NoteCommitmentRandomness;
-        let public_key_s = params.generator(p_g).mul(ecryption_key_s, params).into();
+        let public_key_s = params.generator(p_g).mul(decryption_key_s, params).into();
         let ciphetext_balance = Ciphertext::encrypt(current_balance, r_fs_b, &public_key_s, p_g, params);
         
         let c_bal_left = ciphetext_balance.left.into_xy();
@@ -406,11 +393,11 @@ mod tests {
         let c_val_s_left = ciphertext_value_sender.left.into_xy();
         let c_val_right = ciphertext_value_sender.right.into_xy();
 
-        let public_key_r = params.generator(p_g).mul(ecryption_key_r, params).into();
+        let public_key_r = params.generator(p_g).mul(decryption_key_r, params).into();
         let ciphertext_value_recipient = Ciphertext::encrypt(value, r_fs_v, &public_key_r, p_g, params);
         let c_val_r_left = ciphertext_value_recipient.left.into_xy();
 
-        let rk = viewing_key_s.rk(alpha, params).into_xy();        
+        let rk = proof_generation_key_s.rvk(alpha, params).into_xy();        
 
         let mut cs = TestConstraintSystem::<Bls12>::new();
 
@@ -421,7 +408,7 @@ mod tests {
             randomness: Some(r_fs_v.clone()),
             alpha: Some(alpha.clone()),
             proof_generation_key: Some(proof_generation_key_s.clone()),
-            ecryption_key: Some(ecryption_key_s.clone()),
+            decryption_key: Some(decryption_key_s.clone()),
             pk_d_recipient: Some(address_recipient.0.clone()),
             encrypted_balance: Some(ciphetext_balance.clone())            
         };        

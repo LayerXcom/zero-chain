@@ -82,16 +82,15 @@ mod tests {
     use rand::{Rng, SeedableRng, XorShiftRng};    
     use pairing::bls12_381::Bls12;
     use keys::*;
+    use jubjub::curve::JubjubBls12;
 
     #[test]
     fn test_addr_into_from() {
         let rng = &mut XorShiftRng::from_seed([0x3dbe6259, 0x8d313d76, 0x3237db17, 0xe5bc0654]);
         let mut seed = [0u8; 32];
         rng.fill_bytes(&mut seed[..]);
-
-        let ex_sk = ExpandedSpendingKey::<Bls12>::from_spending_key(&seed[..]);
-        let viewing_key = ViewingKey::<Bls12>::from_expanded_spending_key(&ex_sk, &JUBJUB);        
-        let addr1 = viewing_key.into_encryption_key(&JUBJUB);
+           
+        let addr1 = EncryptionKey::from_ok_bytes(&seed[..], &JUBJUB as &JubjubBls12);
 
         let account_id = PkdAddress::from_encryption_key(&addr1); 
         let addr2 = account_id.into_encryption_key().unwrap();

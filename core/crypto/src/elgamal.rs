@@ -175,7 +175,7 @@ mod tests {
     use rand::{SeedableRng, XorShiftRng, Rand};
     use jubjub::curve::{JubjubBls12, fs::Fs};
     use pairing::bls12_381::Bls12;
-    use keys::{ViewingKey, ExpandedSpendingKey};
+    use keys::{ProofGenerationKey, EncryptionKey};
 
     #[test]
     fn test_elgamal_enc_dec() {
@@ -204,17 +204,14 @@ mod tests {
         let alice_seed = b"Alice                           ";
         let alice_value = 100 as u32;    
                 
-        let r_fs = Fs::rand(rng);        
+        let r_fs = Fs::rand(rng);         
 
-        let expsk = ExpandedSpendingKey::<Bls12>::from_spending_key(alice_seed);        
-        let viewing_key = ViewingKey::<Bls12>::from_expanded_spending_key(&expsk, params);    
-
-        let address = viewing_key.into_payment_address(params);	
+        let address = EncryptionKey::<Bls12>::from_ok_bytes(alice_seed, params);
 	    let enc_alice_val = Ciphertext::encrypt(alice_value, r_fs, &address.0, p_g, params);
 
-        let ivk = viewing_key.ivk();        
+        let bdk = ProofGenerationKey::<Bls12>::from_ok_bytes(alice_seed, params).bdk();
         
-        let dec_alice_val = enc_alice_val.decrypt(ivk, p_g, params).unwrap();
+        let dec_alice_val = enc_alice_val.decrypt(bdk, p_g, params).unwrap();
 	    assert_eq!(dec_alice_val, alice_value);
     }
 

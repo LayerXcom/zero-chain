@@ -240,7 +240,7 @@ mod tests {
         BuildStorage, traits::{BlakeTwo256, IdentityLookup},
         testing::{Digest, DigestItem, Header}
     };
-    use keys::{ExpandedSpendingKey, ViewingKey};    
+    use keys::{ProofGenerationKey, EncryptionKey};    
     use jubjub::{curve::{JubjubBls12, FixedGenerators, fs}};        
     use hex_literal::{hex, hex_impl};
     use std::path::Path;
@@ -282,20 +282,17 @@ mod tests {
         let params = &JubjubBls12::new();
         let p_g = FixedGenerators::Diversifier; // 1 same as NoteCommitmentRandomness;
 
-        let expsk = ExpandedSpendingKey::<Bls12>::from_spending_key(alice_seed);        
-        let viewing_key = ViewingKey::<Bls12>::from_expanded_spending_key(&expsk, params);    
-        
-        let address = viewing_key.into_payment_address(params);	
+        let ek = EncryptionKey::<Bls12>::from_ok_bytes(alice_seed, params);                
 
         // The default balance is not encrypted with randomness.
-        let enc_alice_bal = elgamal::Ciphertext::encrypt(alice_value, fs::Fs::one(), &address.0, p_g, params);
+        let enc_alice_bal = elgamal::Ciphertext::encrypt(alice_value, fs::Fs::one(), &ek.0, p_g, params);
 
-        let ivk = viewing_key.ivk();	
+        let bdk = ProofGenerationKey::<Bls12>::from_ok_bytes(alice_seed, params).bdk();        
 
-        let dec_alice_bal = enc_alice_bal.decrypt(ivk, p_g, params).unwrap();
+        let dec_alice_bal = enc_alice_bal.decrypt(bdk, p_g, params).unwrap();
         assert_eq!(dec_alice_bal, alice_value);	
 
-        (PkdAddress::from_payment_address(&address), Ciphertext::from_ciphertext(&enc_alice_bal))
+        (PkdAddress::from_encryption_key(&ek), Ciphertext::from_ciphertext(&enc_alice_bal))
     }
 
     fn get_pvk() -> PreparedVk {
