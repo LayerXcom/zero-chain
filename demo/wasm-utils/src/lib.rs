@@ -13,7 +13,7 @@ use zpairing::{
     Field as zField, PrimeField as zPrimeField, PrimeFieldRepr as zPrimeFieldRepr,
 };
 use pairing::{
-    bls12_381::Bls12, Field, PrimeField, PrimeFieldRepr
+    bls12_381::Bls12, Field,
 };
 use zjubjub::{
     curve::{JubjubBls12 as zJubjubBls12, 
@@ -262,10 +262,10 @@ pub fn decrypt_ca(mut ciphertext: &[u8], mut sk: &[u8]) -> Result<u32, JsValue> 
 #[cfg(test)]
 mod tests {
     use super::*;
-    use rand::XorShiftRng;    
-    use pairing::{PrimeField, PrimeFieldRepr, Field};
-    use zjubjub::redjubjub::PrivateKey as zPrivateKey;
-    use scrypto::redjubjub::{PrivateKey, PublicKey};      
+    use rand::XorShiftRng;                
+    use std::path::Path;
+    use std::fs::File;
+    use std::io::{BufReader, Read};
 
     fn get_pk_and_vk() -> (Vec<u8>, Vec<u8>) {
         let pk_path = Path::new("../cli/proving.params");        
