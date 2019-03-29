@@ -96,8 +96,9 @@ You can send the transaction from firefox browser.
 - [Announcing Zerochain: Applying zk-SNARKs to Substrate](https://medium.com/layerx/announcing-zerochain-5b08e158355d)
 
 ## Contributing
-- Feel free to submit your own issues and PRs
+i- Feel free to submit your own issues and PRs
 - For further discussions and questions talk to us on [Gitter](https://gitter.im/LayerXcom/Zerochain)
 
 ### Maintainers
 - [Osuke](https://twitter.com/zoom_zoomzo)
+- [Zak](https://twitter.com/zak74702675)
