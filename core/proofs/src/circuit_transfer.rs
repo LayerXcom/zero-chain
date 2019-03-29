@@ -296,18 +296,18 @@ impl<'a, E: JubjubEngine> Circuit<E> for Transfer<'a, E> {
 
         // Ensure randomaized sig-verification key is computed by the addition of ak and alpha_g
         let rvk = pgk.add(
-            cs.namespace(|| "computation of rk"),
+            cs.namespace(|| "computation of rvk"),
             &alpha_g,
             self.params
         )?;
 
-        // Ensure rk is large order.
+        // Ensure rvk is large order.
         rvk.assert_not_small_order(
-            cs.namespace(|| "rk not small order"),
+            cs.namespace(|| "rvk not small order"),
             self.params
         )?;
 
-        rvk.inputize(cs.namespace(|| "rk"))?;                                          
+        rvk.inputize(cs.namespace(|| "rvk"))?;                                          
 
         Ok(())        
     }
@@ -397,7 +397,7 @@ mod tests {
         let ciphertext_value_recipient = Ciphertext::encrypt(value, r_fs_v, &public_key_r, p_g, params);
         let c_val_r_left = ciphertext_value_recipient.left.into_xy();
 
-        let rk = proof_generation_key_s.rvk(alpha, params).into_xy();        
+        let rvk = proof_generation_key_s.rvk(alpha, params).into_xy();        
 
         let mut cs = TestConstraintSystem::<Bls12>::new();
 
@@ -435,7 +435,7 @@ mod tests {
         assert_eq!(cs.get_input(12, "inputize pointl/y/input variable"), c_bal_left.1);        
         assert_eq!(cs.get_input(13, "inputize pointr/x/input variable"), c_bal_right.0);
         assert_eq!(cs.get_input(14, "inputize pointr/y/input variable"), c_bal_right.1);        
-        assert_eq!(cs.get_input(15, "rk/x/input variable"), rk.0);
-        assert_eq!(cs.get_input(16, "rk/y/input variable"), rk.1);        
+        assert_eq!(cs.get_input(15, "rvk/x/input variable"), rvk.0);
+        assert_eq!(cs.get_input(16, "rvk/y/input variable"), rvk.1);        
     }
 }    

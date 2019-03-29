@@ -29,7 +29,7 @@ use zjubjub::{
                 read_scalar as zread_scalar},
 };
 use scrypto::{
-    jubjub::{fs::Fs, FixedGenerators, JubjubBls12, JubjubParams, ToUniform},    
+    jubjub::{fs::Fs, FixedGenerators, JubjubBls12, JubjubParams},    
 };
 use proofs::{
     primitives::{ProofGenerationKey, EncryptionKey, bytes_to_fs},
@@ -181,7 +181,7 @@ struct Calls {
     value_sender: Vec<u8>,
     value_recipient: Vec<u8>,
     balance_sender: Vec<u8>,
-    rk: Vec<u8>,
+    rvk: Vec<u8>,
     rsk: Vec<u8>,
 }
 
@@ -235,12 +235,11 @@ pub fn gen_call(
         value_sender: tx.enc_val_sender.to_vec(),
         value_recipient: tx.enc_val_recipient.to_vec(),
         balance_sender: tx.enc_bal_sender.to_vec(),
-        rk: tx.rk.to_vec(),
+        rvk: tx.rvk.to_vec(),
         rsk: tx.rsk.to_vec(),
     };
 
-    JsValue::from_serde(&calls).expect("fails to write json")    
-    // JsValue::from_str("Hey")
+    JsValue::from_serde(&calls).expect("fails to write json")        
 }
 
 #[wasm_bindgen(catch)]

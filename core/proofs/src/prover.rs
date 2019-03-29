@@ -25,7 +25,7 @@ use crate::elgamal::Ciphertext;
 
 pub struct TransferProof<E: JubjubEngine> {
     pub proof: Proof<E>,
-    pub rk: PublicKey<E>, // re-randomization sig-verifying key    
+    pub rvk: PublicKey<E>, // re-randomization sig-verifying key    
     pub address_sender: EncryptionKey<E>,    
     pub address_recipient: EncryptionKey<E>,
     pub cipher_val_s: Ciphertext<E>,
@@ -49,15 +49,15 @@ impl<E: JubjubEngine> TransferProof<E> {
     {
         let randomness = E::Fs::rand(rng);   
                 
-        let dbk = proof_generation_key.bdk();
+        let bdk = proof_generation_key.bdk();
         let ek_sender = proof_generation_key.into_encryption_key(params);        
 
-        let rk = PublicKey(proof_generation_key.0.clone().into())
+        let rvk = PublicKey(proof_generation_key.0.clone().into())
             .randomize(
                 alpha,
                 FixedGenerators::NoteCommitmentRandomness,
                 params,
-        );
+        );        
 
         let instance = Transfer {
             params: params,
@@ -66,7 +66,7 @@ impl<E: JubjubEngine> TransferProof<E> {
             randomness: Some(randomness.clone()),
             alpha: Some(alpha.clone()),
             proof_generation_key: Some(proof_generation_key.clone()),
-            decryption_key: Some(dbk.clone()),
+            decryption_key: Some(bdk.clone()),
             pk_d_recipient: Some(address_recipient.0.clone()),
             encrypted_balance: Some(ciphertext_balance.clone())            
         };
@@ -129,7 +129,7 @@ impl<E: JubjubEngine> TransferProof<E> {
             public_input[13] = y;
         }
         {
-            let (x, y) = rk.0.into_xy();
+            let (x, y) = rvk.0.into_xy();
             public_input[14] = x;
             public_input[15] = y;
         }                             
@@ -140,7 +140,7 @@ impl<E: JubjubEngine> TransferProof<E> {
 
         let transfer_proof = TransferProof {
             proof: proof,        
-            rk: rk,             
+            rvk: rvk,             
             address_sender: ek_sender,  
             address_recipient: address_recipient,          
             cipher_val_s: cipher_val_s,

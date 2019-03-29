@@ -16,7 +16,7 @@ use proofs::{
 use rand::Rng;
 
 pub struct Transaction{    
-    pub rk: [u8; 32],                    // 32 bytes
+    pub rvk: [u8; 32],                   // 32 bytes
     pub proof: [u8; 192],                // 192 bytes
     pub address_sender: [u8; 32],        // 32 bytes
     pub address_recipient: [u8; 32],     // 32 bytes
@@ -63,8 +63,8 @@ impl Transaction {
 		let mut rsk_bytes = [0u8; 32];
 		rsk.write(&mut rsk_bytes[..]).map_err(|_| io::Error::InvalidData)?;
 		
-		let mut rk_bytes = [0u8; 32];
-		proof_output.rk.write(&mut rk_bytes[..]).map_err(|_| io::Error::InvalidData)?;
+		let mut rvk_bytes = [0u8; 32];
+		proof_output.rvk.write(&mut rvk_bytes[..]).map_err(|_| io::Error::InvalidData)?;
 
 		let mut proof_bytes = [0u8; 192];
 		proof_output.proof.write(&mut proof_bytes[..]).map_err(|_| io::Error::InvalidData)?;
@@ -86,7 +86,7 @@ impl Transaction {
 
 		let tx = Transaction {		
 			proof: proof_bytes,		           			 
-			rk: rk_bytes,  			      
+			rvk: rvk_bytes,  			      
 			address_sender: b_address_sender,        
 			address_recipient: b_address_recipient,
 			enc_val_recipient: enc_val_recipient,
