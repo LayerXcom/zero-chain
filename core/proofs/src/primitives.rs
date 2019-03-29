@@ -138,6 +138,14 @@ impl<E: JubjubEngine> EncryptionKey<E> {
         let proof_generation_key = ProofGenerationKey::from_origin_key(origin_key, params);
         proof_generation_key.into_encryption_key(params)
     }
+
+    pub fn from_ok_bytes(
+        ok: &[u8],
+        params: &E::Params
+    ) -> Self
+    {               
+        Self::from_origin_key(&bytes_to_fs::<E>(ok), params)
+    }
      
     pub fn write<W: io::Write>(&self, mut writer: W) -> io::Result<()> {
         self.0.write(&mut writer)?;        

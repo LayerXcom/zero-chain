@@ -21,7 +21,7 @@ pub fn setup() -> (Parameters<Bls12>, PreparedVerifyingKey<Bls12>) {
             randomness: None,
             alpha: None,
             proof_generation_key: None,
-            ivk: None,
+            decryption_key: None,
             pk_d_recipient: None,
             encrypted_balance: None,
         };

@@ -1,7 +1,7 @@
 use clap::{Arg, App, SubCommand, AppSettings};
 use rand::OsRng;
 use proofs::{
-    primitives::{ExpandedSpendingKey, ViewingKey},     
+    primitives::{EncryptionKey, bytes_to_fs},     
     elgamal::Ciphertext,
     };
 use primitives::hexdisplay::{HexDisplay, AsBytesRef};
@@ -25,9 +25,7 @@ lazy_static! {
 }
 
 fn get_address(seed: &[u8]) -> Vec<u8> { 
-    let expsk = ExpandedSpendingKey::<Bls12>::from_spending_key(seed);     
-    let viewing_key = ViewingKey::<Bls12>::from_expanded_spending_key(&expsk, &PARAMS);        
-    let address = viewing_key.into_payment_address(&PARAMS);
+    let address = EncryptionKey::<Bls12>::from_ok_bytes(seed, &PARAMS);
 
     let mut address_bytes = vec![];
     address.write(&mut address_bytes).unwrap();
@@ -247,12 +245,10 @@ fn cli() -> Result<(), String> {
                 
             let proving_key =  Parameters::<Bls12>::read(&mut &buf_pk[..], true).unwrap();    
             let prepared_vk = PreparedVerifyingKey::<Bls12>::read(&mut &buf_vk[..]).unwrap(); 
-                
-            let ex_sk_s = ExpandedSpendingKey::<Bls12>::from_spending_key(&sender_seed[..]);
-            let ex_sk_r = ExpandedSpendingKey::<Bls12>::from_spending_key(&recipient_seed[..]);
-                  
-            let viewing_key_r = ViewingKey::<Bls12>::from_expanded_spending_key(&ex_sk_r, &PARAMS);
-            let address_recipient = viewing_key_r.into_payment_address(&PARAMS);                    
+
+            let sk_fs_s = bytes_to_fs::<Bls12>(&sender_seed[..]);                                                        
+
+            let address_recipient = EncryptionKey::<Bls12>::from_ok_bytes(&recipient_seed[..], &PARAMS);
 
             let ciphertext_balance_a = sub_matches.value_of("encrypted-balance").unwrap();
             let ciphertext_balance_v = hex::decode(ciphertext_balance_a).unwrap();
@@ -267,7 +263,7 @@ fn cli() -> Result<(), String> {
                             &proving_key,
                             &prepared_vk,
                             &address_recipient,
-                            &ex_sk_s,
+                            &sk_fs_s,
                             ciphertext_balance,                    
                             rng
                     ).expect("fails to generate the tx");
