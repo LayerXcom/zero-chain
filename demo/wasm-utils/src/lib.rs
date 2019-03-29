@@ -197,6 +197,7 @@ pub fn gen_call(
     mut address_recipient: &[u8], 
     value: u32, 
     balance: u32,
+    // fee: u32,
     mut proving_key: &[u8],
     mut prepared_vk: &[u8],
     seed_slice: &[u32],
@@ -218,13 +219,17 @@ pub fn gen_call(
     let public_key = params.generator(p_g).mul(ivk, &params).into();
     let ciphertext_balance = Ciphertext::encrypt(balance, r_fs, &public_key, p_g, &params);
 
+    // let enc_fee = Ciphertext::encrypt(fee, r_fs, &public_key, p_g, &params);
+    let fee = 1 as u32;
+
     let address_recipient = PaymentAddress::<Bls12>::read(&mut address_recipient, params).unwrap();
     let proving_key = Parameters::<Bls12>::read(&mut proving_key, true).unwrap();
     let prepared_vk = PreparedVerifyingKey::<Bls12>::read(&mut prepared_vk).unwrap();
 
     let tx = Transaction::gen_tx(
                 value, 
-                remaining_balance, 
+                remaining_balance,
+                fee,
                 alpha,
                 &proving_key,
                 &prepared_vk,

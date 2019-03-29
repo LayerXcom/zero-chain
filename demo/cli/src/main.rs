@@ -258,11 +258,14 @@ fn cli() -> Result<(), String> {
             let ciphertext_balance_v = hex::decode(ciphertext_balance_a).unwrap();
             let ciphertext_balance = Ciphertext::read(&mut &ciphertext_balance_v[..], &PARAMS as &JubjubBls12).unwrap();
 
-            let remaining_balance = balance - amount;       
+            let fee = 1; // temp fee
+            // let remaining_balance = balance - amount;
+            let remaining_balance = balance - amount - fee;
 
             let tx = Transaction::gen_tx(
                             amount, 
-                            remaining_balance, 
+                            remaining_balance,
+                            1,
                             alpha,
                             &proving_key,
                             &prepared_vk,

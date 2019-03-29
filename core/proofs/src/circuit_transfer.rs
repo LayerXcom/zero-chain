@@ -33,6 +33,7 @@ pub struct Transfer<'a, E: JubjubEngine> {
 }
 
 impl<'a, E: JubjubEngine> Circuit<E> for Transfer<'a, E> {
+    // TODO: remaining_balance = balance - value - fee
     fn synthesize<CS: ConstraintSystem<E>>(
         self,
         cs: &mut CS
