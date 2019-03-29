@@ -10,7 +10,7 @@ use zprimitives::{
 	pkd_address::PkdAddress,
 	ciphertext::Ciphertext,	
 	};
-use keys::{ExpandedSpendingKey, ViewingKey};
+use keys::{ProofGenerationKey, EncryptionKey};
 use jubjub::{curve::{JubjubBls12, FixedGenerators, fs}};
 use zpairing::{bls12_381::Bls12, Field};
 use zcrypto::elgamal;
@@ -145,20 +145,17 @@ fn alice_init() -> (PkdAddress, Ciphertext) {
 	let alice_seed = b"Alice                           ";	
 	let alice_value = 100 as u32;
 
-	let p_g = FixedGenerators::Diversifier; // 1 same as NoteCommitmentRandomness;
+	let p_g = FixedGenerators::Diversifier; // 1 same as NoteCommitmentRandomness;	    
 
-	let expsk = ExpandedSpendingKey::<Bls12>::from_spending_key(alice_seed);        
-    let viewing_key = ViewingKey::<Bls12>::from_expanded_spending_key(&expsk, &JUBJUB);    
-	
-    let address = viewing_key.into_payment_address(&JUBJUB);	
+	let address = EncryptionKey::<Bls12>::from_ok_bytes(alice_seed, &JUBJUB);
 
 	// The default balance is not encrypted with randomness.
 	let enc_alice_bal = elgamal::Ciphertext::encrypt(alice_value, fs::Fs::one(), &address.0, p_g, &JUBJUB);
 
-	let ivk = viewing_key.ivk();	
+	let bdk = ProofGenerationKey::<Bls12>::from_ok_bytes(alice_seed, &JUBJUB).bdk();	
 
-	let dec_alice_bal = enc_alice_bal.decrypt(ivk, p_g, &JUBJUB).unwrap();
+	let dec_alice_bal = enc_alice_bal.decrypt(bdk, p_g, &JUBJUB).unwrap();
 	assert_eq!(dec_alice_bal, alice_value);	
 
-	(PkdAddress::from_payment_address(&address), Ciphertext::from_ciphertext(&enc_alice_bal))
+	(PkdAddress::from_encryption_key(&address), Ciphertext::from_ciphertext(&enc_alice_bal))
 }

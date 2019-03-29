@@ -24,7 +24,7 @@ use zprimitives::{
     sig_vk::SigVerificationKey,      
     prepared_vk::PreparedVk,
 };
-use keys::PaymentAddress;
+use keys::EncryptionKey;
 use zcrypto::elgamal;
 use runtime_io;
 
@@ -48,8 +48,7 @@ decl_module! {
             value_sender: Ciphertext,
             value_recipient: Ciphertext,                  
             rk: SigVerificationKey  // TODO: Extract from origin            
-        ) -> Result {
-            // Temporally removed the signature verification.
+        ) -> Result {            
 			// let rk = ensure_signed(origin)?;            
             
             // Get zkproofs with the type
@@ -59,13 +58,13 @@ decl_module! {
             };
 
             // Get address_sender with the type
-            let saddr_sender = match address_sender.into_payment_address() {
+            let saddr_sender = match address_sender.into_encryption_key() {
                 Some(v) => v,
                 None => return Err("Invalid address_sender"),
             };
 
             // Get address_recipient with the type
-            let saddr_recipient = match  address_recipient.into_payment_address() {
+            let saddr_recipient = match  address_recipient.into_encryption_key() {
                 Some(v) => v,
                 None => return Err("Invalid address_recipient"),
             };
@@ -164,8 +163,8 @@ impl<T: Trait> Module<T> {
     // Validate zk proofs
 	pub fn validate_proof (    
         zkproof: &bellman_verifier::Proof<Bls12>,
-        address_sender: &PaymentAddress<Bls12>,
-        address_recipient: &PaymentAddress<Bls12>,
+        address_sender: &EncryptionKey<Bls12>,
+        address_recipient: &EncryptionKey<Bls12>,
         value_sender: &elgamal::Ciphertext<Bls12>,
         value_recipient: &elgamal::Ciphertext<Bls12>,
         balance_sender: &elgamal::Ciphertext<Bls12>,
@@ -221,7 +220,7 @@ impl<T: Trait> Module<T> {
         match verify_proof(&pvk, &zkproof, &public_input[..]) {
             // No error, and proof verification successful
             Ok(true) => true,
-            _ => {runtime_io::print("Invalid proof!!!!!!"); false},                
+            _ => {runtime_io::print("Invalid proof!!!!"); false},                
         }        
     } 
 
@@ -241,7 +240,7 @@ mod tests {
         BuildStorage, traits::{BlakeTwo256, IdentityLookup},
         testing::{Digest, DigestItem, Header}
     };
-    use keys::{ExpandedSpendingKey, ViewingKey};    
+    use keys::{ProofGenerationKey, EncryptionKey};    
     use jubjub::{curve::{JubjubBls12, FixedGenerators, fs}};        
     use hex_literal::{hex, hex_impl};
     use std::path::Path;
@@ -283,20 +282,17 @@ mod tests {
         let params = &JubjubBls12::new();
         let p_g = FixedGenerators::Diversifier; // 1 same as NoteCommitmentRandomness;
 
-        let expsk = ExpandedSpendingKey::<Bls12>::from_spending_key(alice_seed);        
-        let viewing_key = ViewingKey::<Bls12>::from_expanded_spending_key(&expsk, params);    
-        
-        let address = viewing_key.into_payment_address(params);	
+        let ek = EncryptionKey::<Bls12>::from_ok_bytes(alice_seed, params);                
 
         // The default balance is not encrypted with randomness.
-        let enc_alice_bal = elgamal::Ciphertext::encrypt(alice_value, fs::Fs::one(), &address.0, p_g, params);
+        let enc_alice_bal = elgamal::Ciphertext::encrypt(alice_value, fs::Fs::one(), &ek.0, p_g, params);
 
-        let ivk = viewing_key.ivk();	
+        let bdk = ProofGenerationKey::<Bls12>::from_ok_bytes(alice_seed, params).bdk();        
 
-        let dec_alice_bal = enc_alice_bal.decrypt(ivk, p_g, params).unwrap();
-        assert_eq!(dec_alice_bal, alice_value);	
+        let dec_alice_bal = enc_alice_bal.decrypt(bdk, p_g, params).unwrap();
+        assert_eq!(dec_alice_bal, alice_value);	            
 
-        (PkdAddress::from_payment_address(&address), Ciphertext::from_ciphertext(&enc_alice_bal))
+        (PkdAddress::from_encryption_key(&ek), Ciphertext::from_ciphertext(&enc_alice_bal))
     }
 
     fn get_pvk() -> PreparedVk {
@@ -323,12 +319,12 @@ mod tests {
     #[test]    
     fn test_call_function() {        
         with_externalities(&mut new_test_ext(), || {                 
-            let proof: [u8; 192] = hex!("901308825e77acfa7599dc88db10dc65b8888259721fac4aedec6a0d40e7a890058c2d30f6a920c1b7198566232a3c4cb332a6bbd9cdd10a5daae6f11635743e125d69a796ad9dd8da07a896c9fc4308aafd5da03c25aeb2700f6e9323a7ce110f7283832b4ae59a810a08e757e28bb99874fa7ac89a2dcab620d788523d08fa5480ca6c2812ae7e2f91691082ad0378876a7abf9a22e0c769ef6dceeaba79244b200927ce5f9494e12cab7d4fc5bf2aa1a6adab4c294f81f86eaa459dcb1179");
-            let pkd_addr_alice: [u8; 32] = hex!("775e501abc59d035e71e16c6c6cd225d44a249289dd95c37516ce4754721d763");
-            let pkd_addr_bob: [u8; 32] = hex!("a23bb484f72b28a4179a71057c4528648dfb37974ccd84b38aa3e342f9598515");
-            let enc10_by_alice: [u8; 64] = hex!("aacc5c3e97db89df4a75d270a74aae7307c039a0b78dbb4cc7264829901ef8a918a70b7ebbfd8a655e68f1e122a7dc1d19321da60434c6d9fdb390e18b47c589");
-            let enc10_by_bob: [u8; 64] = hex!("f2bb750cef88adfe7c6271687ed27ffb8eb3bf728b90ace86cf05bf1d79e171318a70b7ebbfd8a655e68f1e122a7dc1d19321da60434c6d9fdb390e18b47c589");                        
-            let rvk: [u8; 32] = hex!("791b91fae07feada7b6f6042b1e214bc75759b3921956053936c38a95271a834");
+            let proof: [u8; 192] = hex!("b4ca09c7c2d9e887e40c37e70a56d97a41ea8da03e40b253e1933f1677c7309c4d3ab8d5aeb9907bf7b328df12af66c3a01c52cf40e9cbcf4f227cab510458835064867a4bbad789be83df0fa62aace268d30296ab49606a75d5bb2f2a4a55431323565a7a3fe94f21c34c71d8aa1a05a7efb5e4c04766ed9920a8c16e8f6fd92c5fec20673bd7561ed59f122239ffd1ac2638fd2d223d0520179a0c2b0fb875ebcef2925782c9f5496ddcf121e012f97f3be9bd3cc74a037064685554e367a7");
+            let pkd_addr_alice: [u8; 32] = hex!("fd0c0c0183770c99559bf64df4fe23f77ced9b8b4d02826a282bcd125117dcc2");
+            let pkd_addr_bob: [u8; 32] = hex!("45e66da531088b55dcb3b273ca825454d79d2d1d5c4fa2ba4a12c1fa1ccd6389");
+            let enc10_by_alice: [u8; 64] = hex!("7db0710337156f353f5c03e41a1b7bfda913e987770c58908da7080d28b0403fdff1316f7cd3189e73563a5481bc953eb3796fb5565f433f3acdbe128859326b");
+            let enc10_by_bob: [u8; 64] = hex!("8d517bf8f8f2aab7090eaa7a57d6ddf9930d8b7198e1b980f1c977255234fca6dff1316f7cd3189e73563a5481bc953eb3796fb5565f433f3acdbe128859326b");                        
+            let rvk: [u8; 32] = hex!("f539db3c0075f6394ff8698c95ca47921669c77bb2b23b366f42a39b05a88c96");
 
             assert_ok!(ConfTransfer::confidential_transfer(
                 Origin::signed(1),

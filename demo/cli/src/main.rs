@@ -1,7 +1,7 @@
 use clap::{Arg, App, SubCommand, AppSettings};
 use rand::OsRng;
 use proofs::{
-    primitives::{ExpandedSpendingKey, ViewingKey},     
+    primitives::{EncryptionKey, bytes_to_fs},     
     elgamal::Ciphertext,
     };
 use primitives::hexdisplay::{HexDisplay, AsBytesRef};
@@ -25,9 +25,7 @@ lazy_static! {
 }
 
 fn get_address(seed: &[u8]) -> Vec<u8> { 
-    let expsk = ExpandedSpendingKey::<Bls12>::from_spending_key(seed);     
-    let viewing_key = ViewingKey::<Bls12>::from_expanded_spending_key(&expsk, &PARAMS);        
-    let address = viewing_key.into_payment_address(&PARAMS);
+    let address = EncryptionKey::<Bls12>::from_ok_bytes(seed, &PARAMS);
 
     let mut address_bytes = vec![];
     address.write(&mut address_bytes).unwrap();
@@ -48,7 +46,7 @@ fn cli() -> Result<(), String> {
     const DEFAULT_BALANCE: &str = "100";
     const ALICESEED: &str = "416c696365202020202020202020202020202020202020202020202020202020";
     const BOBSEED: &str = "426f622020202020202020202020202020202020202020202020202020202020";
-    const DEFAULT_ENCRYPTED_BALANCE: &str = "3f101bd6575876bbf772e25ed84728e012295b51f1be37b8451553184b458aeeac776c796563fcd44cc49cfaea8bb796952c266e47779d94574c10ad01754b11";
+    const DEFAULT_ENCRYPTED_BALANCE: &str = "6f4962da776a391c3b03f3e14e8156d2545f39a3ebbed675ea28859252cb006fac776c796563fcd44cc49cfaea8bb796952c266e47779d94574c10ad01754b11";
 
     let matches = App::new("zero-chain-cli")
         .setting(AppSettings::SubcommandRequiredElseHelp)
@@ -174,6 +172,7 @@ fn cli() -> Result<(), String> {
             let (proving_key, prepared_vk) = setup();
             let mut v_pk = vec![];
             let mut v_vk = vec![];
+            
             proving_key.write(&mut &mut v_pk).unwrap();
             prepared_vk.write(&mut &mut v_vk).unwrap();
 
@@ -185,6 +184,7 @@ fn cli() -> Result<(), String> {
 
             bw_pk.flush()
                 .map_err(|_| "Unable to flush proving key buffer.".to_string())?;
+
             bw_vk.flush()
                 .map_err(|_| "Unable to flush verification key buffer.".to_string())?;
             
@@ -245,18 +245,19 @@ fn cli() -> Result<(), String> {
             // let alpha = fs::Fs::rand(rng); 
             let alpha = fs::Fs::zero();
                 
-            let proving_key =  Parameters::<Bls12>::read(&mut &buf_pk[..], true).unwrap();    
+            let proving_key = Parameters::<Bls12>::read(&mut &buf_pk[..], true).unwrap();    
             let prepared_vk = PreparedVerifyingKey::<Bls12>::read(&mut &buf_vk[..]).unwrap(); 
-                
-            let ex_sk_s = ExpandedSpendingKey::<Bls12>::from_spending_key(&sender_seed[..]);
-            let ex_sk_r = ExpandedSpendingKey::<Bls12>::from_spending_key(&recipient_seed[..]);
-                  
-            let viewing_key_r = ViewingKey::<Bls12>::from_expanded_spending_key(&ex_sk_r, &PARAMS);
-            let address_recipient = viewing_key_r.into_payment_address(&PARAMS);                    
+
+            let sk_fs_s = bytes_to_fs::<Bls12>(&sender_seed[..]);                                                        
+
+            let address_recipient = EncryptionKey::<Bls12>::from_ok_bytes(&recipient_seed[..], &PARAMS);
 
             let ciphertext_balance_a = sub_matches.value_of("encrypted-balance").unwrap();
             let ciphertext_balance_v = hex::decode(ciphertext_balance_a).unwrap();
             let ciphertext_balance = Ciphertext::read(&mut &ciphertext_balance_v[..], &PARAMS as &JubjubBls12).unwrap();
+
+            // let address = EncryptionKey::<Bls12>::from_ok_bytes(&sender_seed[..], &PARAMS);
+            // let ciphertext_balance = Ciphertext::encrypt(100, fs::Fs::one(), &address.0, FixedGenerators::NoteCommitmentRandomness, &PARAMS as &JubjubBls12);            
 
             let remaining_balance = balance - amount;       
 
@@ -267,7 +268,7 @@ fn cli() -> Result<(), String> {
                             &proving_key,
                             &prepared_vk,
                             &address_recipient,
-                            &ex_sk_s,
+                            &sk_fs_s,
                             ciphertext_balance,                    
                             rng
                     ).expect("fails to generate the tx");
@@ -299,7 +300,7 @@ fn cli() -> Result<(), String> {
             //     HexDisplay::from(&tx.enc_val_sender as &AsBytesRef),
             //     HexDisplay::from(&tx.enc_val_recipient as &AsBytesRef),
             //     HexDisplay::from(&tx.enc_bal_sender as &AsBytesRef),     
-            //     HexDisplay::from(&tx.rk as &AsBytesRef),
+            //     HexDisplay::from(&tx.rvk as &AsBytesRef),
             //     HexDisplay::from(&tx.rsk as &AsBytesRef),
             // );
 

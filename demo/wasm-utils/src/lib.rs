@@ -13,7 +13,7 @@ use zpairing::{
     Field as zField, PrimeField as zPrimeField, PrimeFieldRepr as zPrimeFieldRepr,
 };
 use pairing::{
-    bls12_381::Bls12, Field
+    bls12_381::Bls12, Field,
 };
 use zjubjub::{
     curve::{JubjubBls12 as zJubjubBls12, 
@@ -32,7 +32,7 @@ use scrypto::{
     jubjub::{fs::Fs, FixedGenerators, JubjubBls12, JubjubParams},    
 };
 use proofs::{
-    primitives::{ExpandedSpendingKey, ViewingKey, PaymentAddress},
+    primitives::{ProofGenerationKey, EncryptionKey, bytes_to_fs},
     elgamal::Ciphertext,
 };
 use bellman::groth16::{Parameters, PreparedVerifyingKey};
@@ -57,10 +57,9 @@ pub struct PkdAddress(pub Vec<u8>);
 #[wasm_bindgen]
 pub fn gen_account_id(sk: &[u8]) -> JsValue {
     let params = &zJubjubBls12::new();
-    let exps = keys::ExpandedSpendingKey::<zBls12>::from_spending_key(sk);
-
-    let viewing_key = keys::ViewingKey::<zBls12>::from_expanded_spending_key(&exps, params);
-    let address = viewing_key.into_payment_address(params);
+    
+    let pgk = keys::ProofGenerationKey::<zBls12>::from_ok_bytes(sk, params);
+    let address = pgk.into_encryption_key(params);    
 
     let mut v = [0u8; 32];
     address.write(&mut v[..]).expect("fails to write payment address");    
@@ -69,29 +68,26 @@ pub fn gen_account_id(sk: &[u8]) -> JsValue {
     JsValue::from_serde(&pkd_address).expect("fails to write json")
 }
 
-#[derive(Serialize, Deserialize)]
-pub struct Ivk(pub Vec<u8>);
-
 #[wasm_bindgen]
-pub fn gen_ivk(sk: &[u8]) -> Vec<u8> {
+pub fn gen_bdk(sk: &[u8]) -> Vec<u8> {
     let params = &zJubjubBls12::new();
-    let exps = keys::ExpandedSpendingKey::<zBls12>::from_spending_key(sk);
 
-    let viewing_key = keys::ViewingKey::<zBls12>::from_expanded_spending_key(&exps, params);
-    let ivk = viewing_key.ivk();
+    let pgk = keys::ProofGenerationKey::<zBls12>::from_ok_bytes(sk, params);
+    let bdk: zFs = pgk.bdk();       
 
     let mut buf = vec![];
-    ivk.into_repr().write_le(&mut buf).unwrap();    
+    bdk.into_repr().write_le(&mut buf).unwrap();    
 
     buf    
 }
 
+// TODO: Add randomness
 #[wasm_bindgen]
 pub fn gen_rsk(sk: &[u8]) -> Vec<u8> {    
-    let exps = keys::ExpandedSpendingKey::<zBls12>::from_spending_key(sk);
+    let sk_fs: zFs = keys::bytes_to_fs::<zBls12>(sk);   
 
     let mut buf = vec![];
-    exps.ask.into_repr().write_le(&mut buf).unwrap();
+    sk_fs.into_repr().write_le(&mut buf).unwrap();
 
     buf
 }
@@ -99,12 +95,10 @@ pub fn gen_rsk(sk: &[u8]) -> Vec<u8> {
 #[wasm_bindgen]
 pub fn gen_rvk(sk: &[u8]) -> Vec<u8> {
     let params = &zJubjubBls12::new();
-    let exps = keys::ExpandedSpendingKey::<zBls12>::from_spending_key(sk);
-
-    let viewing_key = keys::ViewingKey::<zBls12>::from_expanded_spending_key(&exps, params);
+    let pgk = keys::ProofGenerationKey::<zBls12>::from_ok_bytes(sk, params);    
 
     let mut buf = vec![];
-    viewing_key.ak.write(&mut buf).unwrap();
+    pgk.0.write(&mut buf).unwrap();
 
     buf
 }
@@ -187,7 +181,7 @@ struct Calls {
     value_sender: Vec<u8>,
     value_recipient: Vec<u8>,
     balance_sender: Vec<u8>,
-    rk: Vec<u8>,
+    rvk: Vec<u8>,
     rsk: Vec<u8>,
 }
 
@@ -210,15 +204,15 @@ pub fn gen_call(
     // let alpha = Fs::rand(&mut rng);
     let alpha = Fs::zero();
 
-    let ex_sk_s = ExpandedSpendingKey::<Bls12>::from_spending_key(&sk[..]);
-    let viewing_key_s = ViewingKey::<Bls12>::from_expanded_spending_key(&ex_sk_s, &params);
-    let ivk = viewing_key_s.ivk();    
+    let sk_fs = bytes_to_fs::<Bls12>(sk);
+    let pkg = ProofGenerationKey::<Bls12>::from_ok_bytes(sk, params);
+    let bdk: Fs = pkg.bdk();         
     
     let r_fs = Fs::rand(&mut rng);
-    let public_key = params.generator(p_g).mul(ivk, &params).into();
+    let public_key = params.generator(p_g).mul(bdk, &params).into();
     let ciphertext_balance = Ciphertext::encrypt(balance, r_fs, &public_key, p_g, &params);
 
-    let address_recipient = PaymentAddress::<Bls12>::read(&mut address_recipient, params).unwrap();
+    let address_recipient = EncryptionKey::<Bls12>::read(&mut address_recipient, params).unwrap();
     let proving_key = Parameters::<Bls12>::read(&mut proving_key, true).unwrap();
     let prepared_vk = PreparedVerifyingKey::<Bls12>::read(&mut prepared_vk).unwrap();
 
@@ -229,7 +223,7 @@ pub fn gen_call(
                 &proving_key,
                 &prepared_vk,
                 &address_recipient,
-                &ex_sk_s,
+                &sk_fs,
                 ciphertext_balance,                        
                 rng
         ).expect("fails to generate the tx");    
@@ -241,12 +235,11 @@ pub fn gen_call(
         value_sender: tx.enc_val_sender.to_vec(),
         value_recipient: tx.enc_val_recipient.to_vec(),
         balance_sender: tx.enc_bal_sender.to_vec(),
-        rk: tx.rk.to_vec(),
+        rvk: tx.rvk.to_vec(),
         rsk: tx.rsk.to_vec(),
     };
 
-    JsValue::from_serde(&calls).expect("fails to write json")    
-    // JsValue::from_str("Hey")
+    JsValue::from_serde(&calls).expect("fails to write json")        
 }
 
 #[wasm_bindgen(catch)]
@@ -269,11 +262,10 @@ pub fn decrypt_ca(mut ciphertext: &[u8], mut sk: &[u8]) -> Result<u32, JsValue> 
 #[cfg(test)]
 mod tests {
     use super::*;
-    use rand::XorShiftRng;
-    use scrypto::jubjub::{fs::Fs, ToUniform};
-    use pairing::{PrimeField, PrimeFieldRepr, Field};
-    use zjubjub::redjubjub::PrivateKey as zPrivateKey;
-    use scrypto::redjubjub::{PrivateKey, PublicKey};      
+    use rand::XorShiftRng;                
+    use std::path::Path;
+    use std::fs::File;
+    use std::io::{BufReader, Read};
 
     fn get_pk_and_vk() -> (Vec<u8>, Vec<u8>) {
         let pk_path = Path::new("../cli/proving.params");        

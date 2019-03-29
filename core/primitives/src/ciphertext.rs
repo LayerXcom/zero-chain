@@ -6,7 +6,7 @@ use jubjub::curve::JubjubBls12;
 #[cfg(feature = "std")]
 use ::std::{vec::Vec, fmt, write};
 #[cfg(not(feature = "std"))]
-use crate::std::{vec::Vec, fmt, write};
+use crate::std::vec::Vec;
 
 use parity_codec_derive::{Encode, Decode};
 #[cfg(feature = "std")]

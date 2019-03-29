@@ -5,7 +5,7 @@
 extern crate wasm_bindgen_test;
 use wasm_bindgen_test::*;
 
-use zerochain_wasm_utils::{decrypt_ca, gen_account_id, gen_ivk, sign, verify, gen_call};
+use zerochain_wasm_utils::{decrypt_ca, gen_account_id, gen_bdk, sign, verify, gen_call};
 use rand::{SeedableRng, Rng, Rand, XorShiftRng};
 use keys;
 use zpairing::{
@@ -25,8 +25,8 @@ use bellman::groth16::{Parameters, PreparedVerifyingKey};
 use std::path::Path;
 use std::fs::File;
 use std::io::{BufReader, Read};  
-#[macro_use]
-extern crate hex_literal;
+// #[macro_use]
+// extern crate hex_literal;
 // #[macro_use]
 // extern crate lazy_static;
 
@@ -73,19 +73,16 @@ fn test_decrypt() {
     let params = &zJubjubBls12::new();
     let p_g = zFixedGenerators::Diversifier;
 
-    let expsk = keys::ExpandedSpendingKey::<zBls12>::from_spending_key(alice_seed);        
-    let viewing_key = keys::ViewingKey::<zBls12>::from_expanded_spending_key(&expsk, params);    
-    let ivk = viewing_key.ivk();        
+    let bdk = keys::ProofGenerationKey::<zBls12>::from_ok_bytes(alice_seed, params).bdk();
+    let address = keys::EncryptionKey::<zBls12>::from_ok_bytes(alice_seed, params);    
     
     let mut buf = vec![];
-    ivk.into_repr().write_le(&mut &mut buf).unwrap(); 	
+    bdk.into_repr().write_le(&mut &mut buf).unwrap(); 	
 
     let rng = &mut XorShiftRng::from_seed([0xbc4f6d47, 0xd62f276d, 0xb963afd3, 0x54558639]);    
     let r_fs = zFs::rand(rng);
 
-    let value: u32 = 6 as u32;        
-    let address = viewing_key.into_payment_address(params);	 
-
+    let value: u32 = 6 as u32;            
     let ciphetext = zCiphertext::encrypt(value, r_fs, &address.0, p_g, params);
 
     let mut v = vec![];
@@ -95,24 +92,24 @@ fn test_decrypt() {
     assert_eq!(value, res);
 }
 
-#[wasm_bindgen_test]
-fn test_sign_verify() {
-    let rsk: [u8; 32] = hex!("dcfd7a3cb8291764a4e1ab41f6831d2e285a98114cdc4a2d361a380de0e3cb07");
-    let rvk: [u8; 32] = hex!("791b91fae07feada7b6f6042b1e214bc75759b3921956053936c38a95271a834");
+// #[wasm_bindgen_test]
+// fn test_sign_verify() {
+//     let rsk: [u8; 32] = hex!("dcfd7a3cb8291764a4e1ab41f6831d2e285a98114cdc4a2d361a380de0e3cb07");
+//     let rvk: [u8; 32] = hex!("791b91fae07feada7b6f6042b1e214bc75759b3921956053936c38a95271a834");
     
-    let rng = &mut XorShiftRng::from_seed([0xbc4f6d44, 0xd62f276c, 0xb963afd0, 0x5455863d]);
-    let msg = b"Foo bar";
-    let seed_slice: [u32; 8] = rng.gen();
+//     let rng = &mut XorShiftRng::from_seed([0xbc4f6d44, 0xd62f276c, 0xb963afd0, 0x5455863d]);
+//     let msg = b"Foo bar";
+//     let seed_slice: [u32; 8] = rng.gen();
 
-    let params = &zJubjubBls12::new();   
-    let p_g = zFixedGenerators::Diversifier;        
+//     let params = &zJubjubBls12::new();   
+//     let p_g = zFixedGenerators::Diversifier;        
 
-    let sig = sign(&rsk, msg, &seed_slice);
+//     let sig = sign(&rsk, msg, &seed_slice);
 
-    let is_valid = verify(&rvk, msg, &sig[..]);
+//     let is_valid = verify(&rvk, msg, &sig[..]);
 
-    assert!(is_valid);
-}
+//     assert!(is_valid);
+// }
 
 // #[wasm_bindgen_test]
 // fn test_gen_call() {

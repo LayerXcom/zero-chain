@@ -8,15 +8,15 @@ use scrypto::{
 use proofs::{
     self,
 	primitives::{		
-		PaymentAddress, 		
-		ExpandedSpendingKey,		
+		EncryptionKey, 		
+		ProofGenerationKey,		
 		},
 	prover::TransferProof,	   
 };
 use rand::Rng;
 
 pub struct Transaction{    
-    pub rk: [u8; 32],                    // 32 bytes
+    pub rvk: [u8; 32],                   // 32 bytes
     pub proof: [u8; 192],                // 192 bytes
     pub address_sender: [u8; 32],        // 32 bytes
     pub address_recipient: [u8; 32],     // 32 bytes
@@ -33,8 +33,8 @@ impl Transaction {
         alpha: fs::Fs,
         proving_key: &Parameters<Bls12>,
 		prepared_vk: &PreparedVerifyingKey<Bls12>,		
-		address_recipient: &PaymentAddress<Bls12>,		
-		ex_sk_sender: &ExpandedSpendingKey<Bls12>,
+		address_recipient: &EncryptionKey<Bls12>,		
+		ok_sender: &fs::Fs,
         ciphertext_balance: proofs::elgamal::Ciphertext<Bls12>,		
 		rng: &mut R,
     ) -> Result<Self, io::Error>
@@ -42,7 +42,7 @@ impl Transaction {
 		// The pramaters from std environment
 		let params = JubjubBls12::new();
 		
-		let proof_generation_key = ex_sk_sender.into_proof_generation_key(&params);
+		let proof_generation_key = ProofGenerationKey::from_origin_key(ok_sender, &params);
 
 		// Generate the zk proof
 		let proof_output = TransferProof::gen_proof(
@@ -59,12 +59,12 @@ impl Transaction {
 		).unwrap();		
 
 		// Generate the re-randomized sign key
-		let rsk = PrivateKey::<Bls12>(ex_sk_sender.ask).randomize(alpha);
+		let rsk = PrivateKey::<Bls12>(*ok_sender).randomize(alpha);
 		let mut rsk_bytes = [0u8; 32];
 		rsk.write(&mut rsk_bytes[..]).map_err(|_| io::Error::InvalidData)?;
 		
-		let mut rk_bytes = [0u8; 32];
-		proof_output.rk.write(&mut rk_bytes[..]).map_err(|_| io::Error::InvalidData)?;
+		let mut rvk_bytes = [0u8; 32];
+		proof_output.rvk.write(&mut rvk_bytes[..]).map_err(|_| io::Error::InvalidData)?;
 
 		let mut proof_bytes = [0u8; 192];
 		proof_output.proof.write(&mut proof_bytes[..]).map_err(|_| io::Error::InvalidData)?;
@@ -86,7 +86,7 @@ impl Transaction {
 
 		let tx = Transaction {		
 			proof: proof_bytes,		           			 
-			rk: rk_bytes,  			      
+			rvk: rvk_bytes,  			      
 			address_sender: b_address_sender,        
 			address_recipient: b_address_recipient,
 			enc_val_recipient: enc_val_recipient,

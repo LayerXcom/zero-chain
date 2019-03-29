@@ -27,7 +27,7 @@ pub struct Transfer<'a, E: JubjubEngine> {
     pub randomness: Option<E::Fs>,
     pub alpha: Option<E::Fs>,
     pub proof_generation_key: Option<ProofGenerationKey<E>>,
-    pub ivk: Option<E::Fs>, 
+    pub decryption_key: Option<E::Fs>, 
     pub pk_d_recipient: Option<edwards::Point<E, PrimeOrder>>,
     pub encrypted_balance: Option<Ciphertext<E>>,
 }
@@ -52,17 +52,17 @@ impl<'a, E: JubjubEngine> Circuit<E> for Transfer<'a, E> {
             self.remaining_balance
         )?;            
 
-        // ivk in circuit
-        let ivk_v = boolean::field_into_boolean_vec_le(
-            cs.namespace(|| format!("ivk")),
-            self.ivk 
+        // decryption_key in circuit
+        let decryption_key_v = boolean::field_into_boolean_vec_le(
+            cs.namespace(|| format!("decryption_key")),
+            self.decryption_key 
         )?;
 
         // Ensure the validity of pk_d_sender
         let pk_d_sender_v = ecc::fixed_base_multiplication(
             cs.namespace(|| format!("compute pk_d_sender")),
             FixedGenerators::NoteCommitmentRandomness,
-            &ivk_v,
+            &decryption_key_v,
             params
         )?;        
 
@@ -144,7 +144,7 @@ impl<'a, E: JubjubEngine> Circuit<E> for Transfer<'a, E> {
         // The balance encryption validity. 
         // It is a bit complicated bacause we can not know the randomness of balance.  
         // Enc_sender(sender_balance).cl - Enc_sender(value).cl 
-        //     == (remaining_balance)G + ivk(Enc_sender(sender_balance).cr - (random)G)
+        //     == (remaining_balance)G + decryption_key(Enc_sender(sender_balance).cr - (random)G)
         {
             let bal_gl = ecc::EdwardsPoint::witness(
                 cs.namespace(|| "balance left"), 
@@ -198,24 +198,24 @@ impl<'a, E: JubjubEngine> Circuit<E> for Transfer<'a, E> {
                 params
             )?;                              
 
-            //  ivk * (random)G
-            let ivk_random = c_right.mul(
-                cs.namespace(|| format!("c_right mul by ivk")),
-                &ivk_v, 
+            //  decryption_key * (random)G
+            let decryption_key_random = c_right.mul(
+                cs.namespace(|| format!("c_right mul by decryption_key")),
+                &decryption_key_v, 
                 params
                 )?;
             
-            // Enc_sender(sender_balance).cl + ivk * (random)G
+            // Enc_sender(sender_balance).cl + decryption_key * (random)G
             let bi_left = pointl.add(
-                cs.namespace(|| format!("pointl add ivk_pointl")), 
-                &ivk_random, 
+                cs.namespace(|| format!("pointl add decryption_key_pointl")), 
+                &decryption_key_random, 
                 params
                 )?;
             
-            // ivk * Enc_sender(sender_balance).cr
-            let ivk_pointr = pointr.mul(
-                cs.namespace(|| format!("c_left_sender mul by ivk")),
-                &ivk_v,
+            // decryption_key * Enc_sender(sender_balance).cr
+            let decryption_key_pointr = pointr.mul(
+                cs.namespace(|| format!("c_left_sender mul by decryption_key")),
+                &decryption_key_v,
                 params
                 )?;
 
@@ -234,10 +234,10 @@ impl<'a, E: JubjubEngine> Circuit<E> for Transfer<'a, E> {
                 params
                 )?;
  
-            // Enc_sender(value).cl + (remaining_balance)G + ivk * Enc_sender(sender_balance).cr
+            // Enc_sender(value).cl + (remaining_balance)G + decryption_key * Enc_sender(sender_balance).cr
             let bi_right = val_rem_bal.add(
                 cs.namespace(|| format!("val_rem_bal add ")), 
-                &ivk_pointr, 
+                &decryption_key_pointr, 
                 params
                 )?;
 
@@ -267,20 +267,20 @@ impl<'a, E: JubjubEngine> Circuit<E> for Transfer<'a, E> {
         }
 
 
-        // Ensure ak on the curve.
-        let ak = ecc::EdwardsPoint::witness(
-            cs.namespace(|| "ak"),
-            self.proof_generation_key.as_ref().map(|k| k.ak.clone()),
+        // Ensure pgk on the curve.
+        let pgk = ecc::EdwardsPoint::witness(
+            cs.namespace(|| "pgk"),
+            self.proof_generation_key.as_ref().map(|k| k.0.clone()),
             self.params
         )?;
 
-        // Ensure ak is large order.
-        ak.assert_not_small_order(
-            cs.namespace(|| "ak not small order"),
+        // Ensure pgk is large order.
+        pgk.assert_not_small_order(
+            cs.namespace(|| "pgk not small order"),
             self.params
         )?;
 
-        // Re-randomize ak    
+        // Re-randomized parameter for pgk    
         let alpha = boolean::field_into_boolean_vec_le(
             cs.namespace(|| "alpha"),
             self.alpha
@@ -294,20 +294,20 @@ impl<'a, E: JubjubEngine> Circuit<E> for Transfer<'a, E> {
             self.params
         )?;
 
-        // Ensure re-randomaized sig-verification key is computed by the addition of ak and alpha_g
-        let rk = ak.add(
-            cs.namespace(|| "computation of rk"),
+        // Ensure randomaized sig-verification key is computed by the addition of ak and alpha_g
+        let rvk = pgk.add(
+            cs.namespace(|| "computation of rvk"),
             &alpha_g,
             self.params
         )?;
 
-        // Ensure rk is large order.
-        rk.assert_not_small_order(
-            cs.namespace(|| "rk not small order"),
+        // Ensure rvk is large order.
+        rvk.assert_not_small_order(
+            cs.namespace(|| "rvk not small order"),
             self.params
         )?;
 
-        rk.inputize(cs.namespace(|| "rk"))?;                                          
+        rvk.inputize(cs.namespace(|| "rvk"))?;                                          
 
         Ok(())        
     }
@@ -352,38 +352,25 @@ mod tests {
     use pairing::{bls12_381::{Bls12, Fr}, Field};
     use rand::{SeedableRng, Rng, XorShiftRng, Rand};    
     use crate::circuit_test::TestConstraintSystem;
-    use scrypto::jubjub::{JubjubBls12, fs, edwards, JubjubParams};           
+    use scrypto::jubjub::{JubjubBls12, fs, edwards, JubjubParams};    
+    use crate::primitives::EncryptionKey;       
     
     #[test]
     fn test_circuit_transfer() {        
         let params = &JubjubBls12::new();
         let rng = &mut XorShiftRng::from_seed([0x3dbe6258, 0x8d313d76, 0x3237db17, 0xe5bc0654]);        
 
-        let nsk_s: fs::Fs = rng.gen();
-        let ak_s = edwards::Point::rand(rng, params).mul_by_cofactor(params);
+        let sk_fs_s: fs::Fs = rng.gen();
+        let sk_fs_r: fs::Fs = rng.gen();
 
-        let proof_generation_key_s = ProofGenerationKey {
-            ak: ak_s.clone(),
-            nsk: nsk_s.clone()
-        };
-
-        let viewing_key_s = proof_generation_key_s.into_viewing_key(params);
-        let ivk_s: fs::Fs = viewing_key_s.ivk();
-                     
-        let nsk_r: fs::Fs = rng.gen();
+        let proof_generation_key_s = ProofGenerationKey::<Bls12>::from_origin_key(&sk_fs_s, params);
+        let proof_generation_key_r = ProofGenerationKey::<Bls12>::from_origin_key(&sk_fs_r, params);
         
-        let ak_r = edwards::Point::rand(rng, params).mul_by_cofactor(params);
+        let decryption_key_s: fs::Fs = proof_generation_key_s.bdk();                                             
+        let decryption_key_r: fs::Fs = proof_generation_key_r.bdk();                                                             
 
-        let proof_generation_key_r = ProofGenerationKey {
-            ak: ak_r.clone(),
-            nsk: nsk_r.clone()
-        };
-
-        let viewing_key_r = proof_generation_key_r.into_viewing_key(params);
-        let ivk_r: fs::Fs = viewing_key_r.ivk();
-
-        let address_recipient = viewing_key_r.into_payment_address(params);  
-        let address_sender_xy = viewing_key_s.into_payment_address(params).0.into_xy(); 
+        let address_recipient = EncryptionKey::from_origin_key(&sk_fs_r, params);
+        let address_sender_xy = proof_generation_key_s.into_encryption_key(params).0.into_xy(); 
         let address_recipient_xy = address_recipient.0.into_xy();                       
         
         let alpha: fs::Fs = rng.gen();
@@ -396,7 +383,7 @@ mod tests {
         let r_fs_v = fs::Fs::rand(rng);        
 
         let p_g = FixedGenerators::NoteCommitmentRandomness;
-        let public_key_s = params.generator(p_g).mul(ivk_s, params).into();
+        let public_key_s = params.generator(p_g).mul(decryption_key_s, params).into();
         let ciphetext_balance = Ciphertext::encrypt(current_balance, r_fs_b, &public_key_s, p_g, params);
         
         let c_bal_left = ciphetext_balance.left.into_xy();
@@ -406,11 +393,11 @@ mod tests {
         let c_val_s_left = ciphertext_value_sender.left.into_xy();
         let c_val_right = ciphertext_value_sender.right.into_xy();
 
-        let public_key_r = params.generator(p_g).mul(ivk_r, params).into();
+        let public_key_r = params.generator(p_g).mul(decryption_key_r, params).into();
         let ciphertext_value_recipient = Ciphertext::encrypt(value, r_fs_v, &public_key_r, p_g, params);
         let c_val_r_left = ciphertext_value_recipient.left.into_xy();
 
-        let rk = viewing_key_s.rk(alpha, params).into_xy();        
+        let rvk = proof_generation_key_s.rvk(alpha, params).into_xy();        
 
         let mut cs = TestConstraintSystem::<Bls12>::new();
 
@@ -421,7 +408,7 @@ mod tests {
             randomness: Some(r_fs_v.clone()),
             alpha: Some(alpha.clone()),
             proof_generation_key: Some(proof_generation_key_s.clone()),
-            ivk: Some(ivk_s.clone()),
+            decryption_key: Some(decryption_key_s.clone()),
             pk_d_recipient: Some(address_recipient.0.clone()),
             encrypted_balance: Some(ciphetext_balance.clone())            
         };        
@@ -448,7 +435,7 @@ mod tests {
         assert_eq!(cs.get_input(12, "inputize pointl/y/input variable"), c_bal_left.1);        
         assert_eq!(cs.get_input(13, "inputize pointr/x/input variable"), c_bal_right.0);
         assert_eq!(cs.get_input(14, "inputize pointr/y/input variable"), c_bal_right.1);        
-        assert_eq!(cs.get_input(15, "rk/x/input variable"), rk.0);
-        assert_eq!(cs.get_input(16, "rk/y/input variable"), rk.1);        
+        assert_eq!(cs.get_input(15, "rvk/x/input variable"), rvk.0);
+        assert_eq!(cs.get_input(16, "rvk/y/input variable"), rvk.1);        
     }
 }    
