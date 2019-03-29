@@ -12,16 +12,16 @@ use pairing::{
     Field,    
 };
 use jubjub::{     
-        redjubjub::{        
-            PublicKey,
-        },
-        curve::{
-            FixedGenerators,
-            fs::Fs,
-            JubjubBls12,
-        }
-    };
-use rand::{SeedableRng, XorShiftRng, Rand};
+    curve::{
+        JubjubBls12,
+        fs::Fs,
+        FixedGenerators,
+        ToUniform,
+    },
+    redjubjub::{        
+        PublicKey,
+    },
+};
 use zprimitives::{
     pkd_address::PkdAddress, 
     ciphertext::Ciphertext, 
@@ -31,9 +31,8 @@ use zprimitives::{
 };
 use keys::PaymentAddress;
 use zcrypto::elgamal;
-use zcrypto::elgamal::Ciphertext as zCiphertext;
 use runtime_io;
-
+use rand::{Rng, SeedableRng, XorShiftRng};
 
 pub trait Trait: system::Trait {
 	/// The overarching event type.
@@ -118,18 +117,20 @@ decl_module! {
             );
 
             // Get transaction fee
-            let tx_fee = Self::conf_transfer_fee();
+            let tx_fee = 1; //Self::conf_transfer_fee();
             let params = &JubjubBls12::new();
             let rng = &mut XorShiftRng::from_seed([0xbc4f6d44, 0xd62f276c, 0xb963afd0, 0x5455863d]);
-            let r_fs = Fs::rand(rng);
+            let mut randomness = [0u8; 32];
+            rng.fill_bytes(&mut randomness[..]);
+            let r_fs = Fs::to_uniform(elgamal::elgamal_extend(&randomness).as_bytes());
             let p_g = FixedGenerators::Diversifier;
-            let enc_tx_fee = zCiphertext::encrypt(tx_fee, r_fs, &saddr_sender.0, p_g, params);
+            let enc_tx_fee = elgamal::Ciphertext::encrypt(tx_fee, r_fs, &saddr_sender.0, p_g, params);
 
-            // Charge transaction fee
+            // Charge transaction fee to sender
             <EncryptedBalance<T>>::mutate(address_sender, |balance| {
-                let charged_balance = balance.clone().map(
-                    |_| Ciphertext::from_ciphertext(&bal_sender.sub_no_params(&enc_tx_fee)));
-                *balance = charged_balance
+                 let charged_balance = balance.clone().map(
+                     |_| Ciphertext::from_ciphertext(&bal_sender.sub_no_params(&enc_tx_fee)));
+                 *balance = charged_balance
             });
 
             // Get balance_recipient with the option type
