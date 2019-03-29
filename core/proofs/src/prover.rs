@@ -49,7 +49,7 @@ impl<E: JubjubEngine> TransferProof<E> {
     {
         let randomness = E::Fs::rand(rng);   
                 
-        let dbk = proof_generation_key.dbk();
+        let dbk = proof_generation_key.bdk();
         let ek_sender = proof_generation_key.into_encryption_key(params);        
 
         let rk = PublicKey(proof_generation_key.0.clone().into())

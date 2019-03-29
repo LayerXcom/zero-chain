@@ -8,8 +8,8 @@ use scrypto::{
 use proofs::{
     self,
 	primitives::{		
-		PaymentAddress, 		
-		ExpandedSpendingKey,		
+		EncryptionKey, 		
+		ProofGenerationKey,		
 		},
 	prover::TransferProof,	   
 };
@@ -33,8 +33,8 @@ impl Transaction {
         alpha: fs::Fs,
         proving_key: &Parameters<Bls12>,
 		prepared_vk: &PreparedVerifyingKey<Bls12>,		
-		address_recipient: &PaymentAddress<Bls12>,		
-		ex_sk_sender: &ExpandedSpendingKey<Bls12>,
+		address_recipient: &EncryptionKey<Bls12>,		
+		ok_sender: &fs::Fs,
         ciphertext_balance: proofs::elgamal::Ciphertext<Bls12>,		
 		rng: &mut R,
     ) -> Result<Self, io::Error>
@@ -42,7 +42,7 @@ impl Transaction {
 		// The pramaters from std environment
 		let params = JubjubBls12::new();
 		
-		let proof_generation_key = ex_sk_sender.into_proof_generation_key(&params);
+		let proof_generation_key = ProofGenerationKey::from_origin_key(ok_sender, &params);
 
 		// Generate the zk proof
 		let proof_output = TransferProof::gen_proof(
@@ -59,7 +59,7 @@ impl Transaction {
 		).unwrap();		
 
 		// Generate the re-randomized sign key
-		let rsk = PrivateKey::<Bls12>(ex_sk_sender.ask).randomize(alpha);
+		let rsk = PrivateKey::<Bls12>(*ok_sender).randomize(alpha);
 		let mut rsk_bytes = [0u8; 32];
 		rsk.write(&mut rsk_bytes[..]).map_err(|_| io::Error::InvalidData)?;
 		

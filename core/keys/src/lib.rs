@@ -120,19 +120,11 @@ pub const KEY_DIVERSIFICATION_PERSONALIZATION: &'static [u8; 8] = b"zech_div";
 //     }
 // }
 
-pub fn gen_rsk_bytes<E: JubjubEngine>(
-    ok: &[u8], 
-    alpha: &[u8], 
-    params: &E::Params
-) -> edwards::Point<E, PrimeOrder>     
-{
+pub fn bytes_to_fs<E: JubjubEngine>(bytes: &[u8]) -> E::Fs {
     let mut h = Blake2b::with_params(64, &[], &[], PRF_EXPAND_PERSONALIZATION);
-        h.update(ok);        
-        let res = h.finalize();
-
-        params
-            .generator(FixedGenerators::Diversifier)
-            .mul(E::Fs::to_uniform(res.as_bytes()), params)        
+    h.update(bytes);        
+    let res = h.finalize();
+    E::Fs::to_uniform(res.as_bytes())
 }
 
 #[derive(Clone)]
@@ -160,10 +152,7 @@ impl<E: JubjubEngine> ProofGenerationKey<E> {
         params: &E::Params
     ) -> Self
     {
-        let mut h = Blake2b::with_params(64, &[], &[], PRF_EXPAND_PERSONALIZATION);
-        h.update(ok);        
-        let res = h.finalize();
-        Self::from_origin_key(&E::Fs::to_uniform(res.as_bytes()), params)
+        Self::from_origin_key(&bytes_to_fs::<E>(ok), params)
     }
 
     /// Generate the randomized signature-verifying key
@@ -196,7 +185,7 @@ impl<E: JubjubEngine> ProofGenerationKey<E> {
     }
 
     /// Generate the payment address from proof generation key.
-    pub fn into_payment_address(
+    pub fn into_encryption_key(
         &self,        
         params: &E::Params
     ) -> EncryptionKey<E>
@@ -221,7 +210,7 @@ impl<E: JubjubEngine> EncryptionKey<E> {
     ) -> Self
     {
         let proof_generation_key = ProofGenerationKey::from_origin_key(origin_key, params);
-        proof_generation_key.into_payment_address(params)
+        proof_generation_key.into_encryption_key(params)
     }
 
     pub fn write<W: io::Write>(&self, mut writer: W) -> io::Result<()> {

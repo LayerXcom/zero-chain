@@ -11,7 +11,8 @@ use scrypto::{
             PrimeOrder,
             FixedGenerators,    
             ToUniform,        
-        }        
+        },
+        redjubjub::PrivateKey,
 };
 use std::io;
 
@@ -24,19 +25,32 @@ pub const PRF_EXPAND_PERSONALIZATION: &'static [u8; 16] = b"zech_ExpandSeed_";
 pub const CRH_BDK_PERSONALIZATION: &'static [u8; 8] = b"zech_bdk";
 pub const KEY_DIVERSIFICATION_PERSONALIZATION: &'static [u8; 8] = b"zech_div";
 
-pub fn gen_rsk_bytes<E: JubjubEngine>(
-    ok: &[u8], 
-    alpha: &[u8], 
-    params: &E::Params
-) -> edwards::Point<E, PrimeOrder>     
-{
-    let mut h = Blake2b::with_params(64, &[], &[], PRF_EXPAND_PERSONALIZATION);
-        h.update(ok);        
-        let res = h.finalize();
+// pub fn gen_rsk_bytes<E: JubjubEngine>(
+//     ok: &[u8], 
+//     alpha: &[u8], 
+//     params: &E::Params
+// ) -> PrivateKey
+// {
+//     let mut h = Blake2b::with_params(64, &[], &[], PRF_EXPAND_PERSONALIZATION);
+//     h.update(ok);        
+//     let op_ex = h.finalize();
 
-        params
-            .generator(FixedGenerators::NoteCommitmentRandomness)
-            .mul(E::Fs::to_uniform(res.as_bytes()), params)        
+//     let mut h = Blake2b::with_params(64, &[], &[], PRF_EXPAND_PERSONALIZATION);
+//     h.update(alpha);        
+//     let alpha_ex = h.finalize();
+
+
+
+//     params
+//         .generator(FixedGenerators::NoteCommitmentRandomness)
+//         .mul(E::Fs::to_uniform(res.as_bytes()), params)        
+// }
+
+pub fn bytes_to_fs<E: JubjubEngine>(bytes: &[u8]) -> E::Fs {
+    let mut h = Blake2b::with_params(64, &[], &[], PRF_EXPAND_PERSONALIZATION);
+    h.update(bytes);        
+    let res = h.finalize();
+    E::Fs::to_uniform(res.as_bytes())
 }
 
 #[derive(Clone)]
@@ -63,11 +77,8 @@ impl<E: JubjubEngine> ProofGenerationKey<E> {
         ok: &[u8],
         params: &E::Params
     ) -> Self
-    {
-        let mut h = Blake2b::with_params(64, &[], &[], PRF_EXPAND_PERSONALIZATION);
-        h.update(ok);        
-        let res = h.finalize();
-        Self::from_origin_key(&E::Fs::to_uniform(res.as_bytes()), params)
+    {               
+        Self::from_origin_key(&bytes_to_fs::<E>(ok), params)
     }
 
     /// Generate the randomized signature-verifying key

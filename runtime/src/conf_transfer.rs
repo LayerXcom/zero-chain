@@ -24,7 +24,7 @@ use zprimitives::{
     sig_vk::SigVerificationKey,      
     prepared_vk::PreparedVk,
 };
-use keys::PaymentAddress;
+use keys::EncryptionKey;
 use zcrypto::elgamal;
 use runtime_io;
 
@@ -58,13 +58,13 @@ decl_module! {
             };
 
             // Get address_sender with the type
-            let saddr_sender = match address_sender.into_payment_address() {
+            let saddr_sender = match address_sender.into_encryption_key() {
                 Some(v) => v,
                 None => return Err("Invalid address_sender"),
             };
 
             // Get address_recipient with the type
-            let saddr_recipient = match  address_recipient.into_payment_address() {
+            let saddr_recipient = match  address_recipient.into_encryption_key() {
                 Some(v) => v,
                 None => return Err("Invalid address_recipient"),
             };
@@ -163,8 +163,8 @@ impl<T: Trait> Module<T> {
     // Validate zk proofs
 	pub fn validate_proof (    
         zkproof: &bellman_verifier::Proof<Bls12>,
-        address_sender: &PaymentAddress<Bls12>,
-        address_recipient: &PaymentAddress<Bls12>,
+        address_sender: &EncryptionKey<Bls12>,
+        address_recipient: &EncryptionKey<Bls12>,
         value_sender: &elgamal::Ciphertext<Bls12>,
         value_recipient: &elgamal::Ciphertext<Bls12>,
         balance_sender: &elgamal::Ciphertext<Bls12>,
