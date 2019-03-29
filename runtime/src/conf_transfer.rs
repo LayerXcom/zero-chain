@@ -319,11 +319,11 @@ mod tests {
     #[test]    
     fn test_call_function() {        
         with_externalities(&mut new_test_ext(), || {                 
-            let proof: [u8; 192] = hex!("923bd0c3ea54b147372c78ca6f540f8deee4c91674aa592a5a075ab8868d7d18fc51e7aa8b4c3eb39ebdae25e44289ce8711e926a6828f89c398e4e6d97b2aa0115111a60a8bbbfb9bdc4a1ba27c1dde77ed88a0350c7e2e17ce1d8c4fd5004d152f57afd5ccb911f3c27c04aff88e779c8c1a116f18d84945eab501d4fca3575e64b06966c19b7a8fcf350bf8cee9199085d91754bdf944cf237364d0c57a21e9778b33de7490772372bbe7503eb725cb016fb0c98ce54fff4e33625a24d3c1");
+            let proof: [u8; 192] = hex!("b4ca09c7c2d9e887e40c37e70a56d97a41ea8da03e40b253e1933f1677c7309c4d3ab8d5aeb9907bf7b328df12af66c3a01c52cf40e9cbcf4f227cab510458835064867a4bbad789be83df0fa62aace268d30296ab49606a75d5bb2f2a4a55431323565a7a3fe94f21c34c71d8aa1a05a7efb5e4c04766ed9920a8c16e8f6fd92c5fec20673bd7561ed59f122239ffd1ac2638fd2d223d0520179a0c2b0fb875ebcef2925782c9f5496ddcf121e012f97f3be9bd3cc74a037064685554e367a7");
             let pkd_addr_alice: [u8; 32] = hex!("fd0c0c0183770c99559bf64df4fe23f77ced9b8b4d02826a282bcd125117dcc2");
             let pkd_addr_bob: [u8; 32] = hex!("45e66da531088b55dcb3b273ca825454d79d2d1d5c4fa2ba4a12c1fa1ccd6389");
-            let enc10_by_alice: [u8; 64] = hex!("ecb7fc55e2e2a1a37a1ede19008dfc885b30bf2d0764f4676818ce932a87e4351d6edd052ce792abb1f6df14a6b58f9571a9a97d1d765557d70567b9cffe9ee0");
-            let enc10_by_bob: [u8; 64] = hex!("6956c7e9b9a7a6d638065635e1cd968884957b9e9348ad7670dbc205eca01cb71d6edd052ce792abb1f6df14a6b58f9571a9a97d1d765557d70567b9cffe9ee0");                        
+            let enc10_by_alice: [u8; 64] = hex!("7db0710337156f353f5c03e41a1b7bfda913e987770c58908da7080d28b0403fdff1316f7cd3189e73563a5481bc953eb3796fb5565f433f3acdbe128859326b");
+            let enc10_by_bob: [u8; 64] = hex!("8d517bf8f8f2aab7090eaa7a57d6ddf9930d8b7198e1b980f1c977255234fca6dff1316f7cd3189e73563a5481bc953eb3796fb5565f433f3acdbe128859326b");                        
             let rvk: [u8; 32] = hex!("f539db3c0075f6394ff8698c95ca47921669c77bb2b23b366f42a39b05a88c96");
 
             assert_ok!(ConfTransfer::confidential_transfer(
