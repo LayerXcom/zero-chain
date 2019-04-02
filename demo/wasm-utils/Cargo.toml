@@ -26,6 +26,7 @@ bellman = { git = "https://github.com/LayerXcom/librustzcash", branch = "zero-ch
 zcrypto = { package = "zero-chain-crypto", path = "../../core/crypto"}
 bellman-verifier = { path = "../../core/bellman-verifier"}
 hex = "0.3.2"
+hex-literal = '0.1'
 
 # The `console_error_panic_hook` crate provides better debugging of panics by
 # logging them with `console.error`. This is great for development, but requires
