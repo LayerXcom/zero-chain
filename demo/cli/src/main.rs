@@ -44,6 +44,7 @@ fn cli() -> Result<(), String> {
     const PROVING_KEY_PATH: &str = "demo/cli/proving.params";
     const DEFAULT_AMOUNT: &str = "10";
     const DEFAULT_BALANCE: &str = "100";
+    const DEFAULT_FEE: &str = "1";
     const ALICESEED: &str = "416c696365202020202020202020202020202020202020202020202020202020";
     const BOBSEED: &str = "426f622020202020202020202020202020202020202020202020202020202020";
     const DEFAULT_ENCRYPTED_BALANCE: &str = "6f4962da776a391c3b03f3e14e8156d2545f39a3ebbed675ea28859252cb006fac776c796563fcd44cc49cfaea8bb796952c266e47779d94574c10ad01754b11";
@@ -109,6 +110,14 @@ fn cli() -> Result<(), String> {
                 .takes_value(true)
                 .required(false)
                 .default_value(DEFAULT_BALANCE)
+            )
+            .arg(Arg::with_name("fee")
+                .short("f")
+                .long("fee")
+                .help("The transaction fee. (default: 1)")
+                .takes_value(true)
+                .required(false)
+                .default_value(DEFAULT_FEE)
             )
             .arg(Arg::with_name("sender-privatekey")
                 .short("s")
@@ -237,6 +246,9 @@ fn cli() -> Result<(), String> {
             let balance_str = sub_matches.value_of("balance").unwrap();
             let balance: u32 = balance_str.parse().unwrap();
 
+            let fee_str = sub_matches.value_of("fee").unwrap();
+            let fee: u32 = fee_str.parse().unwrap();
+
             println!("Transaction >>");
             // print_tx(&sender_seed[..], &recipient_seed[..], &buf_pk[..], &buf_vk[..], amount, balance);
 
@@ -259,7 +271,12 @@ fn cli() -> Result<(), String> {
             // let address = EncryptionKey::<Bls12>::from_ok_bytes(&sender_seed[..], &PARAMS);
             // let ciphertext_balance = Ciphertext::encrypt(100, fs::Fs::one(), &address.0, FixedGenerators::NoteCommitmentRandomness, &PARAMS as &JubjubBls12);
 
-            let remaining_balance = balance - amount;
+            // TODO: 暗号化したfeeを徴収した後のciphertext_balanceを取得
+            // 上で得られているciphertextはAlice = 100の暗号化したものここから手数料を引いたもの（Alice = 100）の
+            // いや違うのか，徴収自体はオンチェーンなのでTxにfeeが乗っかっている，ただzkのproofはfee徴収後の残高に対してとる
+            // let ciphertext_balance = hogehoge;
+
+            let remaining_balance = balance - amount - fee;
 
             let tx = Transaction::gen_tx(
                             amount,
@@ -270,7 +287,8 @@ fn cli() -> Result<(), String> {
                             &address_recipient,
                             &sk_fs_s,
                             ciphertext_balance,
-                            rng
+                            rng,
+                            fee
                     ).expect("fails to generate the tx");
 
             println!(

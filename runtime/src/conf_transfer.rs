@@ -48,6 +48,7 @@ decl_module! {
             value_sender: Ciphertext,
             value_recipient: Ciphertext,
             rk: SigVerificationKey  // TODO: Extract from origin
+            fee_sender: Ciphertext
         ) -> Result {
 			// let rk = ensure_signed(origin)?;
 
@@ -79,6 +80,11 @@ decl_module! {
             let svalue_recipient = match value_recipient.into_ciphertext() {
                 Some(v) => v,
                 None => return Err("Invalid value_recipient"),
+            };
+
+            let sfee_sender = match fee_sender.into_ciphertext() {
+                Some(v) => v,
+                None => return Err("Invalid fee_sender"),
             };
 
             // Get rk with the type
@@ -115,6 +121,13 @@ decl_module! {
                 Some(b) => b.into_ciphertext(),
                 _ => None
             };
+
+            // Charge transaction fee on the sender's balance
+            <EncryptedBalance<T>>::mutate(address_sender, |balance| {
+                let new_balance = balance.clone().map(
+                    |_| Ciphertext::from_ciphertext(&bal_sender.sub_no_params(&sfee_sender)));
+                *balance = new_balance
+            });
 
             // Update the sender's balance
             <EncryptedBalance<T>>::mutate(address_sender, |balance| {

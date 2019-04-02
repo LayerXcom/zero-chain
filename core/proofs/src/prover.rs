@@ -45,6 +45,7 @@ impl<E: JubjubEngine> TransferProof<E> {
         ciphertext_balance: Ciphertext<E>,
         rng: &mut R,
         params: &E::Params,
+        fee: u32,
     ) -> Result<Self, &'static str>
     {
         let randomness = E::Fs::rand(rng);
@@ -62,7 +63,7 @@ impl<E: JubjubEngine> TransferProof<E> {
         let instance = Transfer {
             params: params,
             value: Some(value),
-            remaining_balance: Some(remaining_balance),
+            remaining_balance: Some(remaining_balance + fee),
             randomness: Some(randomness.clone()),
             alpha: Some(alpha.clone()),
             proof_generation_key: Some(proof_generation_key.clone()),
@@ -89,6 +90,14 @@ impl<E: JubjubEngine> TransferProof<E> {
             value,
             randomness,
             &address_recipient.0,
+            FixedGenerators::NoteCommitmentRandomness,
+            params
+        );
+
+        let cipher_fee_s = Ciphertext::encrypt(
+            fee,
+            randomness,
+            &ek_sender.0,
             FixedGenerators::NoteCommitmentRandomness,
             params
         );
@@ -146,6 +155,7 @@ impl<E: JubjubEngine> TransferProof<E> {
             cipher_val_s: cipher_val_s,
             cipher_val_r: cipher_val_r,
             cipher_balance: ciphertext_balance,
+            cipher_fee_s: cipher_fee_s,
         };
 
         Ok(transfer_proof)
