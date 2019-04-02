@@ -64,7 +64,7 @@ pub fn verify_proof<'a, E: Engine>(
 
 #[cfg(test)]
 mod tests {
-    use super::*;    
+    use super::*;
     use crate::tests::dummy_engine::{Fr, DummyEngine};
     #[cfg(feature = "std")]
     use ::std::num::Wrapping;
@@ -81,13 +81,13 @@ mod tests {
         };
 
         let proof = Proof {
-            a: Fr(Wrapping(3269)), 
-            b: Fr(Wrapping(471)), 
+            a: Fr(Wrapping(3269)),
+            b: Fr(Wrapping(471)),
             c: Fr(Wrapping(8383)),
         };
 
         let pub_inp = [Fr(Wrapping(1))];
 
-        assert!(verify_proof(&pvk, &proof, &pub_inp).unwrap());            
+        assert!(verify_proof(&pvk, &proof, &pub_inp).unwrap());
     }
 }

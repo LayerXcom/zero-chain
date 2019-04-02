@@ -146,7 +146,7 @@ impl<E: JubjubEngine> PublicKey<E> {
             Ok(s) => s,
             Err(_) => return false,
         };
-                
+
         // 0 = h_G(-S . P_G + R + c . vk)
         self.0.mul(c, params).add(&r, params).add(
             &params.generator(p_g).mul(s, params).negate().into(),
@@ -205,7 +205,7 @@ pub fn batch_verify<'a, E: JubjubEngine, R: Rng>(
 
 #[cfg(test)]
 mod tests {
-    use pairing::bls12_381::Bls12;    
+    use pairing::bls12_381::Bls12;
     use rand::{Rng, SeedableRng, XorShiftRng};
 
     use crate::curve::{JubjubBls12, fs::Fs, edwards};
@@ -213,7 +213,7 @@ mod tests {
     use super::*;
 
     #[test]
-    fn test_batch_verify() {        
+    fn test_batch_verify() {
         let mut rng = XorShiftRng::from_seed([0xbc4f6d44, 0xd62f276c, 0xb963afd0, 0x5455863d]);
 
         let params = &JubjubBls12::new();

@@ -17,8 +17,8 @@ use substrate_primitives::hexdisplay::AsBytesRef;
 pub struct Ciphertext(pub Vec<u8>);
 
 impl Ciphertext {
-    pub fn into_ciphertext(&self) -> Option<elgamal::Ciphertext<Bls12>> {   
-        elgamal::Ciphertext::read(&mut &self.0[..], &JUBJUB as &JubjubBls12).ok()        
+    pub fn into_ciphertext(&self) -> Option<elgamal::Ciphertext<Bls12>> {
+        elgamal::Ciphertext::read(&mut &self.0[..], &JUBJUB as &JubjubBls12).ok()
     }
 
     pub fn from_ciphertext(ciphertext: &elgamal::Ciphertext<Bls12>) -> Self {
@@ -40,7 +40,7 @@ impl fmt::Display for Ciphertext {
         write!(f, "0x")?;
         for i in &self.0 {
             write!(f, "{:02x}", i)?;
-        }        
+        }
         Ok(())
     }
 }
@@ -52,14 +52,14 @@ impl AsBytesRef for Ciphertext {
     }
 }
 
-    
+
 #[cfg(test)]
 mod tests {
     use super::*;
-    use rand::{Rng, SeedableRng, XorShiftRng, Rand};    
+    use rand::{Rng, SeedableRng, XorShiftRng, Rand};
     use pairing::PrimeField;
-    use jubjub::curve::{FixedGenerators, JubjubBls12, fs::Fs, ToUniform, JubjubParams};     
-    use parity_codec::{Encode, Decode};  
+    use jubjub::curve::{FixedGenerators, JubjubBls12, fs::Fs, ToUniform, JubjubParams};
+    use parity_codec::{Encode, Decode};
 
     #[test]
     fn test_ciphertext_into_from() {
@@ -79,9 +79,9 @@ mod tests {
         let public_key = params.generator(p_g).mul(sk_fs, params).into();
         let value: u32 = 5 as u32;
 
-        let ciphertext1 = elgamal::Ciphertext::encrypt(value, r_fs, &public_key, p_g, params);                
+        let ciphertext1 = elgamal::Ciphertext::encrypt(value, r_fs, &public_key, p_g, params);
 
-        let ciphertext_b = Ciphertext::from_ciphertext(&ciphertext1);            
+        let ciphertext_b = Ciphertext::from_ciphertext(&ciphertext1);
         let ciphertext2 = ciphertext_b.into_ciphertext().unwrap();
 
         assert!(ciphertext1 == ciphertext2);
@@ -105,14 +105,14 @@ mod tests {
         let public_key = params.generator(p_g).mul(sk_fs, params).into();
         let value: u32 = 5 as u32;
 
-        let ciphertext1 = elgamal::Ciphertext::encrypt(value, r_fs, &public_key, p_g, params);  
-        let ciphertext_b = Ciphertext::from_ciphertext(&ciphertext1); 
-        
-        let encoded_cipher = ciphertext_b.encode();        
-        
+        let ciphertext1 = elgamal::Ciphertext::encrypt(value, r_fs, &public_key, p_g, params);
+        let ciphertext_b = Ciphertext::from_ciphertext(&ciphertext1);
+
+        let encoded_cipher = ciphertext_b.encode();
+
         let decoded_cipher = Ciphertext::decode(&mut encoded_cipher.as_slice()).unwrap();
         assert_eq!(ciphertext_b, decoded_cipher);
-    }    
+    }
 
     #[test]
     fn test_ciphertext_rw() {

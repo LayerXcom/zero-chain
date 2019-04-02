@@ -18,8 +18,8 @@ pub struct PreparedVk(
 );
 
 impl PreparedVk {
-    pub fn into_prepared_vk(&self) -> Option<bellman_verifier::PreparedVerifyingKey<Bls12>> {   
-        bellman_verifier::PreparedVerifyingKey::<Bls12>::read(&mut &self.0[..]).ok()        
+    pub fn into_prepared_vk(&self) -> Option<bellman_verifier::PreparedVerifyingKey<Bls12>> {
+        bellman_verifier::PreparedVerifyingKey::<Bls12>::read(&mut &self.0[..]).ok()
     }
 
     pub fn from_prepared_vk(pvk: &bellman_verifier::PreparedVerifyingKey<Bls12>) -> Self {
@@ -46,7 +46,7 @@ impl fmt::Display for PreparedVk {
         write!(f, "0x")?;
         for i in &self.0 {
             write!(f, "{:02x}", i)?;
-        }        
+        }
         Ok(())
     }
 }
@@ -62,20 +62,20 @@ impl AsBytesRef for PreparedVk {
 #[cfg(feature = "std")]
 #[cfg(test)]
 mod tests {
-    use super::*;       
-    use parity_codec::{Encode, Decode};   
+    use super::*;
+    use parity_codec::{Encode, Decode};
     use std::path::Path;
     use std::fs::File;
-    use std::io::{BufReader, Read}; 
+    use std::io::{BufReader, Read};
 
     fn get_pvk() -> PreparedVk {
-        let vk_path = Path::new("../../demo/cli/verification.params"); 
+        let vk_path = Path::new("../../demo/cli/verification.params");
         let vk_file = File::open(&vk_path).unwrap();
         let mut vk_reader = BufReader::new(vk_file);
 
         let mut buf_vk = vec![];
         vk_reader.read_to_end(&mut buf_vk).unwrap();
-        
+
         PreparedVk(buf_vk)
     }
 
@@ -91,20 +91,20 @@ mod tests {
     }
 
     #[test]
-    fn test_pvk_encode_decode() {               
+    fn test_pvk_encode_decode() {
         let pvk = get_pvk();
         let encoded_pvk = pvk.encode();
         let decoded_pvk = PreparedVk::decode(&mut encoded_pvk.as_slice()).unwrap();
         assert_eq!(pvk, decoded_pvk);
     }
-    
+
     #[test]
     fn test_pvk_into_from() {
         let pvk = get_pvk();
-        
+
         let into_pvk = pvk.into_prepared_vk().unwrap();
-        let from_pvk = PreparedVk::from_prepared_vk(&into_pvk);                
-                
+        let from_pvk = PreparedVk::from_prepared_vk(&into_pvk);
+
         assert_eq!(pvk, from_pvk);
     }
 }

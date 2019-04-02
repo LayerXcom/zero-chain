@@ -23,7 +23,7 @@ use parity_codec::{Encode, Decode, Input};
 
 #[cfg(feature = "std")]
 impl Serialize for SigVerificationKey {
-    fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error> 
+    fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
         where S: Serializer
     {
         bytes::serialize(&self.0, serializer)
@@ -53,13 +53,13 @@ impl Decode for SigVerificationKey {
 }
 
 impl SigVerificationKey {
-    pub fn into_verification_key(&self) -> Option<redjubjub::PublicKey<Bls12>> {   
-        redjubjub::PublicKey::read(&mut &self.0[..], &JUBJUB as &JubjubBls12).ok()        
+    pub fn into_verification_key(&self) -> Option<redjubjub::PublicKey<Bls12>> {
+        redjubjub::PublicKey::read(&mut &self.0[..], &JUBJUB as &JubjubBls12).ok()
     }
 
     pub fn from_verification_key(vk: &redjubjub::PublicKey<Bls12>) -> Self {
         let mut writer = [0u8; 32];
-        vk.write(&mut &mut writer[..]).unwrap();        
+        vk.write(&mut &mut writer[..]).unwrap();
         H256::from_slice(&writer)
     }
 }
@@ -81,10 +81,10 @@ impl AsBytesRef for SigVerificationKey {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use rand::{Rng, SeedableRng, XorShiftRng};    
+    use rand::{Rng, SeedableRng, XorShiftRng};
     use pairing::bls12_381::Bls12;
     use jubjub::curve::{FixedGenerators, JubjubBls12};
-    use jubjub::redjubjub::PublicKey;        
+    use jubjub::redjubjub::PublicKey;
 
     #[test]
     fn test_vk_into_from() {
@@ -95,7 +95,7 @@ mod tests {
         let sk = redjubjub::PrivateKey::<Bls12>(rng.gen());
         let vk1 = PublicKey::from_private(&sk, p_g, params);
 
-        let vk_b = SigVerificationKey::from_verification_key(&vk1);        
+        let vk_b = SigVerificationKey::from_verification_key(&vk1);
         let vk2 = vk_b.into_verification_key().unwrap();
 
         assert!(vk1 == vk2);
@@ -110,11 +110,11 @@ mod tests {
         let sk = redjubjub::PrivateKey::<Bls12>(rng.gen());
         let vk1 = PublicKey::from_private(&sk, p_g, params);
 
-        let vk_b = SigVerificationKey::from_verification_key(&vk1);                
-        
-        let encoded_vk = vk_b.encode();        
-        
+        let vk_b = SigVerificationKey::from_verification_key(&vk1);
+
+        let encoded_vk = vk_b.encode();
+
         let decoded_vk = SigVerificationKey::decode(&mut encoded_vk.as_slice()).unwrap();
         assert_eq!(vk_b, decoded_vk);
-    }    
+    }
 }

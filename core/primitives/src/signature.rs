@@ -29,7 +29,7 @@ pub type RedjubjubSignature = H512;
 
 #[cfg(feature = "std")]
 impl Serialize for H512 {
-    fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error> 
+    fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
         where S: Serializer
     {
         bytes::serialize(&self.0, serializer)
@@ -85,16 +85,16 @@ impl Verify for RedjubjubSignature {
             Some(vk) => return vk.verify(msg.get(), &sig, p_g, &JUBJUB),
             None => return false
         }
-        
+
     }
 }
 
 //    pub fn verify_auth_sig (
-//         rk: PublicKey<Bls12>, 
+//         rk: PublicKey<Bls12>,
 //         auth_sig: RedjubjubSignature,
 //         sighash_value: &[u8; 32],
 //         params: &JubjubBls12,
-//     ) -> bool {        
+//     ) -> bool {
 //         // Compute the signature's message for rk/auth_sig
 //         let mut data_to_be_signed = [0u8; 64];
 //         rk.0.write(&mut data_to_be_signed[0..32])
@@ -108,7 +108,7 @@ impl Verify for RedjubjubSignature {
 //             FixedGenerators::SpendingKeyGenerator,
 //             &params,
 //         )
-//     } 
+//     }
 
 // impl From<H512> for RedjubjubSignature {
 // 	fn from(h: H512) -> RedjubjubSignature {
@@ -117,13 +117,13 @@ impl Verify for RedjubjubSignature {
 // }
 
 impl RedjubjubSignature {
-    pub fn into_signature(&self) -> Option<redjubjub::Signature> {   
-        redjubjub::Signature::read(&self.0[..]).ok()        
+    pub fn into_signature(&self) -> Option<redjubjub::Signature> {
+        redjubjub::Signature::read(&self.0[..]).ok()
     }
 
     pub fn from_signature(sig: &redjubjub::Signature) -> Self {
         let mut writer = [0u8; 64];
-        sig.write(&mut writer[..]).unwrap();        
+        sig.write(&mut writer[..]).unwrap();
         H512::from_slice(&writer)
     }
 }
@@ -137,10 +137,10 @@ impl Into<RedjubjubSignature> for redjubjub::Signature {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use rand::{Rng, SeedableRng, XorShiftRng};    
+    use rand::{Rng, SeedableRng, XorShiftRng};
     use pairing::bls12_381::Bls12;
     use jubjub::curve::{FixedGenerators, JubjubBls12};
-    use jubjub::redjubjub::PublicKey;    
+    use jubjub::redjubjub::PublicKey;
 
     #[test]
     fn test_sig_into_from() {
@@ -153,10 +153,10 @@ mod tests {
 
         let msg = b"Foo bar";
         let sig1 = sk.sign(msg, &mut rng, p_g, params);
-        
+
         assert!(vk.verify(msg, &sig1, p_g, params));
 
-        let sig_b = RedjubjubSignature::from_signature(&sig1);        
+        let sig_b = RedjubjubSignature::from_signature(&sig1);
         let sig2 = sig_b.into_signature().unwrap();
 
         assert!(sig1 == sig2);
@@ -173,13 +173,13 @@ mod tests {
 
         let msg = b"Foo bar";
         let sig1 = sk.sign(msg, &mut rng, p_g, params);
-        
+
         assert!(vk.verify(msg, &sig1, p_g, params));
         let sig_b = RedjubjubSignature::from_signature(&sig1);
-        
-        let encoded_sig = sig_b.encode();        
-        
+
+        let encoded_sig = sig_b.encode();
+
         let decoded_sig = RedjubjubSignature::decode(&mut encoded_sig.as_slice()).unwrap();
         assert_eq!(sig_b, decoded_sig);
-    }    
+    }
 }

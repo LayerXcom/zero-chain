@@ -95,7 +95,7 @@ impl<E: JubjubEngine> Point<E, Unknown> {
     ) -> io::Result<Self>
     {
         let mut y_repr = <E::Fr as PrimeField>::Repr::default();
-        
+
         y_repr.read_le(reader)?;
 
         let x_sign = (y_repr.as_ref()[3] >> 63) == 1;
@@ -201,7 +201,7 @@ impl<E: JubjubEngine, Subgroup> Point<E, Subgroup> {
         if x_repr.is_odd() {
             y_repr.as_mut()[3] |= 0x8000000000000000u64;
         }
-        
+
         y_repr.write_le(writer)
     }
 

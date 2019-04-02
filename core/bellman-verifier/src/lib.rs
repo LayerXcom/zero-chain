@@ -24,7 +24,7 @@ use pairing::{
     CurveAffine,
     EncodedPoint,
     io,
-    RW,    
+    RW,
 };
 
 #[cfg(test)]
@@ -53,8 +53,8 @@ impl<E: Engine> Proof<E> {
         &self,
         writer: &mut W
     ) -> io::Result<()>
-    {            
-        writer.write(self.a.into_compressed().as_ref())?;           
+    {
+        writer.write(self.a.into_compressed().as_ref())?;
         writer.write(self.b.into_compressed().as_ref())?;
         writer.write(self.c.into_compressed().as_ref())?;
 
@@ -126,11 +126,11 @@ impl<E: Engine> PreparedVerifyingKey<E> {
     {
         use byteorder::{ByteOrder, BigEndian};
 
-        self.alpha_g1_beta_g2.write(writer)?;        
+        self.alpha_g1_beta_g2.write(writer)?;
         self.neg_gamma_g2.write(writer)?;
-        self.neg_delta_g2.write(writer)?; 
+        self.neg_delta_g2.write(writer)?;
 
-        let mut buf = [0u8; 4];        
+        let mut buf = [0u8; 4];
 
         BigEndian::write_u32(&mut buf, self.ic.len() as u32);
         writer.write(&buf)?;
@@ -145,28 +145,28 @@ impl<E: Engine> PreparedVerifyingKey<E> {
     pub fn read<R: io::Read> (
         reader: &mut R
     ) -> io::Result<Self>
-    {   
-        use byteorder::{ByteOrder, BigEndian}; 
-        
+    {
+        use byteorder::{ByteOrder, BigEndian};
+
         let mut g1_repr = <E::G1Affine as CurveAffine>::Uncompressed::empty();
         let alpha_g1_beta_g2 = E::Fqk::read(reader)?;
-        
+
         let neg_gamma_g2 = <E::G2Affine as CurveAffine>::Prepared::read(reader)?;
         let neg_delta_g2 = <E::G2Affine as CurveAffine>::Prepared::read(reader)?;
-        
+
         let mut buf = [0u8; 4];
         reader.read(&mut buf)?;
 
         let ic_len = BigEndian::read_u32(&buf) as usize;
-        
+
         let mut ic = vec![];
 
-        for _ in 0..ic_len {            
-            reader.read(g1_repr.as_mut())?;            
+        for _ in 0..ic_len {
+            reader.read(g1_repr.as_mut())?;
             let g1 = g1_repr
                         .into_affine()
-                        .map_err(|_| io::Error::InvalidData) 
-                        .and_then(|e| if e.is_zero() {                            
+                        .map_err(|_| io::Error::InvalidData)
+                        .and_then(|e| if e.is_zero() {
                             Err(io::Error::PointInfinity)
                         } else {
                             Ok(e)
@@ -331,33 +331,33 @@ impl From<io::Error> for SynthesisError {
 
 #[cfg(test)]
 mod test_proof_write_read {
-    use super::*;            
-    use pairing::bls12_381::{G1Affine, G2Affine, Fq, FqRepr, Fq2, Bls12};        
+    use super::*;
+    use pairing::bls12_381::{G1Affine, G2Affine, Fq, FqRepr, Fq2, Bls12};
 
     #[test]
-    fn byte_cast() {        
-        let proof = Proof::<Bls12> { 
-            a: G1Affine { 
-                x: Fq(FqRepr([16739797345307447054, 8770073581945912782, 2136235734558249053, 15708693206467346864, 8490922573673252286, 1579948179538746271])), 
-                y: Fq(FqRepr([6020268861830312380, 12879642226817054130, 17904268384441769431, 15221266273771162992, 5384025118770475327, 1217424206270675696])), 
-                infinity: false 
-            }, 
-            b: G2Affine { 
-                x: Fq2 { 
-                    c0: Fq(FqRepr([1955900693533848923, 1207270260807916624, 10030599496790334806, 13310839817113796132, 7335494448760471336, 1520001478562200471])), 
-                    c1: Fq(FqRepr([10867545881237734656, 11292327308906943064, 4286427264655280722, 5033346395315998832, 9316987264960049565, 1093242448245841130])) 
-                }, 
-                y: Fq2 { 
-                    c0: Fq(FqRepr([6242954237310667968, 4585560269108097072, 5517602464819718440, 11574556308726901230, 9576729709326690239, 433440758793164942])), 
-                    c1: Fq(FqRepr([11180820212476238720, 13504112200989036594, 2176986271111729977, 4481942420924131750, 16599268505710547724, 922146901424495142])) 
-                }, 
-                infinity: false 
-            }, 
-            c: G1Affine { 
-                x: Fq(FqRepr([16362720867114782945, 14827736289902972547, 7987695302896742039, 14289613131851611182, 7162884718192410854, 605698044002088945])), 
-                y: Fq(FqRepr([3093450141616622888, 7767002491037351418, 5972324121568597438, 2377138492074911281, 701452421528324862, 1373508511228186748])), 
-                infinity: false 
-            } 
+    fn byte_cast() {
+        let proof = Proof::<Bls12> {
+            a: G1Affine {
+                x: Fq(FqRepr([16739797345307447054, 8770073581945912782, 2136235734558249053, 15708693206467346864, 8490922573673252286, 1579948179538746271])),
+                y: Fq(FqRepr([6020268861830312380, 12879642226817054130, 17904268384441769431, 15221266273771162992, 5384025118770475327, 1217424206270675696])),
+                infinity: false
+            },
+            b: G2Affine {
+                x: Fq2 {
+                    c0: Fq(FqRepr([1955900693533848923, 1207270260807916624, 10030599496790334806, 13310839817113796132, 7335494448760471336, 1520001478562200471])),
+                    c1: Fq(FqRepr([10867545881237734656, 11292327308906943064, 4286427264655280722, 5033346395315998832, 9316987264960049565, 1093242448245841130]))
+                },
+                y: Fq2 {
+                    c0: Fq(FqRepr([6242954237310667968, 4585560269108097072, 5517602464819718440, 11574556308726901230, 9576729709326690239, 433440758793164942])),
+                    c1: Fq(FqRepr([11180820212476238720, 13504112200989036594, 2176986271111729977, 4481942420924131750, 16599268505710547724, 922146901424495142]))
+                },
+                infinity: false
+            },
+            c: G1Affine {
+                x: Fq(FqRepr([16362720867114782945, 14827736289902972547, 7987695302896742039, 14289613131851611182, 7162884718192410854, 605698044002088945])),
+                y: Fq(FqRepr([3093450141616622888, 7767002491037351418, 5972324121568597438, 2377138492074911281, 701452421528324862, 1373508511228186748])),
+                infinity: false
+            }
         };
 
         let mut v = vec![];
@@ -366,6 +366,6 @@ mod test_proof_write_read {
         assert_eq!(v.len(), 192);
 
         let de_proof = Proof::read(&v[..]).unwrap();
-        assert!(proof == de_proof);      
-    }    
+        assert!(proof == de_proof);
+    }
 }

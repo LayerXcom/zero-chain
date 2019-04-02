@@ -26,7 +26,7 @@ use version::RuntimeVersion;
 use version::NativeVersion;
 
 use zprimitives::{
-	signature::RedjubjubSignature,	
+	signature::RedjubjubSignature,
 	sig_vk::SigVerificationKey,
 	pkd_address::PkdAddress,
 };
@@ -204,7 +204,7 @@ construct_runtime!(
 		Aura: aura::{Module},
 		Indices: indices,
 		Balances: balances,
-		Sudo: sudo,							
+		Sudo: sudo,
 	}
 );
 

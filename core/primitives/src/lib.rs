@@ -11,7 +11,7 @@ mod std {
     pub use crate::alloc::vec;
     pub use crate::alloc::string;
     pub use crate::alloc::boxed;
-    pub use crate::alloc::borrow;    
+    pub use crate::alloc::borrow;
 }
 
 #[cfg(feature = "std")]
