@@ -53,7 +53,7 @@ features = ["serde-serialize"]
 git = "https://github.com/gtank/blake2-rfc"
 rev = "7a5b5fc99ae483a0043db7547fb79a6fa44b88a9"
 
-[profile.release]
-# Tell `rustc` to optimize for small code size.
-opt-level = "s"
-
+# [profile.release]
+# # Tell `rustc` to optimize for small code size.
+# opt-level = 3
+# lto = true
