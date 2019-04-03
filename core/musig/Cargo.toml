@@ -8,4 +8,4 @@ edition = "2018"
 jubjub = { path = "../jubjub" }
 rand = { version = "0.6.0" }
 failure = { version = "^0.1.1", default-features = false }
-merlin = "0.1.0"
+merlin = "1"
