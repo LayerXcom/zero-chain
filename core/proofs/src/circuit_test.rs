@@ -120,7 +120,7 @@ fn hash_lc<E: Engine>(
                 BigEndian::write_u64(&mut buf[1..9], i as u64);
             }
         }
-        
+
         coeff.into_repr().write_be(&mut buf[9..]).unwrap();
 
         h.update(&buf);

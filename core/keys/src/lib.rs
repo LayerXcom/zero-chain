@@ -11,14 +11,14 @@ mod std {
     pub use crate::alloc::vec;
     pub use crate::alloc::string;
     pub use crate::alloc::boxed;
-    pub use crate::alloc::borrow;    
+    pub use crate::alloc::borrow;
 }
 
 use pairing::{
     PrimeField,
-    PrimeFieldRepr,    
-    io,    
-};    
+    PrimeFieldRepr,
+    io,
+};
 
 use jubjub::{
         curve::{
@@ -28,11 +28,11 @@ use jubjub::{
             PrimeOrder,
             FixedGenerators,
             ToUniform,
-        },        
+        },
 };
 
 use blake2_rfc::{
-    blake2s::Blake2s, 
+    blake2s::Blake2s,
     blake2b::Blake2b
 };
 
@@ -42,27 +42,27 @@ pub const KEY_DIVERSIFICATION_PERSONALIZATION: &'static [u8; 8] = b"zech_div";
 
 pub fn bytes_to_fs<E: JubjubEngine>(bytes: &[u8]) -> E::Fs {
     let mut h = Blake2b::with_params(64, &[], &[], PRF_EXPAND_PERSONALIZATION);
-    h.update(bytes);        
+    h.update(bytes);
     let res = h.finalize();
     E::Fs::to_uniform(res.as_bytes())
 }
 
 #[derive(Clone)]
 pub struct ProofGenerationKey<E: JubjubEngine> (
-    pub edwards::Point<E, PrimeOrder>    
+    pub edwards::Point<E, PrimeOrder>
 );
 
 impl<E: JubjubEngine> ProofGenerationKey<E> {
     /// Generate proof generation key key from origin key
     pub fn from_origin_key(
-        origin_key: &E::Fs, 
+        origin_key: &E::Fs,
         params: &E::Params
-    ) -> Self 
+    ) -> Self
     {
         ProofGenerationKey (
             params
                 .generator(FixedGenerators::Diversifier)
-                .mul(origin_key.into_repr(), params)            
+                .mul(origin_key.into_repr(), params)
         )
     }
 
@@ -90,7 +90,7 @@ impl<E: JubjubEngine> ProofGenerationKey<E> {
     /// Generate the decryption key
     pub fn bdk(&self) -> E::Fs {
         let mut preimage = [0; 32];
-        self.0.write(&mut &mut preimage[..]).unwrap();        
+        self.0.write(&mut &mut preimage[..]).unwrap();
 
         let mut h = Blake2s::with_params(32, &[], &[], CRH_BDK_PERSONALIZATION);
         h.update(&preimage);
@@ -106,7 +106,7 @@ impl<E: JubjubEngine> ProofGenerationKey<E> {
 
     /// Generate the payment address from proof generation key.
     pub fn into_encryption_key(
-        &self,        
+        &self,
         params: &E::Params
     ) -> EncryptionKey<E>
     {
@@ -120,10 +120,10 @@ impl<E: JubjubEngine> ProofGenerationKey<E> {
 
 #[derive(Clone, PartialEq)]
 pub struct EncryptionKey<E: JubjubEngine> (
-    pub edwards::Point<E, PrimeOrder>    
+    pub edwards::Point<E, PrimeOrder>
 );
 
-impl<E: JubjubEngine> EncryptionKey<E> {    
+impl<E: JubjubEngine> EncryptionKey<E> {
     pub fn from_origin_key(
         origin_key: &E::Fs,
         params: &E::Params,
@@ -137,18 +137,18 @@ impl<E: JubjubEngine> EncryptionKey<E> {
         ok: &[u8],
         params: &E::Params
     ) -> Self
-    {               
+    {
         Self::from_origin_key(&bytes_to_fs::<E>(ok), params)
     }
 
     pub fn write<W: io::Write>(&self, mut writer: W) -> io::Result<()> {
-        self.0.write(&mut writer)?;        
+        self.0.write(&mut writer)?;
         Ok(())
     }
 
     pub fn read<R: io::Read>(reader: &mut R, params: &E::Params) -> io::Result<Self> {
         let pk_d = edwards::Point::<E, _>::read(reader, params)?;
-        let pk_d = pk_d.as_prime_order(params).unwrap();        
+        let pk_d = pk_d.as_prime_order(params).unwrap();
         Ok(EncryptionKey(pk_d))
     }
 }
@@ -159,13 +159,13 @@ mod tests {
     use rand::{Rng, SeedableRng, XorShiftRng, Rand};
     use jubjub::curve::{JubjubBls12, fs};
     use pairing::bls12_381::Bls12;
-    
+
     #[test]
     fn test_encryption_key_read_write() {
         let params = &JubjubBls12::new();
         let rng = &mut XorShiftRng::from_seed([0x3dbe6259, 0x8d313d76, 0x3237db17, 0xe5bc0654]);
 
-        let origin_key = fs::Fs::rand(rng);   
+        let origin_key = fs::Fs::rand(rng);
         let addr1 = EncryptionKey::from_origin_key(&origin_key, params);
 
         let mut v = vec![];

@@ -15,14 +15,14 @@ use substrate_primitives::hexdisplay::AsBytesRef;
 pub struct Proof(pub Vec<u8>);
 
 impl Proof {
-    pub fn into_proof(&self) -> Option<bellman_verifier::Proof<Bls12>> {          
-        bellman_verifier::Proof::<Bls12>::read(&self.0[..]).ok()        
+    pub fn into_proof(&self) -> Option<bellman_verifier::Proof<Bls12>> {
+        bellman_verifier::Proof::<Bls12>::read(&self.0[..]).ok()
     }
 
     pub fn from_proof(proof: &bellman_verifier::Proof<Bls12>) -> Self {
-        let mut writer = [0u8; 192];        
-        proof.write(&mut &mut writer[..]).unwrap();        
-        Proof(writer.to_vec())  
+        let mut writer = [0u8; 192];
+        proof.write(&mut &mut writer[..]).unwrap();
+        Proof(writer.to_vec())
     }
 }
 
@@ -38,7 +38,7 @@ impl fmt::Display for Proof {
         write!(f, "0x")?;
         for i in &self.0 {
             write!(f, "{:02x}", i)?;
-        }        
+        }
         Ok(())
     }
 }

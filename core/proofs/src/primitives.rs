@@ -1,7 +1,7 @@
 use pairing::{
     PrimeField,
-    PrimeFieldRepr,       
-};    
+    PrimeFieldRepr,
+};
 
 use scrypto::{
         jubjub::{
@@ -9,16 +9,16 @@ use scrypto::{
             JubjubParams,
             edwards,
             PrimeOrder,
-            FixedGenerators,    
-            ToUniform,        
+            FixedGenerators,
+            ToUniform,
         },
         redjubjub::PrivateKey,
 };
 use std::io;
 
 use blake2_rfc::{
-    blake2s::Blake2s,   
-    blake2b::Blake2b, 
+    blake2s::Blake2s,
+    blake2b::Blake2b,
 };
 
 pub const PRF_EXPAND_PERSONALIZATION: &'static [u8; 16] = b"zech_ExpandSeed_";
@@ -27,27 +27,27 @@ pub const KEY_DIVERSIFICATION_PERSONALIZATION: &'static [u8; 8] = b"zech_div";
 
 pub fn bytes_to_fs<E: JubjubEngine>(bytes: &[u8]) -> E::Fs {
     let mut h = Blake2b::with_params(64, &[], &[], PRF_EXPAND_PERSONALIZATION);
-    h.update(bytes);        
+    h.update(bytes);
     let res = h.finalize();
     E::Fs::to_uniform(res.as_bytes())
 }
 
 #[derive(Clone)]
 pub struct ProofGenerationKey<E: JubjubEngine> (
-    pub edwards::Point<E, PrimeOrder>    
+    pub edwards::Point<E, PrimeOrder>
 );
 
 impl<E: JubjubEngine> ProofGenerationKey<E> {
     /// Generate proof generation key from origin key
     pub fn from_origin_key(
-        origin_key: &E::Fs, 
+        origin_key: &E::Fs,
         params: &E::Params
-    ) -> Self 
+    ) -> Self
     {
         ProofGenerationKey (
             params
                 .generator(FixedGenerators::NoteCommitmentRandomness) // mul_by_cofactor?
-                .mul(origin_key.into_repr(), params)            
+                .mul(origin_key.into_repr(), params)
         )
     }
 
@@ -56,7 +56,7 @@ impl<E: JubjubEngine> ProofGenerationKey<E> {
         ok: &[u8],
         params: &E::Params
     ) -> Self
-    {               
+    {
         Self::from_origin_key(&bytes_to_fs::<E>(ok), params)
     }
 
@@ -75,7 +75,7 @@ impl<E: JubjubEngine> ProofGenerationKey<E> {
     /// Generate the decryption key
     pub fn bdk(&self) -> E::Fs {
         let mut preimage = [0; 32];
-        self.0.write(&mut &mut preimage[..]).unwrap();        
+        self.0.write(&mut &mut preimage[..]).unwrap();
 
         let mut h = Blake2s::with_params(32, &[], &[], CRH_BDK_PERSONALIZATION);
         h.update(&preimage);
@@ -91,7 +91,7 @@ impl<E: JubjubEngine> ProofGenerationKey<E> {
 
     /// Generate the encryption key from proof generation key.
     pub fn into_encryption_key(
-        &self,        
+        &self,
         params: &E::Params
     ) -> EncryptionKey<E>
     {
@@ -105,10 +105,10 @@ impl<E: JubjubEngine> ProofGenerationKey<E> {
 
 #[derive(Clone, PartialEq)]
 pub struct EncryptionKey<E: JubjubEngine> (
-    pub edwards::Point<E, PrimeOrder>    
+    pub edwards::Point<E, PrimeOrder>
 );
 
-impl<E: JubjubEngine> EncryptionKey<E> {   
+impl<E: JubjubEngine> EncryptionKey<E> {
     pub fn from_origin_key(
         origin_key: &E::Fs,
         params: &E::Params,
@@ -122,18 +122,18 @@ impl<E: JubjubEngine> EncryptionKey<E> {
         ok: &[u8],
         params: &E::Params
     ) -> Self
-    {               
+    {
         Self::from_origin_key(&bytes_to_fs::<E>(ok), params)
     }
-     
+
     pub fn write<W: io::Write>(&self, mut writer: W) -> io::Result<()> {
-        self.0.write(&mut writer)?;        
+        self.0.write(&mut writer)?;
         Ok(())
     }
 
     pub fn read<R: io::Read>(reader: &mut R, params: &E::Params) -> io::Result<Self> {
         let pk_d = edwards::Point::<E, _>::read(reader, params)?;
-        let pk_d = pk_d.as_prime_order(params).unwrap();        
+        let pk_d = pk_d.as_prime_order(params).unwrap();
         Ok(EncryptionKey(pk_d))
-    }    
+    }
 }

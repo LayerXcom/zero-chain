@@ -421,14 +421,14 @@ fn test_jubjub_bls12() {
 
     tests::test_suite::<Bls12>(&params);
 
-    let test_repr = hex!("9d12b88b08dcbef8a11ee0712d94cb236ee2f4ca17317075bfafc82ce3139d31");    
-    
-    let p = edwards::Point::<Bls12, _>::read(&mut &test_repr[..], &params).unwrap();    
+    let test_repr = hex!("9d12b88b08dcbef8a11ee0712d94cb236ee2f4ca17317075bfafc82ce3139d31");
+
+    let p = edwards::Point::<Bls12, _>::read(&mut &test_repr[..], &params).unwrap();
     let q = edwards::Point::<Bls12, _>::get_for_y(
         Fr::from_str("22440861827555040311190986994816762244378363690614952020532787748720529117853").unwrap(),
         false,
         &params
-    ).unwrap();    
+    ).unwrap();
 
     assert!(p == q);
 

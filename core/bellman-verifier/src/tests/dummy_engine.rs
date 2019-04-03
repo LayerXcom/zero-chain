@@ -283,7 +283,7 @@ impl Engine for DummyEngine {
     type G2Affine = Fr;
     type Fq = Fr;
     type Fqe = Fr;
-    
+
     // TODO: This should be F_645131 or something. Doesn't matter for now.
     type Fqk = Fr;
 
@@ -330,7 +330,7 @@ impl CurveProjective for Fr {
     }
 
     fn batch_normalization(_: &mut [Self]) {
-        
+
     }
 
     fn is_normalized(&self) -> bool {

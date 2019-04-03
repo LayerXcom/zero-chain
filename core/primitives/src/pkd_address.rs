@@ -22,7 +22,7 @@ pub type PkdAddress = H256;
 
 #[cfg(feature = "std")]
 impl Serialize for PkdAddress {
-    fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error> 
+    fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
         where S: Serializer
     {
         bytes::serialize(&self.0, serializer)
@@ -52,13 +52,13 @@ impl Decode for PkdAddress {
 }
 
 impl PkdAddress {
-    pub fn into_encryption_key(&self) -> Option<EncryptionKey<Bls12>> {         
+    pub fn into_encryption_key(&self) -> Option<EncryptionKey<Bls12>> {
         EncryptionKey::<Bls12>::read(&mut &self.0[..], &JUBJUB).ok()
     }
 
     pub fn from_encryption_key(address: &EncryptionKey<Bls12>) -> Self {
         let mut writer = [0u8; 32];
-        address.write(&mut writer[..]).unwrap();        
+        address.write(&mut writer[..]).unwrap();
         H256::from_slice(&writer)
     }
 }
@@ -79,7 +79,7 @@ impl AsBytesRef for PkdAddress {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use rand::{Rng, SeedableRng, XorShiftRng};    
+    use rand::{Rng, SeedableRng, XorShiftRng};
     use pairing::bls12_381::Bls12;
     use keys::*;
     use jubjub::curve::JubjubBls12;
@@ -89,10 +89,10 @@ mod tests {
         let rng = &mut XorShiftRng::from_seed([0x3dbe6259, 0x8d313d76, 0x3237db17, 0xe5bc0654]);
         let mut seed = [0u8; 32];
         rng.fill_bytes(&mut seed[..]);
-           
+
         let addr1 = EncryptionKey::from_ok_bytes(&seed[..], &JUBJUB as &JubjubBls12);
 
-        let account_id = PkdAddress::from_encryption_key(&addr1); 
+        let account_id = PkdAddress::from_encryption_key(&addr1);
         let addr2 = account_id.into_encryption_key().unwrap();
         assert!(addr1 == addr2);
     }

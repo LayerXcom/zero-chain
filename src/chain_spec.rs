@@ -8,7 +8,7 @@ use substrate_service;
 use zprimitives::{
 	prepared_vk::PreparedVk,
 	pkd_address::PkdAddress,
-	ciphertext::Ciphertext,	
+	ciphertext::Ciphertext,
 	};
 use keys::{ProofGenerationKey, EncryptionKey};
 use jubjub::{curve::{JubjubBls12, FixedGenerators, fs}};
@@ -41,7 +41,7 @@ pub enum Alternative {
 
 impl Alternative {
 	/// Get an actual chain config from one of the alternatives.
-	pub(crate) fn load(self) -> Result<ChainSpec, String> {		
+	pub(crate) fn load(self) -> Result<ChainSpec, String> {
 		Ok(match self {
 			Alternative::Development => ChainSpec::from_genesis(
 				"Development",
@@ -95,9 +95,9 @@ impl Alternative {
 	}
 }
 
-fn testnet_genesis(initial_authorities: Vec<Ed25519AuthorityId>, endowed_accounts: Vec<AccountId>, root_key: AccountId) -> GenesisConfig {	
+fn testnet_genesis(initial_authorities: Vec<Ed25519AuthorityId>, endowed_accounts: Vec<AccountId>, root_key: AccountId) -> GenesisConfig {
 	GenesisConfig {
-		consensus: Some(ConsensusConfig {			
+		consensus: Some(ConsensusConfig {
 			code: include_bytes!("../runtime/wasm/target/wasm32-unknown-unknown/release/zero_chain_runtime_wasm.compact.wasm").to_vec(),
 			authorities: initial_authorities.clone(),
 		}),
@@ -124,38 +124,38 @@ fn testnet_genesis(initial_authorities: Vec<Ed25519AuthorityId>, endowed_account
 		// }),
 		conf_transfer: Some(ConfTransferConfig {
 			encrypted_balance: vec![alice_init(), (PkdAddress::from_slice(b"Alice                           "), Ciphertext(b"Alice                           Bob                             ".to_vec()))],
-			verifying_key: get_pvk(),										
+			verifying_key: get_pvk(),
 			_genesis_phantom_data: Default::default(),
 		})
 	}
 }
 
 fn get_pvk() -> PreparedVk {
-	let vk_path = Path::new("./demo/cli/verification.params"); 
+	let vk_path = Path::new("./demo/cli/verification.params");
 	let vk_file = File::open(&vk_path).unwrap();
 	let mut vk_reader = BufReader::new(vk_file);
 
 	let mut buf_vk = vec![];
     vk_reader.read_to_end(&mut buf_vk).unwrap();
-		
+
 	PreparedVk(buf_vk)
 }
 
 fn alice_init() -> (PkdAddress, Ciphertext) {
-	let alice_seed = b"Alice                           ";	
+	let alice_seed = b"Alice                           ";
 	let alice_value = 100 as u32;
 
-	let p_g = FixedGenerators::Diversifier; // 1 same as NoteCommitmentRandomness;	    
+	let p_g = FixedGenerators::Diversifier; // 1 same as NoteCommitmentRandomness;
 
 	let address = EncryptionKey::<Bls12>::from_ok_bytes(alice_seed, &JUBJUB);
 
 	// The default balance is not encrypted with randomness.
 	let enc_alice_bal = elgamal::Ciphertext::encrypt(alice_value, fs::Fs::one(), &address.0, p_g, &JUBJUB);
 
-	let bdk = ProofGenerationKey::<Bls12>::from_ok_bytes(alice_seed, &JUBJUB).bdk();	
+	let bdk = ProofGenerationKey::<Bls12>::from_ok_bytes(alice_seed, &JUBJUB).bdk();
 
 	let dec_alice_bal = enc_alice_bal.decrypt(bdk, p_g, &JUBJUB).unwrap();
-	assert_eq!(dec_alice_bal, alice_value);	
+	assert_eq!(dec_alice_bal, alice_value);
 
 	(PkdAddress::from_encryption_key(&address), Ciphertext::from_ciphertext(&enc_alice_bal))
 }

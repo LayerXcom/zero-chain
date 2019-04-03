@@ -1,5 +1,5 @@
 use pairing::bls12_381::Bls12;
-use bellman::groth16::{    
+use bellman::groth16::{
     generate_random_parameters,
     prepare_verifying_key,
     Parameters,
@@ -31,7 +31,7 @@ pub fn setup() -> (Parameters<Bls12>, PreparedVerifyingKey<Bls12>) {
 
     let prepared_vk = prepare_verifying_key(&proving_key.vk);
     let mut v = vec![];
-    prepared_vk.write(&mut &mut v).unwrap();        
+    prepared_vk.write(&mut &mut v).unwrap();
     println!("pvk: {:?}", v.len());
 
     (proving_key, prepared_vk)
@@ -39,16 +39,16 @@ pub fn setup() -> (Parameters<Bls12>, PreparedVerifyingKey<Bls12>) {
 
 #[cfg(test)]
 mod tests {
-    use super::*;    
+    use super::*;
 
     #[test]
     fn test_preparedvk_rw() {
         let (_, vk) = setup();
         let mut v = vec![];
-        vk.write(&mut &mut v).unwrap();   
-        
+        vk.write(&mut &mut v).unwrap();
+
         let prepared_vk_a = PreparedVerifyingKey::<Bls12>::read(&mut &v[..]).unwrap();
-        
+
         let mut buf = vec![];
         prepared_vk_a.write(&mut &mut buf).unwrap();
 
