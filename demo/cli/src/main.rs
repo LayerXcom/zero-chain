@@ -176,6 +176,9 @@ fn cli() -> Result<(), String> {
             proving_key.write(&mut &mut v_pk).unwrap();
             prepared_vk.write(&mut &mut v_vk).unwrap();
 
+            println!("pk: {:?}", v_pk.len());
+            println!("vk: {:?}", v_vk.len());
+
             bw_pk.write(&v_pk[..])
                 .map_err(|_| "Unable to write proving key data to file.".to_string())?;
 
