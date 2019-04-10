@@ -120,6 +120,7 @@ members = [
     "core/proofs",
     "runtime",
     "core/keys",
+    "core/sonic",
     "modules/indices",
     "modules/executive",
 ]

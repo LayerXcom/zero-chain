@@ -2827,6 +2827,13 @@ dependencies = [
 ]
 
 [[package]]
+name = "sonic"
+version = "0.1.0"
+dependencies = [
+ "zero-chain-pairing 0.14.2",
+]
+
+[[package]]
 name = "spin"
 version = "0.5.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
