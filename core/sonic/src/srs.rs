@@ -1,4 +1,4 @@
-use pairing::{Engine, Wnaf, CurveAffine};
+use pairing::{Engine, Wnaf, CurveAffine, CurveProjective, Field, PrimeField};
 
 /// Defined in Section 4.3: Structured Reference String
 #[derive(Clone, Eq, PartialEq)]
@@ -54,8 +54,7 @@ impl<E: Engine> SRS<E> {
             }
             // Normalizes a slice of projective elements so that conversion to affine is cheap
             C::Projective::batch_normalization(&mut v);
-            let v = v.into_repr().map(|e| e.into_affine()).collect();
-            v
+            v.into_iter().map(|e| e.into_affine()).collect()
         }
 
         // Get parameters to construct SRS
