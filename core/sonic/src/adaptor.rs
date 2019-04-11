@@ -6,7 +6,15 @@
 
 use std::marker::PhantomData;
 use pairing::{Engine, CurveProjective};
+use bellman::ConstraintSystem;
 
-// pub struct Adaptor<'a, E: Engine, CS: SonicConstraintSystem<E> + 'a> {
+pub struct Adaptor<'a, E: Engine, CS: SonicConstraintSystem<E> + 'a> {
+    cs: &'a mut CS,
+    _maker: PhantomData<E>,
+}
 
-// }
+impl <'a, E: Engine, CS: SonicConstraintSystem<E> + 'a> ConstraintSystem<E>
+    for Adaptor<'a, E, CS>
+{
+    
+}

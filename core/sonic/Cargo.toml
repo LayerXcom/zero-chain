@@ -6,3 +6,4 @@ edition = "2018"
 
 [dependencies]
 pairing = { package = "zero-chain-pairing", path = "../pairing" }
+bellman = { git = "https://github.com/zkcrypto/bellman" }
