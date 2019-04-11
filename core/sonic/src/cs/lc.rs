@@ -56,3 +56,21 @@ pub enum Coeff<E: Engine> {
     NegativeOne,
     Full(E::Fr),
 }
+
+/// Multiply the coefficient with a given variable.
+impl<E: Engine> Coeff<E> {
+    pub fn multiply(&self, with: &mut E::Fr) {
+        match self {
+            Coeff::Zero => {
+                *with = E::Fr::zero();
+            },
+            Coeff::One => {},
+            Coeff::NegativeOne => {
+                with.negate();
+            },
+            Coeff::Full(val) => {
+                with.mul_assign(val);
+            }
+        }
+    }
+}
