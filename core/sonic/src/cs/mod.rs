@@ -8,16 +8,15 @@ use std::marker::PhantomData;
 use bellman::SynthesisError;
 
 pub mod lc;
-use lc::{Variable, Coeff};
+use lc::{Variable, Coeff, LinearCombination};
 
-// pub trait Circuit<E: Engine> {
-//     fn synthesize<CS: ConstraintSystem<E>>
-// }
+pub trait Circuit<E: Engine> {
+    fn synthesize<CS: ConstraintSystem<E>>(&self, cs: &mut CS) -> Result<(), SynthesisError>;
+}
 
 /// Represents a sonic's constraint system which can have new variables
 /// allocated and constrains between them formed.
 pub trait ConstraintSystem<E: Engine>: Sized {
-
     fn alloc<F>(
         &mut self,
         f: F
@@ -29,9 +28,10 @@ pub trait ConstraintSystem<E: Engine>: Sized {
 
     fn enforce_zero(&mut self, lc: LinearCombination<E>);
 
+    fn multiply<F>(&mut self, values: F) -> Result<(Variable, Variable, Variable), SynthesisError>
+        where F: FnOnce() -> Result<(E::Fr, E::Fr, E::Fr), SynthesisError>;
+
 }
-
-
 
 /// This is a backend for the `SynthesisDriver` to replay information abount
 /// the concrete circuit. One backend might just collect basic information
@@ -43,7 +43,7 @@ pub trait Backend<E: Engine> {
 
     /// Set the value of a variable. Might error if this backend expects to know it.
     fn set_var<F>(&mut self, _variable: Variable, _value: F) -> Result<(), SynthesisError>
-        where F: FnOnce() -> Result<E::Fr, SynthesisErro> { Ok() }
+        where F: FnOnce() -> Result<E::Fr, SynthesisError> { Ok(()) }
 
     /// Create a new multiplication gate.
     fn new_multiplication_gate(&mut self) { }
@@ -71,6 +71,6 @@ impl SynthesisDriver for Basic {
     fn synthesize<E: Engine, C: Circuit<E>, B: Backend<E>>(backend: B, circuit: &C)
         -> Result<(), SynthesisError>
     {
-
+        unimplemented!();
     }
 }

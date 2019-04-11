@@ -49,7 +49,7 @@ pub enum Variable {
     C(usize),
 }
 
-#[derive(Debug)]
+#[derive(Copy, Clone, Debug)]
 pub enum Coeff<E: Engine> {
     Zero,
     One,
