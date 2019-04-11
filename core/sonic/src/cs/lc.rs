@@ -44,8 +44,8 @@ impl<E: Engine> Add<Variable> for LinearCombination<E> {
 
 #[derive(Copy, Clone, Debug)]
 pub enum Variable {
-    A(usize),
-    B(usize),
+    A(usize),   // input variable in r1cs
+    B(usize),   // Auxillary variable in r1cs
     C(usize),
 }
 

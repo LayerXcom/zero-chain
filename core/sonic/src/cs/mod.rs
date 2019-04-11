@@ -8,7 +8,7 @@ use std::marker::PhantomData;
 use bellman::SynthesisError;
 
 pub mod lc;
-use lc::{Variable, Coeff, LinearCombination};
+pub use lc::{Variable, Coeff, LinearCombination};
 
 pub trait Circuit<E: Engine> {
     fn synthesize<CS: ConstraintSystem<E>>(&self, cs: &mut CS) -> Result<(), SynthesisError>;
@@ -17,20 +17,28 @@ pub trait Circuit<E: Engine> {
 /// Represents a sonic's constraint system which can have new variables
 /// allocated and constrains between them formed.
 pub trait ConstraintSystem<E: Engine>: Sized {
+    const ONE: Variable;
+
+    /// Allocate a private variable in the constraint system.
+    /// The provided function is used to determin the assignment of the variable.
     fn alloc<F>(
         &mut self,
         f: F
     ) -> Result<Variable, SynthesisError>
         where F: FnOnce() -> Result<E::Fr, SynthesisError>;
 
+    /// Allocate a public variable in the constraint system.
+    /// The provided function is used to determine the assignment of the variable.
     fn alloc_input<F>(&mut self, value: F) -> Result<Variable, SynthesisError>
         where F: FnOnce() -> Result<E::Fr, SynthesisError>;
 
+    /// Enforce that `LinearCombination` = 0
     fn enforce_zero(&mut self, lc: LinearCombination<E>);
 
     fn multiply<F>(&mut self, values: F) -> Result<(Variable, Variable, Variable), SynthesisError>
         where F: FnOnce() -> Result<(E::Fr, E::Fr, E::Fr), SynthesisError>;
 
+    fn get_value(&self, _var: Variable) -> Result<E::Fr, ()> { Err(()) }
 }
 
 /// This is a backend for the `SynthesisDriver` to replay information abount
