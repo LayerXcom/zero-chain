@@ -125,6 +125,7 @@ impl <'a, E: Engine, CS: SonicCS<E> + 'a> ConstraintSystem<E>
         let c_lc = convert(c(LinearCombination::zero()));
         let c_value = eval(&c_lc, &*self.cs);
 
+        // 
         let (a, b, c) = self
             .cs
             .multiply(|| Ok((a_value.unwrap(), b_value.unwrap(), c_value.unwrap())))
