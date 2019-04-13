@@ -9,10 +9,11 @@
 //     pub r: E::G1Affine,
 // }
 
-// impl<E: Engine> for <E>Proof<E>
-// {
-//     fn create_proof_on_srs<C: Circuit<E>, S: SynthesisDriver>(circuit: &C, srs: &SRS<E>)
-//         -> Result<Self, SynthesisError>
+// impl<E: Engine> for Proof<E> {
+//     pub fn create_proof_on_srs<C: Circuit<E>, S: SynthesisDriver>(
+//         circuit: &C,
+//         srs: &SRS<E>
+//     ) -> Result<Self, SynthesisError>
 //     {
 //         unimplemented!();
 //     }
