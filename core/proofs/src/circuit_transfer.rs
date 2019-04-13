@@ -1,3 +1,13 @@
+//! This module contains a circuit implementation for confidential payment.
+//! The statement is following.
+//! * Range proof of the transferred amount
+//! * Range proof of the sender's balance
+//! * Validity of public key
+//! * Validity of encryption for transferred amount
+//! * Validity of encryption for sender's balance
+//! * Spend authority proof
+//! * Some small order checks
+
 use bellman::{
     SynthesisError,
     ConstraintSystem,
