@@ -5,8 +5,8 @@
 //! standardisation.
 
 use std::marker::PhantomData;
-use pairing::{Engine, CurveProjective};
-use bellman::{ConstraintSystem, Variable, Index, SynthesisError};
+use pairing::{Engine, CurveProjective, Field};
+use bellman::{ConstraintSystem, Variable, Index, SynthesisError, LinearCombination};
 use crate::cs::{
     ConstraintSystem as SonicCS,
     Variable as SonicVar,
@@ -120,17 +120,18 @@ impl <'a, E: Engine, CS: SonicCS<E> + 'a> ConstraintSystem<E>
         // Get each sonic's linear combination and evaluated value
         let a_lc = convert(a(LinearCombination::zero()));
         let a_value = eval(&a_lc, &*self.cs);
-        let b_lc = convert(a(LinearCombination::zero()));
+        let b_lc = convert(b(LinearCombination::zero()));
         let b_value = eval(&b_lc, &*self.cs);
         let c_lc = convert(c(LinearCombination::zero()));
         let c_value = eval(&c_lc, &*self.cs);
 
-        // 
+        // Convert scalars into variables in a multipilication gate.
         let (a, b, c) = self
             .cs
             .multiply(|| Ok((a_value.unwrap(), b_value.unwrap(), c_value.unwrap())))
             .unwrap();
 
+        // Ensure each linear conbination is equal to evaluated value
         self.cs.enforce_zero(a_lc - a);
         self.cs.enforce_zero(b_lc - b);
         self.cs.enforce_zero(c_lc - c);

@@ -91,6 +91,7 @@ impl<'a, E: Engine> Sub<&'a LinearCombination<E>> for LinearCombination<E> {
 
     fn sub(mut self, other: &'a LinearCombination<E>) -> LinearCombination<E> {
         for s in &other.0 {
+            // `LinearCombination` = `LinearCombination` - `(Coeff, Variable)`
             self = self - (s.1, s.0);
         }
 
