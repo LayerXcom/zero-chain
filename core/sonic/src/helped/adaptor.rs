@@ -116,7 +116,7 @@ impl <'a, E: Engine, CS: SonicCS<E> + 'a> ConstraintSystem<E>
 
             Some(ret)
         }
-
+ 
         // Get each sonic's linear combination and evaluated value
         let a_lc = convert(a(LinearCombination::zero()));
         let a_value = eval(&a_lc, &*self.cs);
