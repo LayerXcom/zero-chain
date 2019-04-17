@@ -31,6 +31,7 @@ pub struct TransferProof<E: JubjubEngine> {
     pub cipher_val_s: Ciphertext<E>,
     pub cipher_val_r: Ciphertext<E>,
     pub cipher_balance: Ciphertext<E>,
+    pub cipher_fee_s: Ciphertext<E>,
 }
 
 impl<E: JubjubEngine> TransferProof<E> {
@@ -45,6 +46,7 @@ impl<E: JubjubEngine> TransferProof<E> {
         ciphertext_balance: Ciphertext<E>,
         rng: &mut R,
         params: &E::Params,
+        fee: u32,
     ) -> Result<Self, &'static str>
     {
         let randomness = E::Fs::rand(rng);
@@ -69,7 +71,7 @@ impl<E: JubjubEngine> TransferProof<E> {
             decryption_key: Some(bdk.clone()),
             pk_d_recipient: Some(address_recipient.0.clone()),
             encrypted_balance: Some(ciphertext_balance.clone()),
-            fee: Some(1) // TODO: temp change, I'll modify here later.
+            fee: Some(fee)
         };
 
         // Crate proof
@@ -90,6 +92,14 @@ impl<E: JubjubEngine> TransferProof<E> {
             value,
             randomness,
             &address_recipient.0,
+            FixedGenerators::NoteCommitmentRandomness,
+            params
+        );
+
+        let cipher_fee_s = Ciphertext::encrypt(
+            fee,
+            randomness,
+            &ek_sender.0,
             FixedGenerators::NoteCommitmentRandomness,
             params
         );
@@ -147,6 +157,7 @@ impl<E: JubjubEngine> TransferProof<E> {
             cipher_val_s: cipher_val_s,
             cipher_val_r: cipher_val_r,
             cipher_balance: ciphertext_balance,
+            cipher_fee_s: cipher_fee_s
         };
 
         Ok(transfer_proof)
@@ -198,6 +209,7 @@ mod tests {
         let remaining_balance = 30 as u32;
         let balance = 100 as u32;
         let alpha = fs::Fs::rand(rng);
+        let fee = 1 as u32;
 
         let sender_ok = fs::Fs::rand(rng);
         let recipient_ok = fs::Fs::rand(rng);
@@ -224,7 +236,8 @@ mod tests {
             ek_recipient,
             ciphertext_balance,
             &mut rng,
-            params
+            params,
+            fee
         );
 
         assert!(proofs.is_ok());
