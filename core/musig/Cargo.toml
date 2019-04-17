@@ -1,0 +1,11 @@
+[package]
+name = "musig"
+version = "0.1.0"
+authors = ["Osuke Sudo <dish230@gmail.com>"]
+edition = "2018"
+
+[dependencies]
+jubjub = { path = "../jubjub" }
+rand = { version = "0.6.0" }
+failure = { version = "^0.1.1", default-features = false }
+merlin = "1"

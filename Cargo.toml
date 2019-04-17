@@ -113,17 +113,18 @@ path = 'demo/cli/src/main.rs'
 members = [
     "core/bellman-verifier",
     "core/crypto",
-    "demo/cli",    
+    "demo/cli",
     "core/jubjub",
     "core/pairing",
     "core/primitives",
     "core/proofs",
     "runtime",
     "core/keys",
+    "core/musig",
     "modules/indices",
     "modules/executive",
 ]
 exclude = [
-    "runtime/wasm",   
-    "demo/wasm-utils", 
+    "runtime/wasm",
+    "demo/wasm-utils",
 ]
