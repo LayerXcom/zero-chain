@@ -192,11 +192,6 @@ mod tests {
         let params = &JubjubBls12::new();
         let p_g = FixedGenerators::NoteCommitmentRandomness; // 1
         let rng = &mut XorShiftRng::from_seed([0xbc4f6d44, 0xd62f276c, 0xb963afd0, 0x5455863d]);
-<<<<<<< HEAD
-
-=======
-               
->>>>>>> 13760ee0f8f4e5fc785df51abee816c5ec7fa103
         let sk_fs = Fs::rand(rng);
         let r_fs1 = Fs::rand(rng);
         let r_fs2 = Fs::rand(rng);
