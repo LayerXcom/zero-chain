@@ -183,7 +183,7 @@ struct Calls {
     balance_sender: Vec<u8>,
     rvk: Vec<u8>,
     rsk: Vec<u8>,
-    fee: Vec<u8>
+    enc_fee: Vec<u8>,
 }
 
 #[wasm_bindgen]
@@ -217,7 +217,7 @@ pub fn gen_call(
     let proving_key = Parameters::<Bls12>::read(&mut proving_key, true).unwrap();
     let prepared_vk = PreparedVerifyingKey::<Bls12>::read(&mut prepared_vk).unwrap();
 
-    let fee = 1; // default fee
+    let fee = 1;
     let tx = Transaction::gen_tx(
                 value,
                 remaining_balance,
@@ -240,7 +240,7 @@ pub fn gen_call(
         balance_sender: tx.enc_bal_sender.to_vec(),
         rvk: tx.rvk.to_vec(),
         rsk: tx.rsk.to_vec(),
-        fee: fee
+        enc_fee: tx.enc_fee.to_vec(),
     };
 
     JsValue::from_serde(&calls).expect("fails to write json")
