@@ -277,11 +277,12 @@ fn cli() -> Result<(), String> {
 
             println!(
                 "
-                \nfee: 1 (fixed)
+                \nEncrypted fee by sender: 0x{}
                 \nzkProof: 0x{}
                 \nEncrypted amount by sender: 0x{}
                 \nEncrypted amount by recipient: 0x{}
                 ",
+                HexDisplay::from(&tx.enc_fee as &AsBytesRef),
                 HexDisplay::from(&&tx.proof[..] as &AsBytesRef),
                 HexDisplay::from(&tx.enc_val_sender as &AsBytesRef),
                 HexDisplay::from(&tx.enc_val_recipient as &AsBytesRef),
