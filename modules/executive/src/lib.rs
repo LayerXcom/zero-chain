@@ -57,7 +57,7 @@ pub struct Executive<
 impl<
 	Context: Default,
 	System: system::Trait,
-	Block: traits::Block<Header=System::Header, Hash=System::Hash>,	
+	Block: traits::Block<Header=System::Header, Hash=System::Hash>,
 	AllModules: OnInitialise<System::BlockNumber> + OnFinalise<System::BlockNumber>,
 > Executive<System, Block, Context, AllModules> where
 	Block::Extrinsic: Checkable<Context> + Codec,

@@ -15,7 +15,7 @@
 // use pairing::{
 //     PrimeField,
 //     PrimeFieldRepr,
-//     Field,    
+//     Field,
 // };
 
 // // We'll use these interfaces to construct our circuit.
@@ -50,7 +50,7 @@
 // use zcrypto::constants::DEFAULT_MIMC_ROUND;
 
 // /// This is an implementation of MiMC.
-// /// See http://eprint.iacr.org/2016/492 for more 
+// /// See http://eprint.iacr.org/2016/492 for more
 // /// information about this construction.
 // fn mimc<E: JubjubEngine>(
 //     mut x: E::Fs,
@@ -63,13 +63,13 @@
 //     for i in 0..DEFAULT_MIMC_ROUND {
 //         let mut tmp1 = x;
 //         tmp1.add_assign(&k);
-//         tmp1.add_assign(&constants[i]);    
+//         tmp1.add_assign(&constants[i]);
 //         let mut tmp2 = tmp1;
 //         tmp1.square();
 //         tmp1.square();
 //         tmp1.square();
-        
-//         tmp1.mul_assign(&tmp2);                        
+
+//         tmp1.mul_assign(&tmp2);
 //         x = tmp1;
 //     }
 //     x.add_assign(&k);
@@ -94,18 +94,18 @@
 //         cs: &mut CS
 //     ) -> Result<(), SynthesisError>
 //     {
-//         assert_eq!(self.constants.len(), DEFAULT_MIMC_ROUND);        
+//         assert_eq!(self.constants.len(), DEFAULT_MIMC_ROUND);
 
 //         // Allocate the plaintext.
 //         let mut x_value = self.x;
 //         // let x = boolean::field_into_boolean_vec_le(
-//         //     cs.namespace(|| "plaintext x"), 
+//         //     cs.namespace(|| "plaintext x"),
 //         //     self.x
 //         // )?;
 
 //         // let k_value = self.k;
 //         // let k = boolean::field_into_boolean_vec_le(
-//         //     cs.namespace(|| "key k"), 
+//         //     cs.namespace(|| "key k"),
 //         //     self.k
 //         // )?;
 //         let mut x = cs.alloc(|| "plaintext x", || {
@@ -121,7 +121,7 @@
 //         for i in 0..DEFAULT_MIMC_ROUND {
 //             // x, k := (x + k + Ci)^7
 //             let cs = &mut cs.namespace(|| format!("round {}", i));
-            
+
 
 //             // tmp2 = (x + k + Ci)^2
 //             let mut tmp2_value = x_value.map(|mut e| {
@@ -145,7 +145,7 @@
 //             // let mut tmp4_value = tmp2_value.map(|mut e| {
 //             //     e.square();
 //             //     e
-//             // }); 
+//             // });
 
 //             // let mut tmp4 = cs.alloc(|| "tmp4", || {
 //             //     tmp4_value.ok_or(SynthesisError::AssignmentMissing)
@@ -183,7 +183,7 @@
 
 //             // let mut tmp1 = cs.alloc(|| "tmp1", || {
 //             //     tmp1_value.ok_or(SynthesisError::AssignmentMissing)
-//             // })?;            
+//             // })?;
 
 //             // // tmp7 = (x + k + Ci)^7
 //             // let mut tmp7_value = tmp6_value.map(|mut e| {
@@ -200,7 +200,7 @@
 //             //     |lc| lc + tmp6,
 //             //     |lc| lc + x + k + (self.constants[i], CS::one()),
 //             //     |lc| lc + tmp7
-//             // );      
+//             // );
 
 //             // if i == DEFAULT_MIMC_ROUND - 1 {
 //             //     let mut res_value = tmp7_value.map(|mut e| {
@@ -211,18 +211,18 @@
 //             //     let mut res = cs.alloc_input(|| "res", || {
 //             //         res_value.ok_or(SynthesisError::AssignmentMissing)
 //             //     })?;
-                
+
 //             //     cs.enforce(
 //             //         || "res = k + tmp7",
 //             //         |lc| lc + tmp7,
 //             //         |lc| lc + CS::one(),
 //             //         |lc| lc + res - k
-//             //     );    
+//             //     );
 //             // } else {
 //             //     x = tmp7;
 //             //     x_value = tmp7_value;
-//             // }            
-//         }           
+//             // }
+//         }
 
 //         Ok(())
 //     }
@@ -230,10 +230,10 @@
 
 // #[cfg(test)]
 //     use pairing::bls12_381::*;
-//     // use rand::{SeedableRng, Rng, XorShiftRng};    
+//     // use rand::{SeedableRng, Rng, XorShiftRng};
 //     use super::circuit_test::TestConstraintSystem;
-//     use scrypto::jubjub::{JubjubBls12, fs, edwards};    
-    
+//     use scrypto::jubjub::{JubjubBls12, fs, edwards};
+
 
 //     #[test]
 //     fn test_mimc() {
@@ -243,21 +243,21 @@
 //         let params = &JubjubBls12::new();
 
 //         // Generate the MiMC round constants
-        
+
 //         let constants = (0..DEFAULT_MIMC_ROUND).map(|_| {
 //             let crng: fs::Fs = rng.gen();
 //             Some(crng)
-//         }).collect::<Vec<_>>();        
+//         }).collect::<Vec<_>>();
 
 
 //         // Just a place to put the proof data, so we can
 //         // benchmark deserialization.
 //         // let mut proof_vec = vec![];
-        
+
 //         // Generate a random preimage and compute the image
 //         let x: fs::Fs = rng.gen();
 //         let k: fs::Fs = rng.gen();
-//         // let image = mimc::<Bls12>(x, k, &constants);        
+//         // let image = mimc::<Bls12>(x, k, &constants);
 
 //         let instance = MiMC {
 //             x: Some(x),
@@ -271,7 +271,7 @@
 //         instance.synthesize(&mut cs).unwrap();
 //         println!("{:?}", cs.num_constraints());
 //         assert!(cs.is_satisfied());
-        
+
 
 //         //     let start = Instant::now();
 //         //     {
