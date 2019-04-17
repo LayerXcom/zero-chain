@@ -1,8 +1,10 @@
 use pairing::{Engine, Field};
 use bellman::SynthesisError;
 use rand::{Rand, Rng, thread_rng};
+use merlin::Transcript;
 use crate::cs::{SynthesisDriver, Circuit, Backend, Variable, Coeff};
 use crate::srs::SRS;
+use crate::transcript::ProvingTranscript;
 
 #[derive(Clone, Debug, Eq, PartialEq)]
 pub struct Proof<E: Engine> {
@@ -39,11 +41,18 @@ impl<E: Engine> Proof<E> {
 
         S::synthesize(&mut wires, circuit)?;
 
+        let n = wires.a.len();
+        // TODO: Make better entropy
+        let rng = &mut thread_rng();
+        let mut transcript = Transcript::new(&[]);
+
+        
+
         unimplemented!();
     }
 }
 
-///
+
 struct Wires<E: Engine> {
     a: Vec<E::Fr>,
     b: Vec<E::Fr>,
