@@ -24,7 +24,6 @@ pub struct Transaction{
 	pub enc_val_sender: [u8; 64],        // 64 bytes
 	pub enc_bal_sender: [u8; 64],        // 64 bytes
 	pub rsk: [u8; 32],                   // 32 bytes
-	pub enc_fee: [u8; 64]				 // 64 bytes
 }
 
 impl Transaction {
@@ -38,7 +37,6 @@ impl Transaction {
 		ok_sender: &fs::Fs,
         ciphertext_balance: proofs::elgamal::Ciphertext<Bls12>,
 		rng: &mut R,
-		fee: u32,
     ) -> Result<Self, io::Error>
 	{
 		// The pramaters from std environment
@@ -58,7 +56,6 @@ impl Transaction {
             ciphertext_balance.clone(),
 			rng,
 			&params,
-			fee
 		).unwrap();
 
 		// Generate the re-randomized sign key
@@ -87,9 +84,6 @@ impl Transaction {
 		let mut enc_bal_sender = [0u8; 64];
 		proof_output.cipher_balance.write(&mut enc_bal_sender[..]).map_err(|_| io::Error::InvalidData)?;
 
-		let mut enc_fee = [0u8, 64];
-		proof_output.cipher_fee_s.write(&mut enc_fee[..]).map_err(|_| io::Error::InvalidData)?;
-
 		let tx = Transaction {
 			proof: proof_bytes,
 			rvk: rvk_bytes,
@@ -99,7 +93,6 @@ impl Transaction {
 			enc_val_sender: enc_val_sender,
 			enc_bal_sender: enc_bal_sender,
 			rsk: rsk_bytes,
-			enc_fee: enc_fee,
 		};
 
 		Ok(tx)
