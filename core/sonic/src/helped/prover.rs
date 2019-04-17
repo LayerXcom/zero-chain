@@ -5,6 +5,9 @@ use merlin::Transcript;
 use crate::cs::{SynthesisDriver, Circuit, Backend, Variable, Coeff};
 use crate::srs::SRS;
 use crate::transcript::ProvingTranscript;
+use crate::poly_comm::{polynomial_commitment};
+
+pub const NUM_BINDINGS: usize = 4;
 
 #[derive(Clone, Debug, Eq, PartialEq)]
 pub struct Proof<E: Engine> {
@@ -46,7 +49,27 @@ impl<E: Engine> Proof<E> {
         let rng = &mut thread_rng();
         let mut transcript = Transcript::new(&[]);
 
-        
+        // c_{n+1}, c_{n+2}, c_{n+3}, c_{n+4}
+        let bindings: Vec<E::Fr> = (0..NUM_BINDINGS)
+            .into_iter()
+            .map(|_| E::Fr::rand(rng))
+            .collect();
+
+        // r is a commitment to r(X, 1)
+        let r = polynomial_commitment::<E, _>(
+            n,                      // max
+            n,                      // largest positive power
+            2*n + NUM_BINDINGS,     // largest negative power
+            &srs,
+        );
+
+        // A prover commits polynomial
+        transcript.commit_point(&r);
+
+        // A varifier send to challenge scalar to prover
+        let y: E::Fr = transcript.challenge_scalar();
+
+
 
         unimplemented!();
     }
