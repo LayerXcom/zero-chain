@@ -1,3 +1,13 @@
+//! This module contains a circuit implementation for confidential payment.
+//! The statement is following.
+//! * Range proof of the transferred amount
+//! * Range proof of the sender's balance
+//! * Validity of public key
+//! * Validity of encryption for transferred amount
+//! * Validity of encryption for sender's balance
+//! * Spend authority proof
+//! * Some small order checks
+
 use bellman::{
     SynthesisError,
     ConstraintSystem,
@@ -30,7 +40,6 @@ pub struct Transfer<'a, E: JubjubEngine> {
     pub decryption_key: Option<E::Fs>,
     pub pk_d_recipient: Option<edwards::Point<E, PrimeOrder>>,
     pub encrypted_balance: Option<Ciphertext<E>>,
-    pub fee: Option<u32>,
 }
 
 impl<'a, E: JubjubEngine> Circuit<E> for Transfer<'a, E> {
@@ -51,12 +60,6 @@ impl<'a, E: JubjubEngine> Circuit<E> for Transfer<'a, E> {
         let rem_bal_bits = u32_into_boolean_vec_le(
             cs.namespace(|| "range proof of remaining_balance"),
             self.remaining_balance
-        )?;
-
-        //Ensure the fee is u32.
-        let fee_bits = u32_into_boolean_vec_le(
-            cs.namespace(|| "range proof of fee"),
-            self.fee
         )?;
 
         // decryption_key in circuit
@@ -84,14 +87,6 @@ impl<'a, E: JubjubEngine> Circuit<E> for Transfer<'a, E> {
             params
         )?;
 
-        // Multiply the fee to the base point same as FixedGenerators::ElGamal.
-        let fee_g = ecc::fixed_base_multiplication(
-            cs.namespace(|| format!("compute the fee in the exponent")),
-            FixedGenerators::NoteCommitmentRandomness,
-            &fee_bits,
-            params
-        )?;
-
         // Generate the randomness into the circuit
         let rcv = boolean::field_into_boolean_vec_le(
             cs.namespace(|| format!("rcv")),
@@ -101,12 +96,6 @@ impl<'a, E: JubjubEngine> Circuit<E> for Transfer<'a, E> {
         // Generate the randomness * pk_d_sender in circuit
         let val_rls = pk_d_sender_v.mul(
             cs.namespace(|| format!("compute sender value cipher")),
-            &rcv,
-            params
-        )?;
-
-        let fee_rls = pk_d_sender_v.mul(
-            cs.namespace(|| format!("compute sender fee cipher")),
             &rcv,
             params
         )?;
@@ -156,30 +145,16 @@ impl<'a, E: JubjubEngine> Circuit<E> for Transfer<'a, E> {
             params
         )?;
 
-        let f_left_sender = fee_g.add(
-            cs.namespace(|| format!("computation of sender's f_left")),
-            &fee_rls,
-            params
-        )?;
-
         // Expose the ciphertext publicly.
         c_left_sender.inputize(cs.namespace(|| format!("c_left_sender")))?;
         c_left_recipient.inputize(cs.namespace(|| format!("c_left_recipient")))?;
         c_right.inputize(cs.namespace(|| format!("c_right")))?;
-        f_left_sender.inputize(cs.namespace(|| format!("f_left_sender")))?;
 
 
         // The balance encryption validity.
         // It is a bit complicated bacause we can not know the randomness of balance.
         // Enc_sender(sender_balance).cl - Enc_sender(value).cl
         //     == (remaining_balance)G + decryption_key(Enc_sender(sender_balance).cr - (random)G)
-        // <==> Enc_sender(sender_balance).cl + decryption_key * (random)G
-        //       == (remaining_balance)G + decryption_key * Enc_sender(sender_balance).cr + Enc_sender(value).cl
-        //
-        // Enc_sender(sender_balance).cl - Enc_sender(value).cl - Enc_sender(fee).cl
-        //  == (remaining_balance)G + decryption_key * (Enc_sender(sender_balance).cr - (random)G - (random)G)
-        // <==> Enc_sender(sender_balance).cl + decryption_key * (random)G + decryption_key * (random)G
-        //       == (remaining_balance)G + decryption_key * Enc_sender(sender_balance).cr + Enc_sender(value).cl + Enc_sender(fee).cl
         {
             let bal_gl = ecc::EdwardsPoint::witness(
                 cs.namespace(|| "balance left"),
@@ -241,22 +216,15 @@ impl<'a, E: JubjubEngine> Circuit<E> for Transfer<'a, E> {
                 )?;
 
             // Enc_sender(sender_balance).cl + decryption_key * (random)G
-            let senderbalance_decryption_key_random = pointl.add(
+            let bi_left = pointl.add(
                 cs.namespace(|| format!("pointl add decryption_key_pointl")),
-                &decryption_key_random,
-                params
-                )?;
-
-            // Enc_sender(sender_balance).cl + decryption_key * (random)G + decryption_key * (random)G
-            let bi_left = senderbalance_decryption_key_random.add(
-                cs.namespace(|| format!("pointl readd decryption_key_pointl")),
                 &decryption_key_random,
                 params
                 )?;
 
             // decryption_key * Enc_sender(sender_balance).cr
             let decryption_key_pointr = pointr.mul(
-                cs.namespace(|| format!("c_right_sender mul by decryption_key")),
+                cs.namespace(|| format!("c_left_sender mul by decryption_key")),
                 &decryption_key_v,
                 params
                 )?;
@@ -277,18 +245,11 @@ impl<'a, E: JubjubEngine> Circuit<E> for Transfer<'a, E> {
                 )?;
 
             // Enc_sender(value).cl + (remaining_balance)G + decryption_key * Enc_sender(sender_balance).cr
-            let val_rem_bal_balr = val_rem_bal.add(
+            let bi_right = val_rem_bal.add(
                 cs.namespace(|| format!("val_rem_bal add ")),
                 &decryption_key_pointr,
                 params
                 )?;
-
-            // Enc_sender(value).cl + (remaining_balance)G + decryption_key * Enc_sender(sender_balance).cr + Enc_sender(fee).cl
-            let bi_right = f_left_sender.add(
-                cs.namespace(|| format!("f_left_sender add")),
-                &val_rem_bal_balr,
-                params
-            )?;
 
             // The left hand for balance integrity into representation
             let bi_left_repr = bi_left.repr(
@@ -427,7 +388,6 @@ mod tests {
         let value = 10 as u32;
         let remaining_balance = 17 as u32;
         let current_balance = 27 as u32;
-        let fee = 1 as u32;
 
         let r_fs_b = fs::Fs::rand(rng);
         let r_fs_v = fs::Fs::rand(rng);
@@ -442,10 +402,6 @@ mod tests {
         let ciphertext_value_sender = Ciphertext::encrypt(value, r_fs_v, &public_key_s, p_g, params);
         let c_val_s_left = ciphertext_value_sender.left.into_xy();
         let c_val_right = ciphertext_value_sender.right.into_xy();
-
-        let ciphertext_fee_sender = Ciphertext::encrypt(fee, r_fs_v, &public_key_s, p_g, params);
-        let c_fee_s_left = ciphertext_fee_sender.left.into_xy();
-        let c_fee_s_right = ciphertext_fee_sender.right.into_xy();
 
         let public_key_r = params.generator(p_g).mul(decryption_key_r, params).into();
         let ciphertext_value_recipient = Ciphertext::encrypt(value, r_fs_v, &public_key_r, p_g, params);
@@ -464,17 +420,16 @@ mod tests {
             proof_generation_key: Some(proof_generation_key_s.clone()),
             decryption_key: Some(decryption_key_s.clone()),
             pk_d_recipient: Some(address_recipient.0.clone()),
-            encrypted_balance: Some(ciphetext_balance.clone()),
-            fee: Some(fee),
+            encrypted_balance: Some(ciphetext_balance.clone())
         };
 
         instance.synthesize(&mut cs).unwrap();
 
-        assert!(cs.is_satisfied()); // TODO: failed here!
-        // assert_eq!(cs.num_constraints(), 18278);
-        // assert_eq!(cs.hash(), "6858d345922e8a5f173dafb61264ea237b9f0fad75f51c656461cd43fdd3db34");
+        assert!(cs.is_satisfied());
+        assert_eq!(cs.num_constraints(), 18278);
+        assert_eq!(cs.hash(), "6858d345922e8a5f173dafb61264ea237b9f0fad75f51c656461cd43fdd3db34");
 
-        assert_eq!(cs.num_inputs(), 19);
+        assert_eq!(cs.num_inputs(), 17);
         assert_eq!(cs.get_input(0, "ONE"), Fr::one());
         assert_eq!(cs.get_input(1, "inputize pk_d_sender/x/input variable"), address_sender_xy.0);
         assert_eq!(cs.get_input(2, "inputize pk_d_sender/y/input variable"), address_sender_xy.1);
@@ -486,13 +441,11 @@ mod tests {
         assert_eq!(cs.get_input(8, "c_left_recipient/y/input variable"), c_val_r_left.1);
         assert_eq!(cs.get_input(9, "c_right/x/input variable"), c_val_right.0);
         assert_eq!(cs.get_input(10, "c_right/y/input variable"), c_val_right.1);
-        assert_eq!(cs.get_input(11, "f_left_sender/x/input variable"), c_fee_s_left.0);
-        assert_eq!(cs.get_input(12, "f_left_sender/y/input variable"), c_fee_s_left.1);
-        assert_eq!(cs.get_input(13, "inputize pointl/x/input variable"), c_bal_left.0);
-        assert_eq!(cs.get_input(14, "inputize pointl/y/input variable"), c_bal_left.1);
-        assert_eq!(cs.get_input(15, "inputize pointr/x/input variable"), c_bal_right.0);
-        assert_eq!(cs.get_input(16, "inputize pointr/y/input variable"), c_bal_right.1);
-        assert_eq!(cs.get_input(17, "rvk/x/input variable"), rvk.0);
-        assert_eq!(cs.get_input(18, "rvk/y/input variable"), rvk.1);
+        assert_eq!(cs.get_input(11, "inputize pointl/x/input variable"), c_bal_left.0);
+        assert_eq!(cs.get_input(12, "inputize pointl/y/input variable"), c_bal_left.1);
+        assert_eq!(cs.get_input(13, "inputize pointr/x/input variable"), c_bal_right.0);
+        assert_eq!(cs.get_input(14, "inputize pointr/y/input variable"), c_bal_right.1);
+        assert_eq!(cs.get_input(15, "rvk/x/input variable"), rvk.0);
+        assert_eq!(cs.get_input(16, "rvk/y/input variable"), rvk.1);
     }
 }

@@ -735,7 +735,7 @@ pub mod g1 {
             }
         }
         fn from_affine(affine: G1Affine) -> Self {
-            let mut res = Self::empty();            
+            let mut res = Self::empty();
 
             if affine.is_zero() {
                 // Set the second-most significant bit to indicate this point
@@ -836,18 +836,18 @@ pub mod g1 {
                 G1Affine::get_point_from_x(x, greatest).ok_or(GroupDecodingError::NotOnCurve)
             }
         }
-        fn from_affine(affine: G1Affine) -> Self {            
+        fn from_affine(affine: G1Affine) -> Self {
             let mut res = Self::empty();
 
-            if affine.is_zero() {                
+            if affine.is_zero() {
                 // Set the second-most significant bit to indicate this point
                 // is at infinity.
                 res.0[0] |= 1 << 6;
             } else {
-                {                    
+                {
                     let mut writer = &mut res.0[..];
 
-                    affine.x.into_repr().write_be(&mut writer).unwrap();                    
+                    affine.x.into_repr().write_be(&mut writer).unwrap();
                 }
 
                 let mut negy = affine.y;
@@ -936,7 +936,7 @@ pub mod g1 {
 
     // WARNING: SHOULD NOT BE USED
     impl RW for G1Prepared {
-        fn write<W: ::io::Write>(&self, _writer: &mut W) -> ::io::Result<()> {               
+        fn write<W: ::io::Write>(&self, _writer: &mut W) -> ::io::Result<()> {
             unimplemented!();
         }
         fn read<R: ::io::Read>(_reader: &mut R) -> ::io::Result<Self> {
@@ -1636,7 +1636,7 @@ pub mod g2 {
             BigEndian::write_u32(&mut buf, self.coeffs.len() as u32);
             writer.write(&buf)?;
 
-            for coeffs in &self.coeffs {                              
+            for coeffs in &self.coeffs {
                 coeffs.0.write(writer)?;
                 coeffs.1.write(writer)?;
                 coeffs.2.write(writer)?;
@@ -1665,12 +1665,12 @@ pub mod g2 {
                 let mut c = Fq2::read(reader)?;
 
                 coeffs.push((a, b, c));
-            }            
+            }
 
             let res;
             let mut d = [0u8; 1];
-            reader.read(&mut d)?;            
-            
+            reader.read(&mut d)?;
+
             match d[0] {
                 1 => res = true,
                 0 => res = false,
