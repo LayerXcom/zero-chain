@@ -35,3 +35,28 @@ impl<T, U> Iterator for Chain<T, U>
     }
 }
 
+impl<T, U> ExactSizeIterator for Chain<T, U>
+    where
+        T: Iterator + ExactSizeIterator,
+        U: Iterator<Item = T::Item> + ExactSizeIterator,
+{
+    fn len(&self) -> usize {
+        self.t.len() + self.u.len()
+    }
+}
+
+impl<T, U> DoubleEndedIterator for Chain<T, U>
+    where
+        T: Iterator + DoubleEndedIterator,
+        U: Iterator<Item = T::Item> + DoubleEndedIterator,
+{
+    fn next_back(&mut self) -> Option<T::Item> {
+        match self.u.next_back() {
+            Some(v) => Some(v),
+            None => match self.t.next_back() {
+                Some(v) => Some(v),
+                None => None,
+            }
+        }
+    }
+}
