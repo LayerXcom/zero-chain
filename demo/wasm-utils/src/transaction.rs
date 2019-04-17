@@ -87,8 +87,8 @@ impl Transaction {
 		let mut enc_bal_sender = [0u8; 64];
 		proof_output.cipher_balance.write(&mut enc_bal_sender[..]).map_err(|_| io::Error::InvalidData)?;
 
-		let mut enc_fee = [0u8; 64];
-		proof_output.cipher_fee.write(&mut enc_fee[..]).map_err(|_| io::Error::InvalidData)?;
+		let mut enc_fee = [0u8, 64];
+		proof_output.cipher_fee_s.write(&mut enc_fee[..]).map_err(|_| io::Error::InvalidData)?;
 
 		let tx = Transaction {
 			proof: proof_bytes,

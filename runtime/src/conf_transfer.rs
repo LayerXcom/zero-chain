@@ -47,7 +47,7 @@ decl_module! {
             address_recipient: PkdAddress,
             value_sender: Ciphertext,
             value_recipient: Ciphertext,
-            rk: SigVerificationKey  // TODO: Extract from origin
+            rk: SigVerificationKey, // TODO: Extract from origin
             fee_sender: Ciphertext
         ) -> Result {
 			// let rk = ensure_signed(origin)?;
@@ -82,6 +82,7 @@ decl_module! {
                 None => return Err("Invalid value_recipient"),
             };
 
+            // Get fee_sender with the type
             let sfee_sender = match fee_sender.into_ciphertext() {
                 Some(v) => v,
                 None => return Err("Invalid fee_sender"),
@@ -93,7 +94,7 @@ decl_module! {
                 None => return Err("Invalid rk"),
             };
 
-            // Get balance_sender with the type
+            // Get balance_sender with the type from `conf_transfer` storage, which is not charged yet
             let bal_sender = match Self::encrypted_balance(address_sender) {
                 Some(b) => match b.into_ciphertext() {
                     Some(c) => c,
@@ -101,6 +102,12 @@ decl_module! {
                 },
                 None => return Err("Invalid sender balance"),
             };
+
+            // TODO: Tx内に暗号化されたfeeと暗号化されたvalueと暗号化された徴収送金前の残高が含まれている．
+            // 一方でTx内のproofは送金徴収後の残高で取られたもの．
+            // よって，暗号化された送金徴収後の残高を取得してvalidate_proofに渡す必要がある．
+            // let bal_sender_subed_fee = elgamal::Ciphertext<bls12_381::Bls12>::from_ciphertext(&bal_sender.sub_no_params(&sfee_sender));
+            // let bal_sender = elgamal::Ciphertext<bls12_381::Bls12>::from_ciphertext(&bal_sender_subed_fee.sub_no_params(&svalue_sender));
 
             // Verify the zk proof
             ensure!(
@@ -116,7 +123,7 @@ decl_module! {
                 "Invalid zkproof"
             );
 
-            // Get balance_recipient with the option type
+            // Get balance_recipient with the option type from `conf_transfer` storage.
             let bal_recipient = match Self::encrypted_balance(address_recipient) {
                 Some(b) => b.into_ciphertext(),
                 _ => None

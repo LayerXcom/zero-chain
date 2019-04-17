@@ -251,6 +251,7 @@ fn cli() -> Result<(), String> {
 
             println!("Transaction >>");
             // print_tx(&sender_seed[..], &recipient_seed[..], &buf_pk[..], &buf_vk[..], amount, balance);
+            println!("\tfee: {}", fee);
 
             let rng = &mut OsRng::new().expect("should be able to construct RNG");
 
@@ -296,10 +297,12 @@ fn cli() -> Result<(), String> {
                 \nzkProof: 0x{}
                 \nEncrypted amount by sender: 0x{}
                 \nEncrypted amount by recipient: 0x{}
+                \nEncrypted fee by sender: 0x{}
                 ",
                 HexDisplay::from(&&tx.proof[..] as &AsBytesRef),
                 HexDisplay::from(&tx.enc_val_sender as &AsBytesRef),
                 HexDisplay::from(&tx.enc_val_recipient as &AsBytesRef),
+                HexDisplay::from(&tx.enc_fee as &AsBytesRef),
             );
             // println!(
             //     "

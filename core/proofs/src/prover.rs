@@ -31,6 +31,7 @@ pub struct TransferProof<E: JubjubEngine> {
     pub cipher_val_s: Ciphertext<E>,
     pub cipher_val_r: Ciphertext<E>,
     pub cipher_balance: Ciphertext<E>,
+    pub cipher_fee_s: Ciphertext<E>
 }
 
 impl<E: JubjubEngine> TransferProof<E> {
@@ -63,13 +64,14 @@ impl<E: JubjubEngine> TransferProof<E> {
         let instance = Transfer {
             params: params,
             value: Some(value),
-            remaining_balance: Some(remaining_balance + fee),
+            remaining_balance: Some(remaining_balance),
             randomness: Some(randomness.clone()),
             alpha: Some(alpha.clone()),
             proof_generation_key: Some(proof_generation_key.clone()),
             decryption_key: Some(bdk.clone()),
             pk_d_recipient: Some(address_recipient.0.clone()),
-            encrypted_balance: Some(ciphertext_balance.clone())
+            encrypted_balance: Some(ciphertext_balance.clone()),
+            fee: Some(fee),
         };
 
         // Crate proof
@@ -205,6 +207,7 @@ mod tests {
 
         let value = 10 as u32;
         let remaining_balance = 30 as u32;
+        let fee = 1 as u32;
         let balance = 100 as u32;
         let alpha = fs::Fs::rand(rng);
 
@@ -233,7 +236,8 @@ mod tests {
             ek_recipient,
             ciphertext_balance,
             &mut rng,
-            params
+            params,
+            fee,
         );
 
         assert!(proofs.is_ok());
