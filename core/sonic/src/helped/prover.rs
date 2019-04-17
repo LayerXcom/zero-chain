@@ -1,10 +1,10 @@
 use pairing::{Engine, Field};
 use bellman::SynthesisError;
 use rand::{Rand, Rng, thread_rng};
-use crate::cs::{SynthesisDriver, Circuit, Backend};
+use crate::cs::{SynthesisDriver, Circuit, Backend, Variable, Coeff};
 use crate::srs::SRS;
 
-#[derive(Clone, Debug, Eq)]
+#[derive(Clone, Debug, Eq, PartialEq)]
 pub struct Proof<E: Engine> {
     /// A commitment of `r(X, 1)`
     pub r_comm: E::G1Affine,
@@ -25,7 +25,25 @@ pub struct Proof<E: Engine> {
     pub zy_opening: E::G1Affine,
 }
 
+impl<E: Engine> Proof<E> {
+    pub fn create_proof<C: Circuit<E>, S: SynthesisDriver>(
+        circuit: &C,
+        srs: &SRS<E>
+    ) -> Result<Self, SynthesisError>
+    {
+        let mut wires = Wires {
+            a: vec![],
+            b: vec![],
+            c: vec![],
+        };
 
+        S::synthesize(&mut wires, circuit)?;
+
+        unimplemented!();
+    }
+}
+
+///
 struct Wires<E: Engine> {
     a: Vec<E::Fr>,
     b: Vec<E::Fr>,
@@ -33,7 +51,7 @@ struct Wires<E: Engine> {
 }
 
 impl<'a, E: Engine> Backend<E> for &'a mut Wires<E> {
-    fn new_multipilication_gate(&mut self) {
+    fn new_multiplication_gate(&mut self) {
         self.a.push(E::Fr::zero());
         self.b.push(E::Fr::zero());
         self.c.push(E::Fr::zero());
@@ -53,19 +71,19 @@ impl<'a, E: Engine> Backend<E> for &'a mut Wires<E> {
         })
     }
 
-    fn set_var(&mut self, var: Variable, value: F) -> Result<(), SynthesisError>
+    fn set_var<F>(&mut self, var: Variable, value: F) -> Result<(), SynthesisError>
         where F: FnOnce() -> Result<E::Fr, SynthesisError>
     {
         let value = value()?;
 
         match var {
-            Variable::A(idnex) => {
+            Variable::A(index) => {
                 self.a[index - 1] = value;
             },
-            Variable::B(idnex) => {
+            Variable::B(index) => {
                 self.b[index - 1] = value;
             },
-            Variable::C(idnex) => {
+            Variable::C(index) => {
                 self.c[index - 1] = value;
             },
         }
@@ -74,13 +92,4 @@ impl<'a, E: Engine> Backend<E> for &'a mut Wires<E> {
     }
 }
 
-impl<E: Engine> for Proof<E> {
-    pub fn create_proof<C: Circuit<E>, S: SynthesisDriver>(
-        circuit: &C,
-        srs: &SRS<E>
-    ) -> Result<Self, SynthesisError>
-    {
 
-        unimplemented!();
-    }
-}
