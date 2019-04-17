@@ -1,3 +1,6 @@
+/// Basically used for polynomials represented as separeted iterator
+/// (like positive and negative powers).
+/// It can be used nested chains.
 pub trait ChainExt: Iterator {
     fn chain_ext<U>(self, other: U) -> Chain<Self, U::IntoIter>
         where

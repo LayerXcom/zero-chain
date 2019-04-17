@@ -1,8 +1,10 @@
-use pairing::{Field, Engine, CurveAffine};
+use pairing::{Field, Engine, CurveAffine, CurveProjective};
 use crate::srs::SRS;
+use crate::utils::ChainExt;
 
 /// Commit a polynomial `F`.
 /// F \from g^{\alpha * x^{(d - max)}*f(x)}
+/// See: Section 5 SYSTEM OF CONSTRAINTS
 pub fn polynomial_commitment<'a, E: Engine, I: IntoIterator<Item = &'a E::Fr>>(
         max: usize,                 // a maximum degree
         largest_pos_power: usize,   // largest positive power
@@ -22,13 +24,19 @@ pub fn polynomial_commitment<'a, E: Engine, I: IntoIterator<Item = &'a E::Fr>>(
         let max_power = largest_pos_power + d - max;
         let min_power = largest_neg_power - d + max;
 
-        return mul
-    } else {
         return multiexp(
-            srs.g_neg_x_alpha[0..min_power].iter().rev()
-        )
+            srs.g_neg_x_alpha[0..min_power].iter().rev() // Reverse to permute for negative powers
+            .chain_ext(srs.g_pos_x_alpha[..max_power].iter()),
+            s
+        ).into_affine();
+    } else {
+        let max_power = srs.d - max - largest_neg_power;
+
+        return multiexp(
+            srs.g_pos_x_alpha[..max_power].iter(), // TODO: Ensure the range is correct
+            s
+        ).into_affine();
     }
-    unimplemented!();
 }
 
 

@@ -6,6 +6,7 @@ use crate::cs::{SynthesisDriver, Circuit, Backend, Variable, Coeff};
 use crate::srs::SRS;
 use crate::transcript::ProvingTranscript;
 use crate::poly_comm::{polynomial_commitment};
+use crate::utils::ChainExt;
 
 pub const NUM_BINDINGS: usize = 4;
 
@@ -50,17 +51,22 @@ impl<E: Engine> Proof<E> {
         let mut transcript = Transcript::new(&[]);
 
         // c_{n+1}, c_{n+2}, c_{n+3}, c_{n+4}
-        let bindings: Vec<E::Fr> = (0..NUM_BINDINGS)
+        let blindings: Vec<E::Fr> = (0..NUM_BINDINGS)
             .into_iter()
             .map(|_| E::Fr::rand(rng))
             .collect();
 
         // r is a commitment to r(X, 1)
         let r = polynomial_commitment::<E, _>(
-            n,                      // max
+            n,                      // a max degree
             n,                      // largest positive power
             2*n + NUM_BINDINGS,     // largest negative power
-            &srs,
+            &srs,                   // structured reference string
+            blindings.iter().rev()  // ascending order variables
+                .chain_ext(wires.c.iter().rev())
+                .chain_ext(wires.b.iter().rev())
+                .chain_ext(Some(E::Fr::zero()).iter()) // power i is not equal zero
+                .chain_ext(wires.a.iter()),
         );
 
         // A prover commits polynomial
