@@ -68,7 +68,8 @@ impl<E: JubjubEngine> TransferProof<E> {
             proof_generation_key: Some(proof_generation_key.clone()),
             decryption_key: Some(bdk.clone()),
             pk_d_recipient: Some(address_recipient.0.clone()),
-            encrypted_balance: Some(ciphertext_balance.clone())
+            encrypted_balance: Some(ciphertext_balance.clone()),
+            fee: Some(1) // TODO: temp change, I'll modify here later.
         };
 
         // Crate proof
