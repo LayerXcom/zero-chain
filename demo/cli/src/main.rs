@@ -259,7 +259,8 @@ fn cli() -> Result<(), String> {
             // let address = EncryptionKey::<Bls12>::from_ok_bytes(&sender_seed[..], &PARAMS);
             // let ciphertext_balance = Ciphertext::encrypt(100, fs::Fs::one(), &address.0, FixedGenerators::NoteCommitmentRandomness, &PARAMS as &JubjubBls12);
 
-            let remaining_balance = balance - amount;
+            let fee = 1; // tmp fee is fixed value 1.
+            let remaining_balance = balance - amount - fee;
 
             let tx = Transaction::gen_tx(
                             amount,
@@ -270,11 +271,13 @@ fn cli() -> Result<(), String> {
                             &address_recipient,
                             &sk_fs_s,
                             ciphertext_balance,
-                            rng
+                            rng,
+                            fee
                     ).expect("fails to generate the tx");
 
             println!(
                 "
+                \nfee: 1 (fixed)
                 \nzkProof: 0x{}
                 \nEncrypted amount by sender: 0x{}
                 \nEncrypted amount by recipient: 0x{}

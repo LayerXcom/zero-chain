@@ -480,7 +480,7 @@ mod tests {
 
         instance.synthesize(&mut cs).unwrap();
 
-        assert!(cs.is_satisfied()); // TODO: failed here!
+        assert!(cs.is_satisfied());
         // assert_eq!(cs.num_constraints(), 18278);
         // assert_eq!(cs.hash(), "6858d345922e8a5f173dafb61264ea237b9f0fad75f51c656461cd43fdd3db34");
 
