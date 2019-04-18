@@ -1,4 +1,4 @@
-use pairing::{Field, Engine, CurveAffine, CurveProjective};
+use pairing::{Field, Engine, CurveAffine, CurveProjective, PrimeField};
 use crate::srs::SRS;
 use crate::utils::ChainExt;
 
@@ -61,16 +61,37 @@ pub fn kate_division<'a, F: Field, I: IntoIterator<Item = &'a F>>(a: I, mut b: F
 pub fn multiexp<
     'a,
     G: CurveAffine,
-    IB: IntoIterator<Item = &'a G>,
+    IE: IntoIterator<Item = &'a G>,
     IS: IntoIterator<Item = &'a G::Scalar>,
 >(
-    g: IB,
-    s: IS,
+    exponent: IE,
+    scalar: IS,
 ) -> G::Projective
 where
-    IB::IntoIter: ExactSizeIterator + Clone,
+    IE::IntoIter: ExactSizeIterator + Clone,
     IS::IntoIter: ExactSizeIterator,
 {
+    use bellman::multicore::Worker;
+    use bellman::multiexp::multiexp;
+    use std::sync::Arc;
+
+
+    let scalar: Vec<<G::Scalar as PrimeField>::Repr> = scalar
+        .into_iter()
+        .map(|e| e.into_repr())
+        .collect::<Vec<_>>();
+
+    let exponent: Vec<G> = exponent
+        .into_iter()
+        .map(|e| *e)
+        .collect::<Vec<_>>();
+
+    assert_eq!(scalar.len(), exponent.len(), "scalars and exponents must have the same length.");
+
+    let pool = Worker::new();
+
+    // let result =
+
     unimplemented!();
 }
 

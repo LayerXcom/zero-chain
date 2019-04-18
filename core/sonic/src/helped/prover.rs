@@ -8,7 +8,8 @@ use crate::transcript::ProvingTranscript;
 use crate::poly_comm::{polynomial_commitment};
 use crate::utils::ChainExt;
 
-pub const NUM_BINDINGS: usize = 4;
+pub const NUM_BLINDINGS: usize = 4;
+
 
 #[derive(Clone, Debug, Eq, PartialEq)]
 pub struct Proof<E: Engine> {
@@ -43,6 +44,7 @@ impl<E: Engine> Proof<E> {
             c: vec![],
         };
 
+        // Synthesize variables from circuit
         S::synthesize(&mut wires, circuit)?;
 
         let n = wires.a.len();
@@ -50,17 +52,22 @@ impl<E: Engine> Proof<E> {
         let rng = &mut thread_rng();
         let mut transcript = Transcript::new(&[]);
 
+
+        //
+        // === zkP_1(info, a, b, c) -> R: === //
+        //
+
         // c_{n+1}, c_{n+2}, c_{n+3}, c_{n+4}
-        let blindings: Vec<E::Fr> = (0..NUM_BINDINGS)
+        let blindings: Vec<E::Fr> = (0..NUM_BLINDINGS)
             .into_iter()
             .map(|_| E::Fr::rand(rng))
             .collect();
 
         // r is a commitment to r(X, 1)
-        let r = polynomial_commitment::<E, _>(
+        let r_comm = polynomial_commitment::<E, _>(
             n,                      // a max degree
             n,                      // largest positive power
-            2*n + NUM_BINDINGS,     // largest negative power
+            2*n + NUM_BLINDINGS,    // largest negative power;
             &srs,                   // structured reference string
             blindings.iter().rev()  // ascending order variables
                 .chain_ext(wires.c.iter().rev())
@@ -70,11 +77,44 @@ impl<E: Engine> Proof<E> {
         );
 
         // A prover commits polynomial
-        transcript.commit_point(&r);
+        transcript.commit_point(&r_comm);
+
+
+        //
+        // === zkV -> zkP: Send y <- F_p to prover === //
+        //
 
         // A varifier send to challenge scalar to prover
         let y: E::Fr = transcript.challenge_scalar();
 
+
+        //
+        // === zkP_2(y) -> T: === //
+        //
+
+        let mut rx1 = wires.b;
+        rx1.extend(wires.c);
+        rx1.extend(blindings.clone());
+        rx1.reverse();
+        rx1.push(E::Fr::zero());
+        rx1.extend(wires.a);
+
+        let mut rxy = rx1.clone();
+
+        let y_inv = y.inverse().ok_or(SynthesisError::DivisionByZero)?;
+
+        let tmp = y_inv.pow(&[(2 * n + NUM_BLINDINGS) as u64]);
+
+
+        //
+        // === zkV -> zkP: Send z <- F_p to prover === //
+        //
+
+
+
+        //
+        // === zkP_3(z) -> (a, W_a, b, W_b, W_t, s, sc): === //
+        //
 
 
         unimplemented!();
