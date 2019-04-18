@@ -39,7 +39,7 @@ git = 'https://github.com/paritytech/substrate.git'
 package = 'substrate-consensus-aura-primitives'
 rev = '59d5ec144704cec017a01f3e4dbb6b73c5542bf7'
 
-[dependencies.consensus_authorities]
+[dependencies.consensus-authorities]
 default-features = false
 git = 'https://github.com/paritytech/substrate.git'
 package = 'substrate-consensus-authorities'
@@ -91,7 +91,7 @@ default-features = false
 version = '1.0'
 
 [dependencies.serde]
-default-features = false
+optional = true
 version = '1.0'
 
 [dependencies.serde_derive]
@@ -146,10 +146,11 @@ std = [
     'sudo/std',
     'version/std',
     'serde_derive',
-    'serde/std',
+    'serde',
     'safe-mix/std',
     'consensus-aura/std',
     'offchain-primitives/std',
+    'consensus-authorities/std',
 
     "pairing/std",
 	"bellman-verifier/std",

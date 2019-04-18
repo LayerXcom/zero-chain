@@ -53,11 +53,6 @@ pub type AccountId = <AccountSignature as Verify>::Signer;
 /// The type used by authorities to prove their ID.
 pub type AccountSignature = RedjubjubSignature;
 
-// /// Alias to Ed25519 pubkey that identifies an account on the chain.
-// // pub type AccountId = primitives::H256;
-// pub type AccountId = SigVerificationKey;
-// // pub type AccountId = PkdAddress;
-
 /// A hash of some data used by the chain.
 pub type Hash = primitives::H256;
 
@@ -169,10 +164,6 @@ impl indices::Trait for Runtime {
 	type IsDeadAccount = Balances;
 	/// The uniquitous event type.
 	type Event = Event;
-	// The account address
-	// type PkdAddress = PkdAddress;
-	// The account id which is equivalent to SigVerificationKey
-	// type AccountId = Self::AccountId;
 }
 
 impl timestamp::Trait for Runtime {
@@ -195,11 +186,6 @@ impl balances::Trait for Runtime {
 	type DustRemoval = ();
 	type TransferPayment = ();
 }
-
-// impl fees::Trait for Runtime {
-// 	type TransferAsset = Balances;
-// 	type Event = Event;
-// }
 
 impl sudo::Trait for Runtime {
 	/// The uniquitous event type.
@@ -304,7 +290,7 @@ impl_runtime_apis! {
 			Aura::slot_duration()
 		}
 	}
-	
+
 	impl offchain_primitives::OffchainWorkerApi<Block> for Runtime {
 		fn offchain_worker(n: NumberFor<Block>) {
 			Executive::offchain_worker(n)

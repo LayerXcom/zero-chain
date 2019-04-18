@@ -319,11 +319,11 @@ mod tests {
     #[test]
     fn test_call_function() {
         with_externalities(&mut new_test_ext(), || {
-            let proof: [u8; 192] = hex!("91e1e662f17b871026431a9c9b48d4bf3a03aa4f8740a841252583d4472f42195d8b8cc1af8c867f63efb84d2d7b8392b26cfed48591f6128a8e1d43b9f4479c5ddb034e01035f192f7f9627d0525280a646f780c71e66286fed3f838a134e2613d311f6990ec248051ac7e648b8afcabc8924242392afe4ed97eee5b6df6692e54d9d65e8e19eda2b4f3148694baced8fa508a2c9d72c3fe2849158b3dac922ae716f259aab059c503a31a1f81e3836ea6e90de8dfa828f6a0384595995a78c");
+            let proof: [u8; 192] = hex!("a1200c59de33436d49519ef18ef97fbae1b7187b5fdc2abcb7e323b526fd79947f72698d94c78efe8e4a72eb147078abb9d7d353bfc5a89cba4f1e4ad22224bfe97f8b26b04d45f3986ce82692bc56324391c1ff1363cdc05795add569306ec7052132f40f7491446f7a58e9078f63ea1200a8c633ae43b52e14ee028ba26953bc011c8f7a3766bc481b0d31aee56bb0a5b69897f99a2da23cd43d69bd32e44895303083179202608ac24fcff1f532271642ad3d24959c0a0e00b15dba81fcfc");
             let pkd_addr_alice: [u8; 32] = hex!("fd0c0c0183770c99559bf64df4fe23f77ced9b8b4d02826a282bcd125117dcc2");
             let pkd_addr_bob: [u8; 32] = hex!("45e66da531088b55dcb3b273ca825454d79d2d1d5c4fa2ba4a12c1fa1ccd6389");
-            let enc10_by_alice: [u8; 64] = hex!("661550a1a5ac8d297a0bfd5eb2f8f8d9fb03a2c694e265d36e11aa015bb5c49cf07b68ee25b21ea9e6e8346e963e9e55365a1f5880dfc38caba4dd54c26f25c7");
-            let enc10_by_bob: [u8; 64] = hex!("aae4a58760dcab7646df25e4cf45e02af373f2eabb8fd47b94ed7bf2f7e488b5f07b68ee25b21ea9e6e8346e963e9e55365a1f5880dfc38caba4dd54c26f25c7");
+            let enc10_by_alice: [u8; 64] = hex!("5bdecb08dbc3a38be4217c939c30768d990e789431aeee4832cfca84bf04c650eb4ccfaac7dbb7c20dfcf8eea5fe184bacaf249c3e40920d2855013fce9d876d");
+            let enc10_by_bob: [u8; 64] = hex!("c8cd8d37f214f5f000f47e899cd1839a96b42bd98cc3abe42e7261ed083e6d1ceb4ccfaac7dbb7c20dfcf8eea5fe184bacaf249c3e40920d2855013fce9d876d");
             let rvk: [u8; 32] = hex!("f539db3c0075f6394ff8698c95ca47921669c77bb2b23b366f42a39b05a88c96");
 
             assert_ok!(ConfTransfer::confidential_transfer(
