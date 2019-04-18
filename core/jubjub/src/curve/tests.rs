@@ -21,7 +21,7 @@ use ::std::fmt::Debug;
 #[cfg(not(feature = "std"))]
 use crate::std::fmt::Debug;
 
-pub fn test_suite<E: JubjubEngine>(params: &E::Params) 
+pub fn test_suite<E: JubjubEngine>(params: &E::Params)
     where <E as pairing::Engine>::Fr: Debug
 {
     test_back_and_forth::<E>(params);
@@ -32,8 +32,8 @@ pub fn test_suite<E: JubjubEngine>(params: &E::Params)
     test_addition_associativity::<E>(params);
     test_order::<E>(params);
     test_mul_associativity::<E>(params);
-    test_loworder::<E>(params);    
-    test_read_write::<E>(params);    
+    test_loworder::<E>(params);
+    test_read_write::<E>(params);
 }
 
 fn is_on_mont_curve<E: JubjubEngine, P: JubjubParams<E>>(
@@ -259,10 +259,10 @@ fn test_read_write<E: JubjubEngine>(params: &E::Params) {
     for _ in 0..1000 {
         let e = edwards::Point::<E, _>::rand(rng, params);
 
-        let mut v = vec![];        
-        e.write(&mut v).unwrap();    
+        let mut v = vec![];
+        e.write(&mut v).unwrap();
 
-        let e2 = edwards::Point::read(&mut &v[..], params).unwrap();        
+        let e2 = edwards::Point::read(&mut &v[..], params).unwrap();
 
         assert!(e == e2);
     }
@@ -310,7 +310,7 @@ fn test_back_and_forth<E: JubjubEngine>(params: &E::Params) {
     }
 }
 
-fn test_jubjub_params<E: JubjubEngine>(params: &E::Params) 
+fn test_jubjub_params<E: JubjubEngine>(params: &E::Params)
     where <E as pairing::Engine>::Fr: Debug
 {
     // a = -1

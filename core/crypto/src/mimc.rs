@@ -7,8 +7,8 @@
 // use pairing::{
 //     PrimeField,
 //     PrimeFieldRepr,
-//     Field,    
-//     bls12_381::{Bls12},    
+//     Field,
+//     bls12_381::{Bls12},
 // };
 
 // use blake2_rfc::blake2s::Blake2s;
@@ -20,25 +20,25 @@
 // pub fn mimc_constants<'a, E>(
 //     seed: &'a[u8],
 //     scalar_field: E::Fs,
-//     rounds: u64 
+//     rounds: u64
 // ) -> Vec<E::Fs>
 //     where E: JubjubEngine
 // {
 //     let mut res = Vec::with_capacity(DEFAULT_MIMC_ROUND);
-//     let mut preimage = seed;        
+//     let mut preimage = seed;
 
 //     // let mut h = Blake2s::with_params(32, &[], &[], MIMC_PERSONALIZATION);
 //     // h.update(&preimage);
 //     // let mut tmp = &mut *(h.finalize().as_bytes());
 //     // res.push(tmp);
-    
+
 //     for _ in 0..rounds {
-//         let mut h = Blake2s::with_params(32, &[], &[], MIMC_PERSONALIZATION);    
+//         let mut h = Blake2s::with_params(32, &[], &[], MIMC_PERSONALIZATION);
 //         // tmp = &mut *tmp;
-//         h.update(preimage);                     
-//         preimage = h.finalize(); 
-        
-//         res.push(E::Fs::to_uniform(preimage.as_ref()));    
+//         h.update(preimage);
+//         preimage = h.finalize();
+
+//         res.push(E::Fs::to_uniform(preimage.as_ref()));
 //     }
 
 //     assert_eq!(res.len(), 91);
@@ -46,7 +46,7 @@
 // }
 
 // This is an implementation of MiMC.
-// See http://eprint.iacr.org/2016/492 for more 
+// See http://eprint.iacr.org/2016/492 for more
 // information about this construction.
 // pub fn mimc<E: JubjubEngine>(
 //     mut x: E::Fs,
@@ -59,13 +59,13 @@
 //     for i in 0..DEFAULT_MIMC_ROUND {
 //         let mut tmp1 = x;
 //         tmp1.add_assign(&k);
-//         tmp1.add_assign(&constants[i]);    
+//         tmp1.add_assign(&constants[i]);
 //         let tmp2 = tmp1;
 //         tmp1.square();
 //         tmp1.square();
 //         tmp1.square();
-        
-//         tmp1.mul_assign(&tmp2);                        
+
+//         tmp1.mul_assign(&tmp2);
 //         x = tmp1;
 //     }
 //     x.add_assign(&k);

@@ -35,7 +35,7 @@ pub const PROOF_GENERATION_KEY_BASE_GENERATOR_PERSONALIZATION: &'static [u8; 8]
 pub const VALUE_COMMITMENT_GENERATOR_PERSONALIZATION: &'static [u8; 8]
           = b"Zcash_cv";
 
-/// BLAKE2s Personalization for the value encryption generator 
+/// BLAKE2s Personalization for the value encryption generator
 pub const NULLIFIER_POSITION_IN_TREE_GENERATOR_PERSONALIZATION: &'static [u8; 8]
           = b"Zcash_J_";
 
