@@ -9,3 +9,4 @@ pairing = { git = "https://github.com/LayerXcom/librustzcash", branch = "zero-ch
 bellman = { git = "https://github.com/LayerXcom/librustzcash", branch = "zero-chain" }
 rand = "0.4"
 merlin = "1.0"
+futures = "0.1"

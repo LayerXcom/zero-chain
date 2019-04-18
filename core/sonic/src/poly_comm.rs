@@ -74,6 +74,7 @@ where
     use bellman::multicore::Worker;
     use bellman::multiexp::{multiexp, FullDensity};
     use std::sync::Arc;
+    use futures::Future;
 
     let scalar: Vec<<G::Scalar as PrimeField>::Repr> = scalar
         .into_iter()
@@ -89,13 +90,14 @@ where
 
     let pool = Worker::new();
 
-    let result = multiexp(
-        &pool,
-        (Arc::new(exponent), 0),
-        FullDensity,
-        Arc::new(s)
-    ).wait().unwrap();
+    // let result = multiexp(
+    //     &pool,
+    //     (Arc::new(exponent), 0),
+    //     FullDensity,
+    //     Arc::new(s)
+    // ).wait().unwrap();
 
-    result
+    // result
+    unimplemented!();
 }
 

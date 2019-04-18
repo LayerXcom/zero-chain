@@ -2790,6 +2790,7 @@ name = "sonic"
 version = "0.1.0"
 dependencies = [
  "bellman 0.1.0 (git+https://github.com/LayerXcom/librustzcash?branch=zero-chain)",
+ "futures 0.1.26 (registry+https://github.com/rust-lang/crates.io-index)",
  "merlin 1.0.3 (registry+https://github.com/rust-lang/crates.io-index)",
  "pairing 0.14.2 (git+https://github.com/LayerXcom/librustzcash?branch=zero-chain)",
  "rand 0.4.6 (registry+https://github.com/rust-lang/crates.io-index)",
