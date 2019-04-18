@@ -1,0 +1,12 @@
+[package]
+name = "sonic"
+version = "0.1.0"
+authors = ["Osuke Sudo <dish230@gmail.com>"]
+edition = "2018"
+
+[dependencies]
+pairing = { git = "https://github.com/LayerXcom/librustzcash", branch = "zero-chain" }
+bellman = { git = "https://github.com/LayerXcom/librustzcash", branch = "zero-chain" }
+rand = "0.4"
+merlin = "1.0"
+futures = "0.1"

@@ -77,7 +77,6 @@ impl AsBytesRef for SigVerificationKey {
     }
 }
 
-
 #[cfg(test)]
 mod tests {
     use super::*;

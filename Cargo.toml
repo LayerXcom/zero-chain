@@ -36,12 +36,12 @@ clap = "~2.32"
 [dependencies.basic-authorship]
 git = 'https://github.com/paritytech/substrate.git'
 package = 'substrate-basic-authorship'
-rev = '9112a28af677b75cd6f935dda34d283bb4f676e7'
+rev = '59d5ec144704cec017a01f3e4dbb6b73c5542bf7'
 
 [dependencies.consensus]
 git = 'https://github.com/paritytech/substrate.git'
 package = 'substrate-consensus-aura'
-rev = '9112a28af677b75cd6f935dda34d283bb4f676e7'
+rev = '59d5ec144704cec017a01f3e4dbb6b73c5542bf7'
 
 [dependencies.ctrlc]
 features = ['termination']
@@ -50,16 +50,12 @@ version = '3.0'
 [dependencies.inherents]
 git = 'https://github.com/paritytech/substrate.git'
 package = 'substrate-inherents'
-rev = '9112a28af677b75cd6f935dda34d283bb4f676e7'
+rev = '59d5ec144704cec017a01f3e4dbb6b73c5542bf7'
 
 [dependencies.network]
 git = 'https://github.com/paritytech/substrate.git'
 package = 'substrate-network'
-rev = '9112a28af677b75cd6f935dda34d283bb4f676e7'
-
-[dependencies.node-executor]
-git = 'https://github.com/paritytech/substrate.git'
-rev = '9112a28af677b75cd6f935dda34d283bb4f676e7'
+rev = '59d5ec144704cec017a01f3e4dbb6b73c5542bf7'
 
 [dependencies.zero-chain-runtime]
 path = 'runtime'
@@ -67,39 +63,39 @@ path = 'runtime'
 [dependencies.primitives]
 git = 'https://github.com/paritytech/substrate.git'
 package = 'substrate-primitives'
-rev = '9112a28af677b75cd6f935dda34d283bb4f676e7'
+rev = '59d5ec144704cec017a01f3e4dbb6b73c5542bf7'
 
 [dependencies.sr-io]
 git = 'https://github.com/paritytech/substrate.git'
-rev = '9112a28af677b75cd6f935dda34d283bb4f676e7'
+rev = '59d5ec144704cec017a01f3e4dbb6b73c5542bf7'
 
 [dependencies.substrate-cli]
 git = 'https://github.com/paritytech/substrate.git'
-rev = '9112a28af677b75cd6f935dda34d283bb4f676e7'
+rev = '59d5ec144704cec017a01f3e4dbb6b73c5542bf7'
 
 [dependencies.substrate-client]
 git = 'https://github.com/paritytech/substrate.git'
-rev = '9112a28af677b75cd6f935dda34d283bb4f676e7'
+rev = '59d5ec144704cec017a01f3e4dbb6b73c5542bf7'
 
 [dependencies.substrate-executor]
 git = 'https://github.com/paritytech/substrate.git'
-rev = '9112a28af677b75cd6f935dda34d283bb4f676e7'
+rev = '59d5ec144704cec017a01f3e4dbb6b73c5542bf7'
 
 [dependencies.substrate-service]
 git = 'https://github.com/paritytech/substrate.git'
-rev = '9112a28af677b75cd6f935dda34d283bb4f676e7'
+rev = '59d5ec144704cec017a01f3e4dbb6b73c5542bf7'
 
 [dependencies.transaction-pool]
 git = 'https://github.com/paritytech/substrate.git'
 package = 'substrate-transaction-pool'
-rev = '9112a28af677b75cd6f935dda34d283bb4f676e7'
+rev = '59d5ec144704cec017a01f3e4dbb6b73c5542bf7'
 
 [package]
 authors = ['Osuke Sudo<dish230@gmail.com>']
 build = 'build.rs'
 edition = '2018'
 name = 'zero-chain'
-version = '0.9.0'
+version = '1.0.0'
 
 [[bin]]
 name = 'zero-chain'
@@ -113,17 +109,17 @@ path = 'demo/cli/src/main.rs'
 members = [
     "core/bellman-verifier",
     "core/crypto",
-    "demo/cli",    
+    "demo/cli",
     "core/jubjub",
     "core/pairing",
     "core/primitives",
     "core/proofs",
     "runtime",
     "core/keys",
-    "modules/indices",
+    "core/sonic",
     "modules/executive",
 ]
 exclude = [
-    "runtime/wasm",   
-    "demo/wasm-utils", 
+    "runtime/wasm",
+    "demo/wasm-utils",
 ]

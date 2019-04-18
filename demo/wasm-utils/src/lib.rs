@@ -104,7 +104,7 @@ pub fn gen_rvk(sk: &[u8]) -> Vec<u8> {
 }
 
 #[wasm_bindgen]
-pub fn sign(mut sk: &[u8], msg: &[u8], seed_slice: &[u32]) -> Vec<u8> {
+pub fn sign_wasm(mut sk: &[u8], msg: &[u8], seed_slice: &[u32]) -> Vec<u8> {
     let params = &zJubjubBls12::new();
     let rng = &mut ChaChaRng::from_seed(seed_slice);
     let p_g = zFixedGenerators::Diversifier;
@@ -144,7 +144,7 @@ pub fn sign(mut sk: &[u8], msg: &[u8], seed_slice: &[u32]) -> Vec<u8> {
 }
 
 #[wasm_bindgen]
-pub fn verify(mut vk: &[u8], msg: &[u8], mut sig: &[u8]) -> bool {
+pub fn verify_wasm(mut vk: &[u8], msg: &[u8], mut sig: &[u8]) -> bool {
     let params = &zJubjubBls12::new();
     let p_g = zFixedGenerators::Diversifier;
 
