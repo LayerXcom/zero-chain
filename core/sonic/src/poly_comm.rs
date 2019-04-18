@@ -90,7 +90,11 @@ where
 
     let pool = Worker::new();
 
-    // let result =
+    // let result = multiexp(
+    //     &pool,
+    //     (Arc::new(exponent), 0),
+
+    // )
 
     unimplemented!();
 }

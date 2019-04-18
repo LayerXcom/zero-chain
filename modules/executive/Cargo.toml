@@ -7,7 +7,6 @@ edition = "2018"
 [dependencies]
 hex-literal = "0.1.0"
 srml-indices = { path = "../indices", default-features = false }
-# fees = { package = "srml-fees", path = "../fees" }
 
 [dependencies.serde]
 default-features = false
@@ -25,43 +24,42 @@ version = '3.1'
 default_features = false
 git = 'https://github.com/paritytech/substrate.git'
 package = 'sr-std'
-rev = '9112a28af677b75cd6f935dda34d283bb4f676e7'
+rev = '59d5ec144704cec017a01f3e4dbb6b73c5542bf7'
 
 [dependencies.runtime-io]
 default_features = false
 git = 'https://github.com/paritytech/substrate.git'
 package = 'sr-io'
-rev = '9112a28af677b75cd6f935dda34d283bb4f676e7'
+rev = '59d5ec144704cec017a01f3e4dbb6b73c5542bf7'
 
-[dependencies.runtime-primitives]
+[dependencies.primitives]
 default_features = false
 git = 'https://github.com/paritytech/substrate.git'
 package = 'sr-primitives'
-rev = '9112a28af677b75cd6f935dda34d283bb4f676e7'
+rev = '59d5ec144704cec017a01f3e4dbb6b73c5542bf7'
 
 [dependencies.support]
 default_features = false
 git = 'https://github.com/paritytech/substrate.git'
 package = 'srml-support'
-rev = '9112a28af677b75cd6f935dda34d283bb4f676e7'
+rev = '59d5ec144704cec017a01f3e4dbb6b73c5542bf7'
 
 [dependencies.system]
 default_features = false
 git = 'https://github.com/paritytech/substrate.git'
 package = 'srml-system'
-rev = '9112a28af677b75cd6f935dda34d283bb4f676e7'
+rev = '59d5ec144704cec017a01f3e4dbb6b73c5542bf7'
 
-[dependencies.primitives]
+[dependencies.substrate-primitives]
 default_features = false
 git = 'https://github.com/paritytech/substrate.git'
-package = 'substrate-primitives'
-rev = '9112a28af677b75cd6f935dda34d283bb4f676e7'
+rev = '59d5ec144704cec017a01f3e4dbb6b73c5542bf7'
 
 [dependencies.balances]
 default_features = false
 git = 'https://github.com/paritytech/substrate.git'
 package = 'srml-balances'
-rev = '9112a28af677b75cd6f935dda34d283bb4f676e7'
+rev = '59d5ec144704cec017a01f3e4dbb6b73c5542bf7'
 
 [features]
 default = ["std"]
@@ -71,9 +69,9 @@ std = [
 	"serde/std",
 	"parity-codec/std",
 	'parity-codec-derive/std',
-	"primitives/std",	
+	"primitives/std",
 	"system/std",
-	"runtime-primitives/std",	
+	"substrate-primitives/std",
 	'runtime-io/std',
 	"balances/std",
 ]
