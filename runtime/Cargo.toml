@@ -5,7 +5,6 @@ zprimitives = { package = "zero-chain-primitives", path = "../core/primitives", 
 jubjub = { path = "../core/jubjub", default-features = false }
 zcrypto = { package = "zero-chain-crypto", path = "../core/crypto", default-features = false }
 keys = { path = "../core/keys", default-features = false }
-indices = { package = "srml-indices", path = "../modules/indices", default-features = false }
 rand = { version = "0.4", default-features = false }
 executive = { package = "srml-executive", path = "../modules/executive", default-features = false }
 hex-literal = '0.1'
@@ -44,6 +43,12 @@ rev = '59d5ec144704cec017a01f3e4dbb6b73c5542bf7'
 default-features = false
 git = 'https://github.com/paritytech/substrate.git'
 package = 'substrate-consensus-authorities'
+rev = '59d5ec144704cec017a01f3e4dbb6b73c5542bf7'
+
+[dependencies.indices]
+default_features = false
+git = 'https://github.com/paritytech/substrate.git'
+package = 'srml-indices'
 rev = '59d5ec144704cec017a01f3e4dbb6b73c5542bf7'
 
 [dependencies.offchain-primitives]

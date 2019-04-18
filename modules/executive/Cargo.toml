@@ -6,7 +6,6 @@ edition = "2018"
 
 [dependencies]
 hex-literal = "0.1.0"
-srml-indices = { path = "../indices", default-features = false }
 
 [dependencies.serde]
 default-features = false
@@ -38,16 +37,21 @@ git = 'https://github.com/paritytech/substrate.git'
 package = 'sr-primitives'
 rev = '59d5ec144704cec017a01f3e4dbb6b73c5542bf7'
 
-[dependencies.support]
+[dependencies.srml-support]
 default_features = false
 git = 'https://github.com/paritytech/substrate.git'
-package = 'srml-support'
 rev = '59d5ec144704cec017a01f3e4dbb6b73c5542bf7'
 
 [dependencies.system]
 default_features = false
 git = 'https://github.com/paritytech/substrate.git'
 package = 'srml-system'
+rev = '59d5ec144704cec017a01f3e4dbb6b73c5542bf7'
+
+[dependencies.indices]
+default_features = false
+git = 'https://github.com/paritytech/substrate.git'
+package = 'srml-indices'
 rev = '59d5ec144704cec017a01f3e4dbb6b73c5542bf7'
 
 [dependencies.substrate-primitives]
@@ -65,7 +69,7 @@ rev = '59d5ec144704cec017a01f3e4dbb6b73c5542bf7'
 default = ["std"]
 std = [
 	"rstd/std",
-	"support/std",
+	"srml-support/std",
 	"serde/std",
 	"parity-codec/std",
 	'parity-codec-derive/std',

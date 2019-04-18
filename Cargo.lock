@@ -2529,11 +2529,6 @@ dependencies = [
 ]
 
 [[package]]
-name = "ref_thread_local"
-version = "0.0.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-
-[[package]]
 name = "regex"
 version = "1.1.6"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -3082,7 +3077,7 @@ dependencies = [
  "sr-primitives 1.0.0 (git+https://github.com/paritytech/substrate.git?rev=59d5ec144704cec017a01f3e4dbb6b73c5542bf7)",
  "sr-std 1.0.0 (git+https://github.com/paritytech/substrate.git?rev=59d5ec144704cec017a01f3e4dbb6b73c5542bf7)",
  "srml-balances 1.0.0 (git+https://github.com/paritytech/substrate.git?rev=59d5ec144704cec017a01f3e4dbb6b73c5542bf7)",
- "srml-indices 0.1.0",
+ "srml-indices 1.0.0 (git+https://github.com/paritytech/substrate.git?rev=59d5ec144704cec017a01f3e4dbb6b73c5542bf7)",
  "srml-support 1.0.0 (git+https://github.com/paritytech/substrate.git?rev=59d5ec144704cec017a01f3e4dbb6b73c5542bf7)",
  "srml-system 1.0.0 (git+https://github.com/paritytech/substrate.git?rev=59d5ec144704cec017a01f3e4dbb6b73c5542bf7)",
  "substrate-primitives 1.0.0 (git+https://github.com/paritytech/substrate.git?rev=59d5ec144704cec017a01f3e4dbb6b73c5542bf7)",
@@ -3134,25 +3129,6 @@ dependencies = [
  "srml-support 1.0.0 (git+https://github.com/paritytech/substrate.git?rev=59d5ec144704cec017a01f3e4dbb6b73c5542bf7)",
  "srml-system 1.0.0 (git+https://github.com/paritytech/substrate.git?rev=59d5ec144704cec017a01f3e4dbb6b73c5542bf7)",
  "substrate-finality-grandpa-primitives 1.0.0 (git+https://github.com/paritytech/substrate.git?rev=59d5ec144704cec017a01f3e4dbb6b73c5542bf7)",
- "substrate-primitives 1.0.0 (git+https://github.com/paritytech/substrate.git?rev=59d5ec144704cec017a01f3e4dbb6b73c5542bf7)",
-]
-
-[[package]]
-name = "srml-indices"
-version = "0.1.0"
-dependencies = [
- "hex-literal 0.1.4 (registry+https://github.com/rust-lang/crates.io-index)",
- "parity-codec 3.5.1 (registry+https://github.com/rust-lang/crates.io-index)",
- "parity-codec-derive 3.3.0 (registry+https://github.com/rust-lang/crates.io-index)",
- "ref_thread_local 0.0.0 (registry+https://github.com/rust-lang/crates.io-index)",
- "safe-mix 1.0.0 (registry+https://github.com/rust-lang/crates.io-index)",
- "serde 1.0.90 (registry+https://github.com/rust-lang/crates.io-index)",
- "serde_derive 1.0.90 (registry+https://github.com/rust-lang/crates.io-index)",
- "sr-io 1.0.0 (git+https://github.com/paritytech/substrate.git?rev=59d5ec144704cec017a01f3e4dbb6b73c5542bf7)",
- "sr-primitives 1.0.0 (git+https://github.com/paritytech/substrate.git?rev=59d5ec144704cec017a01f3e4dbb6b73c5542bf7)",
- "sr-std 1.0.0 (git+https://github.com/paritytech/substrate.git?rev=59d5ec144704cec017a01f3e4dbb6b73c5542bf7)",
- "srml-support 1.0.0 (git+https://github.com/paritytech/substrate.git?rev=59d5ec144704cec017a01f3e4dbb6b73c5542bf7)",
- "srml-system 1.0.0 (git+https://github.com/paritytech/substrate.git?rev=59d5ec144704cec017a01f3e4dbb6b73c5542bf7)",
  "substrate-primitives 1.0.0 (git+https://github.com/paritytech/substrate.git?rev=59d5ec144704cec017a01f3e4dbb6b73c5542bf7)",
 ]
 
@@ -4934,7 +4910,7 @@ dependencies = [
  "srml-balances 1.0.0 (git+https://github.com/paritytech/substrate.git?rev=59d5ec144704cec017a01f3e4dbb6b73c5542bf7)",
  "srml-consensus 1.0.0 (git+https://github.com/paritytech/substrate.git?rev=59d5ec144704cec017a01f3e4dbb6b73c5542bf7)",
  "srml-executive 0.1.0",
- "srml-indices 0.1.0",
+ "srml-indices 1.0.0 (git+https://github.com/paritytech/substrate.git?rev=59d5ec144704cec017a01f3e4dbb6b73c5542bf7)",
  "srml-sudo 1.0.0 (git+https://github.com/paritytech/substrate.git?rev=59d5ec144704cec017a01f3e4dbb6b73c5542bf7)",
  "srml-support 1.0.0 (git+https://github.com/paritytech/substrate.git?rev=59d5ec144704cec017a01f3e4dbb6b73c5542bf7)",
  "srml-system 1.0.0 (git+https://github.com/paritytech/substrate.git?rev=59d5ec144704cec017a01f3e4dbb6b73c5542bf7)",
@@ -5239,7 +5215,6 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 "checksum rdrand 0.4.0 (registry+https://github.com/rust-lang/crates.io-index)" = "678054eb77286b51581ba43620cc911abf02758c91f93f479767aed0f90458b2"
 "checksum redox_syscall 0.1.54 (registry+https://github.com/rust-lang/crates.io-index)" = "12229c14a0f65c4f1cb046a3b52047cdd9da1f4b30f8a39c5063c8bae515e252"
 "checksum redox_termios 0.1.1 (registry+https://github.com/rust-lang/crates.io-index)" = "7e891cfe48e9100a70a3b6eb652fef28920c117d366339687bd5576160db0f76"
-"checksum ref_thread_local 0.0.0 (registry+https://github.com/rust-lang/crates.io-index)" = "d813022b2e00774a48eaf43caaa3c20b45f040ba8cbf398e2e8911a06668dbe6"
 "checksum regex 1.1.6 (registry+https://github.com/rust-lang/crates.io-index)" = "8f0a0bcab2fd7d1d7c54fa9eae6f43eddeb9ce2e7352f8518a814a4f65d60c58"
 "checksum regex-syntax 0.6.6 (registry+https://github.com/rust-lang/crates.io-index)" = "dcfd8681eebe297b81d98498869d4aae052137651ad7b96822f09ceb690d0a96"
 "checksum remove_dir_all 0.5.1 (registry+https://github.com/rust-lang/crates.io-index)" = "3488ba1b9a2084d38645c4c08276a1752dcbf2c7130d74f1569681ad5d2799c5"
