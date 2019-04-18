@@ -5,10 +5,13 @@ use zero_chain_runtime::{
 };
 use substrate_service;
 
+use ed25519::Public as AuthorityId;
+
 use zprimitives::{
 	prepared_vk::PreparedVk,
 	pkd_address::PkdAddress,
 	ciphertext::Ciphertext,
+	sig_vk::SigVerificationKey,
 	};
 use keys::{ProofGenerationKey, EncryptionKey};
 use jubjub::{curve::{JubjubBls12, FixedGenerators, fs}};
@@ -45,11 +48,11 @@ fn authority_key(s: &str) -> AuthorityId {
 		.public()
 }
 
-fn account_key(s: &str) -> AccountId {
-	sr25519::Pair::from_string(&format!("//{}", s), None)
-		.expect("static values are valid; qed")
-		.public()
-}
+// fn account_key(s: &str) -> AccountId {
+// 	sr25519::Pair::from_string(&format!("//{}", s), None)
+// 		.expect("static values are valid; qed")
+// 		.public()
+// }
 
 impl Alternative {
 	/// Get an actual chain config from one of the alternatives.
@@ -61,9 +64,9 @@ impl Alternative {
 				|| testnet_genesis(vec![
 					authority_key("Alice")
 				], vec![
-					account_key("Alice")
+					SigVerificationKey::from_slice(b"Alice                           ")
 				],
-					account_key("Alice")
+					SigVerificationKey::from_slice(b"Alice                           ")
 				),
 				vec![],
 				None,
@@ -78,14 +81,14 @@ impl Alternative {
 					authority_key("Alice"),
 					authority_key("Bob"),
 				], vec![
-					account_key("Alice"),
-					account_key("Bob"),
-					account_key("Charlie"),
-					account_key("Dave"),
-					account_key("Eve"),
-					account_key("Ferdie"),
+					SigVerificationKey::from_slice(b"Alice                           ")
+					// account_key("Bob"),
+					// account_key("Charlie"),
+					// account_key("Dave"),
+					// account_key("Eve"),
+					// account_key("Ferdie"),
 				],
-					account_key("Alice"),
+					SigVerificationKey::from_slice(b"Alice                           ")
 				),
 				vec![],
 				None,
@@ -131,7 +134,10 @@ fn testnet_genesis(initial_authorities: Vec<AuthorityId>, endowed_accounts: Vec<
 			key: root_key,
 		}),
 		conf_transfer: Some(ConfTransferConfig {
-			encrypted_balance: vec![alice_init(), (PkdAddress::from_slice(b"Alice                           "), Ciphertext(b"Alice                           Bob                             ".to_vec()))],
+			encrypted_balance: vec![
+				alice_init(),
+				(PkdAddress::from_slice(b"Alice                           "),
+					Ciphertext(b"Alice                           Bob                             ".to_vec()))],
 			verifying_key: get_pvk(),
 			_genesis_phantom_data: Default::default(),
 		})
