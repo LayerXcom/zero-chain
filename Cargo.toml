@@ -57,10 +57,6 @@ git = 'https://github.com/paritytech/substrate.git'
 package = 'substrate-network'
 rev = '59d5ec144704cec017a01f3e4dbb6b73c5542bf7'
 
-[dependencies.node-executor]
-git = 'https://github.com/paritytech/substrate.git'
-rev = '59d5ec144704cec017a01f3e4dbb6b73c5542bf7'
-
 [dependencies.zero-chain-runtime]
 path = 'runtime'
 

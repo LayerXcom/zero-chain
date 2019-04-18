@@ -72,9 +72,8 @@ where
     IS::IntoIter: ExactSizeIterator,
 {
     use bellman::multicore::Worker;
-    use bellman::multiexp::multiexp;
+    use bellman::multiexp::{multiexp, FullDensity};
     use std::sync::Arc;
-
 
     let scalar: Vec<<G::Scalar as PrimeField>::Repr> = scalar
         .into_iter()
@@ -90,12 +89,13 @@ where
 
     let pool = Worker::new();
 
-    // let result = multiexp(
-    //     &pool,
-    //     (Arc::new(exponent), 0),
+    let result = multiexp(
+        &pool,
+        (Arc::new(exponent), 0),
+        FullDensity,
+        Arc::new(s)
+    ).wait().unwrap();
 
-    // )
-
-    unimplemented!();
+    result
 }
 
