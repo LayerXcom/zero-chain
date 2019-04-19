@@ -1,4 +1,4 @@
-use pairing::Field;
+use pairing::{Engine, Field};
 
 /// Basically used for polynomials represented as separeted iterator
 /// (like positive and negative powers).
@@ -69,10 +69,10 @@ impl<T, U> DoubleEndedIterator for Chain<T, U>
 /// Multiply each coefficient by some power of the base in a form
 /// `first_power * base^{i}`
 /// This would be sparse, consecutive multiplication based on non-zero coefficients.
-pub fn coeffs_consecutive_powers<'a, F: Field> (
-    coeffs: &mut [F],
-    first_power: F,
-    base: F
+pub fn coeffs_consecutive_powers<'a, E: Engine> (
+    coeffs: &mut [E::Fr],
+    first_power: E::Fr,
+    base: E::Fr
 ) {
     use bellman::multicore::Worker;
 

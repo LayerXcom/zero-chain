@@ -1,7 +1,7 @@
 use bellman::multicore::Worker;
 use pairing::{Engine, Field};
 
-pub fn add_polynomials<F: Field>(a: &mut [F], b: &[F]) {
+pub fn add_polynomials<E: Engine>(a: &mut [E::Fr], b: &[E::Fr]) {
     assert_eq!(a.len(), b.len());
 
     let worker = Worker::new();

@@ -106,7 +106,7 @@ impl<E: Engine> Proof<E> {
         let first_power = y_inv.pow(&[(2 * n + NUM_BLINDINGS) as u64]);
 
         // Evaluate the polynomial r(X, Y) at y
-        coeffs_consecutive_powers(
+        coeffs_consecutive_powers::<E>(
             &mut rxy,
             first_power,
             y,
