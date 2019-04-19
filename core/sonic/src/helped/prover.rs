@@ -6,10 +6,9 @@ use crate::cs::{SynthesisDriver, Circuit, Backend, Variable, Coeff};
 use crate::srs::SRS;
 use crate::transcript::ProvingTranscript;
 use crate::poly_comm::{polynomial_commitment};
-use crate::utils::ChainExt;
+use crate::utils::{ChainExt, mul_powers};
 
 pub const NUM_BLINDINGS: usize = 4;
-
 
 #[derive(Clone, Debug, Eq, PartialEq)]
 pub struct Proof<E: Engine> {
@@ -57,13 +56,13 @@ impl<E: Engine> Proof<E> {
         // === zkP_1(info, a, b, c) -> R: === //
         //
 
-        // c_{n+1}, c_{n+2}, c_{n+3}, c_{n+4}
+        // c_{n+1}, c_{n+2}, c_{n+3}, c_{n+4} <- F_p
         let blindings: Vec<E::Fr> = (0..NUM_BLINDINGS)
             .into_iter()
             .map(|_| E::Fr::rand(rng))
             .collect();
 
-        // r is a commitment to r(X, 1)
+        // a commitment to r(X, 1)
         let r_comm = polynomial_commitment::<E, _>(
             n,                      // a max degree
             n,                      // largest positive power
@@ -92,19 +91,26 @@ impl<E: Engine> Proof<E> {
         // === zkP_2(y) -> T: === //
         //
 
-        let mut rx1 = wires.b;
-        rx1.extend(wires.c);
-        rx1.extend(blindings.clone());
+        // A coefficients vector which can be used in common with polynomials r and r'
+        // associated with powers for X.
+        let mut rx1 = wires.b;         // X^{-n}...X^{-1}
+        rx1.extend(wires.c);           // X^{-2n}...X^{-n-1}
+        rx1.extend(blindings.clone()); // X^{-2n-4}...X^{-2n-1}
         rx1.reverse();
         rx1.push(E::Fr::zero());
-        rx1.extend(wires.a);
+        rx1.extend(wires.a);           // X^{1}...X^{n}
 
         let mut rxy = rx1.clone();
-
         let y_inv = y.inverse().ok_or(SynthesisError::DivisionByZero)?;
 
-        let tmp = y_inv.pow(&[(2 * n + NUM_BLINDINGS) as u64]);
+        let first_power = y_inv.pow(&[(2 * n + NUM_BLINDINGS) as u64]);
 
+        // Evaluate the polynomial r(X, Y) at y
+        mul_powers(
+            &mut rxy,
+            first_power,
+            y,
+        );
 
         //
         // === zkV -> zkP: Send z <- F_p to prover === //
@@ -121,7 +127,8 @@ impl<E: Engine> Proof<E> {
     }
 }
 
-
+/// Three vectors representing the left inputs, right inputs, and outputs of
+/// multiplication constraints respectively in sonic's constraint system.
 struct Wires<E: Engine> {
     a: Vec<E::Fr>,
     b: Vec<E::Fr>,

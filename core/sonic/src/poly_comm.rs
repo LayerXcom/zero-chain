@@ -90,14 +90,12 @@ where
 
     let pool = Worker::new();
 
-    // let result = multiexp(
-    //     &pool,
-    //     (Arc::new(exponent), 0),
-    //     FullDensity,
-    //     Arc::new(s)
-    // ).wait().unwrap();
+    let result = multiexp(
+        &pool,
+        (Arc::new(exponent), 0),
+        FullDensity,
+        Arc::new(scalar)
+    ).wait().unwrap();
 
-    // result
-    unimplemented!();
+    result
 }
-
