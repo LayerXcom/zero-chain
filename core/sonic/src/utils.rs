@@ -69,7 +69,7 @@ impl<T, U> DoubleEndedIterator for Chain<T, U>
 /// Multiply each coefficient by some power of the base in a form
 /// `first_power * base^{i}`
 /// This would be sparse, consecutive multiplication based on non-zero coefficients.
-pub fn mul_powers<'a, F: Field> (
+pub fn coeffs_consecutive_powers<'a, F: Field> (
     coeffs: &mut [F],
     first_power: F,
     base: F

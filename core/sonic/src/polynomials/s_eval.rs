@@ -2,6 +2,7 @@ use pairing::{Engine, Field};
 use bellman::SynthesisError;
 
 /// Defined in Section 5: SYSTEM OF CONSTRAINTS
+/// Evaluation of s(X, Y) at x
 #[derive(Clone)]
 pub struct SxEval<E: Engine> {
     y: E::Fr,
@@ -20,6 +21,7 @@ pub struct SxEval<E: Engine> {
 }
 
 impl<E: Engine> SxEval<E> {
+    ///  Initialize s(X, y) where y is fixed.
     pub fn new(y: E::Fr, n: usize) -> Result<Self, SynthesisError>  {
         unimplemented!();
     }

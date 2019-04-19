@@ -6,7 +6,7 @@ use crate::cs::{SynthesisDriver, Circuit, Backend, Variable, Coeff};
 use crate::srs::SRS;
 use crate::transcript::ProvingTranscript;
 use crate::polynomials::commitment::{polynomial_commitment};
-use crate::utils::{ChainExt, mul_powers};
+use crate::utils::{ChainExt, coeffs_consecutive_powers};
 
 pub const NUM_BLINDINGS: usize = 4;
 
@@ -106,7 +106,7 @@ impl<E: Engine> Proof<E> {
         let first_power = y_inv.pow(&[(2 * n + NUM_BLINDINGS) as u64]);
 
         // Evaluate the polynomial r(X, Y) at y
-        mul_powers(
+        coeffs_consecutive_powers(
             &mut rxy,
             first_power,
             y,
