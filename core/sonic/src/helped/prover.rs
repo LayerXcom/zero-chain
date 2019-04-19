@@ -5,7 +5,7 @@ use merlin::Transcript;
 use crate::cs::{SynthesisDriver, Circuit, Backend, Variable, Coeff};
 use crate::srs::SRS;
 use crate::transcript::ProvingTranscript;
-use crate::poly_comm::{polynomial_commitment};
+use crate::polynomials::commitment::{polynomial_commitment};
 use crate::utils::{ChainExt, mul_powers};
 
 pub const NUM_BLINDINGS: usize = 4;
