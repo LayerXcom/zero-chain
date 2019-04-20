@@ -68,6 +68,7 @@ pub trait Backend<E: Engine> {
 }
 
 /// This is an abstraction which synthesizes circuits.
+/// Synthesize circuits to the backend object.
 pub trait SynthesisDriver {
     fn synthesize<E: Engine, C: Circuit<E>, B: Backend<E>> (backend: B, circuit: &C)
         -> Result<(), SynthesisError>;
@@ -79,6 +80,68 @@ impl SynthesisDriver for Basic {
     fn synthesize<E: Engine, C: Circuit<E>, B: Backend<E>>(backend: B, circuit: &C)
         -> Result<(), SynthesisError>
     {
+        struct Synthesizer<E: Engine, B: Backend<E>> {
+            backend: B,
+            current_variable: Option<usize>,    // Index of the current variable
+            q: usize,
+            n: usize,                           // Degree of the current synthesizing step
+            _marker: PhantomData<E>,
+        }
+
+        impl<E: Engine, B: Backend<E>> ConstraintSystem<E>  for Synthesizer<E, B> {
+            const ONE: Variable = Variable::A(1);
+
+            fn alloc<F>(&mut self, value: F) -> Result<Variable, SynthesisError>
+            where
+                F: FnOnce() -> Result<E::Fr, SynthesisError>
+            {
+                match self.current_variable.take() {
+                    Some(index) => {
+                        let var_a = Variable::A(index);
+                        let var_b = Variable::B(index);
+                        let var_c = Variable::C(index);
+
+                        let mut product = None;
+
+                        let value_a = self.backend.get_var(var_a);
+
+                        // Set the value_b from the argument to the variable B
+                        // and then calculate a product of value_a and value_b.
+                        self.backend.set_var(var_b, || {
+                            let value_b = value()?;
+                            product = Some(value_a.ok_or(SynthesisError::AssignmentMissing)?);
+                            product.as_mut().map(|product| product.mul_assign(&value_b));
+
+                            Ok(value_b)
+                        })?;
+
+                        // Set the product to the variable C
+                        self.backend.set_var(var_c, || {
+                            product.ok_or(SynthesisError::AssignmentMissing)
+                        })?;
+
+                        self.current_variable = None;
+
+                        // Return the allocated value
+                        Ok(var_b)
+                    },
+                    None => {
+                        // One step further because there's not variable in the degree
+                        self.n += 1;
+                        let index = self.n;
+
+                        self.backend.new_multiplication_gate();
+                        let var_a = Variable::A(index);
+
+                        self.backend.set_var(var_a, value)?;
+                        self.current_variable = Some(index);
+
+                        Ok(var_a)
+                    }
+                }
+            }
+        }
+
         unimplemented!();
     }
 }

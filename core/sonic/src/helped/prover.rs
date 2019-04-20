@@ -129,6 +129,7 @@ impl<E: Engine> Proof<E> {
 
 /// Three vectors representing the left inputs, right inputs, and outputs of
 /// multiplication constraints respectively in sonic's constraint system.
+/// Basically, these are value of a variable.
 struct Wires<E: Engine> {
     a: Vec<E::Fr>,
     b: Vec<E::Fr>,
