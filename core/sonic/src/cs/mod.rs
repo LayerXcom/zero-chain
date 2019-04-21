@@ -83,12 +83,12 @@ impl SynthesisDriver for Basic {
         struct Synthesizer<E: Engine, B: Backend<E>> {
             backend: B,
             current_variable: Option<usize>,    // Index of the current variable
-            q: usize,
+            q: usize,                           // q-th linear constraint
             n: usize,                           // Degree of the current synthesizing step
             _marker: PhantomData<E>,
         }
 
-        impl<E: Engine, B: Backend<E>> ConstraintSystem<E>  for Synthesizer<E, B> {
+        impl<E: Engine, B: Backend<E>> ConstraintSystem<E> for Synthesizer<E, B> {
             const ONE: Variable = Variable::A(1);
 
             fn alloc<F>(&mut self, value: F) -> Result<Variable, SynthesisError>
@@ -122,7 +122,7 @@ impl SynthesisDriver for Basic {
 
                         self.current_variable = None;
 
-                        // Return the allocated value
+                        // Return the Variable
                         Ok(var_b)
                     },
                     None => {
@@ -140,8 +140,86 @@ impl SynthesisDriver for Basic {
                     }
                 }
             }
+
+            fn alloc_input<F>(&mut self, value: F) -> Result<Variable, SynthesisError>
+            where
+                F: FnOnce() -> Result<E::Fr, SynthesisError>
+            {
+                let input_var = self.alloc(value)?;
+
+                self.enforce_zero(LinearCombination::zero() + input_var);
+                self.backend.new_k_power(self.q);
+
+                Ok(input_var)
+            }
+
+            fn enforce_zero(&mut self, lc: LinearCombination<E>) {
+                self.q += 1;
+                self.backend.new_linear_constraint();
+
+                for (var, coeff) in lc.as_ref() {
+                    self.backend.insert_coefficient(*var, *coeff);
+                }
+            }
+
+            fn multiply<F>(&mut self, values: F)
+                -> Result<(Variable, Variable, Variable), SynthesisError>
+            where
+                F: FnOnce() -> Result<(E::Fr, E::Fr, E::Fr), SynthesisError>
+            {
+                self.n += 1;
+                let index = self.n;
+                self.backend.new_multiplication_gate();
+
+                let var_a = Variable::A(index);
+                let var_b = Variable::B(index);
+                let var_c = Variable::C(index);
+
+                let mut value_b = None;
+                let mut value_c = None;
+
+                self.backend.set_var(var_a, || {
+                    let (a, b, c) = values()?;
+
+                    value_b = Some(b);
+                    value_c = Some(c);
+
+                    Ok(a)
+                })?;
+
+                self.backend.set_var(var_b, || {
+                    value_b.ok_or(SynthesisError::AssignmentMissing)
+                })?;
+
+                self.backend.set_var(var_c, || {
+                    value_c.ok_or(SynthesisError::AssignmentMissing)
+                })?;
+
+                Ok((var_a, var_b, var_c))
+            }
+
+            fn get_value(&self, var: Variable) -> Result<E::Fr, ()> {
+                self.backend.get_var(var).ok_or(())
+            }
         }
 
-        unimplemented!();
+        let mut instance = Synthesizer {
+            backend: backend,
+            current_variable: None,
+            q: 0,
+            n: 0,
+            _marker: PhantomData,
+        };
+
+        let one_var = instance.alloc_input(|| Ok(E::Fr::one())).expect("should have no issues.");
+
+        match (one_var, <Synthesizer<E, B> as ConstraintSystem<E>>::ONE) {
+            (Variable::A(1), Variable::A(1)) => {},
+            _ => panic!("one variable is incorrect.")
+        }
+
+        circuit.synthesize(&mut instance)?;
+
+        Ok(())
     }
 }

@@ -52,9 +52,9 @@ impl<E: Engine> Proof<E> {
         let mut transcript = Transcript::new(&[]);
 
 
-        //
-        // === zkP_1(info, a, b, c) -> R: === //
-        //
+        // ------------------------------------------------------
+        // zkP_1(info, a, b, c) -> R:
+        // ------------------------------------------------------
 
         // c_{n+1}, c_{n+2}, c_{n+3}, c_{n+4} <- F_p
         let blindings: Vec<E::Fr> = (0..NUM_BLINDINGS)
@@ -79,17 +79,17 @@ impl<E: Engine> Proof<E> {
         transcript.commit_point(&r_comm);
 
 
-        //
-        // === zkV -> zkP: Send y <- F_p to prover === //
-        //
+        // ------------------------------------------------------
+        // zkV -> zkP: Send y <- F_p to prover
+        // ------------------------------------------------------
 
         // A varifier send to challenge scalar to prover
         let y: E::Fr = transcript.challenge_scalar();
 
 
-        //
-        // === zkP_2(y) -> T: === //
-        //
+        // ------------------------------------------------------
+        // zkP_2(y) -> T:
+        // ------------------------------------------------------
 
         // A coefficients vector which can be used in common with polynomials r and r'
         // associated with powers for X.
@@ -112,15 +112,15 @@ impl<E: Engine> Proof<E> {
             y,
         );
 
-        //
-        // === zkV -> zkP: Send z <- F_p to prover === //
-        //
+        // ------------------------------------------------------
+        // zkV -> zkP: Send z <- F_p to prover
+        // ------------------------------------------------------
 
 
 
-        //
-        // === zkP_3(z) -> (a, W_a, b, W_b, W_t, s, sc): === //
-        //
+        // ------------------------------------------------------
+        // zkP_3(z) -> (a, W_a, b, W_b, W_t, s, sc):
+        // ------------------------------------------------------
 
 
         unimplemented!();
