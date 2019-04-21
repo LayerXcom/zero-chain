@@ -32,12 +32,14 @@ pub trait ConstraintSystem<E: Engine>: Sized {
     fn alloc_input<F>(&mut self, value: F) -> Result<Variable, SynthesisError>
         where F: FnOnce() -> Result<E::Fr, SynthesisError>;
 
-    /// Enforce that `LinearCombination` = 0
+
     fn enforce_zero(&mut self, lc: LinearCombination<E>);
 
+    
     fn multiply<F>(&mut self, values: F) -> Result<(Variable, Variable, Variable), SynthesisError>
         where F: FnOnce() -> Result<(E::Fr, E::Fr, E::Fr), SynthesisError>;
 
+    /// Get a value corresponding to the given variable
     fn get_value(&self, _var: Variable) -> Result<E::Fr, ()> { Err(()) }
 }
 

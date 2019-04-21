@@ -6,6 +6,7 @@ use crate::cs::{SynthesisDriver, Circuit, Backend, Variable, Coeff};
 use crate::srs::SRS;
 use crate::transcript::ProvingTranscript;
 use crate::polynomials::commitment::{polynomial_commitment};
+use crate::polynomials::s_eval::SxEval;
 use crate::utils::{ChainExt, coeffs_consecutive_powers};
 
 pub const NUM_BLINDINGS: usize = 4;
@@ -111,6 +112,18 @@ impl<E: Engine> Proof<E> {
             first_power,
             y,
         );
+
+        // negative powers [-1, -2n], positive [1, n] of Polynomial s(X, y)
+        let (mut s_neg_poly, s_pos_poly) = {
+            let mut sx_poly = SxEval::new(y, n)?;
+            S::synthesize(&mut sx_poly, circuit)?;
+
+            sx_poly.neg_pos_poly()
+        };
+
+        // Evaluate the polynomial r'(X, Y) = r(X, Y) + s(X, Y) at y
+        let mut rxy_prime = rxy.clone();
+        
 
         // ------------------------------------------------------
         // zkV -> zkP: Send z <- F_p to prover
