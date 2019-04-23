@@ -10,3 +10,4 @@ bellman = { git = "https://github.com/LayerXcom/librustzcash", branch = "zero-ch
 rand = "0.4"
 merlin = "1.0"
 futures = "0.1"
+clear_on_drop = "0.2"

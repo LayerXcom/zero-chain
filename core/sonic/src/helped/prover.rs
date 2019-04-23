@@ -5,8 +5,7 @@ use merlin::Transcript;
 use crate::cs::{SynthesisDriver, Circuit, Backend, Variable, Coeff};
 use crate::srs::SRS;
 use crate::transcript::ProvingTranscript;
-use crate::polynomials::commitment::{polynomial_commitment};
-use crate::polynomials::s_eval::SxEval;
+use crate::polynomials::{polynomial_commitment, SxEval, add_polynomials};
 use crate::utils::{ChainExt, coeffs_consecutive_powers};
 
 pub const NUM_BLINDINGS: usize = 4;
@@ -101,6 +100,7 @@ impl<E: Engine> Proof<E> {
         rx1.push(E::Fr::zero());
         rx1.extend(wires.a);           // X^{1}...X^{n}
 
+        // powers: [-2n-4, n]
         let mut rxy = rx1.clone();
         let y_inv = y.inverse().ok_or(SynthesisError::DivisionByZero)?;
 
@@ -113,7 +113,7 @@ impl<E: Engine> Proof<E> {
             y,
         );
 
-        // negative powers [-1, -2n], positive [1, n] of Polynomial s(X, y)
+        // negative powers [-1, -n], positive [1, 2n] of Polynomial s(X, y)
         let (mut s_neg_poly, s_pos_poly) = {
             let mut sx_poly = SxEval::new(y, n)?;
             S::synthesize(&mut sx_poly, circuit)?;
@@ -123,7 +123,18 @@ impl<E: Engine> Proof<E> {
 
         // Evaluate the polynomial r'(X, Y) = r(X, Y) + s(X, Y) at y
         let mut rxy_prime = rxy.clone();
-        
+
+        // extend to have powers [n+1, 2n] for w_i(Y)X^{i+n}
+        rxy_prime.resize(4 * n + 1 + NUM_BLINDINGS, E::Fr::zero());
+        // negative powers: [-n, -1]
+        s_neg_poly.reverse();
+
+        // Add negative powers [-n, -1]
+        add_polynomials::<E>(&mut rxy_prime[(n + NUM_BLINDINGS)..(2 * n + NUM_BLINDINGS)], &s_neg_poly[..]);
+
+        // Add positive powers [1, 2n]
+        add_polynomials::<E>(&mut rxy_prime[(2 * n + 1 + NUM_BLINDINGS)..], &s_pos_poly[..]);
+
 
         // ------------------------------------------------------
         // zkV -> zkP: Send z <- F_p to prover
