@@ -1,4 +1,5 @@
 use pairing::{Engine, Field};
+use bellman::multicore::Worker;
 
 /// Basically used for polynomials represented as separeted iterator
 /// (like positive and negative powers).
@@ -74,8 +75,6 @@ pub fn coeffs_consecutive_powers<'a, E: Engine> (
     first_power: E::Fr,
     base: E::Fr
 ) {
-    use bellman::multicore::Worker;
-
     let worker = Worker::new();
     worker.scope(coeffs.len(), |scope, chunk| {
         for (i, coeffs_chunk) in coeffs.chunks_mut(chunk).enumerate() {
@@ -91,4 +90,14 @@ pub fn coeffs_consecutive_powers<'a, E: Engine> (
             });
         }
     });
+}
+
+/// Evaluate a polynomial
+pub fn evaluate_poly<'a, E: Engine> (
+    coeffs: &[E::Fr],
+    first_power: E::Fr,
+    base: E::Fr
+) -> E::Fr
+{
+    unimplemented!();
 }

@@ -5,8 +5,8 @@ use merlin::Transcript;
 use crate::cs::{SynthesisDriver, Circuit, Backend, Variable, Coeff};
 use crate::srs::SRS;
 use crate::transcript::ProvingTranscript;
-use crate::polynomials::{polynomial_commitment, SxEval, add_polynomials};
-use crate::utils::{ChainExt, coeffs_consecutive_powers};
+use crate::polynomials::{polynomial_commitment, SxEval, add_polynomials, mul_polynomials};
+use crate::utils::{ChainExt, coeffs_consecutive_powers, evaluate_poly};
 
 pub const NUM_BLINDINGS: usize = 4;
 
@@ -65,10 +65,10 @@ impl<E: Engine> Proof<E> {
         // a commitment to r(X, 1)
         let r_comm = polynomial_commitment::<E, _>(
             n,                      // a max degree
-            n,                      // largest positive power
             2*n + NUM_BLINDINGS,    // largest negative power;
+            n,                      // largest positive power
             &srs,                   // structured reference string
-            blindings.iter().rev()  // ascending order variables
+            blindings.iter().rev()  // coefficients orderd by ascending powers
                 .chain_ext(wires.c.iter().rev())
                 .chain_ext(wires.b.iter().rev())
                 .chain_ext(Some(E::Fr::zero()).iter()) // power i is not equal zero
@@ -85,6 +85,7 @@ impl<E: Engine> Proof<E> {
 
         // A varifier send to challenge scalar to prover
         let y: E::Fr = transcript.challenge_scalar();
+        let y_inv = y.inverse().ok_or(SynthesisError::DivisionByZero)?;
 
 
         // ------------------------------------------------------
@@ -102,7 +103,6 @@ impl<E: Engine> Proof<E> {
 
         // powers: [-2n-4, n]
         let mut rxy = rx1.clone();
-        let y_inv = y.inverse().ok_or(SynthesisError::DivisionByZero)?;
 
         let first_power = y_inv.pow(&[(2 * n + NUM_BLINDINGS) as u64]);
 
@@ -135,16 +135,42 @@ impl<E: Engine> Proof<E> {
         // Add positive powers [1, 2n]
         add_polynomials::<E>(&mut rxy_prime[(2 * n + 1 + NUM_BLINDINGS)..], &s_pos_poly[..]);
 
+        // Compute t(X, y) = r(X, 1) * r'(X, y)
+        let mut txy = mul_polynomials::<E>(&rx1[..], &rxy_prime[..])?;
+        txy[4 * n + 2 * NUM_BLINDINGS] = E::Fr::zero(); // -k(y)
+
+        // commitment of t(X, y)
+        let t_comm = polynomial_commitment(
+            srs.d,
+            4 * n + 2 * NUM_BLINDINGS,
+            3 * n,
+            srs,
+            txy[..(4 * n + 2 * NUM_BLINDINGS)].iter()
+                .chain_ext(txy[(4 * n + 2 * NUM_BLINDINGS + 1)..].iter())
+        );
+
+        transcript.commit_point(&t_comm);
+
 
         // ------------------------------------------------------
         // zkV -> zkP: Send z <- F_p to prover
         // ------------------------------------------------------
 
-
+        // A varifier send to challenge scalar to prover
+        let z: E::Fr = transcript.challenge_scalar();
+        let z_inv = z.inverse().ok_or(SynthesisError::DivisionByZero)?;
 
         // ------------------------------------------------------
         // zkP_3(z) -> (a, W_a, b, W_b, W_t, s, sc):
         // ------------------------------------------------------
+
+        let rz_1 = {
+            let first_power = z_inv.pow(&[(2 * n + NUM_BLINDINGS) as u64]);
+            evaluate_poly(&rx1, first_power, z)
+        };
+
+
+        // let ryz_1
 
 
         unimplemented!();
