@@ -6,7 +6,7 @@ use crate::cs::{SynthesisDriver, Circuit, Backend, Variable, Coeff};
 use crate::srs::SRS;
 use crate::transcript::ProvingTranscript;
 use crate::polynomials::{poly_comm, poly_comm_opening, SxEval, add_polynomials, mul_polynomials};
-use crate::utils::{ChainExt, coeffs_consecutive_powers, evaluate_poly, mul_add_polynomials};
+use crate::utils::{ChainExt, eval_bivar_poly, eval_univar_poly, mul_add_poly};
 
 pub const NUM_BLINDINGS: usize = 4;
 
@@ -107,7 +107,7 @@ impl<E: Engine> Proof<E> {
         let first_power = y_inv.pow(&[(2 * n + NUM_BLINDINGS) as u64]);
 
         // Evaluate the polynomial r(X, Y) at y
-        coeffs_consecutive_powers::<E>(
+        eval_bivar_poly::<E>(
             &mut r_xy,
             first_power,
             y,
@@ -167,13 +167,13 @@ impl<E: Engine> Proof<E> {
         // ------------------------------------------------------
 
         // r(X, 1) -> r(z, 1)
-        let r_z1 = evaluate_poly::<E>(&r_x1, first_power, z);
+        let r_z1 = eval_univar_poly::<E>(&r_x1, first_power, z);
         transcript.commit_scalar(&r_z1);
 
         // Ensure: r(X, 1) -> r(yz, 1) = r(z, y)
         // let r_zy = evaluate_poly(&r_x1, first_power, z*y);
         // r(X, y) -> r(z, y)
-        let r_zy = evaluate_poly::<E>(&r_xy, first_power, z);
+        let r_zy = eval_univar_poly::<E>(&r_xy, first_power, z);
         transcript.commit_scalar(&r_zy);
 
         let r1: E::Fr = transcript.challenge_scalar();
@@ -185,13 +185,27 @@ impl<E: Engine> Proof<E> {
 
             let r_x1_len = r_x1.len();
             // powers domain: [-2n-4, n]
-            mul_add_polynomials::<E>(
+            mul_add_poly::<E>(
                 &mut txy[(2 * n + NUM_BLINDINGS)..(2 * n + NUM_BLINDINGS + r_x1_len)],
                 &r_x1[..],
                 r1
             );
 
-            let 
+            // Evaluate t(X, y) at z
+            let val = {
+                let first_power = z_inv.pow(&[(4 * n + 2 * NUM_BLINDINGS) as u64]);
+                eval_univar_poly::<E>(&txy, first_power, z)
+            };
+
+            txy[(4 * n + 2 * NUM_BLINDINGS)].sub_assign(&val);
+
+            poly_comm_opening(
+                4 * n + 2 * NUM_BLINDINGS,
+                3 * n,
+                srs,
+                &txy,
+                z
+            )
         };
 
         // An opening of r(X, 1) at yz

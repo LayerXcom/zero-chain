@@ -1,6 +1,6 @@
 use pairing::{Engine, Field};
 use bellman::SynthesisError;
-use crate::utils::coeffs_consecutive_powers;
+use crate::utils::eval_bivar_poly;
 use crate::cs::Backend;
 use crate::cs::lc::{Variable, Coeff};
 use super::add_polynomials;
@@ -46,8 +46,8 @@ impl<E: Engine> SxEval<E> {
             None => return Err(SynthesisError::DivisionByZero)
         };
 
-        coeffs_consecutive_powers::<E>(&mut w[..], y, y);
-        coeffs_consecutive_powers::<E>(&mut neg_w[..], y_inv, y_inv);
+        eval_bivar_poly::<E>(&mut w[..], y, y);
+        eval_bivar_poly::<E>(&mut neg_w[..], y_inv, y_inv);
         add_polynomials::<E>(&mut w[..], &neg_w[..]);
 
         Ok(SxEval {

@@ -1,5 +1,6 @@
 use pairing::{Engine, Field};
 use bellman::multicore::Worker;
+use crossbeam::channel::unbounded;
 
 /// Basically used for polynomials represented as separeted iterator
 /// (like positive and negative powers).
@@ -70,7 +71,9 @@ impl<T, U> DoubleEndedIterator for Chain<T, U>
 /// Multiply each coefficient by some power of the base in a form
 /// `first_power * base^{i}`
 /// This would be sparse, consecutive multiplication based on non-zero coefficients.
-pub fn coeffs_consecutive_powers<'a, E: Engine> (
+/// Basically, it is for the evaluation of one of the variables of bivariate polynomials.
+/// For example, r(X, Y) at y.
+pub fn eval_bivar_poly<'a, E: Engine> (
     coeffs: &mut [E::Fr],
     first_power: E::Fr,
     base: E::Fr
@@ -92,14 +95,54 @@ pub fn coeffs_consecutive_powers<'a, E: Engine> (
     });
 }
 
-/// Evaluate a polynomial
-pub fn evaluate_poly<'a, E: Engine> (
+/// It is for the evaluation of univariate polynomials. For example, r(X, y) at z.
+pub fn eval_univar_poly<'a, E: Engine> (
     coeffs: &[E::Fr],
     first_power: E::Fr,
     base: E::Fr
 ) -> E::Fr
 {
-    unimplemented!();
+    let (tx, rx) = unbounded();
+    let worker = Worker::new();
+
+    worker.scope(coeffs.len(), |scope, chunk| {
+        for (i, coeffs_chunk) in coeffs.chunks(chunk).enumerate() {
+            let tx = tx.clone();
+
+            scope.spawn(move |_| {
+                let mut current_power = base.pow(&[(i * chunk) as u64]);
+                current_power.mul_assign(&first_power);
+
+                let mut acc = E::Fr::zero();
+
+                for p in coeffs {
+                    let mut tmp = *p;
+                    tmp.mul_assign(&current_power);
+                    acc.add_assign(&tmp);
+
+                    current_power.mul_assign(&base);
+                }
+
+                tx.send(acc).expect("must send");
+            });
+        }
+    });
+
+    // The sender is dropped, disconnect the channel.
+    drop(tx);
+
+    let mut res = E::Fr::zero();
+
+    loop {
+        if rx.is_empty() {
+            break;
+        }
+
+        let val = rx.recv().expect("must not be empty");
+        res.add_assign(&val);
+    }
+
+    res
 }
 
 pub fn mul_add_poly<E: Engine>(a: &mut [E::Fr], b: &[E::Fr], c: E::Fr) {
