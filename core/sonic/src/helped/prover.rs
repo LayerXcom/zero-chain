@@ -5,8 +5,8 @@ use merlin::Transcript;
 use crate::cs::{SynthesisDriver, Circuit, Backend, Variable, Coeff};
 use crate::srs::SRS;
 use crate::transcript::ProvingTranscript;
-use crate::polynomials::{polynomial_commitment, SxEval, add_polynomials, mul_polynomials};
-use crate::utils::{ChainExt, coeffs_consecutive_powers, evaluate_poly};
+use crate::polynomials::{poly_comm, poly_comm_opening, SxEval, add_polynomials, mul_polynomials};
+use crate::utils::{ChainExt, coeffs_consecutive_powers, evaluate_poly, mul_add_polynomials};
 
 pub const NUM_BLINDINGS: usize = 4;
 
@@ -24,11 +24,11 @@ pub struct Proof<E: Engine> {
     /// An evaluation `r(z, y)`. `y` and `z` represent a random challenge from the verifier.
     pub r_zy: E::Fr,
 
-    /// An opening of `r(z, 1)`.
-    pub z1_opening: E::G1Affine,
+    /// An opening of `t(z, y)`.
+    pub t_zy_opening: E::G1Affine,
 
     /// An opening of `r(z, y)`.
-    pub zy_opening: E::G1Affine,
+    pub r_zy_opening: E::G1Affine,
 }
 
 impl<E: Engine> Proof<E> {
@@ -63,7 +63,7 @@ impl<E: Engine> Proof<E> {
             .collect();
 
         // a commitment to r(X, 1)
-        let r_comm = polynomial_commitment::<E, _>(
+        let r_comm = poly_comm::<E, _>(
             n,                      // a max degree
             2*n + NUM_BLINDINGS,    // largest negative power;
             n,                      // largest positive power
@@ -94,21 +94,21 @@ impl<E: Engine> Proof<E> {
 
         // A coefficients vector which can be used in common with polynomials r and r'
         // associated with powers for X.
-        let mut rx1 = wires.b;         // X^{-n}...X^{-1}
-        rx1.extend(wires.c);           // X^{-2n}...X^{-n-1}
-        rx1.extend(blindings.clone()); // X^{-2n-4}...X^{-2n-1}
-        rx1.reverse();
-        rx1.push(E::Fr::zero());
-        rx1.extend(wires.a);           // X^{1}...X^{n}
+        let mut r_x1 = wires.b;         // X^{-n}...X^{-1}
+        r_x1.extend(wires.c);           // X^{-2n}...X^{-n-1}
+        r_x1.extend(blindings.clone()); // X^{-2n-4}...X^{-2n-1}
+        r_x1.reverse();
+        r_x1.push(E::Fr::zero());
+        r_x1.extend(wires.a);           // X^{1}...X^{n}
 
         // powers: [-2n-4, n]
-        let mut rxy = rx1.clone();
+        let mut r_xy = r_x1.clone();
 
         let first_power = y_inv.pow(&[(2 * n + NUM_BLINDINGS) as u64]);
 
         // Evaluate the polynomial r(X, Y) at y
         coeffs_consecutive_powers::<E>(
-            &mut rxy,
+            &mut r_xy,
             first_power,
             y,
         );
@@ -122,25 +122,26 @@ impl<E: Engine> Proof<E> {
         };
 
         // Evaluate the polynomial r'(X, Y) = r(X, Y) + s(X, Y) at y
-        let mut rxy_prime = rxy.clone();
+        let mut r_xy_prime = r_xy.clone();
 
         // extend to have powers [n+1, 2n] for w_i(Y)X^{i+n}
-        rxy_prime.resize(4 * n + 1 + NUM_BLINDINGS, E::Fr::zero());
+        r_xy_prime.resize(4 * n + 1 + NUM_BLINDINGS, E::Fr::zero());
         // negative powers: [-n, -1]
         s_neg_poly.reverse();
 
         // Add negative powers [-n, -1]
-        add_polynomials::<E>(&mut rxy_prime[(n + NUM_BLINDINGS)..(2 * n + NUM_BLINDINGS)], &s_neg_poly[..]);
+        add_polynomials::<E>(&mut r_xy_prime[(n + NUM_BLINDINGS)..(2 * n + NUM_BLINDINGS)], &s_neg_poly[..]);
 
         // Add positive powers [1, 2n]
-        add_polynomials::<E>(&mut rxy_prime[(2 * n + 1 + NUM_BLINDINGS)..], &s_pos_poly[..]);
+        add_polynomials::<E>(&mut r_xy_prime[(2 * n + 1 + NUM_BLINDINGS)..], &s_pos_poly[..]);
 
         // Compute t(X, y) = r(X, 1) * r'(X, y)
-        let mut txy = mul_polynomials::<E>(&rx1[..], &rxy_prime[..])?;
+        let mut txy = mul_polynomials::<E>(&r_x1[..], &r_xy_prime[..])?;
+        // the constant term of t(X,Y) is zero
         txy[4 * n + 2 * NUM_BLINDINGS] = E::Fr::zero(); // -k(y)
 
         // commitment of t(X, y)
-        let t_comm = polynomial_commitment(
+        let t_comm = poly_comm(
             srs.d,
             4 * n + 2 * NUM_BLINDINGS,
             3 * n,
@@ -160,20 +161,67 @@ impl<E: Engine> Proof<E> {
         let z: E::Fr = transcript.challenge_scalar();
         let z_inv = z.inverse().ok_or(SynthesisError::DivisionByZero)?;
 
+
         // ------------------------------------------------------
         // zkP_3(z) -> (a, W_a, b, W_b, W_t, s, sc):
         // ------------------------------------------------------
 
-        let rz_1 = {
-            let first_power = z_inv.pow(&[(2 * n + NUM_BLINDINGS) as u64]);
-            evaluate_poly(&rx1, first_power, z)
+        // r(X, 1) -> r(z, 1)
+        let r_z1 = evaluate_poly::<E>(&r_x1, first_power, z);
+        transcript.commit_scalar(&r_z1);
+
+        // Ensure: r(X, 1) -> r(yz, 1) = r(z, y)
+        // let r_zy = evaluate_poly(&r_x1, first_power, z*y);
+        // r(X, y) -> r(z, y)
+        let r_zy = evaluate_poly::<E>(&r_xy, first_power, z);
+        transcript.commit_scalar(&r_zy);
+
+        let r1: E::Fr = transcript.challenge_scalar();
+
+        // An opening of t(X, y) at z
+        let t_zy_opening = {
+            // Add constant term
+            r_x1[(2 * n + NUM_BLINDINGS)].add_assign(&r_zy);
+
+            let r_x1_len = r_x1.len();
+            // powers domain: [-2n-4, n]
+            mul_add_polynomials::<E>(
+                &mut txy[(2 * n + NUM_BLINDINGS)..(2 * n + NUM_BLINDINGS + r_x1_len)],
+                &r_x1[..],
+                r1
+            );
+
+            let 
         };
 
+        // An opening of r(X, 1) at yz
+        let r_zy_opening = {
+            // r(X, 1) - r(z, y)
+            // substract constant term from r(X, 1)
+            r_x1[2 * n + NUM_BLINDINGS].sub_assign(&r_zy);
 
-        // let ryz_1
+            let mut point = y;
+            point.mul_assign(&z);
 
+            poly_comm_opening(
+                2 * n + NUM_BLINDINGS,
+                n,
+                srs,
+                &r_x1,
+                point
+            )
+        };
 
-        unimplemented!();
+        Ok(
+            Proof {
+                r_comm,
+                t_comm,
+                r_z1,
+                r_zy,
+                t_zy_opening,
+                r_zy_opening,
+            }
+        )
     }
 }
 

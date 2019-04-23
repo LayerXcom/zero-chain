@@ -5,7 +5,7 @@ use crate::utils::ChainExt;
 /// Commit a polynomial `F`.
 /// F \from g^{\alpha * x^{(d - max)}*f(x)}
 /// See: Section 5 SYSTEM OF CONSTRAINTS
-pub fn polynomial_commitment<'a, E: Engine, I: IntoIterator<Item = &'a E::Fr>>(
+pub fn poly_comm<'a, E: Engine, I: IntoIterator<Item = &'a E::Fr>>(
         max: usize,                 // a maximum degree
         largest_neg_power: usize,   // largest negative power
         largest_pos_power: usize,   // largest positive power

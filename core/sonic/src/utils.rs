@@ -101,3 +101,20 @@ pub fn evaluate_poly<'a, E: Engine> (
 {
     unimplemented!();
 }
+
+pub fn mul_add_poly<E: Engine>(a: &mut [E::Fr], b: &[E::Fr], c: E::Fr) {
+    let worker = Worker::new();
+    assert_eq!(a.len(), b.len());
+
+    worker.scope(a.len(), |scope, chunk| {
+        for (a, b) in a.chunks_mut(chunk).zip(b.chunks(chunk)) {
+            scope.spawn(move |_| {
+                for (a, b) in a.iter_mut().zip(b.iter()) {
+                    let mut r = *b;
+                    r.mul_assign(&c);
+                    a.add_assign(&r);
+                }
+            });
+        }
+    });
+}
