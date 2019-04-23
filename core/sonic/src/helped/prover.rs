@@ -290,4 +290,42 @@ impl<'a, E: Engine> Backend<E> for &'a mut Wires<E> {
     }
 }
 
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use pairing::bls12_381::{Bls12, Fr};
+    use pairing::PrimeField;
+    use crate::cs::{Basic, ConstraintSystem, LinearCombination};
 
+    struct SimpleCircuit;
+
+    impl<E: Engine> Circuit<E> for SimpleCircuit {
+        fn synthesize<CS: ConstraintSystem<E>>(&self, cs: &mut CS)
+            -> Result<(), SynthesisError>
+        {
+            let (a, b, _) = cs.multiply(|| {
+                Ok((
+                    E::Fr::from_str("3").unwrap(),
+                    E::Fr::from_str("4").unwrap(),
+                    E::Fr::from_str("12").unwrap(),
+                ))
+            })?;
+
+            cs.enforce_zero(LinearCombination::from(a) + a - b);
+
+            Ok(())
+        }
+    }
+
+    #[test]
+    fn test_create_proof() {
+        let srs = SRS::<Bls12>::new(
+            20,
+            Fr::from_str("33").unwrap(),
+            Fr::from_str("44").unwrap(),
+        );
+
+        let proof = Proof::create_proof::<_, Basic>(&SimpleCircuit, &srs).unwrap();
+
+    }
+}
