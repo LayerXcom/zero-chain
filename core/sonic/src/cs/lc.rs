@@ -107,6 +107,7 @@ pub enum Variable {
     C(usize),
 }
 
+// like DensityTracker
 /// A difinition of Coefficient for linear combination used in our constraint system.
 #[derive(Debug)]
 pub enum Coeff<E: Engine> {

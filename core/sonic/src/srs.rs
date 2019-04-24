@@ -1,6 +1,7 @@
 use pairing::{Engine, Wnaf, CurveAffine, CurveProjective, Field, PrimeField};
 
 /// Defined in Section 4.3: Structured Reference String
+/// Pre-processing exponents
 #[derive(Clone, Eq, PartialEq)]
 pub struct SRS<E: Engine> {
     pub d: usize,
