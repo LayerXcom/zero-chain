@@ -43,7 +43,7 @@ impl<E: Engine> Proof<E> {
             c: vec![],
         };
 
-        // Synthesize variables from circuit
+        // Synthesize polynomial coefficients from circuit
         S::synthesize(&mut wires, circuit)?;
 
         let n = wires.a.len();
@@ -68,7 +68,7 @@ impl<E: Engine> Proof<E> {
             2*n + NUM_BLINDINGS,    // largest negative power;
             n,                      // largest positive power
             &srs,                   // structured reference string
-            blindings.iter().rev()  // coefficients orderd by ascending powers
+            blindings.iter().rev()  // poly coefficients orderd by ascending powers
                 .chain_ext(wires.c.iter().rev())
                 .chain_ext(wires.b.iter().rev())
                 .chain_ext(Some(E::Fr::zero()).iter()) // power i is not equal zero

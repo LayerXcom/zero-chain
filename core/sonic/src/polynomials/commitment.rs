@@ -21,8 +21,8 @@ pub fn poly_comm<'a, E: Engine, I: IntoIterator<Item = &'a E::Fr>>(
     // If the smallest power is negative, use both positive and negative powers for commitment,
     // otherwise use only positive powers.
     if d < max + largest_neg_power + 1 {
+        let min_power = largest_neg_power + max - d;
         let max_power = largest_pos_power + d - max;
-        let min_power = largest_neg_power - d + max;
 
         return multiexp(
             srs.g_neg_x_alpha[0..min_power].iter().rev() // Reverse to permute for negative powers
@@ -30,10 +30,11 @@ pub fn poly_comm<'a, E: Engine, I: IntoIterator<Item = &'a E::Fr>>(
             poly_coeffs
         ).into_affine();
     } else {
-        let max_power = srs.d - max - largest_neg_power;
+        let max_power = srs.d - max - largest_neg_power + 1;
 
         return multiexp(
             srs.g_pos_x_alpha[..max_power].iter(), // TODO: Ensure the range is correct
+            // srs.g_pos_x_alpha[(max_power - 1)..].iter(),
             poly_coeffs
         ).into_affine();
     }
@@ -56,7 +57,7 @@ where
     );
 
     let neg_poly = quotient_poly[..largest_neg_power].iter().rev(); // ,...,-1
-    let pos_poly = quotient_poly[largest_neg_power..].iter();
+    let pos_poly = quotient_poly[largest_pos_power..].iter();
 
     multiexp(
         srs.g_neg_x[1..(neg_poly.len() + 1)].iter().chain_ext(
