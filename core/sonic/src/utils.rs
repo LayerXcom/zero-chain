@@ -79,6 +79,7 @@ pub fn eval_bivar_poly<'a, E: Engine> (
     base: E::Fr
 ) {
     let worker = Worker::new();
+    
     worker.scope(coeffs.len(), |scope, chunk| {
         for (i, coeffs_chunk) in coeffs.chunks_mut(chunk).enumerate() {
             scope.spawn(move |_| {

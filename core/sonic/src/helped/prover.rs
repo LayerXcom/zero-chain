@@ -136,9 +136,9 @@ impl<E: Engine> Proof<E> {
         add_polynomials::<E>(&mut r_xy_prime[(2 * n + 1 + NUM_BLINDINGS)..], &s_pos_poly[..]);
 
         // Compute t(X, y) = r(X, 1) * r'(X, y)
-        let mut txy = mul_polynomials::<E>(&r_x1[..], &r_xy_prime[..])?;
+        let mut t_xy = mul_polynomials::<E>(&r_x1[..], &r_xy_prime[..])?;
         // the constant term of t(X,Y) is zero
-        txy[4 * n + 2 * NUM_BLINDINGS] = E::Fr::zero(); // -k(y)
+        t_xy[4 * n + 2 * NUM_BLINDINGS] = E::Fr::zero(); // -k(y)
 
         // commitment of t(X, y)
         let t_comm = poly_comm(
@@ -146,8 +146,9 @@ impl<E: Engine> Proof<E> {
             4 * n + 2 * NUM_BLINDINGS,
             3 * n,
             srs,
-            txy[..(4 * n + 2 * NUM_BLINDINGS)].iter()
-                .chain_ext(txy[(4 * n + 2 * NUM_BLINDINGS + 1)..].iter())
+            // Avoid constant term
+            t_xy[..(4 * n + 2 * NUM_BLINDINGS)].iter()
+                .chain_ext(t_xy[(4 * n + 2 * NUM_BLINDINGS + 1)..].iter())
         );
 
         transcript.commit_point(&t_comm);
@@ -186,7 +187,7 @@ impl<E: Engine> Proof<E> {
             let r_x1_len = r_x1.len();
             // powers domain: [-2n-4, n]
             mul_add_poly::<E>(
-                &mut txy[(2 * n + NUM_BLINDINGS)..(2 * n + NUM_BLINDINGS + r_x1_len)],
+                &mut t_xy[(2 * n + NUM_BLINDINGS)..(2 * n + NUM_BLINDINGS + r_x1_len)],
                 &r_x1[..],
                 r1
             );
@@ -194,16 +195,17 @@ impl<E: Engine> Proof<E> {
             // Evaluate t(X, y) at z
             let val = {
                 let first_power = z_inv.pow(&[(4 * n + 2 * NUM_BLINDINGS) as u64]);
-                eval_univar_poly::<E>(&txy, first_power, z)
+                eval_univar_poly::<E>(&t_xy, first_power, z)
             };
 
-            txy[(4 * n + 2 * NUM_BLINDINGS)].sub_assign(&val);
+            // Sub constant term
+            t_xy[(4 * n + 2 * NUM_BLINDINGS)].sub_assign(&val);
 
             poly_comm_opening(
                 4 * n + 2 * NUM_BLINDINGS,
                 3 * n,
                 srs,
-                &txy,
+                &t_xy,
                 z
             )
         };
@@ -293,7 +295,7 @@ impl<'a, E: Engine> Backend<E> for &'a mut Wires<E> {
 
 pub struct SxyAdvice<E: Engine> {
     pub s_comm: E::G1Affine, // TODO: commitment type
-    pub s_opening: E::G1Affine, // TODO: W opening type
+    pub s_zy_opening: E::G1Affine, // TODO: W opening type
     pub s_zy: E::Fr, // s(z, y)
 }
 
@@ -318,9 +320,48 @@ impl<E: Engine> SxyAdvice<E> {
             z = transcript.challenge_scalar();
         }
 
-        
+        let z_inv = z.inverse().ok_or(SynthesisError::DivisionByZero)?;
 
-        unimplemented!();
+        let (s_neg_poly, s_pos_poly) = {
+            let mut sx_poly = SxEval::new(y, n)?;
+            S::synthesize(&mut sx_poly, circuit)?;
+
+            sx_poly.neg_pos_poly()
+        };
+
+        // a commitment to s(X, y)
+        let s_comm = poly_comm(
+            srs.d, // TODO
+            n,
+            2 * n,
+            srs,
+            s_neg_poly.iter().chain_ext(s_pos_poly.iter())
+        );
+
+        // Evaluate s(X, y) at z
+        let mut s_zy = E::Fr::zero();
+        s_zy.add_assign(&eval_univar_poly::<E>(&s_neg_poly[..], z_inv, z_inv));
+        s_zy.add_assign(&eval_univar_poly::<E>(&s_pos_poly[..], z, z));
+
+        let s_zy_opening = {
+            s_zy.negate();
+
+            poly_comm_opening(
+                n,
+                2 * n,
+                srs,
+                s_neg_poly.iter().rev()
+                    .chain_ext(Some(s_zy).iter())
+                    .chain_ext(s_pos_poly.iter()),
+                z,
+            )
+        };
+
+        Ok(SxyAdvice {
+            s_comm,
+            s_zy,
+            s_zy_opening,
+        })
     }
 }
 
