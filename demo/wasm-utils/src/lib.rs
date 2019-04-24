@@ -195,6 +195,7 @@ pub fn gen_call(
     mut proving_key: &[u8],
     mut prepared_vk: &[u8],
     seed_slice: &[u32],
+    fee: u32,
 ) -> JsValue
 {
     let params = &JubjubBls12::new();
@@ -217,7 +218,6 @@ pub fn gen_call(
     let proving_key = Parameters::<Bls12>::read(&mut proving_key, true).unwrap();
     let prepared_vk = PreparedVerifyingKey::<Bls12>::read(&mut prepared_vk).unwrap();
 
-    let fee = 1;
     let tx = Transaction::gen_tx(
                 value,
                 remaining_balance,
