@@ -78,7 +78,7 @@ impl<E: JubjubEngine> TransferProof<E> {
         let proof = create_random_proof(instance, proving_key, rng)
             .expect("proving should not fail");
 
-        let mut public_input = [E::Fr::zero(); 16];
+        let mut public_input = [E::Fr::zero(); 18];
 
         let cipher_val_s = Ciphertext::encrypt(
             value,
@@ -130,19 +130,24 @@ impl<E: JubjubEngine> TransferProof<E> {
             public_input[9] = y;
         }
         {
-            let (x, y) = ciphertext_balance.left.into_xy();
+            let (x, y) = cipher_fee_s.left.into_xy();
             public_input[10] = x;
             public_input[11] = y;
         }
         {
-            let (x, y) = ciphertext_balance.right.into_xy();
+            let (x, y) = ciphertext_balance.left.into_xy();
             public_input[12] = x;
             public_input[13] = y;
         }
         {
-            let (x, y) = rvk.0.into_xy();
+            let (x, y) = ciphertext_balance.right.into_xy();
             public_input[14] = x;
             public_input[15] = y;
+        }
+        {
+            let (x, y) = rvk.0.into_xy();
+            public_input[16] = x;
+            public_input[17] = y;
         }
 
         if let Err(_) = verify_proof(prepared_vk, &proof, &public_input[..]) {
@@ -206,7 +211,7 @@ mod tests {
         let p_g = FixedGenerators::NoteCommitmentRandomness;
 
         let value = 10 as u32;
-        let remaining_balance = 30 as u32;
+        let remaining_balance = 89 as u32;
         let balance = 100 as u32;
         let alpha = fs::Fs::rand(rng);
         let fee = 1 as u32;

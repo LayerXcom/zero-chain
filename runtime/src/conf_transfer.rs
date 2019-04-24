@@ -103,6 +103,7 @@ decl_module! {
                 None => return Err("Invalid sender balance"),
             };
 
+
             // Verify the zk proof
             ensure!(
                 Self::validate_proof(
@@ -113,6 +114,7 @@ decl_module! {
                     &svalue_recipient,
                     &bal_sender,
                     &srk,
+                    &sfee_sender,
                 ),
                 "Invalid zkproof"
             );
@@ -183,9 +185,10 @@ impl<T: Trait> Module<T> {
         value_recipient: &elgamal::Ciphertext<Bls12>,
         balance_sender: &elgamal::Ciphertext<Bls12>,
         rk: &PublicKey<Bls12>,
+        fee_sender: &elgamal::Ciphertext<Bls12>
     ) -> bool {
         // Construct public input for circuit
-        let mut public_input = [Fr::zero(); 16];
+        let mut public_input = [Fr::zero(); 18];
 
         {
             let (x, y) = address_sender.0.into_xy();
@@ -213,19 +216,24 @@ impl<T: Trait> Module<T> {
             public_input[9] = y;
         }
         {
-            let (x, y) = balance_sender.left.into_xy();
+            let (x, y) = fee_sender.left.into_xy();
             public_input[10] = x;
             public_input[11] = y;
         }
         {
-            let (x, y) = balance_sender.right.into_xy();
+            let (x, y) = balance_sender.left.into_xy();
             public_input[12] = x;
             public_input[13] = y;
         }
         {
-            let (x, y) = rk.0.into_xy();
+            let (x, y) = balance_sender.right.into_xy();
             public_input[14] = x;
             public_input[15] = y;
+        }
+        {
+            let (x, y) = rk.0.into_xy();
+            public_input[16] = x;
+            public_input[17] = y;
         }
 
         let pvk = Self::verifying_key().into_prepared_vk().unwrap();
@@ -347,7 +355,8 @@ mod tests {
                 PkdAddress::from_slice(&pkd_addr_bob),
                 Ciphertext(enc10_by_alice.to_vec()),
                 Ciphertext(enc10_by_bob.to_vec()),
-                SigVerificationKey::from_slice(&rvk)
+                SigVerificationKey::from_slice(&rvk),
+                None // fee
             ));
         })
     }

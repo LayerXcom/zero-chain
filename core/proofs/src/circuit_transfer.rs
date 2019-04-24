@@ -455,7 +455,6 @@ mod tests {
 
         let ciphertext_fee_sender = Ciphertext::encrypt(fee, r_fs_v, &public_key_s, p_g, params);
         let c_fee_s_left = ciphertext_fee_sender.left.into_xy();
-        let c_fee_s_right = ciphertext_fee_sender.right.into_xy();
 
         let public_key_r = params.generator(p_g).mul(decryption_key_r, params).into();
         let ciphertext_value_recipient = Ciphertext::encrypt(value, r_fs_v, &public_key_r, p_g, params);
