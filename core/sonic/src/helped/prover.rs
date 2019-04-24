@@ -290,6 +290,40 @@ impl<'a, E: Engine> Backend<E> for &'a mut Wires<E> {
     }
 }
 
+
+pub struct SxyAdvice<E: Engine> {
+    pub s_comm: E::G1Affine, // TODO: commitment type
+    pub s_opening: E::G1Affine, // TODO: W opening type
+    pub s_zy: E::Fr, // s(z, y)
+}
+
+impl<E: Engine> SxyAdvice<E> {
+    pub fn create_advice<C: Circuit<E>, S: SynthesisDriver> (
+        circuit: &C,
+        proof: &Proof<E>,
+        srs: &SRS<E>,
+        n: usize,
+    ) -> Result<Self, SynthesisError>
+    {
+        let y: E::Fr;
+        let z: E::Fr;
+
+        {
+            let mut transcript = Transcript::new(&[]);
+
+            transcript.commit_point(&proof.r_comm);
+            y = transcript.challenge_scalar();
+
+            transcript.commit_point(&proof.t_comm);
+            z = transcript.challenge_scalar();
+        }
+
+        
+
+        unimplemented!();
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
