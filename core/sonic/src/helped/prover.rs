@@ -63,7 +63,7 @@ impl<E: Engine> Proof<E> {
             .collect();
 
         // a commitment to r(X, 1)
-        let r_comm = poly_comm::<E, _>(
+        let r_comm = poly_comm(
             n,                      // a max degree
             2*n + NUM_BLINDINGS,    // largest negative power;
             n,                      // largest positive power
@@ -331,7 +331,7 @@ impl<E: Engine> SxyAdvice<E> {
 
         // a commitment to s(X, y)
         let s_comm = poly_comm(
-            srs.d, // TODO
+            0, // TODO
             n,
             2 * n,
             srs,
@@ -351,7 +351,7 @@ impl<E: Engine> SxyAdvice<E> {
                 2 * n,
                 srs,
                 s_neg_poly.iter().rev()
-                    .chain_ext(Some(s_zy).iter())
+                    .chain_ext(Some(s_zy).iter()) // f(X) - f(z)
                     .chain_ext(s_pos_poly.iter()),
                 z,
             )
