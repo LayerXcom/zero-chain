@@ -5,8 +5,66 @@ use crate::cs::Backend;
 use crate::cs::lc::{Variable, Coeff};
 use super::add_polynomials;
 
+
 /// Defined in Section 5: SYSTEM OF CONSTRAINTS
 /// Evaluation of s(X, Y) at x
+#[derive(Clone)]
+pub struct SyEval<E: Engine> {
+    max_n: usize,
+    current_q: usize,
+
+    /// polynomial of x^{-1}, ..., x^{-N}
+    a: Vec<E::Fr>,
+
+    /// polynomial of x^1, ..., x^{N}
+    b: Vec<E::Fr>,
+
+    /// polynomial of x^{N+1}, ..., x^{2*N}
+    c: Vec<E::Fr>,
+
+    /// coeffs for y^1, ..., y^{N+Q}
+    pos_coeffs: Vec<E::Fr>,
+
+    /// coeffs for y^{-1}, y^{-2}, ..., y^{-N}
+    neg_coeffs: Vec<E::Fr>,
+}
+
+impl<E: Engine> SyEval<E> {
+    pub fn new(x: E::Fr, n: usize, q: usize) -> Result<Self, SynthesisError> {
+        let x_inv = x.inverse().ok_or(SynthesisError::DivisionByZero)?;
+
+        let mut a = vec![E::Fr::one(); n];
+        let mut b = vec![E::Fr::one(); n];
+        let mut c = vec![E::Fr::one(); n];
+
+        // Evaluate polynomial s
+        eval_bivar_poly::<E>(&mut a[..], x_inv, x_inv);
+        eval_bivar_poly::<E>(&mut b[..], x, x);
+        eval_bivar_poly::<E>(&mut c[..], x.pow(&[(n+1) as u64]), x);
+
+        let mut minus_one = E::Fr::one();
+        minus_one.negate();
+
+        let mut pos_coeffs = vec![minus_one; n];
+        eval_bivar_poly::<E>(&mut pos_coeffs[..], x.pow(&[(n+1) as u64]), x);
+        let neg_coeffs = pos_coeffs.clone();
+
+        pos_coeffs.resize(n+q, E::Fr::zero());
+
+        Ok(SyEval {
+            max_n: n,
+            current_q: 0,
+            a,
+            b,
+            c,
+            pos_coeffs,
+            neg_coeffs,
+        })
+    }
+}
+
+/// Defined in Section 5: SYSTEM OF CONSTRAINTS
+/// Evaluation of s(X, Y) at y
 #[derive(Clone)]
 pub struct SxEval<E: Engine> {
     y: E::Fr,
