@@ -13,13 +13,13 @@ pub struct SyEval<E: Engine> {
     max_n: usize,
     current_q: usize,
 
-    /// polynomial of x^{-1}, ..., x^{-N}
+    /// x^{-1}, ..., x^{-N}
     a: Vec<E::Fr>,
 
-    /// polynomial of x^1, ..., x^{N}
+    /// x^1, ..., x^{N}
     b: Vec<E::Fr>,
 
-    /// polynomial of x^{N+1}, ..., x^{2*N}
+    /// x^{N+1}, ..., x^{2*N}
     c: Vec<E::Fr>,
 
     /// coeffs for y^1, ..., y^{N+Q}
@@ -60,6 +60,53 @@ impl<E: Engine> SyEval<E> {
             pos_coeffs,
             neg_coeffs,
         })
+    }
+
+    /// Return polynomials each of negative and positive powers
+    pub fn neg_pos_poly(self) -> (Vec<E::Fr>, Vec<E::Fr>) {
+        (self.neg_coeffs, self.pos_coeffs)
+    }
+}
+
+impl<'a, E: Engine> Backend<E> for &'a mut SyEval<E> {
+    fn new_linear_constraint(&mut self) {
+        self.current_q += 1;
+    }
+
+    fn insert_coefficient(&mut self, var: Variable, coeff: Coeff<E>) {
+        match var {
+            Variable::A(index) => {
+                let index = index - 1;
+
+                // Y^{q+N} += X^{-i} * coeff
+                let mut tmp = self.a[index];
+                coeff.multiply(&mut tmp);
+
+                let y_idnex = self.current_q + self.max_n;
+                self.pos_coeffs[y_idnex - 1].add_assign(&tmp);
+
+            },
+            Variable::B(index) => {
+                let index = index - 1;
+
+                // Y^{q+N} += X^{i} * coeff
+                let mut tmp = self.b[index];
+                coeff.multiply(&mut tmp);
+
+                let y_index = self.current_q + self.max_n;
+                self.pos_coeffs[y_index - 1].add_assign(&tmp);
+            },
+            Variable::C(index) => {
+                let index = index - 1;
+
+                // Y^{q+N} += X^{i+N} * coeff
+                let mut tmp = self.c[index];
+                coeff.multiply(&mut tmp);
+
+                let y_index = self.current_q + self.max_n;
+                self.pos_coeffs[y_index - 1].add_assign(&tmp);
+            }
+        };
     }
 }
 

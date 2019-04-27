@@ -331,11 +331,12 @@ impl<E: Engine> SxyAdvice<E> {
 
         // a commitment to s(X, y)
         let s_comm = poly_comm(
-            0, // TODO
+            srs.d, // TODO
             n,
             2 * n,
             srs,
-            s_neg_poly.iter().chain_ext(s_pos_poly.iter())
+            s_neg_poly.iter()
+                .chain_ext(s_pos_poly.iter())
         );
 
         // Evaluate s(X, y) at z

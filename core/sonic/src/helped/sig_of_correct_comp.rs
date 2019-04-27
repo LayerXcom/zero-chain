@@ -3,18 +3,20 @@
 //! known polynomial.
 //! The helper algorithm is run on a batch of proofs.
 
-use pairing::Engine;
+use pairing::{Engine, Field};
 use bellman::SynthesisError;
 use merlin::Transcript;
 use crate::cs::{SynthesisDriver, Circuit};
 use crate::srs::SRS;
 use crate::transcript::ProvingTranscript;
+use crate::polynomials::{SyEval, poly_comm};
+use crate::utils::{ChainExt, eval_univar_poly};
 use super::prover::{Proof, SxyAdvice};
 
 #[derive(Clone)]
 pub struct Aggregate<E: Engine> {
     /// Commitment to s(z, Y)
-    pub c: E::G1Affine,
+    pub c_comm: E::G1Affine,
 
     pub s_opening: E::G1Affine,
 
@@ -47,9 +49,37 @@ impl<E: Engine> Aggregate<E> {
 
         let z: E::Fr = transcript.challenge_scalar();
 
-        // let (s_neg_poly, s_pos_poly) = {
+        // Evaluate s(X, Y) at X=z
+        let (s_neg_poly, s_pos_poly) = {
+            let mut tmp = SyEval::new(z, n, q)?;
+            S::synthesize(&mut tmp, circuit)?;
 
-        // };
+            tmp.neg_pos_poly()
+        };
+
+        // max = srs.d
+        let c_comm = poly_comm(
+            srs.d,
+            n,
+            n + q,
+            srs,
+            s_neg_poly.iter()
+                .chain_ext(s_pos_poly.iter())
+        );
+
+        transcript.commit_point(&c_comm);
+
+        let w: E::Fr = transcript.challenge_scalar();
+        let w_inv = w.inverse().ok_or(SynthesisError::DivisionByZero)?;
+
+        // Evaluate s(z, Y) at w
+        let mut s_zw = E::Fr::zero();
+        s_zw.add_assign(&eval_univar_poly::<E>(&s_neg_poly[..], w_inv, w_inv));
+        s_zw.add_assign(&eval_univar_poly::<E>(&s_pos_poly[..], w, w));
+
+        let opening = {
+
+        };
 
         unimplemented!();
     }
