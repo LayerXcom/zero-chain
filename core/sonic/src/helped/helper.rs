@@ -13,7 +13,7 @@
 //! This submodule contains the `Batch` abstraction for creating a
 //! context for batch verification.
 
-use pairing::{Engine, CurveAffine, CurveProjective};
+use pairing::{Engine, CurveAffine, CurveProjective, Field};
 use crate::srs::SRS;
 
 pub struct Batch<E: Engine> {

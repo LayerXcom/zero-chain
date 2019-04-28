@@ -179,12 +179,14 @@ impl<E: Engine> Proof<E> {
 
         let r1: E::Fr = transcript.challenge_scalar();
 
-        // An opening of t(X, y) at z
+        // An opening of t(X, y) and r(X, 1) at z
         let t_zy_opening = {
             // Add constant term
             r_x1[(2 * n + NUM_BLINDINGS)].add_assign(&r_zy);
 
             let r_x1_len = r_x1.len();
+
+            // Batching polynomial commitments t(X, y) and r(X, 1)
             // powers domain: [-2n-4, n]
             mul_add_poly::<E>(
                 &mut t_xy[(2 * n + NUM_BLINDINGS)..(2 * n + NUM_BLINDINGS + r_x1_len)],
@@ -193,13 +195,13 @@ impl<E: Engine> Proof<E> {
             );
 
             // Evaluate t(X, y) at z
-            let val = {
+            let t_zy = {
                 let first_power = z_inv.pow(&[(4 * n + 2 * NUM_BLINDINGS) as u64]);
                 eval_univar_poly::<E>(&t_xy, first_power, z)
             };
 
             // Sub constant term
-            t_xy[(4 * n + 2 * NUM_BLINDINGS)].sub_assign(&val);
+            t_xy[(4 * n + 2 * NUM_BLINDINGS)].sub_assign(&t_zy);
 
             poly_comm_opening(
                 4 * n + 2 * NUM_BLINDINGS,

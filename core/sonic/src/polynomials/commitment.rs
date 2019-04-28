@@ -56,8 +56,8 @@ where
         point
     );
 
-    let neg_poly = quotient_poly[..largest_neg_power].iter().rev(); // ,...,-1
-    let pos_poly = quotient_poly[largest_pos_power..].iter();
+    let neg_poly = quotient_poly[..largest_neg_power].iter().rev(); // -n,...,-1
+    let pos_poly = quotient_poly[largest_pos_power..].iter();       // n,...,1,0
 
     multiexp(
         srs.g_neg_x[1..(neg_poly.len() + 1)].iter().chain_ext(
