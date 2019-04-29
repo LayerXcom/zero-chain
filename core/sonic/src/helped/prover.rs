@@ -374,6 +374,8 @@ mod tests {
     use pairing::bls12_381::{Bls12, Fr};
     use pairing::PrimeField;
     use crate::cs::{Basic, ConstraintSystem, LinearCombination};
+    use super::super::verifier::MultiVerifier;
+    use rand::{thread_rng};
 
     struct SimpleCircuit;
 
@@ -397,6 +399,7 @@ mod tests {
 
     #[test]
     fn test_create_proof() {
+        let rng = thread_rng();
         let srs = SRS::<Bls12>::new(
             20,
             Fr::from_str("33").unwrap(),
@@ -405,5 +408,12 @@ mod tests {
 
         let proof = Proof::create_proof::<_, Basic>(&SimpleCircuit, &srs).unwrap();
 
+        let mut batch = MultiVerifier::<Bls12, _, Basic, _>::new(SimpleCircuit, &srs, rng).unwrap();
+
+        for _ in 0..1 {
+            batch.add_proof(&proof, &[], |_, _| None);
+        }
+
+        // assert!(batch.check_all());
     }
 }
