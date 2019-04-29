@@ -15,6 +15,7 @@
 
 use pairing::{Engine, CurveAffine, CurveProjective, Field};
 use crate::srs::SRS;
+use crate::polynomials::commitment::multiexp;
 
 pub struct Batch<E: Engine> {
     /// Context of openings of polynomial commitment
@@ -72,15 +73,59 @@ impl<E: Engine> Batch<E> {
         self.neg_h.push((comm, random));
     }
 
+    pub fn add_comm_max_n(&mut self, comm: E::G1Affine, random: E::Fr) {
+        self.neg_x_n_minus_d.push((comm, random));
+    }
+
     pub fn add_opening(&mut self, opening: E::G1Affine, mut random: E::Fr, point: E::Fr) {
         self.alpha_x.push((opening, random));
 
+        random.mul_assign(&point);
+        random.negate();
+        self.alpha.push((opening, random));
+    }
 
+    pub fn add_opening_value(&mut self, eval_val: E::Fr, mut random: E::Fr) {
+        random.mul_assign(&eval_val);
+        self.value.add_assign(&random);
     }
 
     pub fn check_all(mut self) -> bool {
-        unimplemented!();
+        self.alpha.push((self.g, self.value));
+
+        let alpha_x = multiexp(
+            self.alpha_x.iter().map(|x| &x.0),
+            self.alpha_x.iter().map(|x| &x.1),
+        ).into_affine();
+
+        let alpha_x = alpha_x.prepare();
+
+        let alpha = multiexp(
+            self.alpha.iter().map(|x| &x.0),
+            self.alpha.iter().map(|x| &x.1),
+        ).into_affine();
+
+        let alpha = alpha.prepare();
+
+        let neg_h = multiexp(
+            self.neg_h.iter().map(|x| &x.0),
+            self.neg_h.iter().map(|x| &x.1),
+        ).into_affine();
+
+        let neg_h = neg_h.prepare();
+
+        let neg_x_n_minus_d = multiexp(
+            self.neg_x_n_minus_d.iter().map(|x| &x.0),
+            self.neg_x_n_minus_d.iter().map(|x| &x.1),
+        ).into_affine();
+
+        let neg_x_n_minus_d = neg_x_n_minus_d.prepare();
+
+        E::final_exponentiation(&E::miller_loop(&[
+            (&alpha_x, &self.alpha_x_precomp),
+            (&alpha, &self.alpha_precomp),
+            (&neg_h, &self.neg_h_precomp),
+            (&neg_x_n_minus_d, &self.neg_x_n_minus_d_precomp),
+        ])).unwrap() == E::Fqk::one()
     }
 }
-
-

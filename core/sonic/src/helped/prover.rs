@@ -24,11 +24,11 @@ pub struct Proof<E: Engine> {
     /// An evaluation `r(z, y)`. `y` and `z` represent a random challenge from the verifier.
     pub r_zy: E::Fr,
 
-    /// An opening of `t(z, y)`.
-    pub t_zy_opening: E::G1Affine,
+    /// An opening of `t(z, y)` and `r(z, 1)` which are evaluated at `X = z`.
+    pub z_opening: E::G1Affine,
 
-    /// An opening of `r(z, y)`.
-    pub r_zy_opening: E::G1Affine,
+    /// An opening of `r(z, y)` which are evaluated at `X = yz`.
+    pub yz_opening: E::G1Affine,
 }
 
 impl<E: Engine> Proof<E> {
@@ -180,7 +180,7 @@ impl<E: Engine> Proof<E> {
         let r1: E::Fr = transcript.challenge_scalar();
 
         // An opening of t(X, y) and r(X, 1) at z
-        let t_zy_opening = {
+        let z_opening = {
             // Add constant term
             r_x1[(2 * n + NUM_BLINDINGS)].add_assign(&r_zy);
 
@@ -213,7 +213,7 @@ impl<E: Engine> Proof<E> {
         };
 
         // An opening of r(X, 1) at yz
-        let r_zy_opening = {
+        let yz_opening = {
             // r(X, 1) - r(z, y)
             // substract constant term from r(X, 1)
             r_x1[2 * n + NUM_BLINDINGS].sub_assign(&r_zy);
@@ -236,8 +236,8 @@ impl<E: Engine> Proof<E> {
                 t_comm,
                 r_z1,
                 r_zy,
-                t_zy_opening,
-                r_zy_opening,
+                z_opening,
+                yz_opening,
             }
         )
     }

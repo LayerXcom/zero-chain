@@ -1,6 +1,6 @@
 use pairing::{Engine, Field};
 use bellman::SynthesisError;
-use crate::utils::eval_bivar_poly;
+use crate::utils::{eval_bivar_poly, eval_univar_poly};
 use crate::cs::Backend;
 use crate::cs::lc::{Variable, Coeff};
 use super::add_polynomials;
@@ -169,6 +169,23 @@ impl<E: Engine> SxEval<E> {
         self.v.extend(self.w);
 
         (self.u, self.v)
+    }
+
+    /// Evaluation of s(X, y) at x
+    pub fn finalize(self, x: E::Fr) -> E::Fr {
+        let x_inv = x.inverse().unwrap();
+        let mut res = E::Fr::zero();
+
+        let tmp = x_inv;
+        res.add_assign(&eval_univar_poly::<E>(&self.u[..], tmp, tmp));
+
+        let tmp = x;
+        res.add_assign(&eval_univar_poly::<E>(&self.v[..], tmp, tmp));
+
+        let tmp = x.pow(&[(self.v.len()+1) as u64]);
+        res.add_assign(&eval_univar_poly::<E>(&self.w[..], tmp, x));
+
+        res
     }
 }
 

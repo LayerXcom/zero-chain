@@ -37,14 +37,14 @@ impl<E: Engine> Aggregate<E> {
         let mut transcript = Transcript::new(&[]);
         let mut y_values: Vec<E::Fr> = Vec::with_capacity(inputs.len());
 
-        for &(ref proof, ref sxyadvice) in inputs {
+        for &(ref proof, ref s_xy_advice) in inputs {
             {
                 let mut transcript = Transcript::new(&[]);
                 transcript.commit_point(&proof.r_comm);
                 y_values.push(transcript.challenge_scalar());
             }
 
-            transcript.commit_point(&sxyadvice.s_comm);
+            transcript.commit_point(&s_xy_advice.s_comm);
         }
 
         let z: E::Fr = transcript.challenge_scalar();
