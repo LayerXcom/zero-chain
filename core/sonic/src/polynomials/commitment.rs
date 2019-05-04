@@ -30,11 +30,11 @@ pub fn poly_comm<'a, E: Engine, I: IntoIterator<Item = &'a E::Fr>>(
             poly_coeffs
         ).into_affine();
     } else {
-        let max_power = srs.d - max - largest_neg_power + 1;
+        let _max_power = srs.d - max - largest_neg_power + 1;
 
         return multiexp(
-            srs.g_pos_x_alpha[..max_power].iter(), // TODO: Ensure the range is correct
-            // srs.g_pos_x_alpha[(max_power - 1)..].iter(),
+            // srs.g_pos_x_alpha[..max_power].iter(), // TODO: Ensure the range is correct
+            srs.g_pos_x_alpha[(srs.d - max - largest_neg_power - 1)..].iter(),
             poly_coeffs
         ).into_affine();
     }
@@ -56,8 +56,8 @@ where
         point
     );
 
-    let neg_poly = quotient_poly[..largest_neg_power].iter().rev(); // ,...,-1
-    let pos_poly = quotient_poly[largest_pos_power..].iter();
+    let neg_poly = quotient_poly[..largest_neg_power].iter().rev(); // -n,...,-1
+    let pos_poly = quotient_poly[largest_pos_power..].iter();       // n,...,1,0
 
     multiexp(
         srs.g_neg_x[1..(neg_poly.len() + 1)].iter().chain_ext(

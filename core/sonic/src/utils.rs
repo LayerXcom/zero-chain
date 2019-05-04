@@ -79,6 +79,7 @@ pub fn eval_bivar_poly<'a, E: Engine> (
     base: E::Fr
 ) {
     let worker = Worker::new();
+
     worker.scope(coeffs.len(), |scope, chunk| {
         for (i, coeffs_chunk) in coeffs.chunks_mut(chunk).enumerate() {
             scope.spawn(move |_| {
@@ -145,6 +146,9 @@ pub fn eval_univar_poly<'a, E: Engine> (
     res
 }
 
+/// Batching polynomial commitment, Defined in appendix C.1.
+/// Elementwise add coeffs of one polynomial with coeffs of other, that are
+/// first multiplied by a scalar
 pub fn mul_add_poly<E: Engine>(a: &mut [E::Fr], b: &[E::Fr], c: E::Fr) {
     let worker = Worker::new();
     assert_eq!(a.len(), b.len());

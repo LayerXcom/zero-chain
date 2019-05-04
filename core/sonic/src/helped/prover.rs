@@ -24,11 +24,11 @@ pub struct Proof<E: Engine> {
     /// An evaluation `r(z, y)`. `y` and `z` represent a random challenge from the verifier.
     pub r_zy: E::Fr,
 
-    /// An opening of `t(z, y)`.
-    pub t_zy_opening: E::G1Affine,
+    /// An opening of `t(z, y)` and `r(z, 1)` which are evaluated at `X = z`.
+    pub z_opening: E::G1Affine,
 
-    /// An opening of `r(z, y)`.
-    pub r_zy_opening: E::G1Affine,
+    /// An opening of `r(z, y)` which are evaluated at `X = yz`.
+    pub yz_opening: E::G1Affine,
 }
 
 impl<E: Engine> Proof<E> {
@@ -63,7 +63,7 @@ impl<E: Engine> Proof<E> {
             .collect();
 
         // a commitment to r(X, 1)
-        let r_comm = poly_comm::<E, _>(
+        let r_comm = poly_comm(
             n,                      // a max degree
             2*n + NUM_BLINDINGS,    // largest negative power;
             n,                      // largest positive power
@@ -136,9 +136,9 @@ impl<E: Engine> Proof<E> {
         add_polynomials::<E>(&mut r_xy_prime[(2 * n + 1 + NUM_BLINDINGS)..], &s_pos_poly[..]);
 
         // Compute t(X, y) = r(X, 1) * r'(X, y)
-        let mut txy = mul_polynomials::<E>(&r_x1[..], &r_xy_prime[..])?;
+        let mut t_xy = mul_polynomials::<E>(&r_x1[..], &r_xy_prime[..])?;
         // the constant term of t(X,Y) is zero
-        txy[4 * n + 2 * NUM_BLINDINGS] = E::Fr::zero(); // -k(y)
+        t_xy[4 * n + 2 * NUM_BLINDINGS] = E::Fr::zero(); // -k(y)
 
         // commitment of t(X, y)
         let t_comm = poly_comm(
@@ -146,8 +146,9 @@ impl<E: Engine> Proof<E> {
             4 * n + 2 * NUM_BLINDINGS,
             3 * n,
             srs,
-            txy[..(4 * n + 2 * NUM_BLINDINGS)].iter()
-                .chain_ext(txy[(4 * n + 2 * NUM_BLINDINGS + 1)..].iter())
+            // Avoid constant term
+            t_xy[..(4 * n + 2 * NUM_BLINDINGS)].iter()
+                .chain_ext(t_xy[(4 * n + 2 * NUM_BLINDINGS + 1)..].iter())
         );
 
         transcript.commit_point(&t_comm);
@@ -178,38 +179,41 @@ impl<E: Engine> Proof<E> {
 
         let r1: E::Fr = transcript.challenge_scalar();
 
-        // An opening of t(X, y) at z
-        let t_zy_opening = {
+        // An opening of t(X, y) and r(X, 1) at z
+        let z_opening = {
             // Add constant term
             r_x1[(2 * n + NUM_BLINDINGS)].add_assign(&r_zy);
 
             let r_x1_len = r_x1.len();
+
+            // Batching polynomial commitments t(X, y) and r(X, 1)
             // powers domain: [-2n-4, n]
             mul_add_poly::<E>(
-                &mut txy[(2 * n + NUM_BLINDINGS)..(2 * n + NUM_BLINDINGS + r_x1_len)],
+                &mut t_xy[(2 * n + NUM_BLINDINGS)..(2 * n + NUM_BLINDINGS + r_x1_len)],
                 &r_x1[..],
                 r1
             );
 
             // Evaluate t(X, y) at z
-            let val = {
+            let t_zy = {
                 let first_power = z_inv.pow(&[(4 * n + 2 * NUM_BLINDINGS) as u64]);
-                eval_univar_poly::<E>(&txy, first_power, z)
+                eval_univar_poly::<E>(&t_xy, first_power, z)
             };
 
-            txy[(4 * n + 2 * NUM_BLINDINGS)].sub_assign(&val);
+            // Sub constant term
+            t_xy[(4 * n + 2 * NUM_BLINDINGS)].sub_assign(&t_zy);
 
             poly_comm_opening(
                 4 * n + 2 * NUM_BLINDINGS,
                 3 * n,
                 srs,
-                &txy,
+                &t_xy,
                 z
             )
         };
 
         // An opening of r(X, 1) at yz
-        let r_zy_opening = {
+        let yz_opening = {
             // r(X, 1) - r(z, y)
             // substract constant term from r(X, 1)
             r_x1[2 * n + NUM_BLINDINGS].sub_assign(&r_zy);
@@ -232,8 +236,8 @@ impl<E: Engine> Proof<E> {
                 t_comm,
                 r_z1,
                 r_zy,
-                t_zy_opening,
-                r_zy_opening,
+                z_opening,
+                yz_opening,
             }
         )
     }
@@ -290,12 +294,88 @@ impl<'a, E: Engine> Backend<E> for &'a mut Wires<E> {
     }
 }
 
+
+pub struct SxyAdvice<E: Engine> {
+    pub s_comm: E::G1Affine, // TODO: commitment type
+    pub s_zy_opening: E::G1Affine, // TODO: W opening type
+    pub s_zy: E::Fr, // s(z, y)
+}
+
+impl<E: Engine> SxyAdvice<E> {
+    pub fn create_advice<C: Circuit<E>, S: SynthesisDriver> (
+        circuit: &C,
+        proof: &Proof<E>,
+        srs: &SRS<E>,
+        n: usize,
+    ) -> Result<Self, SynthesisError>
+    {
+        let y: E::Fr;
+        let z: E::Fr;
+
+        {
+            let mut transcript = Transcript::new(&[]);
+
+            transcript.commit_point(&proof.r_comm);
+            y = transcript.challenge_scalar();
+
+            transcript.commit_point(&proof.t_comm);
+            z = transcript.challenge_scalar();
+        }
+
+        let z_inv = z.inverse().ok_or(SynthesisError::DivisionByZero)?;
+
+        let (s_neg_poly, s_pos_poly) = {
+            let mut sx_poly = SxEval::new(y, n)?;
+            S::synthesize(&mut sx_poly, circuit)?;
+
+            sx_poly.neg_pos_poly()
+        };
+
+        // a commitment to s(X, y)
+        let s_comm = poly_comm(
+            srs.d, // TODO
+            n,
+            2 * n,
+            srs,
+            s_neg_poly.iter()
+                .chain_ext(s_pos_poly.iter())
+        );
+
+        // Evaluate s(X, y) at z
+        let mut s_zy = E::Fr::zero();
+        s_zy.add_assign(&eval_univar_poly::<E>(&s_neg_poly[..], z_inv, z_inv));
+        s_zy.add_assign(&eval_univar_poly::<E>(&s_pos_poly[..], z, z));
+
+        let s_zy_opening = {
+            s_zy.negate();
+
+            poly_comm_opening(
+                n,
+                2 * n,
+                srs,
+                s_neg_poly.iter().rev()
+                    .chain_ext(Some(s_zy).iter()) // f(X) - f(z)
+                    .chain_ext(s_pos_poly.iter()),
+                z,
+            )
+        };
+
+        Ok(SxyAdvice {
+            s_comm,
+            s_zy,
+            s_zy_opening,
+        })
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
     use pairing::bls12_381::{Bls12, Fr};
     use pairing::PrimeField;
     use crate::cs::{Basic, ConstraintSystem, LinearCombination};
+    use super::super::verifier::MultiVerifier;
+    use rand::{thread_rng};
 
     struct SimpleCircuit;
 
@@ -319,6 +399,7 @@ mod tests {
 
     #[test]
     fn test_create_proof() {
+        let rng = thread_rng();
         let srs = SRS::<Bls12>::new(
             20,
             Fr::from_str("33").unwrap(),
@@ -327,5 +408,12 @@ mod tests {
 
         let proof = Proof::create_proof::<_, Basic>(&SimpleCircuit, &srs).unwrap();
 
+        let mut batch = MultiVerifier::<Bls12, _, Basic, _>::new(SimpleCircuit, &srs, rng).unwrap();
+
+        for _ in 0..1 {
+            batch.add_proof(&proof, &[], |_, _| None);
+        }
+
+        // assert!(batch.check_all());
     }
 }
