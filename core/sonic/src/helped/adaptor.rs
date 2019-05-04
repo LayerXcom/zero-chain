@@ -42,7 +42,7 @@ impl <'a, E: Engine, CS: SonicCS<E> + 'a> ConstraintSystem<E>
             A: FnOnce() -> AR,
             AR: Into<String>,
     {
-        /// Get a allocated private variable in the sonic's constraint system.
+        // Get a allocated private variable in the sonic's constraint system.
         let var = self.cs.alloc(|| {
             f().map_err(|_| SynthesisError::AssignmentMissing)
         }).map_err(|_| SynthesisError::AssignmentMissing)?;
@@ -116,7 +116,7 @@ impl <'a, E: Engine, CS: SonicCS<E> + 'a> ConstraintSystem<E>
 
             Some(ret)
         }
- 
+
         // Get each sonic's linear combination and evaluated value
         let a_lc = convert(a(LinearCombination::zero()));
         let a_value = eval(&a_lc, &*self.cs);
