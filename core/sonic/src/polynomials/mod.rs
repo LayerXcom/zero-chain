@@ -45,6 +45,7 @@ impl<E: Engine> Mul<Polynomial<E>> for Polynomial<E> {
         let res_len = self.0.len() + other.0.len() - 1;
 
         let worker = Worker::new();
+
         let scalars_a = self.0.iter().map(|e| Scalar::<E>(*e)).collect();
         // the size of evaluation domain is polynomial's multiplied by other.
         let mut domain_a = EvaluationDomain::from_coeffs_into_sized(scalars_a, res_len)
@@ -116,7 +117,7 @@ impl<'a, E: Engine> Polynomial<E> {
 
     /// Opening a polynomial commitment
     pub fn open(
-        &self,
+        self,
         largest_neg_power: usize,
         largest_pos_power: usize,
         srs: &'a SRS<E>,
@@ -140,10 +141,10 @@ impl<'a, E: Engine> Polynomial<E> {
 
     // TODO: Parallelization
     /// Divides polynomial `a` in `x` by `x-b` with no remainder.
-    pub fn kate_division(&self, mut b: E::Fr) -> Self
+    pub fn kate_division(self, mut b: E::Fr) -> Self
     {
         b.negate();
-        let a_poly = &self.0.into_iter();
+        let a_poly = self.0.into_iter();
 
         let mut quotient_poly = vec![E::Fr::zero(); a_poly.len() - 1];
 
