@@ -139,8 +139,7 @@ impl<E: Engine> Proof<E> {
         }
 
         // Compute t(X, y) = r(X, 1) * r'(X, y)
-        // let mut t_xy = mul_polynomials::<E>(&r_x1[..], &r_xy_prime[..])?;
-        let mut t_xy = mul_polynomials::<E>(r_x1.clone(), r_xy_prime)?;
+        let mut t_xy = mul_polynomials::<E>(&r_x1[..], &r_xy_prime[..])?;
         // the constant term of t(X,Y) is zero
         t_xy[4 * n + 2 * NUM_BLINDINGS] = E::Fr::zero(); // -k(y)
 
@@ -339,7 +338,7 @@ impl<E: Engine> SxyAdvice<E> {
 
         // a commitment to s(X, y)
         let s_comm = poly_comm(
-            srs.d, // TODO
+            srs.d,
             n,
             2 * n,
             srs,
