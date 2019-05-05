@@ -240,10 +240,10 @@ impl<'a, E: Engine> Circuit<E> for MiMCDemoNoInputs<'a, E> {
 fn bench_sonic_mimc() {
     let srs_x = Fr::from_str("23923").unwrap();
     let srs_alpha = Fr::from_str("23728792").unwrap();
-    println!("making srs");
+    println!("Generating srs");
     let start = Instant::now();
     let srs = SRS::<Bls12>::dummy(830564, srs_x, srs_alpha);
-    println!("done in {:?}", start.elapsed());
+    println!("Done in {:?}", start.elapsed());
 
     {
         // This may not be cryptographically safe, use
@@ -272,10 +272,10 @@ fn bench_sonic_mimc() {
         use sonic::helped::{Proof, MultiVerifier};
         // use sonic::helped::helper::{create_aggregate_on_srs};
 
-        println!("creating proof");
+        println!("Creating proof");
         let start = Instant::now();
         let proof = Proof::<Bls12>::create_proof::< _, Basic>(&AdaptorCircuit(circuit.clone()), &srs).unwrap();
-        println!("done in {:?}", start.elapsed());
+        println!("Done in {:?}", start.elapsed());
 
         // println!("creating advice");
         // let start = Instant::now();
@@ -291,15 +291,15 @@ fn bench_sonic_mimc() {
         {
             let rng = thread_rng();
             let mut verifier = MultiVerifier::<Bls12, _, Basic, _>::new(AdaptorCircuit(circuit.clone()), &srs, rng).unwrap();
-            println!("verifying 1 proof without advice");
+            println!("Verifying 1 proof without advice");
             let start = Instant::now();
             {
                 for _ in 0..1 {
                     verifier.add_proof(&proof, &[], |_, _| None);
                 }
-                assert_eq!(verifier.check_all(), true); // TODO
+                assert_eq!(verifier.check_all(), true);
             }
-            println!("done in {:?}", start.elapsed());
+            println!("Done in {:?}", start.elapsed());
         }
 
         // {
@@ -311,7 +311,7 @@ fn bench_sonic_mimc() {
         //         for _ in 0..samples {
         //             verifier.add_proof(&proof, &[], |_, _| None);
         //         }
-        //         assert_eq!(verifier.check_all(), true); // TODO
+        //         assert_eq!(verifier.check_all(), true);
         //     }
         //     println!("done in {:?}", start.elapsed());
         // }
@@ -326,7 +326,7 @@ fn bench_sonic_mimc() {
         //             verifier.add_proof_with_advice(proof, &[], advice);
         //         }
         //         verifier.add_aggregate(&proofs, &aggregate);
-        //         assert_eq!(verifier.check_all(), true); // TODO
+        //         assert_eq!(verifier.check_all(), true);
         //     }
         //     println!("done in {:?}", start.elapsed());
         // }

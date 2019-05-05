@@ -1,6 +1,6 @@
-
-#![feature(test)]
-
+#[macro_use]
+extern crate criterion;
+use criterion::Criterion;
 use pairing::{Engine, Field, PrimeField, CurveAffine, CurveProjective};
 use pairing::bls12_381::{Bls12, Fr};
 use bellman::{Circuit, ConstraintSystem, SynthesisError};
@@ -236,7 +236,59 @@ impl<'a, E: Engine> Circuit<E> for MiMCDemoNoInputs<'a, E> {
     }
 }
 
-// #[bench]
-// fn bench_sonic_mimc() {
+fn mimc_1_proof_wo_advice(c: &mut Criterion) {
+    let srs_x = Fr::from_str("23923").unwrap();
+    let srs_alpha = Fr::from_str("23728792").unwrap();
 
-// }
+    let srs = SRS::<Bls12>::dummy(830564, srs_x, srs_alpha);
+
+    {
+        // This may not be cryptographically safe, use
+        // `OsRng` (for example) in production software.
+        let rng = &mut thread_rng();
+
+        // Generate the MiMC round constants
+        let constants = (0..MIMC_ROUNDS).map(|_| rng.gen()).collect::<Vec<_>>();
+
+        let xl = rng.gen();
+        let xr = rng.gen();
+        let image = mimc::<Bls12>(xl, xr, &constants);
+
+        // Create an instance of our circuit (with the
+        // witness)
+        let circuit = MiMCDemoNoInputs {
+            xl: Some(xl),
+            xr: Some(xr),
+            image: Some(image),
+            constants: &constants
+        };
+
+        use sonic::cs::Basic;
+        use sonic::helped::adaptor::AdaptorCircuit;
+        use sonic::helped::{Proof, MultiVerifier};
+
+        let proof = Proof::<Bls12>::create_proof::< _, Basic>(&AdaptorCircuit(circuit.clone()), &srs).unwrap();
+
+        {
+            let rng = thread_rng();
+            let mut verifier = MultiVerifier::<Bls12, _, Basic, _>::new(AdaptorCircuit(circuit.clone()), &srs, rng).unwrap();
+            println!("Verifying 1 proof without advice");
+
+            {
+                for _ in 0..1 {
+                    verifier.add_proof(&proof, &[], |_, _| None);
+                }
+                assert_eq!(verifier.check_all(), true);
+            }
+        }
+    }
+}
+
+criterion_group! {
+    name = sonic;
+    config = Criterion::default();
+    targets =
+    mimc_1_proof_wo_advice,
+}
+
+criterion_main!(sonic);
