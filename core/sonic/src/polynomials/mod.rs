@@ -1,6 +1,7 @@
 use pairing::{Field, Engine, CurveAffine, CurveProjective, PrimeField};
 use bellman::multicore::Worker;
 use bellman::domain::{EvaluationDomain, Scalar};
+use crossbeam::channel::unbounded;
 pub mod commitment;
 pub mod s_eval;
 pub mod operations;
@@ -158,6 +159,84 @@ impl<'a, E: Engine> Polynomial<E> {
         }
 
         Polynomial(quotient_poly)
+    }
+
+    /// Multiply each coefficient by some power of the base in a form
+    /// `first_power * base^{i}`
+    /// This would be sparse, consecutive multiplication based on non-zero coefficients.
+    /// Basically, it is for the evaluation of one of the variables of bivariate polynomials.
+    /// For example, r(X, Y) at y.
+    pub fn eval_bivar_poly(
+        &mut self,
+        first_power: E::Fr,
+        base: E::Fr
+    ) {
+        let worker = Worker::new();
+
+        worker.scope(self.0.len(), |scope, chunk| {
+            for (i, coeffs_chunk) in self.0.chunks_mut(chunk).enumerate() {
+                scope.spawn(move |_| {
+                    let mut current_power = base.pow(&[(i * chunk) as u64]);
+                    current_power.mul_assign(&first_power);
+
+                    for mut p in coeffs_chunk {
+                        p.mul_assign(&current_power);
+
+                        current_power.mul_assign(&base);
+                    }
+                });
+            }
+        });
+    }
+
+    /// It is for the evaluation of univariate polynomials. For example, r(X, y) at z.
+    pub fn eval_univar_poly(
+        &self,
+        first_power: E::Fr,
+        base: E::Fr
+    ) -> E::Fr
+    {
+        let (tx, rx) = unbounded();
+        let worker = Worker::new();
+
+        worker.scope(self.0.len(), |scope, chunk| {
+            for (i, coeffs_chunk) in self.0.chunks(chunk).enumerate() {
+                let tx = tx.clone();
+
+                scope.spawn(move |_| {
+                    let mut current_power = base.pow(&[(i * chunk) as u64]);
+                    current_power.mul_assign(&first_power);
+
+                    let mut acc = E::Fr::zero();
+
+                    for p in coeffs_chunk {
+                        let mut tmp = *p;
+                        tmp.mul_assign(&current_power);
+                        acc.add_assign(&tmp);
+
+                        current_power.mul_assign(&base);
+                    }
+
+                    tx.send(acc).expect("must send");
+                });
+            }
+        });
+
+        // The sender is dropped, disconnect the channel.
+        drop(tx);
+
+        let mut res = E::Fr::zero();
+
+        loop {
+            if rx.is_empty() {
+                break;
+            }
+
+            let val = rx.recv().expect("must not be empty");
+            res.add_assign(&val);
+        }
+
+        res
     }
 }
 
