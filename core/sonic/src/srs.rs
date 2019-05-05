@@ -77,6 +77,22 @@ impl<E: Engine> SRS<E> {
             h_pos_x_alpha: table(E::Fr::one(), x_alpha, d + 1, &mut g2),
             h_neg_x_alpha: table(E::Fr::one(), inv_x_alpha, d + 1, &mut g2),
         }
+    }
 
+    pub fn dummy(d: usize, _x: E::Fr, _alpha: E::Fr) -> Self {
+        SRS {
+            d: d,
+            g_pos_x: vec![E::G1Affine::one(); d + 1],
+            g_neg_x: vec![E::G1Affine::one(); d + 1],
+
+            g_pos_x_alpha: vec![E::G1Affine::one(); d],
+            g_neg_x_alpha: vec![E::G1Affine::one(); d],
+
+            h_pos_x: vec![E::G2Affine::one(); d + 1],
+            h_neg_x: vec![E::G2Affine::one(); d + 1],
+
+            h_pos_x_alpha: vec![E::G2Affine::one(); d + 1],
+            h_neg_x_alpha: vec![E::G2Affine::one(); d + 1],
+        }
     }
 }

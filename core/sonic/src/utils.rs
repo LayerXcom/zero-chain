@@ -107,7 +107,7 @@ pub fn eval_univar_poly<'a, E: Engine> (
     let worker = Worker::new();
 
     worker.scope(coeffs.len(), |scope, chunk| {
-        for (i, coeffs_chunk) in coeffs.chunks(chunk).enumerate() {
+        for (i, coeffs) in coeffs.chunks(chunk).enumerate() {
             let tx = tx.clone();
 
             scope.spawn(move |_| {

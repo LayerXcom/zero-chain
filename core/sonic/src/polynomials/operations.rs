@@ -20,15 +20,16 @@ pub fn add_polynomials<E: Engine>(a: &mut [E::Fr], b: &[E::Fr]) {
     });
 }
 
-pub fn mul_polynomials<E: Engine>(a: &[E::Fr], b: &[E::Fr]) -> Result<Vec<E::Fr>, SynthesisError> {
+// pub fn mul_polynomials<E: Engine>(a: &[E::Fr], b: &[E::Fr]) -> Result<Vec<E::Fr>, SynthesisError> {
+pub fn mul_polynomials<E: Engine>(a: Vec<E::Fr>, b: Vec<E::Fr>) -> Result<Vec<E::Fr>, SynthesisError> {
     let res_len = a.len() + b.len() - 1;
 
     let worker = Worker::new();
-    let scalars_a = a.iter().map(|e| Scalar::<E>(*e)).collect();
+    let scalars_a: Vec<Scalar<E>> = a.into_iter().map(|e| Scalar::<E>(e)).collect();
     // the size of evaluation domain is polynomial's multiplied by other.
     let mut domain_a = EvaluationDomain::from_coeffs_into_sized(scalars_a, res_len)?;
 
-    let scalars_b = b.iter().map(|e| Scalar::<E>(*e)).collect();
+    let scalars_b: Vec<Scalar<E>> = b.into_iter().map(|e| Scalar::<E>(e)).collect();
     let mut domain_b = EvaluationDomain::from_coeffs_into_sized(scalars_b, res_len)?;
 
     // Convert to point-value representations

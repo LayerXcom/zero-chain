@@ -104,12 +104,12 @@ impl<E: Engine> Proof<E> {
         // powers: [-2n-4, n]
         let mut r_xy = r_x1.clone();
 
-        let first_power = y_inv.pow(&[(2 * n + NUM_BLINDINGS) as u64]);
+        let y_first_power = y_inv.pow(&[(2 * n + NUM_BLINDINGS) as u64]);
 
         // Evaluate the polynomial r(X, Y) at y
         eval_bivar_poly::<E>(
             &mut r_xy,
-            first_power,
+            y_first_power,
             y,
         );
 
@@ -123,20 +123,24 @@ impl<E: Engine> Proof<E> {
 
         // Evaluate the polynomial r'(X, Y) = r(X, Y) + s(X, Y) at y
         let mut r_xy_prime = r_xy.clone();
+        {
+            // extend to have powers [n+1, 2n] for w_i(Y)X^{i+n}
+            r_xy_prime.resize(4 * n + 1 + NUM_BLINDINGS, E::Fr::zero());
+            // negative powers: [-n, -1]
+            s_neg_poly.reverse();
 
-        // extend to have powers [n+1, 2n] for w_i(Y)X^{i+n}
-        r_xy_prime.resize(4 * n + 1 + NUM_BLINDINGS, E::Fr::zero());
-        // negative powers: [-n, -1]
-        s_neg_poly.reverse();
+            let neg_poly_len = s_neg_poly.len();
+            // Add negative powers [-n, -1]
+            add_polynomials::<E>(&mut r_xy_prime[(neg_poly_len + NUM_BLINDINGS)..(2 * n + NUM_BLINDINGS)], &s_neg_poly[..]);
+            s_neg_poly.reverse();
 
-        // Add negative powers [-n, -1]
-        add_polynomials::<E>(&mut r_xy_prime[(n + NUM_BLINDINGS)..(2 * n + NUM_BLINDINGS)], &s_neg_poly[..]);
-
-        // Add positive powers [1, 2n]
-        add_polynomials::<E>(&mut r_xy_prime[(2 * n + 1 + NUM_BLINDINGS)..], &s_pos_poly[..]);
+            // Add positive powers [1, 2n]
+            add_polynomials::<E>(&mut r_xy_prime[(2 * n + 1 + NUM_BLINDINGS)..], &s_pos_poly[..]);
+        }
 
         // Compute t(X, y) = r(X, 1) * r'(X, y)
-        let mut t_xy = mul_polynomials::<E>(&r_x1[..], &r_xy_prime[..])?;
+        // let mut t_xy = mul_polynomials::<E>(&r_x1[..], &r_xy_prime[..])?;
+        let mut t_xy = mul_polynomials::<E>(r_x1.clone(), r_xy_prime)?;
         // the constant term of t(X,Y) is zero
         t_xy[4 * n + 2 * NUM_BLINDINGS] = E::Fr::zero(); // -k(y)
 
@@ -161,23 +165,43 @@ impl<E: Engine> Proof<E> {
         // A varifier send to challenge scalar to prover
         let z: E::Fr = transcript.challenge_scalar();
         let z_inv = z.inverse().ok_or(SynthesisError::DivisionByZero)?;
-
+        let z_first_power = z_inv.pow(&[(2 * n + NUM_BLINDINGS) as u64]);
 
         // ------------------------------------------------------
         // zkP_3(z) -> (a, W_a, b, W_b, W_t, s, sc):
         // ------------------------------------------------------
 
         // r(X, 1) -> r(z, 1)
-        let r_z1 = eval_univar_poly::<E>(&r_x1, first_power, z);
+        let r_z1 = eval_univar_poly::<E>(&r_x1, z_first_power, z);
         transcript.commit_scalar(&r_z1);
 
         // Ensure: r(X, 1) -> r(yz, 1) = r(z, y)
-        // let r_zy = evaluate_poly(&r_x1, first_power, z*y);
+        // let r_zy = evaluate_poly(&r_x1, z_first_power, z*y);
         // r(X, y) -> r(z, y)
-        let r_zy = eval_univar_poly::<E>(&r_xy, first_power, z);
+        let r_zy = eval_univar_poly::<E>(&r_xy, z_first_power, z);
         transcript.commit_scalar(&r_zy);
 
         let r1: E::Fr = transcript.challenge_scalar();
+
+        // An opening of r(X, 1) at yz
+        let yz_opening = {
+            // r(X, 1) - r(z, y)
+            // substract constant term from r(X, 1)
+            r_x1[2 * n + NUM_BLINDINGS].sub_assign(&r_zy);
+
+            let mut point = y;
+            point.mul_assign(&z);
+
+            poly_comm_opening(
+                2 * n + NUM_BLINDINGS,
+                n,
+                srs,
+                &r_x1,
+                point
+            )
+        };
+
+        assert_eq!(r_x1.len(), 3*n + NUM_BLINDINGS + 1);
 
         // An opening of t(X, y) and r(X, 1) at z
         let z_opening = {
@@ -196,8 +220,8 @@ impl<E: Engine> Proof<E> {
 
             // Evaluate t(X, y) at z
             let t_zy = {
-                let first_power = z_inv.pow(&[(4 * n + 2 * NUM_BLINDINGS) as u64]);
-                eval_univar_poly::<E>(&t_xy, first_power, z)
+                let z4_first_power = z_inv.pow(&[(4 * n + 2 * NUM_BLINDINGS) as u64]);
+                eval_univar_poly::<E>(&t_xy, z4_first_power, z)
             };
 
             // Sub constant term
@@ -209,24 +233,6 @@ impl<E: Engine> Proof<E> {
                 srs,
                 &t_xy,
                 z
-            )
-        };
-
-        // An opening of r(X, 1) at yz
-        let yz_opening = {
-            // r(X, 1) - r(z, y)
-            // substract constant term from r(X, 1)
-            r_x1[2 * n + NUM_BLINDINGS].sub_assign(&r_zy);
-
-            let mut point = y;
-            point.mul_assign(&z);
-
-            poly_comm_opening(
-                2 * n + NUM_BLINDINGS,
-                n,
-                srs,
-                &r_x1,
-                point
             )
         };
 
@@ -385,9 +391,9 @@ mod tests {
         {
             let (a, b, _) = cs.multiply(|| {
                 Ok((
-                    E::Fr::from_str("3").unwrap(),
-                    E::Fr::from_str("4").unwrap(),
-                    E::Fr::from_str("12").unwrap(),
+                    E::Fr::from_str("10").unwrap(),
+                    E::Fr::from_str("20").unwrap(),
+                    E::Fr::from_str("200").unwrap(),
                 ))
             })?;
 
@@ -402,8 +408,8 @@ mod tests {
         let rng = thread_rng();
         let srs = SRS::<Bls12>::new(
             20,
-            Fr::from_str("33").unwrap(),
-            Fr::from_str("44").unwrap(),
+            Fr::from_str("22222").unwrap(),
+            Fr::from_str("33333333").unwrap(),
         );
 
         let proof = Proof::create_proof::<_, Basic>(&SimpleCircuit, &srs).unwrap();
@@ -414,6 +420,6 @@ mod tests {
             batch.add_proof(&proof, &[], |_, _| None);
         }
 
-        // assert!(batch.check_all());
+        assert!(batch.check_all());
     }
 }
