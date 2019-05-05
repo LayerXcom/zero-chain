@@ -1,5 +1,5 @@
 use pairing::{Engine, Field};
-use bellman::multicore::Worker;
+// use bellman::multicore::Worker;
 use crossbeam::channel::unbounded;
 
 /// Basically used for polynomials represented as separeted iterator
@@ -78,6 +78,7 @@ pub fn eval_bivar_poly<'a, E: Engine> (
     first_power: E::Fr,
     base: E::Fr
 ) {
+    use bellman::multicore::Worker;
     let worker = Worker::new();
 
     worker.scope(coeffs.len(), |scope, chunk| {
@@ -103,6 +104,7 @@ pub fn eval_univar_poly<'a, E: Engine> (
     base: E::Fr
 ) -> E::Fr
 {
+    use bellman::multicore::Worker;
     let (tx, rx) = unbounded();
     let worker = Worker::new();
 
@@ -150,6 +152,7 @@ pub fn eval_univar_poly<'a, E: Engine> (
 /// Elementwise add coeffs of one polynomial with coeffs of other, that are
 /// first multiplied by a scalar
 pub fn mul_add_poly<E: Engine>(a: &mut [E::Fr], b: &[E::Fr], c: E::Fr) {
+    use bellman::multicore::Worker;
     let worker = Worker::new();
     assert_eq!(a.len(), b.len());
 

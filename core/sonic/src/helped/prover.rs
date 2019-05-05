@@ -426,48 +426,49 @@ mod tests {
     #[test]
     fn polynomial_commitment_test() {
         let srs = SRS::<Bls12>::new(
-        20,
-        Fr::from_str("22222").unwrap(),
-        Fr::from_str("33333333").unwrap(),
-    );
+            20,
+            Fr::from_str("22222").unwrap(),
+            Fr::from_str("33333333").unwrap(),
+        );
 
-    let mut rng = thread_rng();
-    // x^-4 + x^-3 + x^-2 + x^-1 + x + x^2
-    let mut poly = vec![Fr::one(), Fr::one(), Fr::one(), Fr::one(), Fr::zero(), Fr::one(), Fr::one()];
-    // make commitment to the poly
-    let commitment = poly_comm(2, 4, 2, &srs, poly.iter());
-    let point: Fr = rng.gen();
-    let mut tmp = point.inverse().unwrap();
-    tmp.square();
-    let value = eval_univar_poly::<Bls12>(&poly, tmp, point);
-    // evaluate f(z)
-    poly[4] = value;
-    poly[4].negate();
-    // f(x) - f(z)
+        // x^-4 + x^-3 + x^-2 + x^-1 + x + x^2
+        let mut poly = vec![Fr::one(), Fr::one(), Fr::one(), Fr::one(), Fr::zero(), Fr::one(), Fr::one()];
+        // make commitment to the poly
+        let commitment = poly_comm(2, 4, 2, &srs, poly.iter());
 
-    let opening = poly_comm_opening(4, 2, &srs,  poly.iter(), point);
+        let point: Fr = Fr::one();
+        let mut tmp = point.inverse().unwrap();
+        tmp.square();
+        let value = eval_univar_poly::<Bls12>(&poly, tmp, point);
 
-    // e(W , hα x )e(g^{v} * W{-z} , hα ) = e(F , h^{x^{−d +max}} )
+        // evaluate f(z)
+        poly[4] = value;
+        poly[4].negate();
+        // f(x) - f(z)
 
-    let alpha_x_precomp = srs.h_pos_x_alpha[1].prepare();
-    let alpha_precomp = srs.h_pos_x_alpha[0].prepare();
-    let mut neg_x_n_minus_d_precomp = srs.h_neg_x[srs.d - 2];
-    neg_x_n_minus_d_precomp.negate();
-    let neg_x_n_minus_d_precomp = neg_x_n_minus_d_precomp.prepare();
+        let opening = poly_comm_opening(4, 2, &srs,  poly.iter(), point);
 
-    let w = opening.prepare();
-    let mut gv = srs.g_pos_x[0].mul(value.into_repr());
-    let mut z_neg = point;
-    z_neg.negate();
-    let w_minus_z = opening.mul(z_neg.into_repr());
-    gv.add_assign(&w_minus_z);
+        // e(W , hα x )e(g^{v} * W{-z} , hα ) = e(F , h^{x^{−d +max}} )
 
-    let gv = gv.into_affine().prepare();
+        let alpha_x_precomp = srs.h_pos_x_alpha[1].prepare();
+        let alpha_precomp = srs.h_pos_x_alpha[0].prepare();
+        let mut neg_x_n_minus_d_precomp = srs.h_neg_x[srs.d - 2];
+        neg_x_n_minus_d_precomp.negate();
+        let neg_x_n_minus_d_precomp = neg_x_n_minus_d_precomp.prepare();
 
-    assert!(Bls12::final_exponentiation(&Bls12::miller_loop(&[
-            (&w, &alpha_x_precomp),
-            (&gv, &alpha_precomp),
-            (&commitment.prepare(), &neg_x_n_minus_d_precomp),
-        ])).unwrap() == <Bls12 as Engine>::Fqk::one());
+        let w = opening.prepare();
+        let mut gv = srs.g_pos_x[0].mul(value.into_repr());
+        let mut z_neg = point;
+        z_neg.negate();
+        let w_minus_z = opening.mul(z_neg.into_repr());
+        gv.add_assign(&w_minus_z);
+
+        let gv = gv.into_affine().prepare();
+
+        assert!(Bls12::final_exponentiation(&Bls12::miller_loop(&[
+                (&w, &alpha_x_precomp),
+                (&gv, &alpha_precomp),
+                (&commitment.prepare(), &neg_x_n_minus_d_precomp),
+            ])).unwrap() == <Bls12 as Engine>::Fqk::one());
     }
 }
