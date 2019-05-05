@@ -1,11 +1,11 @@
 
-#![feature(test)]
-
 use pairing::{Engine, Field, PrimeField, CurveAffine, CurveProjective};
 use pairing::bls12_381::{Bls12, Fr};
 use bellman::{Circuit, ConstraintSystem, SynthesisError};
 // use sonic::cs::{Circuit, ConstraintSystem};
 use rand::{thread_rng, Rng};
+// For benchmarking
+use std::time::{Duration, Instant};
 use sonic::srs::SRS;
 
 pub const MIMC_ROUNDS: usize = 322;
@@ -236,7 +236,99 @@ impl<'a, E: Engine> Circuit<E> for MiMCDemoNoInputs<'a, E> {
     }
 }
 
-// #[bench]
-// fn bench_sonic_mimc() {
+#[test]
+fn bench_sonic_mimc() {
+    let srs_x = Fr::from_str("23923").unwrap();
+    let srs_alpha = Fr::from_str("23728792").unwrap();
+    println!("making srs");
+    let start = Instant::now();
+    let srs = SRS::<Bls12>::dummy(830564, srs_x, srs_alpha);
+    println!("done in {:?}", start.elapsed());
 
-// }
+    {
+        // This may not be cryptographically safe, use
+        // `OsRng` (for example) in production software.
+        let rng = &mut thread_rng();
+
+        // Generate the MiMC round constants
+        let constants = (0..MIMC_ROUNDS).map(|_| rng.gen()).collect::<Vec<_>>();
+        let samples: usize = 100;
+
+        let xl = rng.gen();
+        let xr = rng.gen();
+        let image = mimc::<Bls12>(xl, xr, &constants);
+
+        // Create an instance of our circuit (with the
+        // witness)
+        let circuit = MiMCDemoNoInputs {
+            xl: Some(xl),
+            xr: Some(xr),
+            image: Some(image),
+            constants: &constants
+        };
+
+        use sonic::cs::Basic;
+        use sonic::helped::adaptor::AdaptorCircuit;
+        use sonic::helped::{Proof, MultiVerifier};
+        // use sonic::helped::helper::{create_aggregate_on_srs};
+
+        println!("creating proof");
+        let start = Instant::now();
+        let proof = Proof::<Bls12>::create_proof::< _, Basic>(&AdaptorCircuit(circuit.clone()), &srs).unwrap();
+        println!("done in {:?}", start.elapsed());
+
+        // println!("creating advice");
+        // let start = Instant::now();
+        // let advice = create_advice_on_srs::<Bls12, _, Basic>(&AdaptorCircuit(circuit.clone()), &proof, &srs).unwrap();
+        // println!("done in {:?}", start.elapsed());
+
+        // println!("creating aggregate for {} proofs", samples);
+        // let start = Instant::now();
+        // let proofs: Vec<_> = (0..samples).map(|_| (proof.clone(), advice.clone())).collect();
+        // let aggregate = create_aggregate_on_srs::<Bls12, _, Basic>(&AdaptorCircuit(circuit.clone()), &proofs, &srs);
+        // println!("done in {:?}", start.elapsed());
+
+        {
+            let rng = thread_rng();
+            let mut verifier = MultiVerifier::<Bls12, _, Basic, _>::new(AdaptorCircuit(circuit.clone()), &srs, rng).unwrap();
+            println!("verifying 1 proof without advice");
+            let start = Instant::now();
+            {
+                for _ in 0..1 {
+                    verifier.add_proof(&proof, &[], |_, _| None);
+                }
+                assert_eq!(verifier.check_all(), true); // TODO
+            }
+            println!("done in {:?}", start.elapsed());
+        }
+
+        // {
+        //     let rng = thread_rng();
+        //     let mut verifier = MultiVerifier::<Bls12, _, Basic, _>::new(AdaptorCircuit(circuit.clone()), &srs, rng).unwrap();
+        //     println!("verifying {} proofs without advice", samples);
+        //     let start = Instant::now();
+        //     {
+        //         for _ in 0..samples {
+        //             verifier.add_proof(&proof, &[], |_, _| None);
+        //         }
+        //         assert_eq!(verifier.check_all(), true); // TODO
+        //     }
+        //     println!("done in {:?}", start.elapsed());
+        // }
+
+        // {
+        //     let rng = thread_rng();
+        //     let mut verifier = MultiVerifier::<Bls12, _, Basic, _>::new(AdaptorCircuit(circuit.clone()), &srs, rng).unwrap();
+        //     println!("verifying 100 proofs with advice");
+        //     let start = Instant::now();
+        //     {
+        //         for (ref proof, ref advice) in &proofs {
+        //             verifier.add_proof_with_advice(proof, &[], advice);
+        //         }
+        //         verifier.add_aggregate(&proofs, &aggregate);
+        //         assert_eq!(verifier.check_all(), true); // TODO
+        //     }
+        //     println!("done in {:?}", start.elapsed());
+        // }
+    }
+}

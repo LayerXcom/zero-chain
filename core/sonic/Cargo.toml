@@ -12,10 +12,3 @@ merlin = "1.0"
 futures = "0.1"
 clear_on_drop = "0.2"
 crossbeam = "0.7"
-
-[dev-dependencies]
-criterion = "0.2"
-
-[[bench]]
-name = "sonic_benchmark"
-harness = false
