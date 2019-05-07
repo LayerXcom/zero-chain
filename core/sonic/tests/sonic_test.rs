@@ -8,7 +8,11 @@ use rand::{thread_rng, Rng};
 use std::time::{Duration, Instant};
 use sonic::srs::SRS;
 
-pub const MIMC_ROUNDS: usize = 322;
+use sonic::cs::Basic;
+use sonic::helped::adaptor::AdaptorCircuit;
+use sonic::helped::{Proof, MultiVerifier};
+
+pub const MIMC_ROUNDS: usize = 32200;
 
 /// This is an implementation of MiMC, specifically a
 /// variant named `LongsightF322p3` for BLS12-381.
@@ -47,6 +51,7 @@ pub fn mimc<E: Engine>(
 
 /// This is our demo circuit for proving knowledge of the
 /// preimage of a MiMC hash invocation.
+#[derive(Clone)]
 pub struct MiMCDemo<'a, E: Engine> {
     xl: Option<E::Fr>,
     xr: Option<E::Fr>,
@@ -237,7 +242,7 @@ impl<'a, E: Engine> Circuit<E> for MiMCDemoNoInputs<'a, E> {
 }
 
 #[test]
-fn bench_sonic_mimc() {
+fn test_sonic_mimc_wo_inputs() {
     let srs_x = Fr::from_str("23923").unwrap();
     let srs_alpha = Fr::from_str("23728792").unwrap();
 
@@ -267,11 +272,6 @@ fn bench_sonic_mimc() {
             constants: &constants
         };
 
-        use sonic::cs::Basic;
-        use sonic::helped::adaptor::AdaptorCircuit;
-        use sonic::helped::{Proof, MultiVerifier};
-        // use sonic::helped::helper::{create_aggregate_on_srs};
-
         // println!("Creating proof");
         let start = Instant::now();
         let proof = Proof::<Bls12>::create_proof::< _, Basic>(&AdaptorCircuit(circuit.clone()), &srs).unwrap();
@@ -288,53 +288,66 @@ fn bench_sonic_mimc() {
         // let aggregate = create_aggregate_on_srs::<Bls12, _, Basic>(&AdaptorCircuit(circuit.clone()), &proofs, &srs);
         // println!("done in {:?}", start.elapsed());
 
+        let rng = thread_rng();
+        let mut verifier = MultiVerifier::<Bls12, _, Basic, _>::new(AdaptorCircuit(circuit.clone()), &srs, rng).unwrap();
+        // println!("Verifying 1 proof without advice");
+        let start = Instant::now();
         {
-            let rng = thread_rng();
-            let mut verifier = MultiVerifier::<Bls12, _, Basic, _>::new(AdaptorCircuit(circuit.clone()), &srs, rng).unwrap();
-            // println!("Verifying 1 proof without advice");
-            let start = Instant::now();
-            {
-                for _ in 0..1 {
-                    verifier.add_proof(&proof, &[], |_, _| None);
-                }
-                assert_eq!(verifier.check_all(), true);
+            for _ in 0..1 {
+                verifier.add_proof(&proof, &[], |_, _| None);
             }
-            println!("(Verifying SONIC) Done in {:?}", start.elapsed());
+            assert_eq!(verifier.check_all(), true);
         }
-
-        // {
-        //     let rng = thread_rng();
-        //     let mut verifier = MultiVerifier::<Bls12, _, Basic, _>::new(AdaptorCircuit(circuit.clone()), &srs, rng).unwrap();
-        //     println!("verifying {} proofs without advice", samples);
-        //     let start = Instant::now();
-        //     {
-        //         for _ in 0..samples {
-        //             verifier.add_proof(&proof, &[], |_, _| None);
-        //         }
-        //         assert_eq!(verifier.check_all(), true);
-        //     }
-        //     println!("done in {:?}", start.elapsed());
-        // }
-
-        // {
-        //     let rng = thread_rng();
-        //     let mut verifier = MultiVerifier::<Bls12, _, Basic, _>::new(AdaptorCircuit(circuit.clone()), &srs, rng).unwrap();
-        //     println!("verifying 100 proofs with advice");
-        //     let start = Instant::now();
-        //     {
-        //         for (ref proof, ref advice) in &proofs {
-        //             verifier.add_proof_with_advice(proof, &[], advice);
-        //         }
-        //         verifier.add_aggregate(&proofs, &aggregate);
-        //         assert_eq!(verifier.check_all(), true);
-        //     }
-        //     println!("done in {:?}", start.elapsed());
-        // }
+        println!("(Verifying SONIC) Done in {:?}", start.elapsed());
     }
 }
 
 #[test]
-fn bench_groth16_mimc() {
+fn test_sonic_mimc_w_input() {
+    let srs_x = Fr::from_str("23923").unwrap();
+    let srs_alpha = Fr::from_str("23728792").unwrap();
+
+    let srs = SRS::<Bls12>::dummy(830564, srs_x, srs_alpha);
+
+    // This may not be cryptographically safe, use
+    // `OsRng` (for example) in production software.
+    let rng = &mut thread_rng();
+
+    // Generate the MiMC round constants
+    let constants = (0..MIMC_ROUNDS).map(|_| rng.gen()).collect::<Vec<_>>();
+    let samples: usize = 100;
+
+    let xl = rng.gen();
+    let xr = rng.gen();
+    let image = mimc::<Bls12>(xl, xr, &constants);
+
+    // Create an instance of our circuit (with the
+    // witness)
+    let circuit = MiMCDemo {
+        xl: Some(xl),
+        xr: Some(xr),
+        constants: &constants
+    };
+
+    let start = Instant::now();
+    let proof = Proof::<Bls12>::create_proof::< _, Basic>(&AdaptorCircuit(circuit.clone()), &srs).unwrap();
+    println!("(Proving SONIC input)done in {:?}", start.elapsed());
+
+    let rng = thread_rng();
+    let mut verifier = MultiVerifier::<Bls12, _, Basic, _>::new(AdaptorCircuit(circuit.clone()), &srs, rng).unwrap();
+
+    let start = Instant::now();
+    {
+        for _ in 0..1 {
+            verifier.add_proof(&proof, &[image], |_, _| None);
+        }
+        assert_eq!(verifier.check_all(), true);
+    }
+    println!("(Verifying SONIC Input)done in {:?}", start.elapsed());
+}
+
+#[test]
+fn test_groth16_mimc() {
     use bellman::groth16::{generate_random_parameters, Proof, prepare_verifying_key, create_random_proof, verify_proof};
 
     // This may not be cryptographically safe, use
