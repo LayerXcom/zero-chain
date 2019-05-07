@@ -21,7 +21,7 @@ impl<'a, E: Engine> IntoIterator for Polynomial<'a, E> {
     type Item = <&'a mut [E::Fr] as IntoIterator>::Item;
     type IntoIter = <&'a mut [E::Fr] as IntoIterator>::IntoIter;
 
-    fn into_iter(mut self) -> Self::IntoIter {
+    fn into_iter(self) -> Self::IntoIter {
         self.0.iter_mut()
     }
 }
@@ -29,7 +29,7 @@ impl<'a, E: Engine> IntoIterator for Polynomial<'a, E> {
 impl<'a, E: Engine> Add<Polynomial<'a, E>> for Polynomial<'a, E> {
     type Output = Polynomial<'a, E>;
 
-    fn add(mut self, other: Polynomial<E>) -> Polynomial<'a, E> {
+    fn add(self, other: Polynomial<E>) -> Polynomial<'a, E> {
         assert_eq!(self.0.len(), other.0.len());
 
         let worker = Worker::new();
@@ -98,7 +98,7 @@ impl<'a, E: Engine> Polynomial<'a, E> {
         largest_neg_power: usize,   // largest negative power
         largest_pos_power: usize,   // largest positive power
         srs: &'a SRS<E>,
-    ) -> PolyComm<E>
+    ) -> E::G1Affine
     {
         let d = srs.d;
         assert!(max >= largest_pos_power);
@@ -110,23 +110,19 @@ impl<'a, E: Engine> Polynomial<'a, E> {
             let min_power = largest_neg_power + max - d;
             let max_power = largest_pos_power + d - max;
 
-            let res = multiexp_mut(
+            multiexp_mut(
                 srs.g_neg_x_alpha[0..min_power].iter().rev() // Reverse to permute for negative powers
                 .chain_ext(srs.g_pos_x_alpha[..max_power].iter()),
                 self.0
-            ).into_affine();
-
-            return PolyComm(res);
+            ).into_affine()
         } else {
             let _max_power = srs.d - max - largest_neg_power + 1;
 
-            let res = multiexp_mut(
+            multiexp_mut(
                 // srs.g_pos_x_alpha[..max_power].iter(), // TODO: Ensure the range is correct
                 srs.g_pos_x_alpha[(srs.d - max - largest_neg_power - 1)..].iter(),
                 self.0
-            ).into_affine();
-
-            return PolyComm(res);
+            ).into_affine()
         }
     }
 
@@ -137,7 +133,7 @@ impl<'a, E: Engine> Polynomial<'a, E> {
         largest_pos_power: usize,
         srs: &'a SRS<E>,
         mut point: E::Fr,
-    ) -> PolyCommOpening<E>
+    ) -> E::G1Affine
     {
         // let quotient_poly = self.kate_division(point);
 
@@ -159,14 +155,12 @@ impl<'a, E: Engine> Polynomial<'a, E> {
         let neg_poly = quotient_poly[..largest_neg_power].iter().rev(); // -n,...,-1
         let pos_poly = quotient_poly[largest_pos_power..].iter();       // n,...,1,0
 
-        let res = multiexp(
+        multiexp(
             srs.g_neg_x[1..(neg_poly.len() + 1)].iter().chain_ext(
                 srs.g_pos_x[..pos_poly.len()].iter()
             ),
             neg_poly.chain_ext(pos_poly)
-        ).into_affine();
-
-        PolyCommOpening(res)
+        ).into_affine()
     }
 
     // TODO: Parallelization

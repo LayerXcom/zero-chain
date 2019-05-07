@@ -5,7 +5,7 @@ use merlin::Transcript;
 use crate::cs::{SynthesisDriver, Circuit, Backend, Variable, Coeff};
 use crate::srs::SRS;
 use crate::transcript::ProvingTranscript;
-use crate::polynomials::{poly_comm, poly_comm_opening, SxEval, add_polynomials, mul_polynomials};
+use crate::polynomials::{Polynomial, poly_comm, poly_comm_opening, SxEval, add_polynomials, mul_polynomials};
 use crate::utils::{ChainExt, eval_bivar_poly, eval_univar_poly, mul_add_poly};
 
 pub const NUM_BLINDINGS: usize = 4;
@@ -62,17 +62,20 @@ impl<E: Engine> Proof<E> {
             .map(|_| E::Fr::rand(rng))
             .collect();
 
-        // a commitment to r(X, 1)
-        let r_comm = poly_comm(
-            n,                      // a max degree
-            2*n + NUM_BLINDINGS,    // largest negative power;
-            n,                      // largest positive power
-            &srs,                   // structured reference string
-            blindings.iter().rev()  // poly coefficients orderd by ascending powers
-                .chain_ext(wires.c.iter().rev())
-                .chain_ext(wires.b.iter().rev())
-                .chain_ext(Some(E::Fr::zero()).iter()) // power i is not equal zero
-                .chain_ext(wires.a.iter()),
+        // A coefficients vector which can be used in common with polynomials r and r'
+        // associated with powers for X.
+        let mut r_x1 = wires.b;         // X^{-n}...X^{-1}
+        r_x1.extend(wires.c);           // X^{-2n}...X^{-n-1}
+        r_x1.extend(blindings); // X^{-2n-4}...X^{-2n-1}
+        r_x1.reverse();
+        r_x1.push(E::Fr::zero());
+        r_x1.extend(wires.a);           // X^{1}...X^{n}
+
+        let r_comm = Polynomial::from_slice(&mut r_x1[..]).commit(
+            n,
+            2*n + NUM_BLINDINGS,
+            n,
+            &srs
         );
 
         // A prover commits polynomial
@@ -91,15 +94,6 @@ impl<E: Engine> Proof<E> {
         // ------------------------------------------------------
         // zkP_2(y) -> T:
         // ------------------------------------------------------
-
-        // A coefficients vector which can be used in common with polynomials r and r'
-        // associated with powers for X.
-        let mut r_x1 = wires.b;         // X^{-n}...X^{-1}
-        r_x1.extend(wires.c);           // X^{-2n}...X^{-n-1}
-        r_x1.extend(blindings.clone()); // X^{-2n-4}...X^{-2n-1}
-        r_x1.reverse();
-        r_x1.push(E::Fr::zero());
-        r_x1.extend(wires.a);           // X^{1}...X^{n}
 
         // powers: [-2n-4, n]
         let mut r_xy = r_x1.clone();
@@ -144,15 +138,18 @@ impl<E: Engine> Proof<E> {
         t_xy[4 * n + 2 * NUM_BLINDINGS] = E::Fr::zero(); // -k(y)
 
         // commitment of t(X, y)
-        let t_comm = poly_comm(
-            srs.d,
-            4 * n + 2 * NUM_BLINDINGS,
-            3 * n,
-            srs,
-            // Avoid constant term
-            t_xy[..(4 * n + 2 * NUM_BLINDINGS)].iter()
+        let mut t_comm_vec = t_xy[..(4 * n + 2 * NUM_BLINDINGS)].iter()
                 .chain_ext(t_xy[(4 * n + 2 * NUM_BLINDINGS + 1)..].iter())
-        );
+                .map(|e| *e)
+                .collect::<Vec<_>>();
+
+        let t_comm = Polynomial::from_slice(&mut t_comm_vec[..])
+                .commit(
+                    srs.d,
+                    4 * n + 2 * NUM_BLINDINGS,
+                    3 * n,
+                    srs
+                );
 
         transcript.commit_point(&t_comm);
 
