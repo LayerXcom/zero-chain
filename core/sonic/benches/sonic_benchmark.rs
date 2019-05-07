@@ -7,6 +7,9 @@ use bellman::{Circuit, ConstraintSystem, SynthesisError};
 // use sonic::cs::{Circuit, ConstraintSystem};
 use rand::{thread_rng, Rng};
 use sonic::srs::SRS;
+use sonic::cs::Basic;
+use sonic::helped::adaptor::AdaptorCircuit;
+use sonic::helped::{Proof, MultiVerifier};
 
 pub const MIMC_ROUNDS: usize = 322;
 
@@ -236,13 +239,13 @@ impl<'a, E: Engine> Circuit<E> for MiMCDemoNoInputs<'a, E> {
     }
 }
 
-fn mimc_1_proof_wo_advice(c: &mut Criterion) {
+fn mimc_1_prove_wo_advice(c: &mut Criterion) {
     let srs_x = Fr::from_str("23923").unwrap();
     let srs_alpha = Fr::from_str("23728792").unwrap();
 
     let srs = SRS::<Bls12>::dummy(830564, srs_x, srs_alpha);
 
-    {
+    c.bench_function("create proof", move |b| {
         // This may not be cryptographically safe, use
         // `OsRng` (for example) in production software.
         let rng = &mut thread_rng();
@@ -263,32 +266,65 @@ fn mimc_1_proof_wo_advice(c: &mut Criterion) {
             constants: &constants
         };
 
-        use sonic::cs::Basic;
-        use sonic::helped::adaptor::AdaptorCircuit;
-        use sonic::helped::{Proof, MultiVerifier};
-
-        let proof = Proof::<Bls12>::create_proof::< _, Basic>(&AdaptorCircuit(circuit.clone()), &srs).unwrap();
-
-        {
-            let rng = thread_rng();
-            let mut verifier = MultiVerifier::<Bls12, _, Basic, _>::new(AdaptorCircuit(circuit.clone()), &srs, rng).unwrap();
-            println!("Verifying 1 proof without advice");
-
-            {
-                for _ in 0..1 {
-                    verifier.add_proof(&proof, &[], |_, _| None);
-                }
-                assert_eq!(verifier.check_all(), true);
-            }
-        }
-    }
+        b.iter(|| {
+            Proof::<Bls12>::create_proof::< _, Basic>(&AdaptorCircuit(circuit.clone()), &srs).unwrap();
+        })
+    });
 }
 
 criterion_group! {
-    name = sonic;
-    config = Criterion::default();
+    name = sonic_prove;
+    config = Criterion::default().sample_size(10);
     targets =
-    mimc_1_proof_wo_advice,
+    mimc_1_prove_wo_advice,
 }
 
-criterion_main!(sonic);
+fn mimc_1_verify_wo_advice(c: &mut Criterion) {
+    let srs_x = Fr::from_str("23923").unwrap();
+    let srs_alpha = Fr::from_str("23728792").unwrap();
+
+    let srs = SRS::<Bls12>::dummy(830564, srs_x, srs_alpha);
+
+    c.bench_function("Verify proof", move |b| {
+        // This may not be cryptographically safe, use
+        // `OsRng` (for example) in production software.
+        let rng = &mut thread_rng();
+
+        // Generate the MiMC round constants
+        let constants = (0..MIMC_ROUNDS).map(|_| rng.gen()).collect::<Vec<_>>();
+
+        let xl = rng.gen();
+        let xr = rng.gen();
+        let image = mimc::<Bls12>(xl, xr, &constants);
+
+        // Create an instance of our circuit (with the
+        // witness)
+        let circuit = MiMCDemoNoInputs {
+            xl: Some(xl),
+            xr: Some(xr),
+            image: Some(image),
+            constants: &constants
+        };
+
+        let proof = Proof::<Bls12>::create_proof::< _, Basic>(&AdaptorCircuit(circuit.clone()), &srs).unwrap();
+
+        b.iter(|| {
+            let rng = thread_rng();
+            let mut verifier = MultiVerifier::<Bls12, _, Basic, _>::new(AdaptorCircuit(circuit.clone()), &srs, rng).unwrap();
+            
+            for _ in 0..1 {
+                verifier.add_proof(&proof, &[], |_, _| None);
+            }
+            assert_eq!(verifier.check_all(), true);
+        })
+    });
+}
+
+criterion_group! {
+    name = sonic_verify;
+    config = Criterion::default().sample_size(10);
+    targets =
+    mimc_1_verify_wo_advice,
+}
+
+criterion_main!(sonic_prove, sonic_verify);
