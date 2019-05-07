@@ -13,7 +13,7 @@ use crate::srs::SRS;
 use crate::utils::ChainExt;
 
 use std::borrow::Borrow;
-use std::ops::{Add, Mul};
+use std::ops::{Add, Mul, Index, IndexMut, Range};
 
 pub struct Polynomial<'a, E: Engine>(&'a mut [E::Fr]);
 
@@ -25,6 +25,22 @@ impl<'a, E: Engine> IntoIterator for Polynomial<'a, E> {
         self.0.iter_mut()
     }
 }
+
+impl<'a, E: Engine> Index<usize> for Polynomial<'a, E> {
+    type Output = E::Fr;
+
+    fn index(&self, id: usize) -> &Self::Output {
+        &self.0[id]
+    }
+}
+
+impl<'a, E: Engine> IndexMut<usize> for Polynomial<'a, E> {
+    fn index_mut(&mut self, id: usize) -> &mut Self::Output {
+        &mut self.0[id]
+    }
+}
+
+// impl<'a, E: Engine> Index<
 
 impl<'a, E: Engine> Add<Polynomial<'a, E>> for Polynomial<'a, E> {
     type Output = Polynomial<'a, E>;

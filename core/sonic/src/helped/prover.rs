@@ -89,6 +89,7 @@ impl<E: Engine> Proof<E> {
         // A varifier send to challenge scalar to prover
         let y: E::Fr = transcript.challenge_scalar();
         let y_inv = y.inverse().ok_or(SynthesisError::DivisionByZero)?;
+        let y_first_power = y_inv.pow(&[(2 * n + NUM_BLINDINGS) as u64]);
 
 
         // ------------------------------------------------------
@@ -97,8 +98,6 @@ impl<E: Engine> Proof<E> {
 
         // powers: [-2n-4, n]
         let mut r_xy = r_x1.clone();
-
-        let y_first_power = y_inv.pow(&[(2 * n + NUM_BLINDINGS) as u64]);
 
         // Evaluate the polynomial r(X, Y) at y
         eval_bivar_poly::<E>(

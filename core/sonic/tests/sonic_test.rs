@@ -240,10 +240,10 @@ impl<'a, E: Engine> Circuit<E> for MiMCDemoNoInputs<'a, E> {
 fn bench_sonic_mimc() {
     let srs_x = Fr::from_str("23923").unwrap();
     let srs_alpha = Fr::from_str("23728792").unwrap();
-    println!("Generating srs");
-    let start = Instant::now();
+
+    // let start = Instant::now();
     let srs = SRS::<Bls12>::dummy(830564, srs_x, srs_alpha);
-    println!("Done in {:?}", start.elapsed());
+    // println!("Done in {:?}", start.elapsed());
 
     {
         // This may not be cryptographically safe, use
@@ -272,10 +272,10 @@ fn bench_sonic_mimc() {
         use sonic::helped::{Proof, MultiVerifier};
         // use sonic::helped::helper::{create_aggregate_on_srs};
 
-        println!("Creating proof");
+        // println!("Creating proof");
         let start = Instant::now();
         let proof = Proof::<Bls12>::create_proof::< _, Basic>(&AdaptorCircuit(circuit.clone()), &srs).unwrap();
-        println!("Done in {:?}", start.elapsed());
+        println!("(Proving SONIC) Done in {:?}", start.elapsed());
 
         // println!("creating advice");
         // let start = Instant::now();
@@ -291,7 +291,7 @@ fn bench_sonic_mimc() {
         {
             let rng = thread_rng();
             let mut verifier = MultiVerifier::<Bls12, _, Basic, _>::new(AdaptorCircuit(circuit.clone()), &srs, rng).unwrap();
-            println!("Verifying 1 proof without advice");
+            // println!("Verifying 1 proof without advice");
             let start = Instant::now();
             {
                 for _ in 0..1 {
@@ -299,7 +299,7 @@ fn bench_sonic_mimc() {
                 }
                 assert_eq!(verifier.check_all(), true);
             }
-            println!("Done in {:?}", start.elapsed());
+            println!("(Verifying SONIC) Done in {:?}", start.elapsed());
         }
 
         // {
@@ -331,4 +331,55 @@ fn bench_sonic_mimc() {
         //     println!("done in {:?}", start.elapsed());
         // }
     }
+}
+
+#[test]
+fn bench_groth16_mimc() {
+    use bellman::groth16::{generate_random_parameters, Proof, prepare_verifying_key, create_random_proof, verify_proof};
+
+    // This may not be cryptographically safe, use
+    // `OsRng` (for example) in production software.
+    let rng = &mut thread_rng();
+
+    // Generate the MiMC round constants
+    let constants = (0..MIMC_ROUNDS).map(|_| rng.gen()).collect::<Vec<_>>();
+
+    // println!("Creating parameters...");
+
+    let params = {
+        let c = MiMCDemo::<Bls12> {
+            xl: None,
+            xr: None,
+            constants: &constants
+        };
+
+        generate_random_parameters(c, rng).unwrap()
+    };
+
+    let pvk = prepare_verifying_key(&params.vk);
+
+    let xl = rng.gen();
+    let xr = rng.gen();
+    let image = mimc::<Bls12>(xl, xr, &constants);
+
+    let c = MiMCDemo {
+        xl: Some(xl),
+        xr: Some(xr),
+        constants: &constants
+    };
+
+    // println!("Creating proofs...");
+    let start = Instant::now();
+    let proof = create_random_proof(c, &params, rng).unwrap();
+    println!("(Proving Groth16) Done in {:?}", start.elapsed());
+
+    // println!("Verifying proof");
+    let start = Instant::now();
+    // Check the proof
+    verify_proof(
+        &pvk,
+        &proof,
+        &[image]
+    ).unwrap();
+    println!("(Verifying Groth16) Done in {:?}", start.elapsed());
 }

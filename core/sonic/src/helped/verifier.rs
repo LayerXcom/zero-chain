@@ -6,10 +6,11 @@ use crate::cs::{Circuit, Backend, SynthesisDriver};
 use crate::srs::SRS;
 use crate::transcript::ProvingTranscript;
 use crate::polynomials::SxEval;
-use super::prover::Proof;
+use super::prover::{Proof, SxyAdvice};
 use super::helper::Batch;
 use std::marker::PhantomData;
 
+#[derive(Clone)]
 pub struct MultiVerifier<E: Engine, C: Circuit<E>, S: SynthesisDriver, R: Rng> {
     circuit: C,
     pub(crate) batch: Batch<E>,
@@ -133,6 +134,41 @@ impl<E: Engine, C: Circuit<E>, S: SynthesisDriver, R: Rng> MultiVerifier<E, C, S
         }
     }
 
+    pub fn add_proof_with_advice(
+        &mut self,
+        proof: &Proof<E>,
+        inputs: &[E::Fr],
+        advice: &SxyAdvice<E>,
+    )
+    {
+        let mut z = None;
+        self.add_proof(proof, inputs, |_z, _y| {
+            z = Some(_z);
+            Some(advice.s_zy)
+        });
+
+        let z = z.unwrap();
+
+        let mut transcript = Transcript::new(&[]);
+        transcript.commit_point(&advice.s_zy_opening);
+        transcript.commit_point(&advice.s_comm);
+        transcript.commit_scalar(&advice.s_zy);
+        let random: E::Fr = self.randommness.gen();
+
+        self.batch.add_opening(advice.s_zy_opening, random, z);
+        self.batch.add_comm(advice.s_comm, random);
+        self.batch.add_opening_value(advice.s_zy, random);
+    }
+
+    // pub fn add_aggregate(
+    //     &mut self,
+    //     proofs: &[(Proof<E>, SxyAdvice<E>)],
+    //     aggregate: &Aggregate<E>,
+    // )
+    // {
+    //     unimplemented!();
+    // }
+
     pub fn get_k_map(&self) -> Vec<usize> {
         self.k_map.clone()
     }
@@ -150,7 +186,12 @@ impl<E: Engine, C: Circuit<E>, S: SynthesisDriver, R: Rng> MultiVerifier<E, C, S
     }
 }
 
-pub fn verify_a_proof<'a, E: Engine>() {
+pub fn verify_a_proof<'a, E: Engine>(
+    proof: Proof<E>,
+    public_inputs: &[E::Fr],
+) -> Result<bool, SynthesisError>
+{
+
     unimplemented!();
 }
 

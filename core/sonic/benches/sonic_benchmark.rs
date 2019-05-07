@@ -311,7 +311,7 @@ fn mimc_1_verify_wo_advice(c: &mut Criterion) {
         b.iter(|| {
             let rng = thread_rng();
             let mut verifier = MultiVerifier::<Bls12, _, Basic, _>::new(AdaptorCircuit(circuit.clone()), &srs, rng).unwrap();
-            
+
             for _ in 0..1 {
                 verifier.add_proof(&proof, &[], |_, _| None);
             }

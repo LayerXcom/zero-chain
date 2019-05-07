@@ -17,6 +17,7 @@ use pairing::{Engine, CurveAffine, CurveProjective, Field};
 use crate::srs::SRS;
 use crate::polynomials::commitment::multiexp;
 
+#[derive(Clone)]
 pub struct Batch<E: Engine> {
     /// Context of openings of polynomial commitment
     alpha_x: Vec<(E::G1Affine, E::Fr)>,
