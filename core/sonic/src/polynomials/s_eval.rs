@@ -132,6 +132,7 @@ pub struct SxEval<E: Engine> {
 impl<E: Engine> SxEval<E> {
     ///  Initialize s(X, y) where y is fixed.
     pub fn new(y: E::Fr, n: usize) -> Result<Self, SynthesisError>  {
+        let y_inv = y.inverse().ok_or(SynthesisError::DivisionByZero)?;
         let yqn = y.pow(&[n as u64]);
 
         // because of u_{q,i} is zero
@@ -140,16 +141,11 @@ impl<E: Engine> SxEval<E> {
         // because of v_{q,i} is zero
         let v = vec![E::Fr::zero(); n];
 
-        let mut neg_one = E::Fr::one();
-        neg_one.negate();
+        let mut minus_one = E::Fr::one();
+        minus_one.negate();
 
-        let mut w = vec![neg_one; n];
-        let mut neg_w = vec![neg_one; n];
-
-        let y_inv = match y.inverse() {
-            Some(v) => v,
-            None => return Err(SynthesisError::DivisionByZero)
-        };
+        let mut w = vec![minus_one; n];
+        let mut neg_w = vec![minus_one; n];
 
         eval_bivar_poly::<E>(&mut w[..], y, y);
         eval_bivar_poly::<E>(&mut neg_w[..], y_inv, y_inv);

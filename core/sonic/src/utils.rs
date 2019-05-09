@@ -1,5 +1,5 @@
-use pairing::{Engine, Field};
-use bellman::multicore::Worker;
+use pairing::{Engine, Field, PrimeField, CurveAffine};
+// use bellman::multicore::Worker;
 use crossbeam::channel::unbounded;
 
 /// Basically used for polynomials represented as separeted iterator
@@ -78,6 +78,7 @@ pub fn eval_bivar_poly<'a, E: Engine> (
     first_power: E::Fr,
     base: E::Fr
 ) {
+    use bellman::multicore::Worker;
     let worker = Worker::new();
 
     worker.scope(coeffs.len(), |scope, chunk| {
@@ -103,11 +104,12 @@ pub fn eval_univar_poly<'a, E: Engine> (
     base: E::Fr
 ) -> E::Fr
 {
+    use bellman::multicore::Worker;
     let (tx, rx) = unbounded();
     let worker = Worker::new();
 
     worker.scope(coeffs.len(), |scope, chunk| {
-        for (i, coeffs_chunk) in coeffs.chunks(chunk).enumerate() {
+        for (i, coeffs) in coeffs.chunks(chunk).enumerate() {
             let tx = tx.clone();
 
             scope.spawn(move |_| {
@@ -150,6 +152,7 @@ pub fn eval_univar_poly<'a, E: Engine> (
 /// Elementwise add coeffs of one polynomial with coeffs of other, that are
 /// first multiplied by a scalar
 pub fn mul_add_poly<E: Engine>(a: &mut [E::Fr], b: &[E::Fr], c: E::Fr) {
+    use bellman::multicore::Worker;
     let worker = Worker::new();
     assert_eq!(a.len(), b.len());
 
@@ -164,4 +167,51 @@ pub fn mul_add_poly<E: Engine>(a: &mut [E::Fr], b: &[E::Fr], c: E::Fr) {
             });
         }
     });
+}
+
+
+pub fn multiexp<
+    'a,
+    G: CurveAffine,
+    IE: IntoIterator<Item = &'a G>,
+    IS: IntoIterator<Item = &'a G::Scalar>,
+>(
+    exponent: IE,
+    scalar: IS,
+) -> G::Projective
+where
+    IE::IntoIter: ExactSizeIterator + Clone,
+    IS::IntoIter: ExactSizeIterator,
+{
+    use bellman::multicore::Worker;
+    use bellman::multiexp::{multiexp, FullDensity};
+    use std::sync::Arc;
+    use futures::Future;
+
+    let scalar: Vec<<G::Scalar as PrimeField>::Repr> = scalar
+        .into_iter()
+        .map(|e| e.into_repr())
+        .collect::<Vec<_>>();
+
+    let exponent: Vec<G> = exponent
+        .into_iter()
+        .map(|e| *e)
+        .collect::<Vec<_>>();
+
+    assert_eq!(
+        scalar.len(),
+        exponent.len(),
+        "scalars and exponents must have the same length."
+    );
+
+    let pool = Worker::new();
+
+    let result = multiexp(
+        &pool,
+        (Arc::new(exponent), 0),
+        FullDensity,
+        Arc::new(scalar)
+    ).wait().unwrap();
+
+    result
 }

@@ -5,7 +5,7 @@ use merlin::Transcript;
 use crate::cs::{SynthesisDriver, Circuit, Backend, Variable, Coeff};
 use crate::srs::SRS;
 use crate::transcript::ProvingTranscript;
-use crate::polynomials::{poly_comm, poly_comm_opening, SxEval, add_polynomials, mul_polynomials};
+use crate::polynomials::{Polynomial, poly_comm, poly_comm_opening, SxEval, add_polynomials, mul_polynomials};
 use crate::utils::{ChainExt, eval_bivar_poly, eval_univar_poly, mul_add_poly};
 
 pub const NUM_BLINDINGS: usize = 4;
@@ -62,17 +62,20 @@ impl<E: Engine> Proof<E> {
             .map(|_| E::Fr::rand(rng))
             .collect();
 
-        // a commitment to r(X, 1)
-        let r_comm = poly_comm(
-            n,                      // a max degree
-            2*n + NUM_BLINDINGS,    // largest negative power;
-            n,                      // largest positive power
-            &srs,                   // structured reference string
-            blindings.iter().rev()  // poly coefficients orderd by ascending powers
-                .chain_ext(wires.c.iter().rev())
-                .chain_ext(wires.b.iter().rev())
-                .chain_ext(Some(E::Fr::zero()).iter()) // power i is not equal zero
-                .chain_ext(wires.a.iter()),
+        // A coefficients vector which can be used in common with polynomials r and r'
+        // associated with powers for X.
+        let mut r_x1 = wires.b;         // X^{-n}...X^{-1}
+        r_x1.extend(wires.c);           // X^{-2n}...X^{-n-1}
+        r_x1.extend(blindings); // X^{-2n-4}...X^{-2n-1}
+        r_x1.reverse();
+        r_x1.push(E::Fr::zero());
+        r_x1.extend(wires.a);           // X^{1}...X^{n}
+
+        let r_comm = Polynomial::from_slice(&mut r_x1[..]).commit(
+            n,
+            2*n + NUM_BLINDINGS,
+            n,
+            &srs
         );
 
         // A prover commits polynomial
@@ -86,30 +89,20 @@ impl<E: Engine> Proof<E> {
         // A varifier send to challenge scalar to prover
         let y: E::Fr = transcript.challenge_scalar();
         let y_inv = y.inverse().ok_or(SynthesisError::DivisionByZero)?;
+        let y_first_power = y_inv.pow(&[(2 * n + NUM_BLINDINGS) as u64]);
 
 
         // ------------------------------------------------------
         // zkP_2(y) -> T:
         // ------------------------------------------------------
 
-        // A coefficients vector which can be used in common with polynomials r and r'
-        // associated with powers for X.
-        let mut r_x1 = wires.b;         // X^{-n}...X^{-1}
-        r_x1.extend(wires.c);           // X^{-2n}...X^{-n-1}
-        r_x1.extend(blindings.clone()); // X^{-2n-4}...X^{-2n-1}
-        r_x1.reverse();
-        r_x1.push(E::Fr::zero());
-        r_x1.extend(wires.a);           // X^{1}...X^{n}
-
         // powers: [-2n-4, n]
         let mut r_xy = r_x1.clone();
-
-        let first_power = y_inv.pow(&[(2 * n + NUM_BLINDINGS) as u64]);
 
         // Evaluate the polynomial r(X, Y) at y
         eval_bivar_poly::<E>(
             &mut r_xy,
-            first_power,
+            y_first_power,
             y,
         );
 
@@ -123,17 +116,20 @@ impl<E: Engine> Proof<E> {
 
         // Evaluate the polynomial r'(X, Y) = r(X, Y) + s(X, Y) at y
         let mut r_xy_prime = r_xy.clone();
+        {
+            // extend to have powers [n+1, 2n] for w_i(Y)X^{i+n}
+            r_xy_prime.resize(4 * n + 1 + NUM_BLINDINGS, E::Fr::zero());
+            // negative powers: [-n, -1]
+            s_neg_poly.reverse();
 
-        // extend to have powers [n+1, 2n] for w_i(Y)X^{i+n}
-        r_xy_prime.resize(4 * n + 1 + NUM_BLINDINGS, E::Fr::zero());
-        // negative powers: [-n, -1]
-        s_neg_poly.reverse();
+            let neg_poly_len = s_neg_poly.len();
+            // Add negative powers [-n, -1]
+            add_polynomials::<E>(&mut r_xy_prime[(neg_poly_len + NUM_BLINDINGS)..(2 * n + NUM_BLINDINGS)], &s_neg_poly[..]);
+            s_neg_poly.reverse();
 
-        // Add negative powers [-n, -1]
-        add_polynomials::<E>(&mut r_xy_prime[(n + NUM_BLINDINGS)..(2 * n + NUM_BLINDINGS)], &s_neg_poly[..]);
-
-        // Add positive powers [1, 2n]
-        add_polynomials::<E>(&mut r_xy_prime[(2 * n + 1 + NUM_BLINDINGS)..], &s_pos_poly[..]);
+            // Add positive powers [1, 2n]
+            add_polynomials::<E>(&mut r_xy_prime[(2 * n + 1 + NUM_BLINDINGS)..], &s_pos_poly[..]);
+        }
 
         // Compute t(X, y) = r(X, 1) * r'(X, y)
         let mut t_xy = mul_polynomials::<E>(&r_x1[..], &r_xy_prime[..])?;
@@ -141,15 +137,18 @@ impl<E: Engine> Proof<E> {
         t_xy[4 * n + 2 * NUM_BLINDINGS] = E::Fr::zero(); // -k(y)
 
         // commitment of t(X, y)
-        let t_comm = poly_comm(
-            srs.d,
-            4 * n + 2 * NUM_BLINDINGS,
-            3 * n,
-            srs,
-            // Avoid constant term
-            t_xy[..(4 * n + 2 * NUM_BLINDINGS)].iter()
+        let mut t_comm_vec = t_xy[..(4 * n + 2 * NUM_BLINDINGS)].iter()
                 .chain_ext(t_xy[(4 * n + 2 * NUM_BLINDINGS + 1)..].iter())
-        );
+                .map(|e| *e)
+                .collect::<Vec<_>>();
+
+        let t_comm = Polynomial::from_slice(&mut t_comm_vec[..])
+                .commit(
+                    srs.d,
+                    4 * n + 2 * NUM_BLINDINGS,
+                    3 * n,
+                    srs
+                );
 
         transcript.commit_point(&t_comm);
 
@@ -161,23 +160,43 @@ impl<E: Engine> Proof<E> {
         // A varifier send to challenge scalar to prover
         let z: E::Fr = transcript.challenge_scalar();
         let z_inv = z.inverse().ok_or(SynthesisError::DivisionByZero)?;
-
+        let z_first_power = z_inv.pow(&[(2 * n + NUM_BLINDINGS) as u64]);
 
         // ------------------------------------------------------
         // zkP_3(z) -> (a, W_a, b, W_b, W_t, s, sc):
         // ------------------------------------------------------
 
         // r(X, 1) -> r(z, 1)
-        let r_z1 = eval_univar_poly::<E>(&r_x1, first_power, z);
+        let r_z1 = eval_univar_poly::<E>(&r_x1, z_first_power, z);
         transcript.commit_scalar(&r_z1);
 
         // Ensure: r(X, 1) -> r(yz, 1) = r(z, y)
-        // let r_zy = evaluate_poly(&r_x1, first_power, z*y);
+        // let r_zy = evaluate_poly(&r_x1, z_first_power, z*y);
         // r(X, y) -> r(z, y)
-        let r_zy = eval_univar_poly::<E>(&r_xy, first_power, z);
+        let r_zy = eval_univar_poly::<E>(&r_xy, z_first_power, z);
         transcript.commit_scalar(&r_zy);
 
         let r1: E::Fr = transcript.challenge_scalar();
+
+        // An opening of r(X, 1) at yz
+        let yz_opening = {
+            // r(X, 1) - r(z, y)
+            // substract constant term from r(X, 1)
+            r_x1[2 * n + NUM_BLINDINGS].sub_assign(&r_zy);
+
+            let mut point = y;
+            point.mul_assign(&z);
+
+            poly_comm_opening(
+                2 * n + NUM_BLINDINGS,
+                n,
+                srs,
+                &r_x1,
+                point
+            )
+        };
+
+        assert_eq!(r_x1.len(), 3*n + NUM_BLINDINGS + 1);
 
         // An opening of t(X, y) and r(X, 1) at z
         let z_opening = {
@@ -196,8 +215,8 @@ impl<E: Engine> Proof<E> {
 
             // Evaluate t(X, y) at z
             let t_zy = {
-                let first_power = z_inv.pow(&[(4 * n + 2 * NUM_BLINDINGS) as u64]);
-                eval_univar_poly::<E>(&t_xy, first_power, z)
+                let z4_first_power = z_inv.pow(&[(4 * n + 2 * NUM_BLINDINGS) as u64]);
+                eval_univar_poly::<E>(&t_xy, z4_first_power, z)
             };
 
             // Sub constant term
@@ -209,24 +228,6 @@ impl<E: Engine> Proof<E> {
                 srs,
                 &t_xy,
                 z
-            )
-        };
-
-        // An opening of r(X, 1) at yz
-        let yz_opening = {
-            // r(X, 1) - r(z, y)
-            // substract constant term from r(X, 1)
-            r_x1[2 * n + NUM_BLINDINGS].sub_assign(&r_zy);
-
-            let mut point = y;
-            point.mul_assign(&z);
-
-            poly_comm_opening(
-                2 * n + NUM_BLINDINGS,
-                n,
-                srs,
-                &r_x1,
-                point
             )
         };
 
@@ -333,7 +334,7 @@ impl<E: Engine> SxyAdvice<E> {
 
         // a commitment to s(X, y)
         let s_comm = poly_comm(
-            srs.d, // TODO
+            srs.d,
             n,
             2 * n,
             srs,
@@ -372,7 +373,7 @@ impl<E: Engine> SxyAdvice<E> {
 mod tests {
     use super::*;
     use pairing::bls12_381::{Bls12, Fr};
-    use pairing::PrimeField;
+    use pairing::{PrimeField, CurveAffine, CurveProjective};
     use crate::cs::{Basic, ConstraintSystem, LinearCombination};
     use super::super::verifier::MultiVerifier;
     use rand::{thread_rng};
@@ -385,9 +386,9 @@ mod tests {
         {
             let (a, b, _) = cs.multiply(|| {
                 Ok((
-                    E::Fr::from_str("3").unwrap(),
-                    E::Fr::from_str("4").unwrap(),
-                    E::Fr::from_str("12").unwrap(),
+                    E::Fr::from_str("10").unwrap(),
+                    E::Fr::from_str("20").unwrap(),
+                    E::Fr::from_str("200").unwrap(),
                 ))
             })?;
 
@@ -402,8 +403,8 @@ mod tests {
         let rng = thread_rng();
         let srs = SRS::<Bls12>::new(
             20,
-            Fr::from_str("33").unwrap(),
-            Fr::from_str("44").unwrap(),
+            Fr::from_str("22222").unwrap(),
+            Fr::from_str("33333333").unwrap(),
         );
 
         let proof = Proof::create_proof::<_, Basic>(&SimpleCircuit, &srs).unwrap();
@@ -414,6 +415,55 @@ mod tests {
             batch.add_proof(&proof, &[], |_, _| None);
         }
 
-        // assert!(batch.check_all());
+        assert!(batch.check_all());
+    }
+
+    #[test]
+    fn polynomial_commitment_test() {
+        let srs = SRS::<Bls12>::new(
+            20,
+            Fr::from_str("22222").unwrap(),
+            Fr::from_str("33333333").unwrap(),
+        );
+
+        // x^-4 + x^-3 + x^-2 + x^-1 + x + x^2
+        let mut poly = vec![Fr::one(), Fr::one(), Fr::one(), Fr::one(), Fr::zero(), Fr::one(), Fr::one()];
+        // make commitment to the poly
+        let commitment = poly_comm(2, 4, 2, &srs, poly.iter());
+
+        let point: Fr = Fr::one();
+        let mut tmp = point.inverse().unwrap();
+        tmp.square();
+        let value = eval_univar_poly::<Bls12>(&poly, tmp, point);
+
+        // evaluate f(z)
+        poly[4] = value;
+        poly[4].negate();
+        // f(x) - f(z)
+
+        let opening = poly_comm_opening(4, 2, &srs,  poly.iter(), point);
+
+        // e(W , hα x )e(g^{v} * W{-z} , hα ) = e(F , h^{x^{−d +max}} )
+
+        let alpha_x_precomp = srs.h_pos_x_alpha[1].prepare();
+        let alpha_precomp = srs.h_pos_x_alpha[0].prepare();
+        let mut neg_x_n_minus_d_precomp = srs.h_neg_x[srs.d - 2];
+        neg_x_n_minus_d_precomp.negate();
+        let neg_x_n_minus_d_precomp = neg_x_n_minus_d_precomp.prepare();
+
+        let w = opening.prepare();
+        let mut gv = srs.g_pos_x[0].mul(value.into_repr());
+        let mut z_neg = point;
+        z_neg.negate();
+        let w_minus_z = opening.mul(z_neg.into_repr());
+        gv.add_assign(&w_minus_z);
+
+        let gv = gv.into_affine().prepare();
+
+        assert!(Bls12::final_exponentiation(&Bls12::miller_loop(&[
+                (&w, &alpha_x_precomp),
+                (&gv, &alpha_precomp),
+                (&commitment.prepare(), &neg_x_n_minus_d_precomp),
+            ])).unwrap() == <Bls12 as Engine>::Fqk::one());
     }
 }

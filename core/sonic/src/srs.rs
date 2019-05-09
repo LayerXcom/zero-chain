@@ -2,33 +2,43 @@ use pairing::{Engine, Wnaf, CurveAffine, CurveProjective, Field, PrimeField};
 
 /// Defined in Section 4.3: Structured Reference String
 /// Pre-processing exponents
-#[derive(Clone, Eq, PartialEq)]
+#[derive(Clone, Eq, Debug)]
 pub struct SRS<E: Engine> {
     pub d: usize,
 
+    /// g^{x^{0}}, g^{x^{-1}}, g^{x^{-2}}, ..., g^{x^{-d}}
+    pub g_neg_x: Vec<E::G1Affine>,
     /// g^{x^0}, g^{x^{1}}, g^{x^{2}}, ..., g^{x^{d}}
     pub g_pos_x: Vec<E::G1Affine>,
 
-    /// g^{x^{0}}, g^{x^{-1}}, g^{x^{-2}}, ..., g^{x^{-d}}
-    pub g_neg_x: Vec<E::G1Affine>,
-
+    /// alpha*(g^{x^{-1}}, g^{x^{-2}}, ..., g^{x^{-d}})
+    pub g_neg_x_alpha: Vec<E::G1Affine>,
     /// alpha*(g^{x^{1}}, g^{x^{2}}, ..., g^{x^{d}})
     pub g_pos_x_alpha: Vec<E::G1Affine>,
 
-    /// alpha*(g^{x^{-1}}, g^{x^{-2}}, ..., g^{x^{-d}})
-    pub g_neg_x_alpha: Vec<E::G1Affine>,
-
+    /// h^{x^0}, h^{x^{-1}}, h^{x^{-2}}, ..., h^{x^{-d}}
+    pub h_neg_x: Vec<E::G2Affine>,
     /// h^{x^0}, h^{x^{1}}, h^{x^{2}}, ..., h^{x^{d}}
     pub h_pos_x: Vec<E::G2Affine>,
 
-    /// h^{x^0}, h^{x^{-1}}, h^{x^{-2}}, ..., h^{x^{-d}}
-    pub h_neg_x: Vec<E::G2Affine>,
-
-    /// alpha*(h^{x^0}, h^{x^{1}}, h^{x^{2}}, ..., h^{x^{d}})
-    pub h_pos_x_alpha: Vec<E::G2Affine>,
-
     /// alpha*(h^{x^0}, h^{x^{-1}}, h^{x^{-2}}, ..., h^{x^{-d}})
     pub h_neg_x_alpha: Vec<E::G2Affine>,
+    /// alpha*(h^{x^0}, h^{x^{1}}, h^{x^{2}}, ..., h^{x^{d}})
+    pub h_pos_x_alpha: Vec<E::G2Affine>,
+}
+
+impl<E: Engine> PartialEq for SRS<E> {
+    fn eq(&self, other: &SRS<E>) -> bool {
+        self.d == other.d &&
+        self.g_neg_x == other.g_neg_x &&
+        self.g_pos_x == other.g_pos_x &&
+        self.h_neg_x == other.h_neg_x &&
+        self.h_pos_x == other.h_pos_x &&
+        self.g_neg_x_alpha == other.g_neg_x_alpha &&
+        self.g_pos_x_alpha == other.g_pos_x_alpha &&
+        self.h_neg_x_alpha == other.h_neg_x_alpha &&
+        self.h_pos_x_alpha == other.h_pos_x_alpha
+    }
 }
 
 
@@ -55,7 +65,8 @@ impl<E: Engine> SRS<E> {
             }
             // Normalizes a slice of projective elements so that conversion to affine is cheap
             C::Projective::batch_normalization(&mut v);
-            v.into_iter().map(|e| e.into_affine()).collect()
+            let v = v.into_iter().map(|e| e.into_affine()).collect();
+            v
         }
 
         // Get parameters to construct SRS
@@ -68,15 +79,36 @@ impl<E: Engine> SRS<E> {
 
         SRS {
             d: d,
-            g_pos_x: table(E::Fr::one(), x, d + 1, &mut g1),
-            g_neg_x: table(E::Fr::one(), x_inv, d + 1, &mut g1),
-            g_pos_x_alpha: table(E::Fr::one(), x_alpha, d, &mut g1),
-            g_neg_x_alpha: table(E::Fr::one(), inv_x_alpha, d, &mut g1),
-            h_pos_x: table(E::Fr::one(), x, d + 1, &mut g2),
-            h_neg_x: table(E::Fr::one(), x_inv, d + 1, &mut g2),
-            h_pos_x_alpha: table(E::Fr::one(), x_alpha, d + 1, &mut g2),
-            h_neg_x_alpha: table(E::Fr::one(), inv_x_alpha, d + 1, &mut g2),
-        }
 
+            g_neg_x: table(E::Fr::one(), x_inv, d + 1, &mut g1),
+            g_pos_x: table(E::Fr::one(), x, d + 1, &mut g1),
+
+            g_neg_x_alpha: table(inv_x_alpha, x_inv, d, &mut g1),
+            g_pos_x_alpha: table(x_alpha, x, d, &mut g1),
+
+            h_neg_x: table(E::Fr::one(), x_inv, d + 1, &mut g2),
+            h_pos_x: table(E::Fr::one(), x, d + 1, &mut g2),
+
+            h_neg_x_alpha: table(alpha, x_inv, d + 1, &mut g2),
+            h_pos_x_alpha: table(alpha, x, d + 1, &mut g2),
+        }
+    }
+
+    pub fn dummy(d: usize, _x: E::Fr, _alpha: E::Fr) -> Self {
+        SRS {
+            d: d,
+
+            g_neg_x: vec![E::G1Affine::one(); d + 1],
+            g_pos_x: vec![E::G1Affine::one(); d + 1],
+
+            g_neg_x_alpha: vec![E::G1Affine::one(); d],
+            g_pos_x_alpha: vec![E::G1Affine::one(); d],
+
+            h_neg_x: vec![E::G2Affine::one(); d + 1],
+            h_pos_x: vec![E::G2Affine::one(); d + 1],
+
+            h_neg_x_alpha: vec![E::G2Affine::one(); d + 1],
+            h_pos_x_alpha: vec![E::G2Affine::one(); d + 1],
+        }
     }
 }

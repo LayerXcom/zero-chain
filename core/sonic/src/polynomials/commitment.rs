@@ -1,6 +1,6 @@
 use pairing::{Field, Engine, CurveAffine, CurveProjective, PrimeField};
 use crate::srs::SRS;
-use crate::utils::ChainExt;
+use crate::utils::{ChainExt, multiexp};
 
 /// Commit a polynomial `F`.
 /// F \from g^{\alpha * x^{(d - max)}*f(x)}
@@ -56,8 +56,9 @@ where
         point
     );
 
-    let neg_poly = quotient_poly[..largest_neg_power].iter().rev(); // -n,...,-1
-    let pos_poly = quotient_poly[largest_pos_power..].iter();       // n,...,1,0
+    let neg_poly = quotient_poly[0..largest_neg_power].iter().rev(); // -n,...,-1
+    // let pos_poly = quotient_poly[largest_pos_power..].iter();       // n,...,1,0
+    let pos_poly = quotient_poly[largest_neg_power..].iter();       // n,...,1,0
 
     multiexp(
         srs.g_neg_x[1..(neg_poly.len() + 1)].iter().chain_ext(
@@ -88,50 +89,4 @@ pub fn kate_division<'a, F: Field, I: IntoIterator<Item = &'a F>>(a: I, mut b: F
     }
 
     quotient_poly
-}
-
-pub fn multiexp<
-    'a,
-    G: CurveAffine,
-    IE: IntoIterator<Item = &'a G>,
-    IS: IntoIterator<Item = &'a G::Scalar>,
->(
-    exponent: IE,
-    scalar: IS,
-) -> G::Projective
-where
-    IE::IntoIter: ExactSizeIterator + Clone,
-    IS::IntoIter: ExactSizeIterator,
-{
-    use bellman::multicore::Worker;
-    use bellman::multiexp::{multiexp, FullDensity};
-    use std::sync::Arc;
-    use futures::Future;
-
-    let scalar: Vec<<G::Scalar as PrimeField>::Repr> = scalar
-        .into_iter()
-        .map(|e| e.into_repr())
-        .collect::<Vec<_>>();
-
-    let exponent: Vec<G> = exponent
-        .into_iter()
-        .map(|e| *e)
-        .collect::<Vec<_>>();
-
-    assert_eq!(
-        scalar.len(),
-        exponent.len(),
-        "scalars and exponents must have the same length."
-    );
-
-    let pool = Worker::new();
-
-    let result = multiexp(
-        &pool,
-        (Arc::new(exponent), 0),
-        FullDensity,
-        Arc::new(scalar)
-    ).wait().unwrap();
-
-    result
 }

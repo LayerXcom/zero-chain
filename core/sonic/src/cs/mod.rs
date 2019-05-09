@@ -35,7 +35,7 @@ pub trait ConstraintSystem<E: Engine>: Sized {
 
     fn enforce_zero(&mut self, lc: LinearCombination<E>);
 
-    
+
     fn multiply<F>(&mut self, values: F) -> Result<(Variable, Variable, Variable), SynthesisError>
         where F: FnOnce() -> Result<(E::Fr, E::Fr, E::Fr), SynthesisError>;
 
@@ -205,7 +205,7 @@ impl SynthesisDriver for Basic {
             }
         }
 
-        let mut instance = Synthesizer {
+        let mut instance: Synthesizer<E, B> = Synthesizer {
             backend: backend,
             current_variable: None,
             q: 0,

@@ -6,7 +6,7 @@
 
 use std::marker::PhantomData;
 use pairing::{Engine, CurveProjective, Field};
-use bellman::{ConstraintSystem, Variable, Index, SynthesisError, LinearCombination};
+use bellman::{ConstraintSystem, Variable, Index, SynthesisError, LinearCombination, Circuit};
 use crate::cs::{
     ConstraintSystem as SonicCS,
     Variable as SonicVar,
@@ -151,5 +151,21 @@ impl <'a, E: Engine, CS: SonicCS<E> + 'a> ConstraintSystem<E>
 
     fn get_root(&mut self) -> &mut Self::Root {
         self
+    }
+}
+
+#[derive(Clone)]
+pub struct AdaptorCircuit<T>(pub T);
+
+impl<'a, E: Engine, C: Circuit<E> + Clone> SonicCircuit<E> for AdaptorCircuit<C> {
+    fn synthesize<CS: SonicCS<E>>(&self, cs: &mut CS) -> Result<(), SynthesisError> {
+        let mut adaptor = Adaptor {
+            cs,
+            _maker: PhantomData,
+        };
+
+        self.0.clone().synthesize(&mut adaptor)?;
+
+        Ok(())
     }
 }
