@@ -1,4 +1,4 @@
-use pairing::{Engine, Field};
+use pairing::{Engine, Field, PrimeField, CurveAffine};
 // use bellman::multicore::Worker;
 use crossbeam::channel::unbounded;
 
@@ -167,4 +167,51 @@ pub fn mul_add_poly<E: Engine>(a: &mut [E::Fr], b: &[E::Fr], c: E::Fr) {
             });
         }
     });
+}
+
+
+pub fn multiexp<
+    'a,
+    G: CurveAffine,
+    IE: IntoIterator<Item = &'a G>,
+    IS: IntoIterator<Item = &'a G::Scalar>,
+>(
+    exponent: IE,
+    scalar: IS,
+) -> G::Projective
+where
+    IE::IntoIter: ExactSizeIterator + Clone,
+    IS::IntoIter: ExactSizeIterator,
+{
+    use bellman::multicore::Worker;
+    use bellman::multiexp::{multiexp, FullDensity};
+    use std::sync::Arc;
+    use futures::Future;
+
+    let scalar: Vec<<G::Scalar as PrimeField>::Repr> = scalar
+        .into_iter()
+        .map(|e| e.into_repr())
+        .collect::<Vec<_>>();
+
+    let exponent: Vec<G> = exponent
+        .into_iter()
+        .map(|e| *e)
+        .collect::<Vec<_>>();
+
+    assert_eq!(
+        scalar.len(),
+        exponent.len(),
+        "scalars and exponents must have the same length."
+    );
+
+    let pool = Worker::new();
+
+    let result = multiexp(
+        &pool,
+        (Arc::new(exponent), 0),
+        FullDensity,
+        Arc::new(scalar)
+    ).wait().unwrap();
+
+    result
 }
