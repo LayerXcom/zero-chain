@@ -6,7 +6,7 @@ use crate::cs::{SynthesisDriver, Circuit, Backend, Variable, Coeff};
 use crate::srs::SRS;
 use crate::transcript::ProvingTranscript;
 use crate::polynomials::{Polynomial, poly_comm, poly_comm_opening, SxEval, add_polynomials, mul_polynomials};
-use crate::utils::{ChainExt, eval_bivar_poly, eval_univar_poly, mul_add_poly};
+use crate::utils::*;
 
 pub const NUM_BLINDINGS: usize = 4;
 
