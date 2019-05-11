@@ -14,13 +14,16 @@ impl<E: Engine> WellformednessArg<E> {
 
     pub fn new(polys: Vec<Vec<E::Fr>>) -> Self {
         assert!(!polys.is_empty());
+        let len_poly = polys[0].len();
+
+        // Ensure all of the polynomials have the same degree.
+        polys.iter().all(|p| p.len() == len_poly);
 
         WellformednessArg(polys)
     }
 
     pub fn commit(&self, srs: &SRS<E>) -> Vec<E::G1Affine> {
         let mut res = vec![];
-
         let n = self.0[0].len();
 
         for poly in self.0.iter() {
@@ -36,7 +39,7 @@ impl<E: Engine> WellformednessArg<E> {
     }
 
     /// The prover sends a well-formedness proof to the verifier.
-    pub fn prove(&self, challenges: Vec<E::Fr>, srs: &SRS<E>) -> WellformednessProof<E> {
+    pub fn prove(&self, challenges: &[E::Fr], srs: &SRS<E>) -> WellformednessProof<E> {
         let m = self.len();
         let n = self.0[0].len();
         let d = srs.d;
@@ -86,8 +89,8 @@ impl<E: Engine> WellformednessProof<E> {
     pub fn verify(
         &self,
         n: usize,
-        challenges: &Vec<E::Fr>,
-        commitments: &Vec<E::G1Affine>,
+        challenges: &[E::Fr],
+        commitments: &[E::G1Affine],
         srs: &SRS<E>
     ) -> bool
     {
@@ -105,17 +108,17 @@ impl<E: Engine> WellformednessProof<E> {
         ).into_affine();
         let alpha_f_prep = alpha_f.prepare();
 
-        let valid_1 = E::final_exponentiation(&E::miller_loop(&[
+        let is_valid_l = E::final_exponentiation(&E::miller_loop(&[
             (&alpha_f_prep, &h_prep),
             (&self.l.prepare(), &alpha_x_d_prep)
         ])).unwrap() == E::Fqk::one();
 
-        let valid_2 = E::final_exponentiation(&E::miller_loop(&[
+        let is_valid_r = E::final_exponentiation(&E::miller_loop(&[
             (&alpha_f_prep, &h_prep),
             (&self.r.prepare(), &alpha_x_n_minus_d_prep)
         ])).unwrap() == E::Fqk::one();
 
-        valid_1 && valid_2
+        is_valid_l && is_valid_r
     }
 }
 
@@ -140,7 +143,7 @@ mod tests {
         let challenges = (0..1).map(|_| Fr::rand(rng)).collect::<Vec<_>>();
 
         let commitments = arg.commit(&srs);
-        let proof = arg.prove(challenges.clone(), &srs);
+        let proof = arg.prove(&challenges[..], &srs);
         let valid = proof.verify(n, &challenges, &commitments, &srs);
 
         assert!(valid);
@@ -160,7 +163,7 @@ mod tests {
         let challenges = (0..3).map(|_| Fr::rand(rng)).collect::<Vec<_>>();
 
         let commitments = arg.commit(&srs);
-        let proof = arg.prove(challenges.clone(), &srs);
+        let proof = arg.prove(&challenges[..], &srs);
         let valid = proof.verify(n, &challenges, &commitments, &srs);
 
         assert!(valid);
@@ -183,7 +186,7 @@ mod tests {
         let arg_2 = WellformednessArg::new(vec![coeffs_2; 3]);
         let challenges_2 = (0..3).map(|_| Fr::rand(rng)).collect::<Vec<_>>();
 
-        let proof = arg_2.prove(challenges_2.clone(), &srs);
+        let proof = arg_2.prove(&challenges_2[..], &srs);
         let valid = proof.verify(n, &challenges_2, &commitments_1, &srs);
 
         assert!(!valid);
