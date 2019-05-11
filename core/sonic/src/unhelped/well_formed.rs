@@ -7,13 +7,6 @@ use crate::utils::*;
 #[derive(Clone)]
 pub struct WellformednessArg<E: Engine> (Vec<Vec<E::Fr>>);
 
-/// A proof of Well-formedness Argument
-#[derive(Clone)]
-pub struct WellformednessProof<E: Engine> {
-    l: E::G1Affine,
-    r: E::G1Affine,
-}
-
 impl<E: Engine> WellformednessArg<E> {
     pub fn len(&self) -> usize {
         self.0.len()
@@ -77,15 +70,24 @@ impl<E: Engine> WellformednessArg<E> {
             r,
         }
     }
+}
 
+/// A proof of Well-formedness Argument
+#[derive(Clone)]
+pub struct WellformednessProof<E: Engine> {
+    l: E::G1Affine,
+    r: E::G1Affine,
+}
+
+impl<E: Engine> WellformednessProof<E> {
     /// The verifier can check with the pairings
     /// e(g^{alpha * f(x)}, h) = e(proof.l, h^{alpha * x^{d}})
     /// e(g^{alpha * f(x)}, h) = e(proof.r, h^{alpha * x^{n-d}})
     pub fn verify(
+        &self,
         n: usize,
         challenges: &Vec<E::Fr>,
         commitments: &Vec<E::G1Affine>,
-        proof: &WellformednessProof<E>,
         srs: &SRS<E>
     ) -> bool
     {
@@ -105,12 +107,12 @@ impl<E: Engine> WellformednessArg<E> {
 
         let valid_1 = E::final_exponentiation(&E::miller_loop(&[
             (&alpha_f_prep, &h_prep),
-            (&proof.l.prepare(), &alpha_x_d_prep)
+            (&self.l.prepare(), &alpha_x_d_prep)
         ])).unwrap() == E::Fqk::one();
 
         let valid_2 = E::final_exponentiation(&E::miller_loop(&[
             (&alpha_f_prep, &h_prep),
-            (&proof.r.prepare(), &alpha_x_n_minus_d_prep)
+            (&self.r.prepare(), &alpha_x_n_minus_d_prep)
         ])).unwrap() == E::Fqk::one();
 
         valid_1 && valid_2
@@ -139,7 +141,7 @@ mod tests {
 
         let commitments = arg.commit(&srs);
         let proof = arg.prove(challenges.clone(), &srs);
-        let valid = WellformednessArg::verify(n, &challenges, &commitments, &proof, &srs);
+        let valid = proof.verify(n, &challenges, &commitments, &srs);
 
         assert!(valid);
     }
@@ -159,7 +161,7 @@ mod tests {
 
         let commitments = arg.commit(&srs);
         let proof = arg.prove(challenges.clone(), &srs);
-        let valid = WellformednessArg::verify(n, &challenges, &commitments, &proof, &srs);
+        let valid = proof.verify(n, &challenges, &commitments, &srs);
 
         assert!(valid);
     }
@@ -182,7 +184,7 @@ mod tests {
         let challenges_2 = (0..3).map(|_| Fr::rand(rng)).collect::<Vec<_>>();
 
         let proof = arg_2.prove(challenges_2.clone(), &srs);
-        let valid = WellformednessArg::verify(n, &challenges_2, &commitments_1, &proof, &srs);
+        let valid = proof.verify(n, &challenges_2, &commitments_1, &srs);
 
         assert!(!valid);
     }
