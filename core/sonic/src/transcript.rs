@@ -1,13 +1,13 @@
 use merlin::Transcript;
 use pairing::{CurveAffine, PrimeField, Field, PrimeFieldRepr};
-use crate::traits::Commitment;
+use crate::traits::{Commitment, PolyEngine};
 
 /// In this trait, we provide an interface for Fiat-Shamir transformation
 /// which takes an interactive argument and replaces the verifier challenges.
 pub trait ProvingTranscript {
     /// Extend the transcript with an affine representation of an elliptic curve point
     /// guaranteed to be in the correct prime order subgroup.
-    fn commit_point<C: Commitment>(&mut self, point: &C);
+    fn commit_point<PE: PolyEngine>(&mut self, point: &PE::Commitment);
 
     /// Extend the transcript with scalar
     fn commit_scalar<F: PrimeField>(&mut self, scalar: &F);
@@ -18,7 +18,7 @@ pub trait ProvingTranscript {
 
 /// The transcript trait is compatible with `merlin::Transcript`.
 impl ProvingTranscript for Transcript {
-    fn commit_point<CM: Commitment>(&mut self, point: &CM) {
+    fn commit_point<PE: PolyEngine>(&mut self, point: &PE::Commitment) {
         self.commit_bytes(b"point", point.into_bytes());
     }
 

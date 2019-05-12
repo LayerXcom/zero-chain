@@ -16,9 +16,9 @@
 use pairing::{Engine, CurveAffine, CurveProjective, Field};
 use crate::srs::SRS;
 use crate::utils::multiexp;
+use crate::traits::{PolyEngine, Commitment};
 
-#[derive(Clone)]
-pub struct Batch<E: Engine> {
+pub struct Batch<E: Engine, PE: PolyEngine> {
     /// Context of openings of polynomial commitment
     alpha_x: Vec<(E::G1Affine, E::Fr)>,
     alpha_x_precomp: <E::G2Affine as CurveAffine>::Prepared,
@@ -28,17 +28,18 @@ pub struct Batch<E: Engine> {
     alpha_precomp: <E::G2Affine as CurveAffine>::Prepared,
 
     /// Context of polynomial commitment and randomness
-    neg_h: Vec<(E::G1Affine, E::Fr)>,
+    neg_h: Vec<(PE::Commitment, E::Fr)>,
     neg_h_precomp: <E::G2Affine as CurveAffine>::Prepared,
 
-    neg_x_n_minus_d: Vec<(E::G1Affine, E::Fr)>,
+    neg_x_n_minus_d: Vec<(PE::Commitment, E::Fr)>,
     neg_x_n_minus_d_precomp: <E::G2Affine as CurveAffine>::Prepared,
 
     value: E::Fr,
     g: E::G1Affine,
 }
 
-impl<E: Engine> Batch<E> {
+impl<E: Engine, PE: PolyEngine<Pairing = E>> Batch<E, PE>
+{
     pub fn new(srs: &SRS<E>, n: usize) -> Self {
         Batch {
             alpha_x: vec![],
@@ -70,11 +71,11 @@ impl<E: Engine> Batch<E> {
         }
     }
 
-    pub fn add_comm(&mut self, comm: E::G1Affine, random: E::Fr) {
+    pub fn add_comm(&mut self, comm: PE::Commitment, random: E::Fr) {
         self.neg_h.push((comm, random));
     }
 
-    pub fn add_comm_max_n(&mut self, comm: E::G1Affine, random: E::Fr) {
+    pub fn add_comm_max_n(&mut self, comm: PE::Commitment, random: E::Fr) {
         self.neg_x_n_minus_d.push((comm, random));
     }
 

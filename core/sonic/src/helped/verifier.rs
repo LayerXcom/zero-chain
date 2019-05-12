@@ -6,14 +6,14 @@ use crate::cs::{Circuit, Backend, SynthesisDriver};
 use crate::srs::SRS;
 use crate::transcript::ProvingTranscript;
 use crate::polynomials::SxEval;
+use crate::traits::{PolyEngine, Commitment};
 use super::prover::{Proof, SxyAdvice};
 use super::helper::Batch;
 use std::marker::PhantomData;
 
-#[derive(Clone)]
-pub struct MultiVerifier<E: Engine, C: Circuit<E>, S: SynthesisDriver, R: Rng> {
+pub struct MultiVerifier<E: Engine, C: Circuit<E>, S: SynthesisDriver, R: Rng, PE: PolyEngine> {
     circuit: C,
-    pub(crate) batch: Batch<E>,
+    pub(crate) batch: Batch<E, PE>,
     k_map: Vec<usize>,
     n: usize,
     q: usize,
@@ -21,7 +21,7 @@ pub struct MultiVerifier<E: Engine, C: Circuit<E>, S: SynthesisDriver, R: Rng> {
     _marker: PhantomData<(E, S)>,
 }
 
-impl<E: Engine, C: Circuit<E>, S: SynthesisDriver, R: Rng> MultiVerifier<E, C, S, R> {
+impl<E: Engine, C: Circuit<E>, S: SynthesisDriver, R: Rng, PE: PolyEngine<Pairing = E>> MultiVerifier<E, C, S, R, PE> {
     pub fn new(circuit: C, srs: &SRS<E>, rng: R) -> Result<Self, SynthesisError> {
         struct Preprocess<E: Engine> {
             k_map: Vec<usize>,
@@ -64,7 +64,7 @@ impl<E: Engine, C: Circuit<E>, S: SynthesisDriver, R: Rng> MultiVerifier<E, C, S
         })
     }
 
-    pub fn add_proof<F>(&mut self, proof: &Proof<E>, inputs: &[E::Fr], s_xy: F)
+    pub fn add_proof<F>(&mut self, proof: &Proof<E, PE>, inputs: &[E::Fr], s_xy: F)
     where
         F: FnOnce(E::Fr, E::Fr) -> Option<E::Fr>,
     {
@@ -136,9 +136,9 @@ impl<E: Engine, C: Circuit<E>, S: SynthesisDriver, R: Rng> MultiVerifier<E, C, S
 
     pub fn add_proof_with_advice(
         &mut self,
-        proof: &Proof<E>,
+        proof: &Proof<E, PE>,
         inputs: &[E::Fr],
-        advice: &SxyAdvice<E>,
+        advice: &SxyAdvice<E, PE>,
     )
     {
         let mut z = None;
@@ -186,8 +186,8 @@ impl<E: Engine, C: Circuit<E>, S: SynthesisDriver, R: Rng> MultiVerifier<E, C, S
     }
 }
 
-pub fn verify_a_proof<'a, E: Engine>(
-    proof: Proof<E>,
+pub fn verify_a_proof<'a, E: Engine, PE: PolyEngine>(
+    proof: Proof<E, PE>,
     public_inputs: &[E::Fr],
 ) -> Result<bool, SynthesisError>
 {
@@ -195,14 +195,14 @@ pub fn verify_a_proof<'a, E: Engine>(
     unimplemented!();
 }
 
-pub fn verify_proofs<E: Engine, C: Circuit<E>, S: SynthesisDriver, R: Rng>(
-    proofs: &[Proof<E>],
+pub fn verify_proofs<E: Engine, C: Circuit<E>, S: SynthesisDriver, R: Rng, PE: PolyEngine<Pairing = E>>(
+    proofs: &[Proof<E, PE>],
     inputs: &[Vec<E::Fr>],
     circuit: C,
     rng: R,
     srs: &SRS<E>,
 ) -> Result<bool, SynthesisError> {
-    let mut verifier = MultiVerifier::<E, C, S, R>::new(circuit, srs, rng)?;
+    let mut verifier = MultiVerifier::<E, C, S, R, PE>::new(circuit, srs, rng)?;
     // minus one because of the inputize ONE
     let expected_inputs_size = verifier.get_k_map().len() - 1;
 

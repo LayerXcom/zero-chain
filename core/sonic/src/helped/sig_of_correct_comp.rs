@@ -10,13 +10,15 @@ use crate::cs::{SynthesisDriver, Circuit};
 use crate::srs::SRS;
 use crate::transcript::ProvingTranscript;
 use crate::polynomials::{SyEval, SxEval, poly_comm, poly_comm_opening};
-use crate::utils::{ChainExt, eval_univar_poly, mul_add_poly};
+use crate::utils::*;
+use crate::traits::{PolyEngine, Commitment};
 use super::prover::{Proof, SxyAdvice};
 
+
 #[derive(Clone)]
-pub struct Aggregate<E: Engine, CM: Commitment<Point = E::G1Affine>> {
+pub struct Aggregate<E: Engine, PE: PolyEngine> {
     /// Commitment to s(z, Y)
-    pub c_comm: CM,
+    pub c_comm: PE::Commitment,
 
     pub s_opening: E::G1Affine,
 
@@ -26,10 +28,10 @@ pub struct Aggregate<E: Engine, CM: Commitment<Point = E::G1Affine>> {
 
 }
 
-impl<E: Engine> Aggregate<E> {
+impl<E: Engine, PE: PolyEngine> Aggregate<E, PE> {
     pub fn create_aggregate<C: Circuit<E>, S: SynthesisDriver>(
         circuit: &C,
-        inputs: &[(Proof<E, CM>, SxyAdvice<E>)],
+        inputs: &[(Proof<E, PE>, SxyAdvice<E, PE>)],
         srs: &SRS<E>,
         n: usize,
         q: usize,

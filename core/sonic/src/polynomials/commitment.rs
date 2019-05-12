@@ -6,7 +6,7 @@ use crate::traits::{Commitment, PolyEngine};
 /// Commit a polynomial `F`.
 /// F \from g^{\alpha * x^{(d - max)}*f(x)}
 /// See: Section 5 SYSTEM OF CONSTRAINTS
-pub fn poly_comm<'a, E: Engine, I: IntoIterator<Item = &'a E::Fr>, PE: PolyEngine>(
+pub fn poly_comm<'a, E: Engine, I: IntoIterator<Item = &'a E::Fr>, PE: PolyEngine<Pairing = E>>(
         max: usize,                 // a maximum degree
         largest_neg_power: usize,   // largest negative power
         largest_pos_power: usize,   // largest positive power

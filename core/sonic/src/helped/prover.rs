@@ -7,17 +7,17 @@ use crate::srs::SRS;
 use crate::transcript::ProvingTranscript;
 use crate::polynomials::{Polynomial, poly_comm, poly_comm_opening, SxEval, add_polynomials, mul_polynomials};
 use crate::utils::*;
-use crate::traits::Commitment;
+use crate::traits::{Commitment, PolyEngine};
 
 pub const NUM_BLINDINGS: usize = 4;
 
 #[derive(Clone, Debug, Eq, PartialEq)]
-pub struct Proof<E: Engine, CM: Commitment<Point = E::G1Affine>> {
+pub struct Proof<E: Engine, PE: PolyEngine> {
     /// A commitment of `r(X, 1)`
-    pub r_comm: CM,
+    pub r_comm: PE::Commitment,
 
     /// A commitment of `t(X, y)`. `y` represents a random challenge from the verifier.
-    pub t_comm: CM,
+    pub t_comm: PE::Commitment,
 
     /// An evaluation `r(z, 1)`. `z` represents a random challenge from the verifier.
     pub r_z1: E::Fr,
@@ -32,7 +32,7 @@ pub struct Proof<E: Engine, CM: Commitment<Point = E::G1Affine>> {
     pub yz_opening: E::G1Affine,
 }
 
-impl<E: Engine, CM: Commitment<Point = E::G1Affine>> Proof<E, CM> {
+impl<E: Engine, PE: PolyEngine<Pairing = E>> Proof<E, PE> {
     pub fn create_proof<C: Circuit<E>, S: SynthesisDriver>(
         circuit: &C,
         srs: &SRS<E>
@@ -72,7 +72,7 @@ impl<E: Engine, CM: Commitment<Point = E::G1Affine>> Proof<E, CM> {
         r_x1.push(E::Fr::zero());
         r_x1.extend(wires.a);           // X^{1}...X^{n}
 
-        let r_comm = Polynomial::from_slice(&mut r_x1[..]).commit::<CM>(
+        let r_comm = Polynomial::from_slice(&mut r_x1[..]).commit::<PE>(
             n,
             2*n + NUM_BLINDINGS,
             n,
@@ -144,7 +144,7 @@ impl<E: Engine, CM: Commitment<Point = E::G1Affine>> Proof<E, CM> {
                 .collect::<Vec<_>>();
 
         let t_comm = Polynomial::from_slice(&mut t_comm_vec[..])
-                .commit::<CM>(
+                .commit::<PE>(
                     srs.d,
                     4 * n + 2 * NUM_BLINDINGS,
                     3 * n,
@@ -297,16 +297,16 @@ impl<'a, E: Engine> Backend<E> for &'a mut Wires<E> {
 }
 
 
-pub struct SxyAdvice<E: Engine> {
-    pub s_comm: E::G1Affine, // TODO: commitment type
+pub struct SxyAdvice<E: Engine, PE: PolyEngine> {
+    pub s_comm: PE::Commitment,
     pub s_zy_opening: E::G1Affine, // TODO: W opening type
     pub s_zy: E::Fr, // s(z, y)
 }
 
-impl<E: Engine> SxyAdvice<E> {
+impl<E: Engine, PE: PolyEngine> SxyAdvice<E, PE> {
     pub fn create_advice<C: Circuit<E>, S: SynthesisDriver> (
         circuit: &C,
-        proof: &Proof<E>,
+        proof: &Proof<E, PE>,
         srs: &SRS<E>,
         n: usize,
     ) -> Result<Self, SynthesisError>
@@ -317,10 +317,10 @@ impl<E: Engine> SxyAdvice<E> {
         {
             let mut transcript = Transcript::new(&[]);
 
-            transcript.commit_point::<CM>(&proof.r_comm);
+            transcript.commit_point::<PE>(&proof.r_comm);
             y = transcript.challenge_scalar();
 
-            transcript.commit_point::<CM>(&proof.t_comm);
+            transcript.commit_point::<PE>(&proof.t_comm);
             z = transcript.challenge_scalar();
         }
 

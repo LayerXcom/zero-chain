@@ -1,8 +1,9 @@
 use pairing::{CurveAffine, Engine};
 
 pub trait PolyEngine {
-    type Commitment: Commitment<Point = Engine::G1Affine>;
+    type Commitment: Commitment<Point = <Self::Pairing as Engine>::G1Affine>;
     type Opening: Opening;
+    type Pairing: Engine;
 }
 
 pub trait Commitment {

@@ -108,7 +108,7 @@ impl<'a, E: Engine> Polynomial<'a, E> {
     /// Commit a polynomial `F`.
     /// F \from g^{\alpha * x^{(d - max)}*f(x)}
     /// See: Section 5 SYSTEM OF CONSTRAINTS
-    pub fn commit<PE: PolyEngine>(
+    pub fn commit<PE: PolyEngine<Pairing = E>>(
         self,
         max: usize,                 // a maximum degree
         largest_neg_power: usize,   // largest negative power
