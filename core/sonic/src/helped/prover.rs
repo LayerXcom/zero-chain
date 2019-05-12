@@ -378,6 +378,7 @@ mod tests {
     use crate::cs::{Basic, ConstraintSystem, LinearCombination};
     use super::super::verifier::MultiVerifier;
     use rand::{thread_rng};
+    use crate::polynomials::{PolyComm, Polynomial};
 
     struct SimpleCircuit;
 
@@ -408,9 +409,9 @@ mod tests {
             Fr::from_str("33333333").unwrap(),
         );
 
-        let proof = Proof::create_proof::<_, Basic>(&SimpleCircuit, &srs).unwrap();
+        let proof: Proof<Bls12, Polynomial<Bls12>> = Proof::create_proof::<_, Basic>(&SimpleCircuit, &srs).unwrap();
 
-        let mut batch = MultiVerifier::<Bls12, _, Basic, _, _>::new(SimpleCircuit, &srs, rng).unwrap();
+        let mut batch = MultiVerifier::<Bls12, _, Basic, _>::new(SimpleCircuit, &srs, rng).unwrap();
 
         for _ in 0..1 {
             batch.add_proof(&proof, &[], |_, _| None);
@@ -430,7 +431,7 @@ mod tests {
         // x^-4 + x^-3 + x^-2 + x^-1 + x + x^2
         let mut poly = vec![Fr::one(), Fr::one(), Fr::one(), Fr::one(), Fr::zero(), Fr::one(), Fr::one()];
         // make commitment to the poly
-        let commitment = poly_comm(2, 4, 2, &srs, poly.iter());
+        let commitment = poly_comm::<Bls12, _, Polynomial<Bls12>>(2, 4, 2, &srs, poly.iter()).into_point();
 
         let point: Fr = Fr::one();
         let mut tmp = point.inverse().unwrap();

@@ -11,11 +11,17 @@ pub use commitment::*;
 pub use s_eval::*;
 use crate::srs::SRS;
 use crate::utils::ChainExt;
-use crate::traits::{Commitment, PolyEngine};
+use crate::traits::*;
 use std::borrow::Borrow;
 use std::ops::{Add, Mul, Index, IndexMut, Range};
 
 pub struct Polynomial<'a, E: Engine>(&'a mut [E::Fr]);
+
+impl<'a, E: Engine> PolyEngine for Polynomial<'a, E> {
+    type Commitment = PolyComm<E>;
+    type Opening = PolyCommOpening<E>;
+    type Pairing = E;
+}
 
 impl<'a, E: Engine> IntoIterator for Polynomial<'a, E> {
     type Item = <&'a mut [E::Fr] as IntoIterator>::Item;
@@ -283,9 +289,30 @@ impl<'a, E: Engine> Polynomial<'a, E> {
     }
 }
 
-pub struct PolyComm<E: Engine>(E::G1Affine);
+#[derive(Clone)]
+pub struct PolyComm<E: Engine>(pub E::G1Affine);
+
+impl<E: Engine> Commitment for PolyComm<E> {
+    type Point = E::G1Affine;
+
+    fn from_point(point: &Self::Point) -> Self {
+        PolyComm(*point)
+    }
+
+    fn into_point(&self) -> Self::Point {
+        self.0
+    }
+
+    fn into_bytes(&self) -> Vec<u8> { // TODO
+        self.0.into_compressed().as_ref().to_vec()
+    }
+}
+
+impl<E: Engine> Copy for PolyComm<E> {}
 
 pub struct PolyCommOpening<E: Engine>(E::G1Affine);
+
+impl<E: Engine> Opening for PolyCommOpening<E> {}
 
 pub fn multiexp<
     'a,
@@ -331,6 +358,7 @@ where
 
     result
 }
+
 pub fn multiexp_mut<
     'a,
     G: CurveAffine,

@@ -19,7 +19,7 @@ pub trait ProvingTranscript {
 /// The transcript trait is compatible with `merlin::Transcript`.
 impl ProvingTranscript for Transcript {
     fn commit_point<PE: PolyEngine>(&mut self, point: &PE::Commitment) {
-        self.commit_bytes(b"point", point.into_bytes());
+        self.commit_bytes(b"point", &point.into_bytes()[..]);
     }
 
     fn commit_scalar<F: PrimeField>(&mut self, scalar: &F) {
