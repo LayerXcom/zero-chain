@@ -5,11 +5,20 @@ use crate::utils::*;
 
 // Nested vec because of \sum\limits_{j=1}^M, for now.
 #[derive(Clone)]
-pub struct WellformednessArg<E: Engine> (Vec<Vec<E::Fr>>);
+pub struct WellformedArg<E: Engine>(Vec<Vec<E::Fr>>);
 
-impl<E: Engine> WellformednessArg<E> {
+#[derive(Clone)]
+pub struct WellformedComm<E: Engine>(Vec<E::G1Affine>);
+
+impl<E: Engine> WellformedArg<E> {
+    /// The number of polynomials for well-formed argument
     pub fn len(&self) -> usize {
         self.0.len()
+    }
+
+    /// The degree of each polynomials for well-formed argument
+    pub fn len_poly(&self) -> usize {
+        self.0[0].len()
     }
 
     pub fn new(polys: Vec<Vec<E::Fr>>) -> Self {
@@ -17,14 +26,14 @@ impl<E: Engine> WellformednessArg<E> {
         let len_poly = polys[0].len();
 
         // Ensure all of the polynomials have the same degree.
-        polys.iter().all(|p| p.len() == len_poly);
+        assert!(polys.iter().all(|p| p.len() == len_poly));
 
-        WellformednessArg(polys)
+        WellformedArg(polys)
     }
 
-    pub fn commit(&self, srs: &SRS<E>) -> Vec<E::G1Affine> {
+    pub fn commit(&self, srs: &SRS<E>) -> WellformedComm<E> {
         let mut res = vec![];
-        let n = self.0[0].len();
+        let n = self.len_poly();
 
         for poly in self.0.iter() {
             let c = multiexp(
@@ -35,13 +44,13 @@ impl<E: Engine> WellformednessArg<E> {
             res.push(c);
         }
 
-        res
+        WellformedComm::<E>(res)
     }
 
     /// The prover sends a well-formedness proof to the verifier.
-    pub fn prove(&self, challenges: &[E::Fr], srs: &SRS<E>) -> WellformednessProof<E> {
+    pub fn prove(&self, challenges: &[E::Fr], srs: &SRS<E>) -> WellformedProof<E> {
         let m = self.len();
-        let n = self.0[0].len();
+        let n = self.len_poly();
         let d = srs.d;
 
         assert_eq!(m, challenges.len());
@@ -54,7 +63,7 @@ impl<E: Engine> WellformednessArg<E> {
             mul_add_poly::<E>(&mut acc[..], &self.0[j][..], challenges[j])
         }
 
-        // g^{x^{-d} * f(x)} where f(x) is well-formed, meaning dont't have negative powers and constant term.
+        // g^{x^{-d} * f(x)} where f(x) is well-formed, meaning don't have terms of negative degree and constant term.
         // so larget negative power is -(d - 1), smallest negative power is -(d-n)
         let l = multiexp(
             srs.g_neg_x[(d - n)..d].iter().rev(),
@@ -68,7 +77,7 @@ impl<E: Engine> WellformednessArg<E> {
             acc.iter()
         ).into_affine();
 
-        WellformednessProof {
+        WellformedProof {
             l,
             r,
         }
@@ -77,12 +86,12 @@ impl<E: Engine> WellformednessArg<E> {
 
 /// A proof of Well-formedness Argument
 #[derive(Clone)]
-pub struct WellformednessProof<E: Engine> {
+pub struct WellformedProof<E: Engine> {
     l: E::G1Affine,
     r: E::G1Affine,
 }
 
-impl<E: Engine> WellformednessProof<E> {
+impl<E: Engine> WellformedProof<E> {
     /// The verifier can check with the pairings
     /// e(g^{alpha * f(x)}, h) = e(proof.l, h^{alpha * x^{d}})
     /// e(g^{alpha * f(x)}, h) = e(proof.r, h^{alpha * x^{n-d}})
@@ -90,7 +99,7 @@ impl<E: Engine> WellformednessProof<E> {
         &self,
         n: usize,
         challenges: &[E::Fr],
-        commitments: &[E::G1Affine],
+        commitments: &WellformedComm<E>,
         srs: &SRS<E>
     ) -> bool
     {
@@ -103,7 +112,7 @@ impl<E: Engine> WellformednessProof<E> {
         let h_prep = h.prepare();
 
         let alpha_f = multiexp(
-            commitments.iter(),
+            commitments.0.iter(),
             challenges.iter()
         ).into_affine();
         let alpha_f_prep = alpha_f.prepare();
@@ -139,7 +148,7 @@ mod tests {
         let rng = &mut XorShiftRng::from_seed([0x5dbe6259, 0x8d313d76, 0x3237db17, 0xe5bc0654]);
         let coeffs = (0..n).map(|_| Fr::rand(rng)).collect::<Vec<_>>();
 
-        let arg = WellformednessArg::new(vec![coeffs]);
+        let arg = WellformedArg::new(vec![coeffs]);
         let challenges = (0..1).map(|_| Fr::rand(rng)).collect::<Vec<_>>();
 
         let commitments = arg.commit(&srs);
@@ -159,7 +168,7 @@ mod tests {
         let rng = &mut XorShiftRng::from_seed([0x5dbe6259, 0x8d313d76, 0x3237db17, 0xe5bc0654]);
         let coeffs = (0..n).map(|_| Fr::rand(rng)).collect::<Vec<_>>();
 
-        let arg = WellformednessArg::new(vec![coeffs; 3]);
+        let arg = WellformedArg::new(vec![coeffs; 3]);
         let challenges = (0..3).map(|_| Fr::rand(rng)).collect::<Vec<_>>();
 
         let commitments = arg.commit(&srs);
@@ -179,11 +188,11 @@ mod tests {
         let rng = &mut XorShiftRng::from_seed([0x5dbe6259, 0x8d313d76, 0x3237db17, 0xe5bc0654]);
         let coeffs_1 = (0..n).map(|_| Fr::rand(rng)).collect::<Vec<_>>();
 
-        let arg_1 = WellformednessArg::new(vec![coeffs_1; 3]);
+        let arg_1 = WellformedArg::new(vec![coeffs_1; 3]);
         let commitments_1 = arg_1.commit(&srs);
 
         let coeffs_2 = (0..n).map(|_| Fr::rand(rng)).collect::<Vec<_>>();
-        let arg_2 = WellformednessArg::new(vec![coeffs_2; 3]);
+        let arg_2 = WellformedArg::new(vec![coeffs_2; 3]);
         let challenges_2 = (0..3).map(|_| Fr::rand(rng)).collect::<Vec<_>>();
 
         let proof = arg_2.prove(&challenges_2[..], &srs);

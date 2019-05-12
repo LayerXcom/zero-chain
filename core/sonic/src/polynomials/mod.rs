@@ -11,7 +11,7 @@ pub use commitment::*;
 pub use s_eval::*;
 use crate::srs::SRS;
 use crate::utils::ChainExt;
-
+use crate::traits::{Commitment, PolyEngine};
 use std::borrow::Borrow;
 use std::ops::{Add, Mul, Index, IndexMut, Range};
 
@@ -108,13 +108,13 @@ impl<'a, E: Engine> Polynomial<'a, E> {
     /// Commit a polynomial `F`.
     /// F \from g^{\alpha * x^{(d - max)}*f(x)}
     /// See: Section 5 SYSTEM OF CONSTRAINTS
-    pub fn commit(
+    pub fn commit<PE: PolyEngine>(
         self,
         max: usize,                 // a maximum degree
         largest_neg_power: usize,   // largest negative power
         largest_pos_power: usize,   // largest positive power
         srs: &'a SRS<E>,
-    ) -> E::G1Affine
+    ) -> PE::Commitment
     {
         let d = srs.d;
         assert!(max >= largest_pos_power);
@@ -126,19 +126,23 @@ impl<'a, E: Engine> Polynomial<'a, E> {
             let min_power = largest_neg_power + max - d;
             let max_power = largest_pos_power + d - max;
 
-            multiexp_mut(
+            let point = multiexp_mut(
                 srs.g_neg_x_alpha[0..min_power].iter().rev() // Reverse to permute for negative powers
                 .chain_ext(srs.g_pos_x_alpha[..max_power].iter()),
                 self.0
-            ).into_affine()
+            ).into_affine();
+
+            PE::Commitment::from_point(&point)
         } else {
             let _max_power = srs.d - max - largest_neg_power + 1;
 
-            multiexp_mut(
+            let point = multiexp_mut(
                 // srs.g_pos_x_alpha[..max_power].iter(), // TODO: Ensure the range is correct
                 srs.g_pos_x_alpha[(srs.d - max - largest_neg_power - 1)..].iter(),
                 self.0
-            ).into_affine()
+            ).into_affine();
+
+            PE::Commitment::from_point(&point)
         }
     }
 

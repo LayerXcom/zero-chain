@@ -1,18 +1,20 @@
 use pairing::{Field, Engine, CurveAffine, CurveProjective, PrimeField};
 use crate::srs::SRS;
 use crate::utils::{ChainExt, multiexp};
+use crate::traits::{Commitment, PolyEngine};
 
 /// Commit a polynomial `F`.
 /// F \from g^{\alpha * x^{(d - max)}*f(x)}
 /// See: Section 5 SYSTEM OF CONSTRAINTS
-pub fn poly_comm<'a, E: Engine, I: IntoIterator<Item = &'a E::Fr>>(
+pub fn poly_comm<'a, E: Engine, I: IntoIterator<Item = &'a E::Fr>, PE: PolyEngine>(
         max: usize,                 // a maximum degree
         largest_neg_power: usize,   // largest negative power
         largest_pos_power: usize,   // largest positive power
         srs: &'a SRS<E>,
         poly_coeffs: I
-    ) -> E::G1Affine
-    where I::IntoIter: ExactSizeIterator
+    ) -> PE::Commitment
+    where
+        I::IntoIter: ExactSizeIterator,
 {
     let d = srs.d;
     assert!(max >= largest_pos_power);
@@ -24,19 +26,23 @@ pub fn poly_comm<'a, E: Engine, I: IntoIterator<Item = &'a E::Fr>>(
         let min_power = largest_neg_power + max - d;
         let max_power = largest_pos_power + d - max;
 
-        return multiexp(
+        let point = multiexp(
             srs.g_neg_x_alpha[0..min_power].iter().rev() // Reverse to permute for negative powers
             .chain_ext(srs.g_pos_x_alpha[..max_power].iter()),
             poly_coeffs
         ).into_affine();
+
+        return PE::Commitment::from_point(&point)
     } else {
         let _max_power = srs.d - max - largest_neg_power + 1;
 
-        return multiexp(
+        let point = multiexp(
             // srs.g_pos_x_alpha[..max_power].iter(), // TODO: Ensure the range is correct
             srs.g_pos_x_alpha[(srs.d - max - largest_neg_power - 1)..].iter(),
             poly_coeffs
         ).into_affine();
+
+        return PE::Commitment::from_point(&point)
     }
 }
 

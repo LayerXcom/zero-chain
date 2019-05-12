@@ -14,9 +14,9 @@ use crate::utils::{ChainExt, eval_univar_poly, mul_add_poly};
 use super::prover::{Proof, SxyAdvice};
 
 #[derive(Clone)]
-pub struct Aggregate<E: Engine> {
+pub struct Aggregate<E: Engine, CM: Commitment<Point = E::G1Affine>> {
     /// Commitment to s(z, Y)
-    pub c_comm: E::G1Affine,
+    pub c_comm: CM,
 
     pub s_opening: E::G1Affine,
 
@@ -29,7 +29,7 @@ pub struct Aggregate<E: Engine> {
 impl<E: Engine> Aggregate<E> {
     pub fn create_aggregate<C: Circuit<E>, S: SynthesisDriver>(
         circuit: &C,
-        inputs: &[(Proof<E>, SxyAdvice<E>)],
+        inputs: &[(Proof<E, CM>, SxyAdvice<E>)],
         srs: &SRS<E>,
         n: usize,
         q: usize,

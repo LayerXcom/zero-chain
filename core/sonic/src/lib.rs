@@ -5,3 +5,4 @@ pub mod unhelped;
 pub mod transcript;
 pub mod polynomials;
 pub mod utils;
+pub mod traits;

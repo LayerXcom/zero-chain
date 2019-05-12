@@ -25,7 +25,7 @@ extern crate alloc;
 
 #[cfg(not(feature = "std"))]
 mod std {
-	pub use core::*; 
+	pub use core::*;
 	pub use alloc::vec;
 	pub use alloc::string;
 	pub use alloc::boxed;
@@ -140,7 +140,7 @@ pub trait CurveProjective:
     + Copy
     + Clone
     + Send
-    + Sync    
+    + Sync
     + rand::Rand
     + 'static
 {
@@ -242,8 +242,8 @@ pub trait CurveAffine:
 
     /// Converts this element into its compressed encoding, so long as it's not
     /// the point at infinity.
-    fn into_compressed(&self) -> Self::Compressed {        
-        <Self::Compressed as EncodedPoint>::from_affine(*self)        
+    fn into_compressed(&self) -> Self::Compressed {
+        <Self::Compressed as EncodedPoint>::from_affine(*self)
     }
 
     /// Converts this element into its uncompressed encoding, so long as it's not
@@ -341,7 +341,7 @@ pub trait Field:
         }
 
         res
-    } 
+    }
 }
 
 /// This trait represents an element of a field that has a square root operation described for it.
@@ -365,7 +365,7 @@ pub trait PrimeFieldRepr:
     + Ord
     + Send
     + Sync
-    + Default    
+    + Default
     + 'static
     + rand::Rand
     + AsRef<[u64]>
@@ -409,7 +409,7 @@ pub trait PrimeFieldRepr:
     fn write_be<W: io::Write>(&self, writer: &mut W) -> io::Result<()> {
         use byteorder::BigEndian;
 
-        let mut buf = [0u8; 8];    
+        let mut buf = [0u8; 8];
         for digit in self.as_ref().iter().rev() {
             BigEndian::write_u64(&mut buf, *digit);
             writer.write(&buf)?;
@@ -452,7 +452,7 @@ pub trait PrimeFieldRepr:
         for digit in self.as_mut().iter_mut() {
 			reader.read(&mut buf)?;
 			*digit = LittleEndian::read_u64(&buf);
-        }	        
+        }
 
         Ok(())
     }

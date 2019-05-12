@@ -7,16 +7,17 @@ use crate::srs::SRS;
 use crate::transcript::ProvingTranscript;
 use crate::polynomials::{Polynomial, poly_comm, poly_comm_opening, SxEval, add_polynomials, mul_polynomials};
 use crate::utils::*;
+use crate::traits::Commitment;
 
 pub const NUM_BLINDINGS: usize = 4;
 
 #[derive(Clone, Debug, Eq, PartialEq)]
-pub struct Proof<E: Engine> {
+pub struct Proof<E: Engine, CM: Commitment<Point = E::G1Affine>> {
     /// A commitment of `r(X, 1)`
-    pub r_comm: E::G1Affine,
+    pub r_comm: CM,
 
     /// A commitment of `t(X, y)`. `y` represents a random challenge from the verifier.
-    pub t_comm: E::G1Affine,
+    pub t_comm: CM,
 
     /// An evaluation `r(z, 1)`. `z` represents a random challenge from the verifier.
     pub r_z1: E::Fr,
@@ -31,7 +32,7 @@ pub struct Proof<E: Engine> {
     pub yz_opening: E::G1Affine,
 }
 
-impl<E: Engine> Proof<E> {
+impl<E: Engine, CM: Commitment<Point = E::G1Affine>> Proof<E, CM> {
     pub fn create_proof<C: Circuit<E>, S: SynthesisDriver>(
         circuit: &C,
         srs: &SRS<E>
@@ -71,7 +72,7 @@ impl<E: Engine> Proof<E> {
         r_x1.push(E::Fr::zero());
         r_x1.extend(wires.a);           // X^{1}...X^{n}
 
-        let r_comm = Polynomial::from_slice(&mut r_x1[..]).commit(
+        let r_comm = Polynomial::from_slice(&mut r_x1[..]).commit::<CM>(
             n,
             2*n + NUM_BLINDINGS,
             n,
@@ -143,7 +144,7 @@ impl<E: Engine> Proof<E> {
                 .collect::<Vec<_>>();
 
         let t_comm = Polynomial::from_slice(&mut t_comm_vec[..])
-                .commit(
+                .commit::<CM>(
                     srs.d,
                     4 * n + 2 * NUM_BLINDINGS,
                     3 * n,
@@ -316,10 +317,10 @@ impl<E: Engine> SxyAdvice<E> {
         {
             let mut transcript = Transcript::new(&[]);
 
-            transcript.commit_point(&proof.r_comm);
+            transcript.commit_point::<CM>(&proof.r_comm);
             y = transcript.challenge_scalar();
 
-            transcript.commit_point(&proof.t_comm);
+            transcript.commit_point::<CM>(&proof.t_comm);
             z = transcript.challenge_scalar();
         }
 
