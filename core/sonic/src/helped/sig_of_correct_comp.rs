@@ -28,7 +28,7 @@ pub struct Aggregate<E: Engine, PE: PolyEngine> {
 
 }
 
-impl<E: Engine, PE: PolyEngine> Aggregate<E, PE> {
+impl<E: Engine, PE: PolyEngine<Pairing = E>> Aggregate<E, PE> {
     pub fn create_aggregate<C: Circuit<E>, S: SynthesisDriver>(
         circuit: &C,
         inputs: &[(Proof<E, PE>, SxyAdvice<E, PE>)],
@@ -42,11 +42,11 @@ impl<E: Engine, PE: PolyEngine> Aggregate<E, PE> {
         for &(ref proof, ref s_xy_advice) in inputs {
             {
                 let mut transcript = Transcript::new(&[]);
-                transcript.commit_point(&proof.r_comm);
+                transcript.commit_point::<PE>(&proof.r_comm);
                 y_values.push(transcript.challenge_scalar());
             }
 
-            transcript.commit_point(&s_xy_advice.s_comm);
+            transcript.commit_point::<PE>(&s_xy_advice.s_comm);
         }
 
         let z: E::Fr = transcript.challenge_scalar();
@@ -60,7 +60,7 @@ impl<E: Engine, PE: PolyEngine> Aggregate<E, PE> {
         };
 
         // max = srs.d
-        let c_comm = poly_comm(
+        let c_comm = poly_comm::<_, _, PE>(
             srs.d,
             n,
             n + q,
@@ -69,7 +69,7 @@ impl<E: Engine, PE: PolyEngine> Aggregate<E, PE> {
                 .chain_ext(s_pos_poly.iter())
         );
 
-        transcript.commit_point(&c_comm);
+        transcript.commit_point::<PE>(&c_comm);
 
         let w: E::Fr = transcript.challenge_scalar();
         let w_inv = w.inverse().ok_or(SynthesisError::DivisionByZero)?;

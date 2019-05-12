@@ -80,7 +80,7 @@ impl<E: Engine, PE: PolyEngine<Pairing = E>> Proof<E, PE> {
         );
 
         // A prover commits polynomial
-        transcript.commit_point(&r_comm);
+        transcript.commit_point::<PE>(&r_comm);
 
 
         // ------------------------------------------------------
@@ -151,7 +151,7 @@ impl<E: Engine, PE: PolyEngine<Pairing = E>> Proof<E, PE> {
                     srs
                 );
 
-        transcript.commit_point(&t_comm);
+        transcript.commit_point::<PE>(&t_comm);
 
 
         // ------------------------------------------------------
@@ -303,7 +303,7 @@ pub struct SxyAdvice<E: Engine, PE: PolyEngine> {
     pub s_zy: E::Fr, // s(z, y)
 }
 
-impl<E: Engine, PE: PolyEngine> SxyAdvice<E, PE> {
+impl<E: Engine, PE: PolyEngine<Pairing = E>> SxyAdvice<E, PE> {
     pub fn create_advice<C: Circuit<E>, S: SynthesisDriver> (
         circuit: &C,
         proof: &Proof<E, PE>,
@@ -334,7 +334,7 @@ impl<E: Engine, PE: PolyEngine> SxyAdvice<E, PE> {
         };
 
         // a commitment to s(X, y)
-        let s_comm = poly_comm(
+        let s_comm = poly_comm::<_, _, PE>(
             srs.d,
             n,
             2 * n,
@@ -410,7 +410,7 @@ mod tests {
 
         let proof = Proof::create_proof::<_, Basic>(&SimpleCircuit, &srs).unwrap();
 
-        let mut batch = MultiVerifier::<Bls12, _, Basic, _>::new(SimpleCircuit, &srs, rng).unwrap();
+        let mut batch = MultiVerifier::<Bls12, _, Basic, _, _>::new(SimpleCircuit, &srs, rng).unwrap();
 
         for _ in 0..1 {
             batch.add_proof(&proof, &[], |_, _| None);
