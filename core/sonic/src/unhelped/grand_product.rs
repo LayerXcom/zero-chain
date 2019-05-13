@@ -12,7 +12,7 @@ pub struct GrandProductArg<E: Engine> {
     a_polys: Vec<Vec<E::Fr>>,
 
     /// g^{alpha * \sum\limits_{i=1}^{2n+1} c_i x^i
-    /// Following the constraint system
+    /// Following the requirements.
     /// (1) a \cdot b = c
     /// (2) b = (1, c_1, ..., c_{2n+1})
     /// (3) c_{n+1} = 1
@@ -21,19 +21,19 @@ pub struct GrandProductArg<E: Engine> {
 
     t_polys: Option<Vec<E::Fr>>,
 
-    v_elements: Vec<E::Fr>,
+    c_minus: Vec<E::Fr>,
 
     n: usize,
 }
 
 impl<E: Engine> GrandProductArg<E> {
-    /// Initialize the Grand product arguments from the given two polynomials
-    pub fn new(polys: Vec<(Vec<E::Fr>, Vec<E::Fr>)>) -> Self {
+    /// Create the Grand product arguments from the given two polynomials
+    pub fn gen_a_c(polys: Vec<(Vec<E::Fr>, Vec<E::Fr>)>) -> Self {
         assert!(!polys.is_empty());
         let n = polys[0].0.len();
         let mut a_polys = vec![];
         let mut c_polys = vec![];
-        let mut v_elements = vec![];
+        let mut c_minus = vec![];
 
         for poly in polys.into_iter() {
             let (u_poly, v_poly) = poly;
@@ -44,19 +44,22 @@ impl<E: Engine> GrandProductArg<E> {
             let mut a_poly = Vec::with_capacity(2 * n + 1);
             let mut c_coeff = E::Fr::one();
 
+            // c_1 = a_1 * b_1(=1)
+            // c_2 = a_2 * b_2(=c_1) = a_2 * a_1 * 1
+            // c_3 = a_3 * b_3(=c_2) = a_3 * a_2 * a_1 * 1
+            // ...
+            // c_n = a_n + c_{n-1} = \prod a_i
             for a in u_poly.iter() {
                 c_coeff.mul_assign(a);
                 c_poly.push(c_coeff);
             }
-            assert_eq!(c_poly.len(), n);
-            a_poly.extend(u_poly);
 
             // v = a_{n+1} = c_{n}^-1
             let v = c_poly[n - 1].inverse().unwrap();
 
-            a_poly.push(E::Fr::zero()); // n + 1
-            let mut c_coeff = E::Fr::one(); //re-set to one
-            c_poly.push(c_coeff); // n + 1
+            let mut c_coeff = E::Fr::one(); // re-set to one
+            // (3) c_{n+1} = 1
+            c_poly.push(c_coeff);
 
             for b in v_poly.iter() {
                 c_coeff.mul_assign(b);
@@ -64,19 +67,26 @@ impl<E: Engine> GrandProductArg<E> {
             }
 
             assert_eq!(c_poly.len(), 2 * n + 1);
-            a_poly.extend(v_poly); // a_poly = u_poly || v_poly // 2n
+            // (4) c_{2n+1} == c_{n}
+            assert_eq!(c_poly[2 * n], c_poly[n - 1]);
 
-            assert_eq!(c_poly[n - 1], c_poly[2 * n]); // c_{n} == c_{2n+1}
+            // Define the a_i arguments
+            // a_1, a_2, ..., a_n from U
+            a_poly.extend(u_poly);
+            // a_{n+1} = 0
+            a_poly.push(E::Fr::zero());
+            // a_{n+2}, a_{n+3}, ..., a_{2n+1} from V
+            a_poly.extend(v_poly);
 
             a_polys.push(a_poly);
             c_polys.push(c_poly);
-            v_elements.push(v);
+            c_minus.push(v);
         }
 
         GrandProductArg {
             a_polys,
             c_polys,
-            v_elements,
+            c_minus,
             t_polys: None,
             n,
         }
@@ -86,7 +96,7 @@ impl<E: Engine> GrandProductArg<E> {
         let mut acc = vec![];
         let n = self.c_polys[0].len();
 
-        for (poly, v) in self.c_polys.iter().zip(self.v_elements.iter()) {
+        for (poly, v) in self.c_polys.iter().zip(self.c_minus.iter()) {
             let c = multiexp(
                 srs.g_pos_x_alpha[0..n].iter(),
                 poly.iter()
@@ -99,16 +109,29 @@ impl<E: Engine> GrandProductArg<E> {
     }
 
     pub fn commit_t_poly(&mut self, challenges: &Vec<E::Fr>, y: E::Fr, srs: &SRS<E>) -> E::G1Affine {
+        assert_eq!(self.a_polys.len(), challenges.len());
+        let mut t_poly: Option<Vec<E::Fr>> = None;
 
-        for (((a_poly, c_poly, v), challenge) in self.a_polys.iter()
+        for (((a_poly, c_poly), v), challenge) in self.a_polys.iter()
                                                 .zip(self.c_polys.iter())
-                                                .zip(self.v_elements.iter())
+                                                .zip(self.c_minus.iter())
                                                 .zip(challenges.iter())
         {
-            let r_xy = {
+            // let mut a_xy = a_poly.clone();
+            // let mut c_xy = c_poly.clone();
+            // let v = *v;
 
+            let r_xy = {
+                // U * V^{x}^{n+1}
+                let mut tmp = y;
+                tmp.square();
+                eval_bivar_poly(&mut a_poly[..], tmp, y);
+
+                let tmp = y.pow(&[(self.n+2) as u64]);
+                let mut
             };
         }
+        unimplemented!();
     }
 
     pub fn prove(&self, srs: &SRS<E>) -> GrandProductProof<E> {
