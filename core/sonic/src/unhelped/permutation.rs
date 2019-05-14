@@ -2,10 +2,7 @@ use pairing::{Engine, Field, PrimeField, CurveAffine, CurveProjective};
 use crate::srs::SRS;
 use crate::utils::*;
 
-pub struct PermutationArgument<E: Engine> {
-    n: usize,
-    non_permuted_coeffs: Vec<Vec<E::Fr>>,
-}
+
 
 /// An additional elements in our shared information
 pub struct SrsPerm<E: Engine> {
@@ -29,24 +26,82 @@ impl<E: Engine> SrsPerm<E> {
         let n = non_permuted_coeffs[0].len();
 
         // A commitment to the powers of x which is the srs's randomness
-        let p_1 = multiexp(srs.g_pos_x_alpha[..n].iter(), vec![E::Fr::one(); n].iter()).into_affine();
+        let p_1 = multiexp(
+            srs.g_pos_x_alpha[..n].iter(),
+            vec![E::Fr::one(); n].iter()
+        ).into_affine();
 
-        // let p_3 = multiexp(srs.g_pos_x_alpha[..n], (1..=n).map(|e| E::Fr::from_str("e"))).into_affine();
+        let p_3 = {
+                let vals: Vec<E::Fr> = (1..=n).map(|e| {
+                let mut repr = <<E as Engine>::Fr as PrimeField>::Repr::default();
+                repr.as_mut()[0] = e as u64;
+                let re = E::Fr::from_repr(repr).unwrap();
 
-        // let mut p_2 = vec![];
-        // let mut p_4 = vec![];
+                re
+            }).collect();
 
-        unimplemented!();
+            multiexp(
+                srs.g_pos_x_alpha[0..n].iter(),
+                vals.iter()
+            ).into_affine()
+        };
+
+        let mut p_2 = vec![];
+        let mut p_4 = vec![];
+
+        for (coeff, perm) in non_permuted_coeffs.iter().zip(perms.iter()) {
+            assert_eq!(coeff.len(), perm.len());
+
+            let p2_el = multiexp(
+                srs.g_pos_x_alpha[..n].iter(),
+                coeff.iter()
+            ).into_affine();
+            p_2.push(p2_el);
+
+            let vals: Vec<E::Fr> = perm.iter().map(|e| {
+                let mut repr = <<E as Engine>::Fr as PrimeField>::Repr::default();
+                repr.as_mut()[0] = *e as u64;
+                let re = E::fr::from_repr(repr).unwrap();
+
+                re
+            }).collect();
+
+            let p4_el = multiexp(
+                srs.g_pos_x_alpha[..n].iter(),
+                vals.iter()
+            ).into_affine();
+            p_4.push(p4_el);
+        }
+
+        SrsPerm {
+            n,
+            p_1,
+            p_2,
+            p_3,
+            p_4,
+        }
     }
 }
 
-pub struct ProofSigOfCorrectComp<E: Engine> {
+pub struct ProofSCC<E: Engine> {
     j: usize,
     s_opening: E::G1Affine,
     s_zy: E::G1Affine,
 }
 
+pub struct PermutationArgument<E: Engine> {
+    n: usize,
+    non_permuted_coeffs: Vec<Vec<E::Fr>>,
+    permutated_coeffs: Vec<Vec<E::Fr>>,
+    permutated_y_coeffs: Vec<Vec<E::Fr>>,
+    perms: Vec<Vec<usize>>,
+}
+
 impl<E: Engine> PermutationArgument<E> {
+    pub fn new(coeffs: Vec<Vec<E::Fr>>, perms: Vec<Vec<usize>>) -> Self {
+        unimplemented!();
+    }
+
     pub fn commit(&mut self, y: E::Fr, srs: &SRS<E>) -> Vec<(E::G1Affine, E::G1Affine)> {
         unimplemented!();
     }
@@ -59,7 +114,7 @@ impl<E: Engine> PermutationArgument<E> {
         y: E::Fr,
         z: E::Fr,
         srs_perm: &SrsPerm<E>,
-    ) -> ProofSigOfCorrectComp<E>
+    ) -> ProofSCC<E>
     {
         unimplemented!();
     }

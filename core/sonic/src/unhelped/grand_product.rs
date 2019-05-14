@@ -114,7 +114,12 @@ impl<E: Engine> GrandProductArg<E> {
         acc
     }
 
-    pub fn commit_t_poly(&mut self, challenges: &Vec<E::Fr>, y: E::Fr, srs: &SRS<E>) -> Result<E::G1Affine, SynthesisError> {
+    pub fn commit_t_poly(
+        &mut self,
+        challenges: &Vec<E::Fr>,
+        y: E::Fr,
+        srs: &SRS<E>
+    ) -> Result<E::G1Affine, SynthesisError> {
         assert_eq!(self.a_polys.len(), challenges.len());
         let n = self.n;
 
@@ -201,7 +206,33 @@ impl<E: Engine> GrandProductArg<E> {
         Ok(t_comm)
     }
 
-    pub fn prove(&self, srs: &SRS<E>) -> GrandProductProof<E> {
+    pub fn prove(
+        &self,
+        a_zy: &Vec<E::Fr>,
+        challenges: &Vec<E::Fr>,
+        srs: &SRS<E>
+    ) -> GrandProductProof<E> {
+        // assert_eq!(a_zy.len(), self.a_polys.ken()):
+        // assert_eq!(challenges.len(), self.a_polys.len());
+
+        // let n = self.n;
+        // let mut yz = y;
+        // yz.mul_assign(&z);
+
+        // for(((a, c_poly), challenge), c_minus) in a_zy.iter()
+        //                                                 .zip(self.c_polys.into_iter())
+        //                                                 .zip(challenges.iter())
+        //                                                 .zip(self.c_minus.iter())
+        // {
+        //     let mut c_zy = yz.pow[(n+1) as u64];
+        //     c_zy.mul_assign(c_minus);
+        //     c_zy.add_assign(a);
+        //     c_zy.mul_assign(&y);
+
+        //     let mut z_n_plus_one = z.pow[(n+1) as u64];
+        //     let mut z_n_plus_two = z_n_plus_one;
+        //     z_n_plus_two.mul_assign(&z);
+        // }
 
         // gprodP_1
 
@@ -215,7 +246,6 @@ impl<E: Engine> GrandProductArg<E> {
         // gprodV -> gprodP:
 
         // gprod_3(z) -> T:
-
         unimplemented!();
     }
 

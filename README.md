@@ -99,7 +99,7 @@ You can send the transaction from firefox browser.
 - [Substrate](https://github.com/paritytech/substrate)
 - [Zcash Protocol Specification](https://github.com/zcash/zips/blob/master/protocol/protocol.pdf)
 - [Zether](https://crypto.stanford.edu/~buenz/papers/zether.pdf)
-- [Sonic](https://eprint.iacr.org/2019/099.pdf)]
+- [Sonic](https://eprint.iacr.org/2019/099.pdf)
 
 ## Contributing
 - Feel free to submit your own issues and PRs

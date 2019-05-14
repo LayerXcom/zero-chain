@@ -20,3 +20,5 @@ pub trait Commitment:
 }
 
 pub trait Opening {}
+
+pub trait Challenge {}
