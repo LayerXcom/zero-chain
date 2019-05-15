@@ -8,7 +8,7 @@ It is designed to get efficient zero-knowledge proving, reduce the on-chain stor
 ## Status
 **WARNING: Zerochain is alpha quality software, improvements and fixes are made frequently, and documentation for technical details doesn't yet exist.**
 
-For now, only supported for the "confidential payment PoC".
+For now, only supported for the "confidential payment PoC" inspired by [Zether](https://crypto.stanford.edu/~buenz/papers/zether.pdf) paper.
 
 - Balance for each account is encrypted
 <div align="center">
@@ -98,8 +98,8 @@ You can send the transaction from firefox browser.
 ### References
 - [Substrate](https://github.com/paritytech/substrate)
 - [Zcash Protocol Specification](https://github.com/zcash/zips/blob/master/protocol/protocol.pdf)
-- [Zether](https://crypto.stanford.edu/~buenz/papers/zether.pdf)
-- [Sonic](https://eprint.iacr.org/2019/099.pdf)
+- [Zether](https://crypto.stanford.edu/~buenz/papers/zether.pdf): Towards Privacy in a Smart Contract World
+- [Sonic](https://eprint.iacr.org/2019/099.pdf): Zero-Knowledge SNARKs from Linear-Size Universal and Updatable Structured Reference Strings
 
 ## Contributing
 - Feel free to submit your own issues and PRs
