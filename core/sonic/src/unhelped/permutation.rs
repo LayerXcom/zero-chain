@@ -97,10 +97,23 @@ pub struct PermutationArgument<E: Engine> {
 
 impl<E: Engine> PermutationArgument<E> {
     pub fn new(coeffs: Vec<Vec<E::Fr>>, perms: Vec<Vec<usize>>) -> Self {
+        assert!(!coeffs.is_empty());
+        assert_eq!(coeffs.len(), perms.len());
+
+
         unimplemented!();
     }
 
     pub fn commit(&mut self, y: E::Fr, srs: &SRS<E>) -> Vec<(E::G1Affine, E::G1Affine)> {
+        let acc = vec![];
+        let mut permutated_coeffs = vec![];
+        let mut permutated_y_coeffs = vec![];
+
+        for (coeffs, perm) for self.non_permuted_coeffs.iter().zip(self.perms.iter()) {
+
+            eval_bivar_poly(coeffs: &mut [E::Fr], first_power: E::Fr, base: E::Fr)
+        }
+
         unimplemented!();
     }
 

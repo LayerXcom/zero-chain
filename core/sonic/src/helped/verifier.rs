@@ -128,7 +128,7 @@ impl<E: Engine, C: Circuit<E>, S: SynthesisDriver, R: Rng> MultiVerifier<E, C, S
             self.batch.add_opening_value(t_zy, random);
             self.batch.add_comm::<PE>(proof.t_comm, random);
 
-            random.mul_assign(&r1);
+            random.mul_assign(&r1); // for batching
 
             self.batch.add_opening_value(proof.r_z1, random);
             self.batch.add_comm_max_n::<PE>(proof.r_comm, random);
