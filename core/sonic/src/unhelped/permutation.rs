@@ -2,8 +2,6 @@ use pairing::{Engine, Field, PrimeField, CurveAffine, CurveProjective};
 use crate::srs::SRS;
 use crate::utils::*;
 
-
-
 /// An additional elements in our shared information
 pub struct SrsPerm<E: Engine> {
     n: usize,
@@ -61,7 +59,7 @@ impl<E: Engine> SrsPerm<E> {
             let vals: Vec<E::Fr> = perm.iter().map(|e| {
                 let mut repr = <<E as Engine>::Fr as PrimeField>::Repr::default();
                 repr.as_mut()[0] = *e as u64;
-                let re = E::fr::from_repr(repr).unwrap();
+                let re = E::Fr::from_repr(repr).unwrap();
 
                 re
             }).collect();

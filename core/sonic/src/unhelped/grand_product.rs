@@ -5,6 +5,7 @@ use crate::{traits, transcript};
 use crate::srs::SRS;
 use crate::utils::*;
 use crate::polynomials::operations::mul_polynomials;
+use crate::polynomials::commitment::poly_comm_opening;
 
 #[derive(Clone)]
 pub struct GrandProductArg<E: Engine> {
@@ -204,6 +205,43 @@ impl<E: Engine> GrandProductArg<E> {
         ).into_affine();
 
         Ok(t_comm)
+    }
+
+    pub fn open(&self, y: E::Fr, z: E::Fr, srs: &SRS<E>) -> Vec<(E::Fr, E::G1Affine)> {
+        let n = self.n;
+        let mut yz = y;
+        yz.mul_assign(&z);
+
+        let mut acc = vec![];
+
+        for a_poly in self.a_polys.iter() {
+            let u = &a_poly[..n];
+            let v = &a_poly[(n+1)..];
+            assert_eq!(u.len(), v.len());
+
+            let mut val = eval_univar_poly::<E>(u, yz, yz);
+            let fp = yz.pow([(n+2) as u64]);
+            let val_v = eval_univar_poly::<E>(v, fp, yz);
+            val.add_assign(&val_v);
+
+            let mut constant_term = val;
+            constant_term.negate();
+
+            let opening = poly_comm_opening(
+                0,
+                2 * n + 1,
+                srs,
+                Some(constant_term).iter() // f(x)-f(yz)
+                    .chain_ext(u.iter())
+                    .chain_ext(Some(E::Fr::zero()).iter())
+                    .chain_ext(v.iter()),
+                yz,
+            );
+
+            acc.push((val, opening));
+        }
+
+        acc
     }
 
     pub fn prove(
