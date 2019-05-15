@@ -1,37 +1,14 @@
 /// Defined in appendix B: THE GRAND PRODUCT ARGUMENT
 use pairing::{Engine, Field, CurveAffine, CurveProjective};
 use bellman::SynthesisError;
-use crate::{traits, transcript};
+use merlin::Transcript;
+use crate::{traits, transcript::ProvingTranscript};
 use crate::srs::SRS;
 use crate::utils::*;
 use crate::polynomials::operations::mul_polynomials;
 use crate::polynomials::commitment::poly_comm_opening;
 use crate::traits::*;
 use super::well_formed;
-
-// #[derive(Clone)]
-// pub struct GrandProductArg<E: Engine> {
-//     /// the coeffientis of two commitments U and V,
-//     /// where U and V are fully well-formed commitments to n-degree polynomials.
-//     /// U = g^{alpha * \sum\limits_{i=1}^n a_i x^i, V = g^{alpha * \sum\limits_{i=1}^n a_{i+n+1} x^i,
-//     a_poly: Vec<E::Fr>,
-
-//     /// g^{alpha * \sum\limits_{i=1}^{2n+1} c_i x^i
-//     /// Following the requirements.
-//     /// (1) a \cdot b = c
-//     /// (2) b = (1, c_1, ..., c_{2n+1})
-//     /// (3) c_{n+1} = 1
-//     /// (4) c_{2n+1} = c_n
-//     c_poly: Vec<E::Fr>,
-
-//     /// t(X, Y) = (r(X, Y) + s(X, Y))r'(X, Y) - k(Y)
-//     t_poly: E::Fr,
-
-//     /// c_n^{-1}
-//     c_minus: E::Fr,
-
-//     n: usize,
-// }
 
 #[derive(Clone)]
 pub struct ProductPolys<E: Engine>{
@@ -48,7 +25,7 @@ impl<E: Engine> ProductPolys<E> {
     }
 
     /// Create the Grand product arguments from the given two polynomials
-    pub fn gprodP_1(&self, srs: &SRS<E>) -> gprodArg<E> {
+    pub fn gen_arg<PE: PolyEngine<Pairing=E>>(&self, srs: &SRS<E>) -> gprodArg<E, PE> {
         // let (u_poly, v_poly) = polys;
         let n = self.u_poly.len();
         assert!(self.u_poly.len() == self.v_poly.len());
@@ -92,11 +69,12 @@ impl<E: Engine> ProductPolys<E> {
         // a_{n+2}, a_{n+3}, ..., a_{2n+1} from V
         a_poly.extend(&self.v_poly);
 
-        let c_comm = multiexp(
+        let c_point = multiexp(
             srs.g_pos_x_alpha[0..n].iter(),
             c_poly.iter()
         ).into_affine();
 
+        let c_comm = PE::Commitment::from_point(&c_point);
 
         gprodArg {
             a_poly,
@@ -110,7 +88,7 @@ impl<E: Engine> ProductPolys<E> {
 }
 
 #[derive(Clone)]
-pub struct gprodArg<E: Engine> {
+pub struct gprodArg<E: Engine, PE: PolyEngine> {
     /// the coeffientis of two commitments U and V,
     /// where U and V are fully well-formed commitments to n-degree polynomials.
     /// U = g^{alpha * \sum\limits_{i=1}^n a_i x^i, V = g^{alpha * \sum\limits_{i=1}^n a_{i+n+1} x^i,
@@ -125,7 +103,7 @@ pub struct gprodArg<E: Engine> {
     c_poly: Vec<E::Fr>,
 
     // a_comm: PE::Commitment,
-    c_comm: E::G1Affine,
+    c_comm: PE::Commitment,
 
     /// c_n^{-1}
     c_n_inv: E::Fr,
@@ -133,86 +111,78 @@ pub struct gprodArg<E: Engine> {
     n: usize,
 }
 
-impl<E: Engine> gprodArg<E,> {
+impl<E: Engine, PE: PolyEngine<Pairing=E>> gprodArg<E, PE> {
     pub fn commit_t_poly(
         &mut self,
         y: E::Fr, // challenge
         srs: &SRS<E>
-    ) -> Result<E::G1Affine, SynthesisError> {
+    ) -> Result<(Vec<E::Fr>, PE::Commitment), SynthesisError> {
         let n = self.n;
 
-        // for (((a_poly, c_poly), cn_minus_one), challenge) in self.a_polys.iter()
-        //                                         .zip(self.c_polys.iter())
-        //                                         .zip(self.c_minus.iter())
-        //                                         .zip(challenges.iter())
-        // {
-            let mut a_xy = self.a_poly.clone();
+        let mut a_xy = self.a_poly.clone();
 
-            // let cn_minus_one = *cn_minus_one;
+        // r(X, y) + s(X, y) with powers [1, 2n+2]
+        let r_plus_s = {
 
-            // r(X, y) + s(X, y) with powers [1, 2n+2]
-            let r_plus_s = {
+            // (y * \sum\limits_{i=1}^{2n+1} a_i y^i) * X^i
+            let mut tmp = y;
+            tmp.square();
+            eval_bivar_poly::<E>(&mut a_xy[..], tmp, y);
 
-                // (y * \sum\limits_{i=1}^{2n+1} a_i y^i) * X^i
-                let mut tmp = y;
-                tmp.square();
-                eval_bivar_poly::<E>(&mut a_xy[..], tmp, y);
+            // (x_n^{-1}*y^{n+2} + y) * X^{n+1}
+            let y_n_plus_two = y.pow(&[(n+2) as u64]);
+            let mut x_n_plus_one = self.c_n_inv;
+            x_n_plus_one.mul_assign(&y_n_plus_two);
+            x_n_plus_one.add_assign(&y);
+            a_xy[n].add_assign(&x_n_plus_one);
 
-                // (x_n^{-1}*y^{n+2} + y) * X^{n+1}
-                let y_n_plus_two = y.pow(&[(n+2) as u64]);
-                let mut x_n_plus_one = self.c_n_inv;
-                x_n_plus_one.mul_assign(&y_n_plus_two);
-                x_n_plus_one.add_assign(&y);
-                a_xy[n].add_assign(&x_n_plus_one);
+            // 1 * X^{n+2}
+            a_xy[n+1].add_assign(&E::Fr::one());
 
-                // 1 * X^{n+2}
-                a_xy[n+1].add_assign(&E::Fr::one());
+            // (-y) * X^{2n+2}
+            let mut neg_y = y;
+            neg_y.negate();
+            a_xy.push(neg_y);
 
-                // (-y) * X^{2n+2}
-                let mut neg_y = y;
-                neg_y.negate();
-                a_xy.push(neg_y);
+            // Padding for negative powers
+            let mut a_prime = vec![E::Fr::zero(); 2 * n + 3];
+            a_prime.extend(a_xy);
 
-                // Padding for negative powers
-                let mut a_prime = vec![E::Fr::zero(); 2 * n + 3];
-                a_prime.extend(a_xy);
+            a_prime
+        };
 
-                a_prime
-            };
+        // r'(X, y) with powers [-2n-3, -1]
+        let r_prime = {
+            let mut cx = self.c_poly.iter().rev().map(|e| *e).collect::<Vec<E::Fr>>();
+            cx.push(E::Fr::one());
+            cx.push(E::Fr::zero());
 
-            // r'(X, y) with powers [-2n-3, -1]
-            let r_prime = {
-                let mut cx = self.c_poly.iter().rev().map(|e| *e).collect::<Vec<E::Fr>>();
-                cx.push(E::Fr::one());
-                cx.push(E::Fr::zero());
+            cx
+        };
 
-                cx
-            };
+        let mut t_xy = mul_polynomials::<E>(&r_plus_s, &r_prime)?;
 
-            let mut t_xy = mul_polynomials::<E>(&r_plus_s, &r_prime)?;
+        // (4n+5) + (2n+3) - 1
+        assert_eq!(t_xy.len(), 6 * n + 7);
 
-            // (4n+5) + (2n+3) - 1
-            assert_eq!(t_xy.len(), 6 * n + 7);
+        // Remove the first powers due to the padding.
+        t_xy.drain(0..(2*n+3));
+        let last = t_xy.pop();
+        assert_eq!(last.unwrap(), E::Fr::zero(), "last element should be zero");
+        assert_eq!(t_xy.len(), 4 * n + 3);
 
-            // Remove the first powers due to the padding.
-            t_xy.drain(0..(2*n+3));
-            let last = t_xy.pop();
-            assert_eq!(last.unwrap(), E::Fr::zero(), "last element should be zero");
-            assert_eq!(t_xy.len(), 4 * n + 3);
+        // k(y)
+        let mut k_y = {
+            let mut y_sq = y;
+            y_sq.square();
+            eval_univar_poly::<E>(&self.c_poly[..], y_sq, y)
+        };
+        k_y.add_assign(&E::Fr::one());
 
-            // k(y)
-            let mut k_y = {
-                let mut y_sq = y;
-                y_sq.square();
-                eval_univar_poly::<E>(&self.c_poly[..], y_sq, y)
-            };
-            k_y.add_assign(&E::Fr::one());
+        // (r(X, y) + s(X, y))r'(X, y) - k(y)
+        t_xy[2 * n + 1].sub_assign(&k_y);
 
-            // (r(X, y) + s(X, y))r'(X, y) - k(y)
-            t_xy[2 * n + 1].sub_assign(&k_y);
-
-            // mul_add_poly::<E>(&mut self.t_polys[..], &t_xy, *challenge);
-        // }
+        // mul_add_poly::<E>(&mut self.t_polys[..], &t_xy, *challenge);
 
         let t_comm = multiexp(
             srs.g_neg_x_alpha[..(2*n+1)].iter().rev()
@@ -221,50 +191,7 @@ impl<E: Engine> gprodArg<E,> {
                 .chain_ext(t_xy[(2*n+2)..].iter())
         ).into_affine();
 
-        Ok(t_comm)
-    }
-
-    pub fn prove(
-        &self,
-        a_zy: &Vec<E::Fr>,
-        // challenges: &Vec<E::Fr>,
-        srs: &SRS<E>
-    ) -> GrandProductProof<E> {
-        // assert_eq!(a_zy.len(), self.a_polys.ken()):
-        // assert_eq!(challenges.len(), self.a_polys.len());
-
-        // let n = self.n;
-        // let mut yz = y;
-        // yz.mul_assign(&z);
-
-        // for(((a, c_poly), challenge), c_minus) in a_zy.iter()
-        //                                                 .zip(self.c_polys.into_iter())
-        //                                                 .zip(challenges.iter())
-        //                                                 .zip(self.c_minus.iter())
-        // {
-        //     let mut c_zy = yz.pow[(n+1) as u64];
-        //     c_zy.mul_assign(c_minus);
-        //     c_zy.add_assign(a);
-        //     c_zy.mul_assign(&y);
-
-        //     let mut z_n_plus_one = z.pow[(n+1) as u64];
-        //     let mut z_n_plus_two = z_n_plus_one;
-        //     z_n_plus_two.mul_assign(&z);
-        // }
-
-        // gprodP_1
-
-
-        // gprodV -> groudP:
-
-
-        // gprodP_2(y) -> T:
-
-
-        // gprodV -> gprodP:
-
-        // gprod_3(z) -> T:
-        unimplemented!();
+        Ok((t_xy, PE::Commitment::from_point(&t_comm)))
     }
 }
 
@@ -307,11 +234,82 @@ impl<E: Engine> gprodArg<E,> {
 //         acc
 //     }
 
-pub fn create_gprod_proof<E: Engine>(
+pub fn create_gprod_proof<E: Engine, PE: PolyEngine<Pairing=E>>(
     polys: &ProductPolys<E>,
     srs: &SRS<E>
-) -> GrandProductProof<E> {
-    unimplemented!();
+) -> Result<GrandProductProof<E>, SynthesisError> {
+    let mut transcript = Transcript::new(&[]);
+
+    // gprodP_1
+    let mut args = polys.gen_arg::<PE>(srs);
+    transcript.commit_point::<PE>(&args.c_comm);
+
+    let n = args.n;
+
+    // gprodV -> gprodP:
+    let y: E::Fr = transcript.challenge_scalar();
+
+    // gprod_2(y) -> T:
+    let (mut t_xy, t_comm) = args.commit_t_poly(y, srs)?;
+    transcript.commit_point::<PE>(&t_comm);
+
+    // gprodV -> gprodP:
+    let z: E::Fr = transcript.challenge_scalar();
+    let z_inv = z.inverse().ok_or(SynthesisError::DivisionByZero)?;
+
+    let mut yz = y;
+    yz.mul_assign(&z);
+
+    // gprod_3(z) -> T:
+    let mut c_z_inv = eval_univar_poly::<E>(&args.c_poly[..], z_inv, z_inv);
+    c_z_inv.negate();
+
+    let c_opening = poly_comm_opening(
+        0,
+        2 * n + 1,
+        srs,
+        Some(c_z_inv).iter()
+            .chain_ext(args.c_poly.iter()),
+        z_inv
+    );
+    c_z_inv.negate();
+
+    let mut k_y = eval_univar_poly::<E>(&args.c_poly[..], y, y);
+    k_y.negate();
+
+    let k_opening = poly_comm_opening(
+        0,
+        2 * n + 1,
+        srs,
+        Some(k_y).iter()
+            .chain_ext(args.c_poly.iter()),
+        y
+    );
+    k_y.negate();
+
+    let t_zy = {
+        let first_power = z_inv.pow([(2 * n + 1) as u64]);
+        eval_univar_poly::<E>(&t_xy, first_power, z)
+    };
+    t_xy[2 * n + 1].sub_assign(&t_zy);
+
+    let t_opening = poly_comm_opening(
+        2 * n + 1,
+        2 * n + 1,
+        srs,
+        t_xy.iter(),
+        z
+    );
+
+    Ok(GrandProductProof::<E> {
+        // a_yz: E::Fr,
+        // a_opening: E::G1Affine,
+        c_z_inv,
+        c_opening,
+        k_y,
+        k_opening,
+        t_opening,
+    })
 }
 
 // #[derive(Clone)]
@@ -333,12 +331,9 @@ pub fn create_gprod_proof<E: Engine>(
 // }
 
 #[derive(Clone)]
-pub struct CPolyComm<E: Engine>(Vec<(E::G1Affine, E::Fr)>);
-
-#[derive(Clone)]
 pub struct GrandProductProof<E: Engine> {
-    a_yz: E::Fr,
-    a_opening: E::G1Affine,
+    // a_yz: E::Fr,
+    // a_opening: E::G1Affine,
     c_z_inv: E::Fr,
     c_opening: E::G1Affine,
     k_y: E::Fr,
