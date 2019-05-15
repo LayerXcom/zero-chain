@@ -1,0 +1,5 @@
+[book]
+authors = ["Osuke Sudo"]
+multilingual = false
+src = "src"
+title = "zerochain-eng"
