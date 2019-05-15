@@ -105,14 +105,14 @@ impl<E: Engine> PermutationArgument<E> {
     }
 
     pub fn commit(&mut self, y: E::Fr, srs: &SRS<E>) -> Vec<(E::G1Affine, E::G1Affine)> {
-        let acc = vec![];
-        let mut permutated_coeffs = vec![];
-        let mut permutated_y_coeffs = vec![];
+        // let acc = vec![];
+        // let mut permutated_coeffs = vec![];
+        // let mut permutated_y_coeffs = vec![];
 
-        for (coeffs, perm) for self.non_permuted_coeffs.iter().zip(self.perms.iter()) {
+        // for (coeffs, perm) for self.non_permuted_coeffs.iter().zip(self.perms.iter()) {
 
-            eval_bivar_poly(coeffs: &mut [E::Fr], first_power: E::Fr, base: E::Fr)
-        }
+        //     eval_bivar_poly(coeffs: &mut [E::Fr], first_power: E::Fr, base: E::Fr)
+        // }
 
         unimplemented!();
     }
