@@ -329,23 +329,27 @@ impl<E: Engine> GrandProductProof<E> {
         n: usize,
         randomness: &Vec<E::Fr>,
         t_commitment: E::G1Affine,
-        c_commitments: &Vec<(E::G1Affine, E::Fr)>,
+        c_commitment: E::G1Affine,
         a_yz: E::Fr,
         y: E::Fr,
         z: E::Fr,
         srs: &SRS<E>
     ) -> Result<bool, SynthesisError> {
+        assert_eq!(randomness.len(), 3);
 
         let c_z_inv = self.c_z_inv;
         let k_y = self.k_y;
-
-        // Prepare the elements for pairing
         let g = srs.g_pos_x[0];
-        let h_alpha_x_prep = srs.h_pos_x_alpha[1].prepare();
-        let h_alpha_prep = srs.h_pos_x_alpha[0].prepare();
+
+        // Prepare the G2 elements for pairing
+        let g = srs.g_pos_x[0];
+        let alpha_x_prep = srs.h_pos_x_alpha[1].prepare();
+        let alpha_prep = srs.h_pos_x_alpha[0].prepare();
+        let mut neg_h = srs.h_pos_x[0];
+        neg_h.negate();
+        let neg_h_prep = neg_h.prepare();
 
         // Re-calculate t(z, y)
-
         // r <- y * v_a
         let mut r = y;
         r.mul_assign(&a_yz);
@@ -372,7 +376,7 @@ impl<E: Engine> GrandProductProof<E> {
 
         // r' <- v_c * z^{-1}
         let mut r_prime = c_z_inv;
-        let mut z_inv = z;
+        let z_inv = z;
         z_inv.inverse().ok_or(SynthesisError::DivisionByZero)?;
         r_prime.mul_assign(&z_inv);
 
@@ -387,8 +391,64 @@ impl<E: Engine> GrandProductProof<E> {
         t.mul_assign(&r_prime);
         t.sub_assign(&k);
 
-        
+        // g^{c_z_inv} * c_opening^{-z^{-1}}
+        let mut minus_z_inv = z_inv;
+        minus_z_inv.negate();
+        let mut g_c_term = self.c_opening.mul(minus_z_inv);
+        let g_c = g.mul(self.c_z_inv);
+        g_c_term.add_assign(&g_c);
 
-        unimplemented!();
+        // g^{k_y} * k_opening^{-y}
+        let mut minus_y = y;
+        minus_y.negate();
+        let mut g_k_term = self.k_opening.mul(minus_y);
+        let g_k = g.mul(self.k_y);
+        g_k_term.add_assign(&g_k);
+
+        // g^{t} * t_opening^{-z}
+        let mut minus_z = z;
+        minus_z.negate();
+        let mut g_t_term = self.t_opening.mul(minus_z);
+        let g_t = g.mul(t);
+        g_t_term.add_assign(&g_t);
+
+        let alpha_x = multiexp(
+            Some(self.c_opening).iter()
+                .chain_ext(Some(self.k_opening).iter())
+                .chain_ext(Some(self.t_opening).iter()),
+            randomness.iter()
+        ).into_affine();
+
+        let alpha = multiexp(
+            Some(g_c_term.into_affine()).iter()
+                .chain_ext(Some(g_k_term.into_affine()).iter())
+                .chain_ext(Some(g_t_term.into_affine()).iter()),
+            randomness.iter()
+        ).into_affine();
+
+        let neg_h = multiexp(
+            Some(c_commitment).iter()
+                .chain_ext(Some(c_commitment).iter())
+                .chain_ext(Some(t_commitment).iter()),
+            randomness.iter()
+        ).into_affine();
+
+        let is_valid = E::final_exponentiation(&E::miller_loop(&[
+            (&alpha_x.prepare(), &alpha_prep),
+            (&alpha.prepare(), &alpha_prep),
+            (&neg_h.prepare(), &neg_h_prep),
+        ])).unwrap() == E::Fqk::one();
+
+        Ok(is_valid)
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn grand_product_argument_corecctness() {
+
     }
 }
