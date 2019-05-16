@@ -312,24 +312,6 @@ pub fn create_gprod_proof<E: Engine, PE: PolyEngine<Pairing=E>>(
     })
 }
 
-// #[derive(Clone)]
-// pub struct CPoly<E: Engine>(Vec<Vec<E::Fr>>);
-
-// impl<E: Engine> CPoly<E> {
-//     pub fn new(polys: Vec<(Vec<E::Fr>, Vec<E::Fr>)>) -> Self {
-
-//         unimplemented!();
-//     }
-
-//     pub fn commit(&self, srs: &SRS<E>) -> CPolyComm<E> {
-//         let mut res = vec![];
-//         let n = self.0.len();
-
-//         for ()
-//         unimplemented!();
-//     }
-// }
-
 #[derive(Clone)]
 pub struct GrandProductProof<E: Engine> {
     // a_yz: E::Fr,
@@ -348,14 +330,64 @@ impl<E: Engine> GrandProductProof<E> {
         randomness: &Vec<E::Fr>,
         t_commitment: E::G1Affine,
         c_commitments: &Vec<(E::G1Affine, E::Fr)>,
+        a_yz: E::Fr,
         y: E::Fr,
         z: E::Fr,
         srs: &SRS<E>
-    ) -> bool {
+    ) -> Result<bool, SynthesisError> {
+
+        let c_z_inv = self.c_z_inv;
+        let k_y = self.k_y;
+
+        // Prepare the elements for pairing
+        let g = srs.g_pos_x[0];
+        let h_alpha_x_prep = srs.h_pos_x_alpha[1].prepare();
+        let h_alpha_prep = srs.h_pos_x_alpha[0].prepare();
 
         // Re-calculate t(z, y)
 
-        //
+        // r <- y * v_a
+        let mut r = y;
+        r.mul_assign(&a_yz);
+
+        // s <- z^{n+2} + z^{n+1}*y - z{2*n+2}*y
+        let mut s = E::Fr::zero();
+        let mut z_n_plus_1 = z.pow([(n + 1) as u64]);
+
+        // z^{n+2}
+        let mut z_n_plus_2 = z_n_plus_1;
+        z_n_plus_2.mul_assign(&z);
+
+        // z{2*n+2}*y
+        let mut z_2n_plus_2_y = z_n_plus_1;
+        z_2n_plus_2_y.square();
+        z_2n_plus_2_y.mul_assign(&y);
+
+        // z^{n+1}*y
+        z_n_plus_1.mul_assign(&y);
+
+        s.add_assign(&z_n_plus_2);
+        s.add_assign(&z_n_plus_1);
+        s.sub_assign(&z_2n_plus_2_y);
+
+        // r' <- v_c * z^{-1}
+        let mut r_prime = c_z_inv;
+        let mut z_inv = z;
+        z_inv.inverse().ok_or(SynthesisError::DivisionByZero)?;
+        r_prime.mul_assign(&z_inv);
+
+        // k <- v_k * y + 1
+        let mut k = k_y;
+        k.mul_assign(&y);
+        k.add_assign(&E::Fr::one());
+
+        // t <- (r + s) * r' - k
+        let mut t = r;
+        t.add_assign(&s);
+        t.mul_assign(&r_prime);
+        t.sub_assign(&k);
+
+        
 
         unimplemented!();
     }
