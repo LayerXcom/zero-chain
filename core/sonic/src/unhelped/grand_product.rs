@@ -25,7 +25,7 @@ impl<E: Engine> ProductPolys<E> {
     }
 
     /// Create the Grand product arguments from the given two polynomials
-    pub fn gen_arg<PE: PolyEngine<Pairing=E>>(&self, srs: &SRS<E>) -> gprodArg<E, PE> {
+    pub fn gen_arg<PE: PolyEngine<Pairing=E>>(&self, srs: &SRS<E>) -> GprodArg<E, PE> {
         // let (u_poly, v_poly) = polys;
         let n = self.u_poly.len();
         assert!(self.u_poly.len() == self.v_poly.len());
@@ -70,13 +70,13 @@ impl<E: Engine> ProductPolys<E> {
         a_poly.extend(&self.v_poly);
 
         let c_point = multiexp(
-            srs.g_pos_x_alpha[0..n].iter(),
+            srs.g_pos_x_alpha[0..c_poly.len()].iter(),
             c_poly.iter()
         ).into_affine();
 
         let c_comm = PE::Commitment::from_point(&c_point);
 
-        gprodArg {
+        GprodArg {
             a_poly,
             c_poly,
             // a_comm,
@@ -88,7 +88,7 @@ impl<E: Engine> ProductPolys<E> {
 }
 
 #[derive(Clone)]
-pub struct gprodArg<E: Engine, PE: PolyEngine> {
+pub struct GprodArg<E: Engine, PE: PolyEngine> {
     /// the coeffientis of two commitments U and V,
     /// where U and V are fully well-formed commitments to n-degree polynomials.
     /// U = g^{alpha * \sum\limits_{i=1}^n a_i x^i, V = g^{alpha * \sum\limits_{i=1}^n a_{i+n+1} x^i,
@@ -111,7 +111,7 @@ pub struct gprodArg<E: Engine, PE: PolyEngine> {
     n: usize,
 }
 
-impl<E: Engine, PE: PolyEngine<Pairing=E>> gprodArg<E, PE> {
+impl<E: Engine, PE: PolyEngine<Pairing=E>> GprodArg<E, PE> {
     pub fn commit_t_poly(
         &mut self,
         y: E::Fr, // challenge
@@ -193,58 +193,50 @@ impl<E: Engine, PE: PolyEngine<Pairing=E>> gprodArg<E, PE> {
 
         Ok((t_xy, PE::Commitment::from_point(&t_comm)))
     }
+
+     pub fn open_a(&self, y: E::Fr, z: E::Fr, srs: &SRS<E>) -> (E::Fr, E::G1Affine) {
+        let n = self.n;
+        let mut yz = y;
+        yz.mul_assign(&z);
+
+        let u = &self.a_poly[..n];
+        let v = &self.a_poly[(n+1)..];
+        assert_eq!(u.len(), v.len());
+
+        let mut val = eval_univar_poly::<E>(u, yz, yz);
+        let fp = yz.pow([(n+2) as u64]);
+        let val_v = eval_univar_poly::<E>(v, fp, yz);
+        val.add_assign(&val_v);
+
+        let mut constant_term = val;
+        constant_term.negate();
+
+        let opening = poly_comm_opening(
+            0,
+            2 * n + 1,
+            srs,
+            Some(constant_term).iter() // f(x)-f(yz)
+                .chain_ext(u.iter())
+                .chain_ext(Some(E::Fr::zero()).iter())
+                .chain_ext(v.iter()),
+            yz,
+        );
+
+        (val, opening)
+    }
 }
-
-
-
-//     pub fn open(&self, y: E::Fr, z: E::Fr, srs: &SRS<E>) -> Vec<(E::Fr, E::G1Affine)> {
-//         let n = self.n;
-//         let mut yz = y;
-//         yz.mul_assign(&z);
-
-//         let mut acc = vec![];
-
-//         for a_poly in self.a_polys.iter() {
-//             let u = &a_poly[..n];
-//             let v = &a_poly[(n+1)..];
-//             assert_eq!(u.len(), v.len());
-
-//             let mut val = eval_univar_poly::<E>(u, yz, yz);
-//             let fp = yz.pow([(n+2) as u64]);
-//             let val_v = eval_univar_poly::<E>(v, fp, yz);
-//             val.add_assign(&val_v);
-
-//             let mut constant_term = val;
-//             constant_term.negate();
-
-//             let opening = poly_comm_opening(
-//                 0,
-//                 2 * n + 1,
-//                 srs,
-//                 Some(constant_term).iter() // f(x)-f(yz)
-//                     .chain_ext(u.iter())
-//                     .chain_ext(Some(E::Fr::zero()).iter())
-//                     .chain_ext(v.iter()),
-//                 yz,
-//             );
-
-//             acc.push((val, opening));
-//         }
-
-//         acc
-//     }
 
 pub fn create_gprod_proof<E: Engine, PE: PolyEngine<Pairing=E>>(
     polys: &ProductPolys<E>,
     srs: &SRS<E>
-) -> Result<GrandProductProof<E>, SynthesisError> {
+) -> Result<GrandProductProof<E, PE>, SynthesisError> {
     let mut transcript = Transcript::new(&[]);
 
     // gprodP_1
     let mut args = polys.gen_arg::<PE>(srs);
-    transcript.commit_point::<PE>(&args.c_comm);
-
     let n = args.n;
+    let c_comm = args.c_comm;
+    transcript.commit_point::<PE>(&c_comm);
 
     // gprodV -> gprodP:
     let y: E::Fr = transcript.challenge_scalar();
@@ -261,6 +253,8 @@ pub fn create_gprod_proof<E: Engine, PE: PolyEngine<Pairing=E>>(
     yz.mul_assign(&z);
 
     // gprod_3(z) -> T:
+    let (a_yz, a_opening) = args.open_a(y, z, srs);
+
     let mut c_z_inv = eval_univar_poly::<E>(&args.c_poly[..], z_inv, z_inv);
     c_z_inv.negate();
 
@@ -301,35 +295,38 @@ pub fn create_gprod_proof<E: Engine, PE: PolyEngine<Pairing=E>>(
         z
     );
 
-    Ok(GrandProductProof::<E> {
-        // a_yz: E::Fr,
-        // a_opening: E::G1Affine,
+    Ok(GrandProductProof::<E, PE> {
+        a_yz,
+        a_opening,
         c_z_inv,
         c_opening,
         k_y,
         k_opening,
         t_opening,
+        c_comm,
+        t_comm,
     })
 }
 
 #[derive(Clone)]
-pub struct GrandProductProof<E: Engine> {
-    // a_yz: E::Fr,
-    // a_opening: E::G1Affine,
+pub struct GrandProductProof<E: Engine, PE: PolyEngine> {
+    a_yz: E::Fr,
+    a_opening: E::G1Affine,
     c_z_inv: E::Fr,
     c_opening: E::G1Affine,
     k_y: E::Fr,
     k_opening: E::G1Affine,
     t_opening: E::G1Affine,
+    c_comm: PE::Commitment,
+    t_comm: PE::Commitment,
+
 }
 
-impl<E: Engine> GrandProductProof<E> {
+impl<E: Engine, PE: PolyEngine<Pairing=E>> GrandProductProof<E, PE> {
     pub fn verify(
         &self,
         n: usize,
         randomness: &Vec<E::Fr>,
-        t_commitment: E::G1Affine,
-        c_commitment: E::G1Affine,
         a_yz: E::Fr,
         y: E::Fr,
         z: E::Fr,
@@ -427,15 +424,15 @@ impl<E: Engine> GrandProductProof<E> {
         ).into_affine();
 
         let neg_h = multiexp(
-            Some(c_commitment).iter()
-                .chain_ext(Some(c_commitment).iter())
-                .chain_ext(Some(t_commitment).iter()),
+            Some(self.c_comm.into_point()).iter()
+                .chain_ext(Some(self.c_comm.into_point()).iter())
+                .chain_ext(Some(self.t_comm.into_point()).iter()),
             randomness.iter()
         ).into_affine();
 
         let is_valid = E::final_exponentiation(&E::miller_loop(&[
             (&alpha_x.prepare(), &alpha_prep),
-            (&alpha.prepare(), &alpha_prep),
+            (&alpha.prepare(), &alpha_x_prep),
             (&neg_h.prepare(), &neg_h_prep),
         ])).unwrap() == E::Fqk::one();
 
@@ -446,9 +443,39 @@ impl<E: Engine> GrandProductProof<E> {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use rand::{XorShiftRng, SeedableRng, Rand, Rng};
+    use pairing::bls12_381::{Bls12, Fr};
+    use pairing::PrimeField;
+    use crate::polynomials::Polynomial;
 
     #[test]
     fn grand_product_argument_corecctness() {
+        let srs_x = Fr::from_str("432").unwrap();
+        let srs_alpha = Fr::from_str("9876").unwrap();
+        let srs = &SRS::<Bls12>::dummy(824562, srs_x, srs_alpha);
 
+        let n: usize = 1 << 16;
+        let rng = &mut XorShiftRng::from_seed([0x5dbe6259, 0x8d313d76, 0x3237db17, 0xe5bc0654]);
+        let coeffs = (0..n).map(|_| Fr::rand(rng)).collect::<Vec<_>>();
+        let mut perm = coeffs.clone();
+        rng.shuffle(&mut perm);
+
+        let prod_polys = ProductPolys::new(coeffs, perm);
+        let proof = create_gprod_proof::<Bls12, Polynomial<Bls12>>(&prod_polys, srs).unwrap();
+
+        let y: Fr = rng.gen();
+        let z: Fr = rng.gen();
+        let randomness = (0..3).map(|_| Fr::rand(rng)).collect::<Vec<_>>();
+
+        let is_valid = proof.verify(
+            n,
+            &randomness,
+            proof.a_yz,
+            y,
+            z,
+            srs
+        ).unwrap();
+
+        assert!(is_valid);
     }
 }
