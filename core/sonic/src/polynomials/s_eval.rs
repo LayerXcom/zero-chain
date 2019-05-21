@@ -5,7 +5,6 @@ use crate::cs::Backend;
 use crate::cs::lc::{Variable, Coeff};
 use super::add_polynomials;
 
-
 /// Defined in Section 5: SYSTEM OF CONSTRAINTS
 /// Evaluation of s(X, Y) at x
 #[derive(Clone)]
@@ -13,19 +12,22 @@ pub struct SyEval<E: Engine> {
     max_n: usize,
     current_q: usize,
 
+    /// Coefficients of u term
     /// x^{-1}, ..., x^{-N}
     a: Vec<E::Fr>,
 
+    /// Coefficients of v term
     /// x^1, ..., x^{N}
     b: Vec<E::Fr>,
 
-    /// x^{N+1}, ..., x^{2*N}
+    /// Coefficients of w term
+    /// x^{N+1}, ..., x^{2*N+1}
     c: Vec<E::Fr>,
 
-    /// coeffs for y^1, ..., y^{N+Q}
+    /// Coefficients of Y^1, ..., Y^{N+Q}
     pos_coeffs: Vec<E::Fr>,
 
-    /// coeffs for y^{-1}, y^{-2}, ..., y^{-N}
+    /// Coefficients of Y^{-1}, Y^{-2}, ..., Y^{-N}
     neg_coeffs: Vec<E::Fr>,
 }
 
@@ -45,10 +47,13 @@ impl<E: Engine> SyEval<E> {
         let mut minus_one = E::Fr::one();
         minus_one.negate();
 
+        // Coefficients of powers [-1, -n] and [1, n] are fixed to -1
+        // because of -Y^{i}-Y^{-i} term in w_i(Y)
         let mut pos_coeffs = vec![minus_one; n];
         eval_bivar_poly::<E>(&mut pos_coeffs[..], x.pow(&[(n+1) as u64]), x);
         let neg_coeffs = pos_coeffs.clone();
 
+        // Coefficients of powers [1+n, n+q] will be assigned via synthesizing.
         pos_coeffs.resize(n+q, E::Fr::zero());
 
         Ok(SyEval {
@@ -119,13 +124,16 @@ pub struct SxEval<E: Engine> {
     /// Current value of y^{q+n}
     yqn: E::Fr,
 
-    /// X^{-i} * (Y^{1+n} * u_{1,i}), X^{-i} * (Y^{2+n} * u_{2,i}),... , X^{-i} * (Y^{Q+n} * u_{Q,i})
+    /// Coefficients of X^{-i} term
+    /// Y^{1+n} * u_{1,i}, Y^{2+n} * u_{2,i},... , Y^{Q+n} * u_{Q,i}
     u: Vec<E::Fr>,
 
-    /// X^{i} * (Y^{1+n} * v_{1,i}), X^{i} * (Y^{2+n} * v_{2,i}),... , X^{i} * (Y^{Q+n} * v_{Q,i})
+    /// Coefficients of X^{i} term
+    /// Y^{1+n} * v_{1,i}, Y^{2+n} * v_{2,i},... , Y^{Q+n} * v_{Q,i}
     v: Vec<E::Fr>,
 
-    /// X^{i+n} * (-Y^{i}-Y^{-i} + Y^{1+n}*w_{1,i}), X^{i+n} * (-Y^{i}-Y^{-i} + Y^{2+n}*w_{2,i}),... , X^{i+n} * (-Y^{i}-Y^{-i} + Y^{Q+n}*w_{Q,i})
+    /// Coefficients of X^{i+n} term
+    /// -Y^{i}-Y^{-i} + Y^{1+n}*w_{1,i}, -Y^{i}-Y^{-i} + Y^{2+n}*w_{2,i},... , -Y^{i}-Y^{-i} + Y^{Q+n}*w_{Q,i}
     w: Vec<E::Fr>,
 }
 
@@ -191,7 +199,7 @@ impl<'a, E: Engine> Backend<E> for &'a mut SxEval<E> {
         self.yqn.mul_assign(&self.y);
     }
 
-    /// Add coefficient to a value of u and v, and w polynomials.
+    /// Add coefficients u, v, and w to a polynomial.
     fn insert_coefficient(&mut self, var: Variable, coeff: Coeff<E>) {
         let uvw_val = match var {
             Variable::A(index) => {
