@@ -158,7 +158,7 @@ impl SynthesisDriver for Permutation {
                 //             }
                 //         }
                 //     }
-                }
+                // }
 
                 unimplemented!();
             }

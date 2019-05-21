@@ -34,15 +34,16 @@ pub struct SyEval<E: Engine> {
 impl<E: Engine> SyEval<E> {
     pub fn new(x: E::Fr, n: usize, q: usize) -> Result<Self, SynthesisError> {
         let x_inv = x.inverse().ok_or(SynthesisError::DivisionByZero)?;
+        let x_n_plus_1 = x.pow(&[(n + 1) as u64]);
 
         let mut a = vec![E::Fr::one(); n];
         let mut b = vec![E::Fr::one(); n];
         let mut c = vec![E::Fr::one(); n];
 
-        // Evaluate polynomial s
+        // Evaluate polynomial S(X, Y) at x for each coefficients u, v ,and w.
         eval_bivar_poly::<E>(&mut a[..], x_inv, x_inv);
         eval_bivar_poly::<E>(&mut b[..], x, x);
-        eval_bivar_poly::<E>(&mut c[..], x.pow(&[(n+1) as u64]), x);
+        eval_bivar_poly::<E>(&mut c[..], x_n_plus_1, x);
 
         let mut minus_one = E::Fr::one();
         minus_one.negate();
@@ -50,11 +51,11 @@ impl<E: Engine> SyEval<E> {
         // Coefficients of powers [-1, -n] and [1, n] are fixed to -1
         // because of -Y^{i}-Y^{-i} term in w_i(Y)
         let mut pos_coeffs = vec![minus_one; n];
-        eval_bivar_poly::<E>(&mut pos_coeffs[..], x.pow(&[(n+1) as u64]), x);
+        eval_bivar_poly::<E>(&mut pos_coeffs[..], x_n_plus_1, x);
         let neg_coeffs = pos_coeffs.clone();
 
-        // Coefficients of powers [1+n, n+q] will be assigned via synthesizing.
-        pos_coeffs.resize(n+q, E::Fr::zero());
+        // Coefficients of powers [1+n, n+q] will be assigned with u, v, and w via synthesizing.
+        pos_coeffs.resize(n + q, E::Fr::zero());
 
         Ok(SyEval {
             max_n: n,
@@ -70,6 +71,20 @@ impl<E: Engine> SyEval<E> {
     /// Return polynomials each of negative and positive powers
     pub fn neg_pos_poly(self) -> (Vec<E::Fr>, Vec<E::Fr>) {
         (self.neg_coeffs, self.pos_coeffs)
+    }
+
+    // Evaluate S(x, Y) at y
+    pub fn finalize(&self, y: E::Fr) -> Result<E::Fr, SynthesisError> {
+        let y_inv = y.inverse().ok_or(SynthesisError::DivisionByZero)?;
+
+        let pos_eval = eval_univar_poly::<E>(&self.pos_coeffs[..], y, y);
+        let neg_eval = eval_univar_poly::<E>(&self.neg_coeffs[..], y_inv, y_inv);
+
+        let mut acc = E::Fr::zero();
+        acc.add_assign(&pos_eval);
+        acc.add_assign(&neg_eval);
+
+        Ok(acc)
     }
 }
 
