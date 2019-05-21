@@ -73,6 +73,8 @@ impl <'a, E: Engine, CS: SonicCS<E> + 'a> ConstraintSystem<E>
         })
     }
 
+
+
     /// Enforce that `A` * `B` = `C`.
     fn enforce<A, AR, LA, LB, LC>(&mut self, _: A, a: LA, b: LB, c: LC)
         where

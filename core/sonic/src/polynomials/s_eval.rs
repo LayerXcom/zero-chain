@@ -32,7 +32,12 @@ pub struct SyEval<E: Engine> {
 }
 
 impl<E: Engine> SyEval<E> {
-    pub fn new(x: E::Fr, n: usize, q: usize) -> Result<Self, SynthesisError> {
+    pub fn new(
+        x: E::Fr,
+        n: usize,   // Max N
+        q: usize,   // Max Q
+    ) -> Result<Self, SynthesisError>
+    {
         let x_inv = x.inverse().ok_or(SynthesisError::DivisionByZero)?;
         let x_n_plus_1 = x.pow(&[(n + 1) as u64]);
 
@@ -55,6 +60,9 @@ impl<E: Engine> SyEval<E> {
         let neg_coeffs = pos_coeffs.clone();
 
         // Coefficients of powers [1+n, n+q] will be assigned with u, v, and w via synthesizing.
+        // We don't append a, b, and c as coefficients because u, v, and w haven't be determined yet.
+        // We store the a, b, and c as separate elements, so can add those coefficients at the time of
+        // synthesizing u,v,w.
         pos_coeffs.resize(n + q, E::Fr::zero());
 
         Ok(SyEval {
@@ -93,40 +101,35 @@ impl<'a, E: Engine> Backend<E> for &'a mut SyEval<E> {
         self.current_q += 1;
     }
 
-    fn insert_coefficient(&mut self, var: Variable, coeff: Coeff<E>) {
+    /// Append coefficients u, v, w to Y powers [1+n, Q+n]
+    fn insert_coefficient(
+        &mut self,
+        var: Variable,  // a, b, and c
+        coeff: Coeff<E> // u, v, and w for current q
+    ) {
+        let y_index = self.current_q + self.max_n;
+
         match var {
             Variable::A(index) => {
-                let index = index - 1;
+                // index starts from 1
+                let mut a = self.a[index - 1];
+                coeff.multiply(&mut a);
 
-                // Y^{q+N} += X^{-i} * coeff
-                let mut tmp = self.a[index];
-                coeff.multiply(&mut tmp);
-
-                let y_idnex = self.current_q + self.max_n;
-                self.pos_coeffs[y_idnex - 1].add_assign(&tmp);
-
+                self.pos_coeffs[y_index - 1].add_assign(&a);
             },
             Variable::B(index) => {
-                let index = index - 1;
+                let mut b = self.b[index - 1];
+                coeff.multiply(&mut b);
 
-                // Y^{q+N} += X^{i} * coeff
-                let mut tmp = self.b[index];
-                coeff.multiply(&mut tmp);
-
-                let y_index = self.current_q + self.max_n;
-                self.pos_coeffs[y_index - 1].add_assign(&tmp);
+                self.pos_coeffs[y_index - 1].add_assign(&b);
             },
             Variable::C(index) => {
-                let index = index - 1;
+                let mut c = self.c[index - 1];
+                coeff.multiply(&mut c);
 
-                // Y^{q+N} += X^{i+N} * coeff
-                let mut tmp = self.c[index];
-                coeff.multiply(&mut tmp);
-
-                let y_index = self.current_q + self.max_n;
-                self.pos_coeffs[y_index - 1].add_assign(&tmp);
+                self.pos_coeffs[y_index - 1].add_assign(&c);
             }
-        };
+        }
     }
 }
 

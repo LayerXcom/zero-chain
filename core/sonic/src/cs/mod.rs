@@ -92,6 +92,7 @@ impl SynthesisDriver for Basic {
         }
 
         impl<E: Engine, B: Backend<E>> ConstraintSystem<E> for Synthesizer<E, B> {
+            // Variable starts from index 1
             const ONE: Variable = Variable::A(1);
 
             fn alloc<F>(&mut self, value: F) -> Result<Variable, SynthesisError>
