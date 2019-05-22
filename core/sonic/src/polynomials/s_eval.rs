@@ -151,7 +151,7 @@ pub struct SxEval<E: Engine> {
     v: Vec<E::Fr>,
 
     /// Coefficients of X^{i+n} term
-    /// -Y^{1}-Y^{-1} + \sum Y^{q+n}*w_{q,1}, -Y^{2}-Y^{-2} + \sum Y^{q+n}*w_{q,2},... , -Y^{n}-Y^{-n} + \sum Y^{q+n}*w_{q,n}
+    /// -Y^{1}-Y^{-1} + Y^{q+n}*w_{q,1}, -Y^{2}-Y^{-2} + Y^{q+n}*w_{q,2},... , -Y^{n}-Y^{-n} + Y^{q+n}*w_{q,n}
     w: Vec<E::Fr>,
 }
 
