@@ -110,7 +110,7 @@ impl<E: Engine, C: Circuit<E>, S: SynthesisDriver, R: Rng> MultiVerifier<E, C, S
             let mut tmp = SxEval::new(y, self.n).unwrap();
             S::synthesize(&mut tmp, &self.circuit).unwrap();
 
-            tmp.finalize(z)
+            tmp.finalize(z).unwrap()
         });
 
         // Compute t(z, y)

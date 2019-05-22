@@ -59,11 +59,11 @@ impl<E: Engine> SyEval<E> {
         eval_bivar_poly::<E>(&mut pos_coeffs[..], x_n_plus_1, x);
         let neg_coeffs = pos_coeffs.clone();
 
-        // Coefficients of powers [1+n, n+q] will be assigned with u, v, and w via synthesizing.
+        // Coefficients of powers [1+n, q+n] will be assigned with u, v, and w via synthesizing.
         // We don't append a, b, and c as coefficients because u, v, and w haven't be determined yet.
         // We store the a, b, and c as separate elements, so can add those coefficients at the time of
         // synthesizing u,v,w.
-        pos_coeffs.resize(n + q, E::Fr::zero());
+        pos_coeffs.resize(q + n, E::Fr::zero());
 
         Ok(SyEval {
             max_n: n,
@@ -143,39 +143,38 @@ pub struct SxEval<E: Engine> {
     yqn: E::Fr,
 
     /// Coefficients of X^{-i} term
-    /// Y^{1+n} * u_{1,i}, Y^{2+n} * u_{2,i},... , Y^{Q+n} * u_{Q,i}
+    /// Y^{q+n} * u_{q,1}, Y^{q+n} * u_{q,2},... , Y^{q+n} * u_{q,n}
     u: Vec<E::Fr>,
 
     /// Coefficients of X^{i} term
-    /// Y^{1+n} * v_{1,i}, Y^{2+n} * v_{2,i},... , Y^{Q+n} * v_{Q,i}
+    /// Y^{q+n} * v_{q,1}, Y^{q+n} * v_{q,2},... , Y^{q+n} * v_{q,n}
     v: Vec<E::Fr>,
 
     /// Coefficients of X^{i+n} term
-    /// -Y^{i}-Y^{-i} + Y^{1+n}*w_{1,i}, -Y^{i}-Y^{-i} + Y^{2+n}*w_{2,i},... , -Y^{i}-Y^{-i} + Y^{Q+n}*w_{Q,i}
+    /// -Y^{1}-Y^{-1} + \sum Y^{q+n}*w_{q,1}, -Y^{2}-Y^{-2} + \sum Y^{q+n}*w_{q,2},... , -Y^{n}-Y^{-n} + \sum Y^{q+n}*w_{q,n}
     w: Vec<E::Fr>,
 }
 
 impl<E: Engine> SxEval<E> {
-    ///  Initialize s(X, y) where y is fixed.
-    pub fn new(y: E::Fr, n: usize) -> Result<Self, SynthesisError>  {
+    pub fn new(y: E::Fr, n: usize) -> Result<Self, SynthesisError> {
         let y_inv = y.inverse().ok_or(SynthesisError::DivisionByZero)?;
         let yqn = y.pow(&[n as u64]);
 
-        // because of u_{q,i} is zero
+        // because of u_{q,i} and q is zero
         let u = vec![E::Fr::zero(); n];
 
-        // because of v_{q,i} is zero
+        // because of v_{q,i} and q is zero
         let v = vec![E::Fr::zero(); n];
 
         let mut minus_one = E::Fr::one();
         minus_one.negate();
 
         let mut w = vec![minus_one; n];
-        let mut neg_w = vec![minus_one; n];
+        let mut inv_w = vec![minus_one; n];
 
         eval_bivar_poly::<E>(&mut w[..], y, y);
-        eval_bivar_poly::<E>(&mut neg_w[..], y_inv, y_inv);
-        add_polynomials::<E>(&mut w[..], &neg_w[..]);
+        eval_bivar_poly::<E>(&mut inv_w[..], y_inv, y_inv);
+        add_polynomials::<E>(&mut w[..], &inv_w[..]);
 
         Ok(SxEval {
             y,
@@ -194,20 +193,16 @@ impl<E: Engine> SxEval<E> {
     }
 
     /// Evaluation of s(X, y) at x
-    pub fn finalize(self, x: E::Fr) -> E::Fr {
-        let x_inv = x.inverse().unwrap();
-        let mut res = E::Fr::zero();
+    pub fn finalize(self, x: E::Fr) -> Result<E::Fr, SynthesisError> {
+        let x_inv = x.inverse().ok_or(SynthesisError::DivisionByZero)?;
+        let x_n_plus_1 = x.pow(&[(self.v.len() + 1) as u64]);
+        let mut acc = E::Fr::zero();
 
-        let tmp = x_inv;
-        res.add_assign(&eval_univar_poly::<E>(&self.u[..], tmp, tmp));
+        acc.add_assign(&eval_univar_poly::<E>(&self.u, x_inv, x_inv));
+        acc.add_assign(&eval_univar_poly::<E>(&self.v, x, x));
+        acc.add_assign(&eval_univar_poly::<E>(&self.w, x_n_plus_1, x));
 
-        let tmp = x;
-        res.add_assign(&eval_univar_poly::<E>(&self.v[..], tmp, tmp));
-
-        let tmp = x.pow(&[(self.v.len()+1) as u64]);
-        res.add_assign(&eval_univar_poly::<E>(&self.w[..], tmp, x));
-
-        res
+        Ok(acc)
     }
 }
 
