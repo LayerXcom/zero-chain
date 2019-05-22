@@ -212,32 +212,28 @@ impl<'a, E: Engine> Backend<E> for &'a mut SxEval<E> {
         self.yqn.mul_assign(&self.y);
     }
 
-    /// Add coefficients u, v, and w to a polynomial.
+    /// Add coefficients u, v, and w terms.
     fn insert_coefficient(&mut self, var: Variable, coeff: Coeff<E>) {
-        let uvw_val = match var {
+        let mut yqn = self.yqn;
+
+        match var {
             Variable::A(index) => {
-                &mut self.u[index - 1]
+                coeff.multiply(&mut yqn);
+
+                let u = &mut self.u[index - 1];
+                u.add_assign(&yqn);
             },
             Variable::B(index) => {
-                &mut self.v[index - 1]
+                coeff.multiply(&mut yqn);
+
+                let v = &mut self.v[index - 1];
+                v.add_assign(&yqn);
             },
             Variable::C(index) => {
-                &mut self.w[index - 1]
-            },
-        };
+                coeff.multiply(&mut yqn);
 
-        match coeff {
-            Coeff::Zero => {},
-            Coeff::One => {
-                // Addition is because the current value is not filled.
-                uvw_val.add_assign(&self.yqn);
-            },
-            Coeff::NegativeOne => {
-                uvw_val.sub_assign(&self.yqn);
-            },
-            Coeff::Full(mut val) => {
-                val.mul_assign(&self.yqn);
-                uvw_val.add_assign(&val);
+                let w = &mut self.w[index - 1];
+                w.add_assign(&mut yqn);
             }
         }
     }
