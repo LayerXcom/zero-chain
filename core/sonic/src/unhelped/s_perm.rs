@@ -80,7 +80,6 @@ impl<'a, E: Engine> Backend<E> for &'a mut SxPerm<E> {
 
                 let u_q = &mut self.u_q[index - 1];
                 *u_q += self.current_q;
-                println!("u_q: {:?}", u_q);
             },
             Variable::B(index) => {
                 coeff.multiply(&mut yq);
@@ -90,7 +89,6 @@ impl<'a, E: Engine> Backend<E> for &'a mut SxPerm<E> {
 
                 let v_q = &mut self.v_q[index - 1];
                 *v_q += self.current_q;
-                println!("v_q: {:?}", v_q);
             },
             Variable::C(index) => {
                 coeff.multiply(&mut yq);
@@ -100,7 +98,6 @@ impl<'a, E: Engine> Backend<E> for &'a mut SxPerm<E> {
 
                 let w_q = &mut self.w_q[index - 1];
                 *w_q += self.current_q;
-                println!("w_q: {:?}", w_q);
             }
         }
     }
@@ -139,19 +136,22 @@ mod tests {
     fn dummy_s_prove<E: Engine, C: Circuit<E>, S: SynthesisDriver>(
         circuit: &C,
         n: usize,
-    ) {
+    ) -> Vec<Vec<usize>> {
         let y = E::Fr::from_str("2").unwrap();
 
-        let polynomials = {
+        let perm = {
             let mut s_1 = SxPerm::new(y, n);
             S::synthesize(&mut s_1, circuit);
 
-            s_1.poly()
+            s_1.perm()
         };
+
+        perm
     }
 
     #[test]
     fn test_perm_s1() {
-        dummy_s_prove::<Bls12, _, Basic>(&SimpleCircuit, 1 << 4);
+        let perm = dummy_s_prove::<Bls12, _, Basic>(&SimpleCircuit, 1 << 4);
+        println!("perm: {:?}", perm);
     }
 }
