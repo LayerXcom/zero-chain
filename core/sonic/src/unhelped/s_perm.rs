@@ -29,15 +29,15 @@ impl<E: Engine> SxPerm<E> {
     pub fn new(y: E::Fr, n: usize) -> Self {
         // because of u_{q,i} and q is zero
         let u = vec![E::Fr::zero(); n];
-        let u_q = vec![0; n];
+        let u_q = Vec::with_capacity(n);
 
         // because of v_{q,i} and q is zero
         let v = vec![E::Fr::zero(); n];
-        let v_q = vec![0; n];
+        let v_q = Vec::with_capacity(n);
 
         // because of w_{q,i} and q is zero
         let w = vec![E::Fr::zero(); n];
-        let w_q = vec![0; n];
+        let w_q = Vec::with_capacity(n);
 
         SxPerm {
             y,
@@ -77,6 +77,8 @@ impl<'a, E: Engine> Backend<E> for &'a mut SxPerm<E> {
 
                 let u = &mut self.u[index - 1];
                 u.add_assign(&yq);
+
+                // self.u_q.push(self.current_q);
 
                 let u_q = &mut self.u_q[index - 1];
                 *u_q += self.current_q;

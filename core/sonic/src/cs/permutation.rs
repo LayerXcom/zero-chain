@@ -16,28 +16,37 @@ impl SynthesisDriver for Permutation {
             _marker: PhantomData<E>,
         }
 
-        // impl<E: Engine, B: Backend<E>> Synthesizer<E, B> {
-        //     // A * 1 = A
-        //     fn remove_current_variable(&mut self) {
-        //         match self.current_variable.take() {
-        //             Some(index) => {
-        //                 let var_a = Variable::A(index);
-        //                 let var_b = Variable::B(index);
-        //                 let var_c = Variable::C(index);
+        impl<E: Engine, B: Backend<E>> Synthesizer<E, B> {
+            // A * 1 = A
+            fn remove_current_variable(&mut self) {
+                match self.current_variable.take() {
+                    Some(index) => {
+                        let var_a = Variable::A(index);
+                        let var_b = Variable::B(index);
+                        let var_c = Variable::C(index);
 
-        //                 let mut product = E::Fr::zero();
+                        let mut product = None;
 
-        //                 let value_a = self.backend.get_var(var_a);
+                        let value_a = self.backend.get_var(var_a);
 
-        //                 self.backend.set_var(var_b, || {
-        //                     let value_b = E::Fr::one();
-        //                     product.add_assign(&)
-        //                 });
-        //             },
-        //             _ => {}
-        //         }
-        //     }
-        // }
+                        self.backend.set_var(var_b, || {
+                            let value_b = E::Fr::one();
+                            product = Some(value_a.ok_or(SynthesisError::AssignmentMissing)?);
+                            product.as_mut().map(|p| p.mul_assign(&value_b));
+
+                            Ok(value_b)
+                        }).expect("should exist by now");
+
+                        self.backend.set_var(var_c, || {
+                            product.ok_or(SynthesisError::AssignmentMissing)
+                        }).expect("should exist by now");
+
+                        self.current_variable = None;
+                    },
+                    _ => {}
+                }
+            }
+        }
 
         impl<E: Engine, B: Backend<E>> ConstraintSystem<E> for Synthesizer<E, B> {
             const ONE: Variable = Variable::A(1);
@@ -57,6 +66,106 @@ impl SynthesisDriver for Permutation {
             }
 
             fn enforce_zero(&mut self, lc: LinearCombination<E>) {
+                // A -> A, B -> B, C -> C
+                self.q += 1;
+                self.backend.new_linear_constraint();
+
+                for (var, coeff) in lc.as_ref() {
+                    self.backend.insert_coefficient(*var, *coeff);
+                }
+
+                // remove current variable
+
+                // A -> B, B -> C, C -> A
+                {
+                    self.q += 1;
+                    self.backend.new_linear_constraint();
+                    let mut alloc_map = HashMap::with_capacity(lc.as_ref().len());
+                    let mut new_index = self.n + 1;
+
+                    // Construct the mapping to new index which is incremented by one for rotations
+                    for (var, _) in lc.as_ref() {
+                        match var {
+                            Variable::A(index) => {
+                                if alloc_map.get(index).is_none() && *index != 1 {
+                                    alloc_map.insert(*index, new_index);
+                                }
+                            },
+                            Variable::B(index) => {
+                                if alloc_map.get(index).is_none() && *index != 2 {
+                                    alloc_map.insert(*index, new_index);
+                                }
+                            },
+                            Variable::C(index) => {
+                                if alloc_map.get(index).is_none() && *index != 3 {
+                                    alloc_map.insert(*index, new_index);
+                                }
+                            }
+                        }
+                    }
+
+                    // Allocate the rotated variable
+                    for (index, new_index) in alloc_map.iter() {
+                        self.n += 1;
+                        self.backend.new_multiplication_gate();
+
+                        let current_value_a = self.backend.get_var(Variable::A(*index));
+                        let current_value_b = self.backend.get_var(Variable::B(*index));
+                        let current_value_c = self.backend.get_var(Variable::C(*index));
+
+                        // A(index) -> B(new_index)
+                        self.backend.set_var(Variable::B(*new_index), || {
+                            let value = current_value_a.ok_or(SynthesisError::AssignmentMissing)?;
+                            Ok(value)
+                        });
+
+                        // B(index) -> C(new_index)
+                        self.backend.set_var(Variable::C(*new_index), || {
+                            let value = current_value_b.ok_or(SynthesisError::AssignmentMissing)?;
+                            Ok(value)
+                        });
+
+                        // C(index) -> A(new_index)
+                        self.backend.set_var(Variable::A(*new_index), || {
+                            let value = current_value_c.ok_or(SynthesisError::AssignmentMissing)?;
+                            Ok(value)
+                        });
+                    }
+
+                    // Add coefficients with a new rotated variable
+                    for (var, coeff) in lc.as_ref() {
+                        let new_var = match var {
+                            Variable::A(index) => {
+                                if *index == 1 {
+                                    Variable::B(2)
+                                } else {
+                                    let new_index = alloc_map.get(index).unwrap();
+                                    Variable::B(*new_index)
+                                }
+                            },
+                            Variable::B(index) => {
+                                if *index == 2 {
+                                    Variable::C(3)
+                                } else {
+                                    let new_index = alloc_map.get(index).unwrap();
+                                    Variable::C(*new_index)
+                                }
+                            },
+                            Variable::C(index) => {
+                                if *index == 3 {
+                                    Variable::A(1)
+                                } else {
+                                    let new_index = alloc_map.get(index).unwrap();
+                                    Variable::A(*new_index)
+                                }
+                            }
+                        };
+
+                        self.backend.insert_coefficient(new_var, *coeff);
+                    }
+                }
+
+                // A -> C, B -> A, C -> B
 
 
                 unimplemented!();
