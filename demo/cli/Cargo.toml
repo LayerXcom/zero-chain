@@ -20,7 +20,6 @@ zjubjub = { package = "jubjub", path = "../../core/jubjub"}
 lazy_static = "1.3.0"
 byteorder = "1"
 keys = { path = "../../core/keys" }
-wasm-utils = {package = "zerochain-wasm-utils", path = "../wasm-utils", features = ["multithread"]}
 hex = "0.3.2"
 
 [dependencies.blake2-rfc]

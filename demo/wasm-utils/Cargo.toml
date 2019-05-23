@@ -9,11 +9,6 @@ crate-type = ["cdylib", "rlib"]
 
 [features]
 default = ["console_error_panic_hook"]
-multithread = [
-    "scrypto/multithread",
-    "proofs/multithread",
-    "bellman/multithread",
-]
 
 [dependencies]
 cfg-if = "0.1.2"

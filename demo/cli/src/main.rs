@@ -11,11 +11,12 @@ use std::fs::File;
 use std::path::Path;
 use std::string::String;
 use std::io::{BufWriter, Write, BufReader, Read};
-use wasm_utils::transaction::Transaction;
 use bellman::groth16::{Parameters, PreparedVerifyingKey};
 
 mod setup;
 use setup::setup;
+mod transaction;
+use transaction::Transaction;
 
 #[macro_use]
 extern crate lazy_static;

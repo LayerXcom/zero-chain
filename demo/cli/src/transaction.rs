@@ -7,22 +7,22 @@ use scrypto::{
 	};
 use proofs::{
     self,
-	primitives::{
-		EncryptionKey,
-		ProofGenerationKey,
+	primitives::{		
+		EncryptionKey, 		
+		ProofGenerationKey,		
 		},
-	prover::TransferProof,
+	prover::TransferProof,	   
 };
 use rand::Rng;
 
-pub struct Transaction{
+pub struct Transaction{    
     pub rvk: [u8; 32],                   // 32 bytes
     pub proof: [u8; 192],                // 192 bytes
     pub address_sender: [u8; 32],        // 32 bytes
     pub address_recipient: [u8; 32],     // 32 bytes
     pub enc_val_recipient: [u8; 64],     // 64 bytes
 	pub enc_val_sender: [u8; 64],        // 64 bytes
-	pub enc_bal_sender: [u8; 64],        // 64 bytes
+	pub enc_bal_sender: [u8; 64],        // 64 bytes	
 	pub rsk: [u8; 32],                   // 32 bytes
 }
 
@@ -32,37 +32,37 @@ impl Transaction {
         remaining_balance: u32,
         alpha: fs::Fs,
         proving_key: &Parameters<Bls12>,
-		prepared_vk: &PreparedVerifyingKey<Bls12>,
-		address_recipient: &EncryptionKey<Bls12>,
+		prepared_vk: &PreparedVerifyingKey<Bls12>,		
+		address_recipient: &EncryptionKey<Bls12>,		
 		ok_sender: &fs::Fs,
-        ciphertext_balance: proofs::elgamal::Ciphertext<Bls12>,
+        ciphertext_balance: proofs::elgamal::Ciphertext<Bls12>,		
 		rng: &mut R,
     ) -> Result<Self, io::Error>
-	{
+	{		
 		// The pramaters from std environment
 		let params = JubjubBls12::new();
-
+		
 		let proof_generation_key = ProofGenerationKey::from_origin_key(ok_sender, &params);
 
 		// Generate the zk proof
 		let proof_output = TransferProof::gen_proof(
 			value,
-			remaining_balance,
-			alpha,
-			proving_key,
+			remaining_balance,        
+			alpha,			
+			proving_key, 
 			prepared_vk,
 			proof_generation_key,
-			address_recipient.clone(),
+			address_recipient.clone(),			
             ciphertext_balance.clone(),
 			rng,
 			&params,
-		).unwrap();
+		).unwrap();		
 
 		// Generate the re-randomized sign key
 		let rsk = PrivateKey::<Bls12>(*ok_sender).randomize(alpha);
 		let mut rsk_bytes = [0u8; 32];
 		rsk.write(&mut rsk_bytes[..]).map_err(|_| io::Error::InvalidData)?;
-
+		
 		let mut rvk_bytes = [0u8; 32];
 		proof_output.rvk.write(&mut rvk_bytes[..]).map_err(|_| io::Error::InvalidData)?;
 
@@ -82,17 +82,17 @@ impl Transaction {
 		proof_output.cipher_val_s.write(&mut enc_val_sender[..]).map_err(|_| io::Error::InvalidData)?;
 
 		let mut enc_bal_sender = [0u8; 64];
-		proof_output.cipher_balance.write(&mut enc_bal_sender[..]).map_err(|_| io::Error::InvalidData)?;
+		proof_output.cipher_balance.write(&mut enc_bal_sender[..]).map_err(|_| io::Error::InvalidData)?;					
 
-		let tx = Transaction {
-			proof: proof_bytes,
-			rvk: rvk_bytes,
-			address_sender: b_address_sender,
+		let tx = Transaction {		
+			proof: proof_bytes,		           			 
+			rvk: rvk_bytes,  			      
+			address_sender: b_address_sender,        
 			address_recipient: b_address_recipient,
 			enc_val_recipient: enc_val_recipient,
 			enc_val_sender: enc_val_sender,
 			enc_bal_sender: enc_bal_sender,
-			rsk: rsk_bytes,
+			rsk: rsk_bytes,					
 		};
 
 		Ok(tx)
