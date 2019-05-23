@@ -242,131 +242,6 @@ pub fn gen_call(
     JsValue::from_serde(&calls).expect("fails to write json")
 }
 
-#[wasm_bindgen]
-pub fn gen_call1(
-    sk: &[u8],
-    mut address_recipient: &[u8],
-    value: u32,
-    balance: u32,
-    mut proving_key: &[u8],
-    mut prepared_vk: &[u8],
-    seed_slice: &[u32],
-) -> u32
-{
-    let params = &JubjubBls12::new();
-    let mut rng = &mut ChaChaRng::from_seed(seed_slice);
-    let p_g = FixedGenerators::NoteCommitmentRandomness; // 1
-    let remaining_balance = balance - value;
-
-    // let alpha = Fs::rand(&mut rng);
-    let alpha = Fs::zero();
-
-    let sk_fs = bytes_to_fs::<Bls12>(sk);
-    let pkg = ProofGenerationKey::<Bls12>::from_ok_bytes(sk, params);
-    let bdk: Fs = pkg.bdk();
-
-    let r_fs = Fs::rand(&mut rng);
-    let public_key = params.generator(p_g).mul(bdk, &params).into();
-    let ciphertext_balance = Ciphertext::encrypt(balance, r_fs, &public_key, p_g, &params);
-
-    let address_recipient = EncryptionKey::<Bls12>::read(&mut address_recipient, params).unwrap();
-
-    let prepared_vk = PreparedVerifyingKey::<Bls12>::read(&mut prepared_vk).unwrap();
-
-    5
-}
-
-#[wasm_bindgen]
-pub fn gen_call2(
-    sk: &[u8],
-    mut address_recipient: &[u8],
-    value: u32,
-    balance: u32,
-    mut proving_key: &[u8],
-    mut prepared_vk: &[u8],
-    seed_slice: &[u32],
-) -> u32
-{
-    let params = &JubjubBls12::new();
-    let mut rng = &mut ChaChaRng::from_seed(seed_slice);
-    let p_g = FixedGenerators::NoteCommitmentRandomness; // 1
-    let remaining_balance = balance - value;
-
-    // let alpha = Fs::rand(&mut rng);
-    let alpha = Fs::zero();
-
-    let sk_fs = bytes_to_fs::<Bls12>(sk);
-    let pkg = ProofGenerationKey::<Bls12>::from_ok_bytes(sk, params);
-    let bdk: Fs = pkg.bdk();
-
-    let r_fs = Fs::rand(&mut rng);
-    let public_key = params.generator(p_g).mul(bdk, &params).into();
-    let ciphertext_balance = Ciphertext::encrypt(balance, r_fs, &public_key, p_g, &params);
-
-    let address_recipient = EncryptionKey::<Bls12>::read(&mut address_recipient, params).unwrap();
-    let proving_key = Parameters::<Bls12>::read(&mut proving_key, true).unwrap();
-
-    5
-}
-
-
-#[wasm_bindgen]
-pub fn gen_call3(
-    sk: &[u8],
-    mut address_recipient: &[u8],
-    value: u32,
-    balance: u32,
-    mut proving_key: &[u8],
-    mut prepared_vk: &[u8],
-    seed_slice: &[u32],
-) -> u32
-{
-    let params = &JubjubBls12::new();
-    let mut rng = &mut ChaChaRng::from_seed(seed_slice);
-    let p_g = FixedGenerators::NoteCommitmentRandomness; // 1
-    let remaining_balance = balance - value;
-
-    // let alpha = Fs::rand(&mut rng);
-    let alpha = Fs::zero();
-
-    let sk_fs = bytes_to_fs::<Bls12>(sk);
-    let pkg = ProofGenerationKey::<Bls12>::from_ok_bytes(sk, params);
-    let bdk: Fs = pkg.bdk();
-
-    let r_fs = Fs::rand(&mut rng);
-    let public_key = params.generator(p_g).mul(bdk, &params).into();
-    let ciphertext_balance = Ciphertext::encrypt(balance, r_fs, &public_key, p_g, &params);
-
-    let address_recipient = EncryptionKey::<Bls12>::read(&mut address_recipient, params).unwrap();
-    let proving_key = Parameters::<Bls12>::read(&mut proving_key, true).unwrap();
-    let prepared_vk = PreparedVerifyingKey::<Bls12>::read(&mut prepared_vk).unwrap();
-
-    let tx = Transaction::gen_tx(
-                value,
-                remaining_balance,
-                alpha,
-                &proving_key,
-                &prepared_vk,
-                &address_recipient,
-                &sk_fs,
-                ciphertext_balance,
-                rng
-        ).expect("fails to generate the tx");
-
-    let calls = Calls {
-        zk_proof: tx.proof.to_vec(),
-        address_sender: tx.address_sender.to_vec(),
-        address_recipient: tx.address_recipient.to_vec(),
-        value_sender: tx.enc_val_sender.to_vec(),
-        value_recipient: tx.enc_val_recipient.to_vec(),
-        balance_sender: tx.enc_bal_sender.to_vec(),
-        rvk: tx.rvk.to_vec(),
-        rsk: tx.rsk.to_vec(),
-    };
-
-    5
-}
-
 #[wasm_bindgen(catch)]
 pub fn decrypt_ca(mut ciphertext: &[u8], mut sk: &[u8]) -> Result<u32, JsValue> {
     let params = &zJubjubBls12::new();
@@ -393,25 +268,6 @@ mod tests {
     use std::io::{BufReader, Read};
     use hex_literal::{hex, hex_impl};
 
-    fn get_pk_and_vk() -> (Vec<u8>, Vec<u8>) {
-        let pk_path = Path::new("../cli/proving.params");
-        let vk_path = Path::new("../cli/verification.params");
-
-        let pk_file = File::open(&pk_path).unwrap();
-        let vk_file = File::open(&vk_path).unwrap();
-
-        let mut pk_reader = BufReader::new(pk_file);
-        let mut vk_reader = BufReader::new(vk_file);
-
-        let mut buf_pk = vec![];
-        pk_reader.read_to_end(&mut buf_pk).unwrap();
-
-        let mut buf_vk = vec![];
-        vk_reader.read_to_end(&mut buf_vk).unwrap();
-
-        (buf_pk, buf_vk)
-    }
-
     #[test]
     fn test_fs_write_read() {
         let rng = &mut XorShiftRng::from_seed([0xbc4f6d44, 0xd62f276c, 0xb963afd0, 0x5455863d]);
@@ -424,29 +280,5 @@ mod tests {
         sk_repr.read_le(&mut &buf[..]).unwrap();
 
         assert_eq!(fs, zFs::from_repr(sk_repr).unwrap());
-    }
-
-    #[test]
-    fn test_get_call() {
-        let (buf_pk, buf_vk) = get_pk_and_vk();
-        println!("len_pk:{:?}", buf_pk.len());
-        println!("len_vk:{:?}", buf_vk.len());
-
-        let rng = &mut XorShiftRng::from_seed([0xbc4f6d44, 0xd62f276c, 0xb963afd0, 0x5455863d]);
-        let sk: [u8; 32] = rng.gen();
-        let random_seed: [u32; 8] = rng.gen();
-        let pkd_addr_bob: [u8; 32] = hex!("45e66da531088b55dcb3b273ca825454d79d2d1d5c4fa2ba4a12c1fa1ccd6389");
-        let value = 10 as u32;
-        let balance = 100 as u32;
-
-        let _res = gen_call3(
-            &sk[..],
-            &pkd_addr_bob[..],
-            value,
-            balance,
-            &buf_pk[..],
-            &buf_vk[..],
-            &random_seed[..],
-        );
     }
 }
