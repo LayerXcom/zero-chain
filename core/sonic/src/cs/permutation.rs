@@ -207,10 +207,89 @@ impl SynthesisDriver for Permutation {
                     }
                 }
 
-                // A -> C, B -> A, C -> B
+                // A(index) -> C(new_index), B(index) -> A(new_index), C(index) -> B(new_index)
+                {
+                    self.q += 1;
+                    self.backend.new_linear_constraint();
 
+                    let mut alloc_map = HashMap::with_capacity(lc.as_ref().len());
+                    let new_index = self.n + 1;
 
-                unimplemented!();
+                    for (var, _) in lc.as_ref() {
+                        match var {
+                            Variable::A(index) => {
+                                if alloc_map.get(index).is_none() && *index != 1 {
+                                    alloc_map.insert(*index, new_index);
+                                }
+                            },
+                            Variable::B(index) => {
+                                if alloc_map.get(index).is_none() && *index != 2 {
+                                    alloc_map.insert(*index, new_index);
+                                }
+                            },
+                            Variable::C(index) => {
+                                if alloc_map.get(index).is_none() && *index != 3 {
+                                    alloc_map.insert(*index, new_index);
+                                }
+                            }
+                        }
+                    }
+
+                    for (index, new_index) in alloc_map.iter() {
+                        self.n += 1;
+                        self.backend.new_multiplication_gate();
+
+                        let current_value_a = self.backend.get_var(Variable::A(*index));
+                        let current_value_b = self.backend.get_var(Variable::B(*index));
+                        let current_value_c = self.backend.get_var(Variable::C(*index));
+
+                        // B(index) -> A(new_index)
+                        self.backend.set_var(Variable::A(*new_index), || {
+                            current_value_b.ok_or(SynthesisError::AssignmentMissing)
+                        }).expect("should exist by now");
+
+                        // C(index) -> B(new_index)
+                        self.backend.set_var(Variable::B(*new_index), || {
+                            current_value_c.ok_or(SynthesisError::AssignmentMissing)
+                        }).expect("should exist by now");
+
+                        // A(index) -> C(new_index)
+                        self.backend.set_var(Variable::C(*new_index), || {
+                            current_value_a.ok_or(SynthesisError::AssignmentMissing)
+                        }).expect("should exist by now");
+                    }
+
+                    for (var, coeff) in lc.as_ref() {
+                        let new_var = match var {
+                            Variable::A(index) => {
+                                if *index == 1 {
+                                    Variable::C(3)
+                                } else {
+                                    let new_index = alloc_map.get(index).unwrap();
+                                    Variable::C(*new_index)
+                                }
+                            },
+                            Variable::B(index) => {
+                                if *index == 2 {
+                                    Variable::A(1)
+                                } else {
+                                    let new_index = alloc_map.get(index).unwrap();
+                                    Variable::B(*new_index)
+                                }
+                            },
+                            Variable::C(index) => {
+                                if *index == 3 {
+                                    Variable::B(2)
+                                } else {
+                                    let new_index = alloc_map.get(index).unwrap();
+                                    Variable::C(*new_index)
+                                }
+                            }
+                        };
+
+                        self.backend.insert_coefficient(new_var, *coeff);
+                    }
+                }
             }
 
             fn multiply<F>(&mut self, values: F) -> Result<(Variable, Variable, Variable), SynthesisError>
@@ -245,12 +324,33 @@ impl SynthesisDriver for Permutation {
                     value_c.ok_or(SynthesisError::AssignmentMissing)
                 })?;
 
-                Ok(var_a, var_b, var_c)
+                Ok((var_a, var_b, var_c))
             }
 
             fn get_value(&self, var: Variable) -> Result<E::Fr, ()> {
                 self.backend.get_var(var).ok_or(())
             }
         }
+
+        let mut instance = Synthesizer {
+            backend,
+            current_variable: None,
+            q: 0,
+            n: 0,
+            _marker: PhantomData,
+        };
+
+        let one = instance.alloc_input(|| {
+            Ok(E::Fr::one())
+        }).expect("should have no issues");
+
+        match (one, <Synthesizer<E, B> as ConstraintSystem<E>>::ONE) {
+            (Variable::A(1), Variable::A(1)) => {},
+            _ => panic!("one variable is incorrect")
+        }
+
+        circuit.synthesize(&mut instance)?;
+
+        Ok(())
     }
 }
