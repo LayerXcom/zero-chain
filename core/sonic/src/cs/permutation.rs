@@ -55,14 +55,55 @@ impl SynthesisDriver for Permutation {
             where
                 F: FnOnce() -> Result<E::Fr, SynthesisError>
             {
-                unimplemented!();
+                match self.current_variable.take() {
+                    Some(index) => {
+                        let var_a = Variable::A(index);
+                        let var_b = Variable::B(index);
+                        let var_c = Variable::C(index);
+
+                        let value_a = self.backend.get_var(var_a).ok_or(SynthesisError::AssignmentMissing)?;
+                        let mut product = None;
+
+                        self.backend.set_var(var_b, || {
+                            let value_b = value()?;
+                            product = Some(value_a);
+                            product.as_mut().map(|p| p.mul_assign(&value_b));
+                            Ok(value_b)
+                        })?;
+
+                        self.backend.set_var(var_c, || {
+                            product.ok_or(SynthesisError::AssignmentMissing)
+                        })?;
+
+                        self.current_variable = None;
+                        Ok(var_b)
+                    },
+                    None => {
+                        self.n += 1;
+                        self.backend.new_multiplication_gate();
+
+                        let index = self.n;
+                        let var_a = Variable::A(index);
+
+                        self.backend.set_var(var_a, value)?;
+                        self.current_variable = Some(index);
+                        Ok(var_a)
+                    }
+                }
             }
 
             fn alloc_input<F>(&mut self, value: F) -> Result<Variable, SynthesisError>
             where
                 F: FnOnce() -> Result<E::Fr, SynthesisError>
             {
-                unimplemented!();
+                let input_var = self.alloc(value)?;
+                self.enforce_zero(LinearCombination::zero() + input_var);
+
+                self.backend.new_k_power(self.q - 2);
+                self.backend.new_k_power(self.q - 1);
+                self.backend.new_k_power(self.q);
+
+                Ok(input_var)
             }
 
             fn enforce_zero(&mut self, lc: LinearCombination<E>) {
@@ -74,14 +115,15 @@ impl SynthesisDriver for Permutation {
                     self.backend.insert_coefficient(*var, *coeff);
                 }
 
-                // remove current variable
+                // Remove current variable because we will set variables for rotation.
+                self.remove_current_variable();
 
-                // A -> B, B -> C, C -> A
+                // A(index) -> B(index + 1), B(index) -> C(index + 1), C(index) -> A(index + 1)
                 {
                     self.q += 1;
                     self.backend.new_linear_constraint();
                     let mut alloc_map = HashMap::with_capacity(lc.as_ref().len());
-                    let mut new_index = self.n + 1;
+                    let new_index = self.n + 1;
 
                     // Construct the mapping to new index which is incremented by one for rotations
                     for (var, _) in lc.as_ref() {
@@ -175,14 +217,40 @@ impl SynthesisDriver for Permutation {
             where
                 F: FnOnce() -> Result<(E::Fr, E::Fr, E::Fr), SynthesisError>
             {
-                unimplemented!();
+                self.n += 1;
+                self.backend.new_multiplication_gate();
+                let index = self.n;
+
+                let var_a = Variable::A(index);
+                let var_b = Variable::B(index);
+                let var_c = Variable::C(index);
+
+                let mut value_b = None;
+                let mut value_c = None;
+
+                self.backend.set_var(var_a, || {
+                    let (a, b, c) = values()?;
+
+                    value_b = Some(b);
+                    value_c = Some(c);
+
+                    Ok(a)
+                })?;
+
+                self.backend.set_var(var_b, || {
+                    value_b.ok_or(SynthesisError::AssignmentMissing)
+                })?;
+
+                self.backend.set_var(var_c, || {
+                    value_c.ok_or(SynthesisError::AssignmentMissing)
+                })?;
+
+                Ok(var_a, var_b, var_c)
             }
 
             fn get_value(&self, var: Variable) -> Result<E::Fr, ()> {
-                unimplemented!();
+                self.backend.get_var(var).ok_or(())
             }
         }
-
-        Ok(())
     }
 }
