@@ -134,9 +134,10 @@ impl <'a, E: Engine, CS: SonicCS<E> + 'a> ConstraintSystem<E>
             .unwrap();
 
         // Ensure each linear conbination is equal to evaluated value
-        self.cs.enforce_zero(a_lc - a);
-        self.cs.enforce_zero(b_lc - b);
-        self.cs.enforce_zero(c_lc - c);
+        self.cs.enforce_zero(a_lc + b_lc + c_lc - a - b - c);
+        // self.cs.enforce_zero(a_lc - a);
+        // self.cs.enforce_zero(b_lc - b);
+        // self.cs.enforce_zero(c_lc - c);
     }
 
     fn push_namespace<NR, N>(&mut self, _: N)
