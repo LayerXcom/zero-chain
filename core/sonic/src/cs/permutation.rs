@@ -107,7 +107,6 @@ impl SynthesisDriver for Permutation {
             }
 
             fn enforce_zero(&mut self, lc: LinearCombination<E>) {
-                // A -> A, B -> B, C -> C
                 self.q += 1;
                 self.backend.new_linear_constraint();
 
@@ -115,17 +114,14 @@ impl SynthesisDriver for Permutation {
                     self.backend.insert_coefficient(*var, *coeff);
                 }
 
-                // Remove current variable because we will set variables for rotation.
                 self.remove_current_variable();
 
-                // A(index) -> B(index + 1), B(index) -> C(index + 1), C(index) -> A(index + 1)
                 {
                     self.q += 1;
                     self.backend.new_linear_constraint();
                     let mut alloc_map = HashMap::with_capacity(lc.as_ref().len());
                     let new_index = self.n + 1;
 
-                    // Construct the mapping to new index which is incremented by one for rotations
                     for (var, _) in lc.as_ref() {
                         match var {
                             Variable::A(index) => {
@@ -146,7 +142,6 @@ impl SynthesisDriver for Permutation {
                         }
                     }
 
-                    // Allocate the rotated variable
                     for (index, new_index) in alloc_map.iter() {
                         self.n += 1;
                         self.backend.new_multiplication_gate();
@@ -155,26 +150,22 @@ impl SynthesisDriver for Permutation {
                         let current_value_b = self.backend.get_var(Variable::B(*index));
                         let current_value_c = self.backend.get_var(Variable::C(*index));
 
-                        // A(index) -> B(new_index)
                         self.backend.set_var(Variable::B(*new_index), || {
                             let value = current_value_a.ok_or(SynthesisError::AssignmentMissing)?;
                             Ok(value)
                         });
 
-                        // B(index) -> C(new_index)
                         self.backend.set_var(Variable::C(*new_index), || {
                             let value = current_value_b.ok_or(SynthesisError::AssignmentMissing)?;
                             Ok(value)
                         });
 
-                        // C(index) -> A(new_index)
                         self.backend.set_var(Variable::A(*new_index), || {
                             let value = current_value_c.ok_or(SynthesisError::AssignmentMissing)?;
                             Ok(value)
                         });
                     }
 
-                    // Add coefficients with a new rotated variable
                     for (var, coeff) in lc.as_ref() {
                         let new_var = match var {
                             Variable::A(index) => {
@@ -207,7 +198,6 @@ impl SynthesisDriver for Permutation {
                     }
                 }
 
-                // A(index) -> C(new_index), B(index) -> A(new_index), C(index) -> B(new_index)
                 {
                     self.q += 1;
                     self.backend.new_linear_constraint();
@@ -243,17 +233,14 @@ impl SynthesisDriver for Permutation {
                         let current_value_b = self.backend.get_var(Variable::B(*index));
                         let current_value_c = self.backend.get_var(Variable::C(*index));
 
-                        // B(index) -> A(new_index)
                         self.backend.set_var(Variable::A(*new_index), || {
                             current_value_b.ok_or(SynthesisError::AssignmentMissing)
                         }).expect("should exist by now");
 
-                        // C(index) -> B(new_index)
                         self.backend.set_var(Variable::B(*new_index), || {
                             current_value_c.ok_or(SynthesisError::AssignmentMissing)
                         }).expect("should exist by now");
 
-                        // A(index) -> C(new_index)
                         self.backend.set_var(Variable::C(*new_index), || {
                             current_value_a.ok_or(SynthesisError::AssignmentMissing)
                         }).expect("should exist by now");
