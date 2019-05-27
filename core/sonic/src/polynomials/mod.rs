@@ -11,22 +11,28 @@ pub use commitment::*;
 pub use s_eval::*;
 use crate::srs::SRS;
 use crate::utils::ChainExt;
-
+use crate::traits::*;
 use std::borrow::Borrow;
 use std::ops::{Add, Mul, Index, IndexMut, Range};
 
-pub struct Polynomial<'a, E: Engine>(&'a mut [E::Fr]);
+pub struct Polynomial<E: Engine>(Vec<E::Fr>);
 
-impl<'a, E: Engine> IntoIterator for Polynomial<'a, E> {
-    type Item = <&'a mut [E::Fr] as IntoIterator>::Item;
-    type IntoIter = <&'a mut [E::Fr] as IntoIterator>::IntoIter;
+impl<E: Engine> PolyEngine for Polynomial<E> {
+    type Commitment = PolyComm<E>;
+    type Opening = PolyCommOpening<E>;
+    type Pairing = E;
+}
+
+impl<E: Engine> IntoIterator for Polynomial<E> {
+    type Item = <Vec<E::Fr> as IntoIterator>::Item;
+    type IntoIter = <Vec<E::Fr> as IntoIterator>::IntoIter;
 
     fn into_iter(self) -> Self::IntoIter {
-        self.0.iter_mut()
+        self.0.into_iter()
     }
 }
 
-impl<'a, E: Engine> Index<usize> for Polynomial<'a, E> {
+impl<E: Engine> Index<usize> for Polynomial<E> {
     type Output = E::Fr;
 
     fn index(&self, id: usize) -> &Self::Output {
@@ -34,18 +40,16 @@ impl<'a, E: Engine> Index<usize> for Polynomial<'a, E> {
     }
 }
 
-impl<'a, E: Engine> IndexMut<usize> for Polynomial<'a, E> {
+impl<E: Engine> IndexMut<usize> for Polynomial<E> {
     fn index_mut(&mut self, id: usize) -> &mut Self::Output {
         &mut self.0[id]
     }
 }
 
-// impl<'a, E: Engine> Index<
+impl<E: Engine> Add<Polynomial<E>> for Polynomial<E> {
+    type Output = Polynomial<E>;
 
-impl<'a, E: Engine> Add<Polynomial<'a, E>> for Polynomial<'a, E> {
-    type Output = Polynomial<'a, E>;
-
-    fn add(self, other: Polynomial<E>) -> Polynomial<'a, E> {
+    fn add(mut self, other: Polynomial<E>) -> Polynomial<E> {
         assert_eq!(self.0.len(), other.0.len());
 
         let worker = Worker::new();
@@ -64,10 +68,10 @@ impl<'a, E: Engine> Add<Polynomial<'a, E>> for Polynomial<'a, E> {
     }
 }
 
-impl<'a, E: Engine> Mul<Polynomial<'a, E>> for Polynomial<'a, E> {
+impl<E: Engine> Mul<Polynomial<E>> for Polynomial<E> {
     type Output = Vec<E::Fr>; // TODO
 
-    fn mul(self, other: Polynomial<'a, E>) -> Vec<E::Fr> {
+    fn mul(self, other: Polynomial<E>) -> Vec<E::Fr> {
         let res_len = self.0.len() + other.0.len() - 1;
 
         let worker = Worker::new();
@@ -96,25 +100,24 @@ impl<'a, E: Engine> Mul<Polynomial<'a, E>> for Polynomial<'a, E> {
         mul_res.truncate(res_len);
 
         mul_res
-        // Polynomial(&mul_res[..])
     }
 }
 
-impl<'a, E: Engine> Polynomial<'a, E> {
-    pub fn from_slice(s: &'a mut [E::Fr]) -> Self {
-        Polynomial(s)
+impl<E: Engine> Polynomial<E> {
+    pub fn from_slice(s: &mut [E::Fr]) -> Self {
+        Polynomial(s.to_vec())
     }
 
     /// Commit a polynomial `F`.
     /// F \from g^{\alpha * x^{(d - max)}*f(x)}
     /// See: Section 5 SYSTEM OF CONSTRAINTS
-    pub fn commit(
-        self,
+    pub fn commit<PE: PolyEngine<Pairing = E>>(
+        &self,
         max: usize,                 // a maximum degree
         largest_neg_power: usize,   // largest negative power
         largest_pos_power: usize,   // largest positive power
-        srs: &'a SRS<E>,
-    ) -> E::G1Affine
+        srs: &SRS<E>,
+    ) -> PE::Commitment
     {
         let d = srs.d;
         assert!(max >= largest_pos_power);
@@ -126,28 +129,32 @@ impl<'a, E: Engine> Polynomial<'a, E> {
             let min_power = largest_neg_power + max - d;
             let max_power = largest_pos_power + d - max;
 
-            multiexp_mut(
+            let point = multiexp(
                 srs.g_neg_x_alpha[0..min_power].iter().rev() // Reverse to permute for negative powers
                 .chain_ext(srs.g_pos_x_alpha[..max_power].iter()),
-                self.0
-            ).into_affine()
+                self.0.iter()
+            ).into_affine();
+
+            PE::Commitment::from_point(&point)
         } else {
             let _max_power = srs.d - max - largest_neg_power + 1;
 
-            multiexp_mut(
+            let point = multiexp(
                 // srs.g_pos_x_alpha[..max_power].iter(), // TODO: Ensure the range is correct
                 srs.g_pos_x_alpha[(srs.d - max - largest_neg_power - 1)..].iter(),
-                self.0
-            ).into_affine()
+                self.0.iter()
+            ).into_affine();
+
+            PE::Commitment::from_point(&point)
         }
     }
 
     /// Opening a polynomial commitment
     pub fn open(
-        self,
+        &self,
         largest_neg_power: usize,
         largest_pos_power: usize,
-        srs: &'a SRS<E>,
+        srs: &SRS<E>,
         mut point: E::Fr,
     ) -> E::G1Affine
     {
@@ -155,7 +162,7 @@ impl<'a, E: Engine> Polynomial<'a, E> {
 
         // kate division
         point.negate();
-        let a_poly = self.0.into_iter();
+        let a_poly = self.0.iter();
 
         let mut quotient_poly = vec![E::Fr::zero(); a_poly.len() - 1];
 
@@ -279,9 +286,30 @@ impl<'a, E: Engine> Polynomial<'a, E> {
     }
 }
 
-pub struct PolyComm<E: Engine>(E::G1Affine);
+#[derive(Clone)]
+pub struct PolyComm<E: Engine>(pub E::G1Affine);
+
+impl<E: Engine> Commitment for PolyComm<E> {
+    type Point = E::G1Affine;
+
+    fn from_point(point: &Self::Point) -> Self {
+        PolyComm(*point)
+    }
+
+    fn into_point(&self) -> Self::Point {
+        self.0
+    }
+
+    fn into_bytes(&self) -> Vec<u8> { // TODO
+        self.0.into_compressed().as_ref().to_vec()
+    }
+}
+
+impl<E: Engine> Copy for PolyComm<E> {}
 
 pub struct PolyCommOpening<E: Engine>(E::G1Affine);
+
+impl<E: Engine> Opening for PolyCommOpening<E> {}
 
 pub fn multiexp<
     'a,
@@ -327,6 +355,7 @@ where
 
     result
 }
+
 pub fn multiexp_mut<
     'a,
     G: CurveAffine,

@@ -28,6 +28,18 @@ impl<E: Engine> LinearCombination<E> {
     }
 }
 
+impl<E: Engine> Add<LinearCombination<E>> for LinearCombination<E> {
+    type Output = LinearCombination<E>;
+
+    fn add(mut self, lc: LinearCombination<E>) -> LinearCombination<E> {
+        for (var, coeff) in lc.as_ref() {
+            self.0.push((*var, *coeff));
+        }
+
+        self
+    }
+}
+
 /// Operetor overloading for linear combination
 /// `LinearCombination` + `(Coeff, Variable)` = `LinearCombination`
 impl<E: Engine> Add<(Coeff<E>, Variable)> for LinearCombination<E> {

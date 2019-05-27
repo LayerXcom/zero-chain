@@ -16,8 +16,8 @@
 use pairing::{Engine, CurveAffine, CurveProjective, Field};
 use crate::srs::SRS;
 use crate::utils::multiexp;
+use crate::traits::{PolyEngine, Commitment};
 
-#[derive(Clone)]
 pub struct Batch<E: Engine> {
     /// Context of openings of polynomial commitment
     alpha_x: Vec<(E::G1Affine, E::Fr)>,
@@ -38,7 +38,8 @@ pub struct Batch<E: Engine> {
     g: E::G1Affine,
 }
 
-impl<E: Engine> Batch<E> {
+impl<E: Engine> Batch<E>
+{
     pub fn new(srs: &SRS<E>, n: usize) -> Self {
         Batch {
             alpha_x: vec![],
@@ -70,12 +71,12 @@ impl<E: Engine> Batch<E> {
         }
     }
 
-    pub fn add_comm(&mut self, comm: E::G1Affine, random: E::Fr) {
-        self.neg_h.push((comm, random));
+    pub fn add_comm<PE: PolyEngine<Pairing = E>>(&mut self, comm: PE::Commitment, random: E::Fr) {
+        self.neg_h.push((comm.into_point(), random));
     }
 
-    pub fn add_comm_max_n(&mut self, comm: E::G1Affine, random: E::Fr) {
-        self.neg_x_n_minus_d.push((comm, random));
+    pub fn add_comm_max_n<PE: PolyEngine<Pairing = E>>(&mut self, comm: PE::Commitment, random: E::Fr) {
+        self.neg_x_n_minus_d.push((comm.into_point(), random));
     }
 
     pub fn add_opening(&mut self, opening: E::G1Affine, mut random: E::Fr, point: E::Fr) {

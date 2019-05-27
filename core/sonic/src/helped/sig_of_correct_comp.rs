@@ -10,13 +10,15 @@ use crate::cs::{SynthesisDriver, Circuit};
 use crate::srs::SRS;
 use crate::transcript::ProvingTranscript;
 use crate::polynomials::{SyEval, SxEval, poly_comm, poly_comm_opening};
-use crate::utils::{ChainExt, eval_univar_poly, mul_add_poly};
+use crate::utils::*;
+use crate::traits::{PolyEngine, Commitment};
 use super::prover::{Proof, SxyAdvice};
 
+
 #[derive(Clone)]
-pub struct Aggregate<E: Engine> {
+pub struct Aggregate<E: Engine, PE: PolyEngine> {
     /// Commitment to s(z, Y)
-    pub c_comm: E::G1Affine,
+    pub c_comm: PE::Commitment,
 
     pub s_opening: E::G1Affine,
 
@@ -26,10 +28,10 @@ pub struct Aggregate<E: Engine> {
 
 }
 
-impl<E: Engine> Aggregate<E> {
+impl<E: Engine, PE: PolyEngine<Pairing = E>> Aggregate<E, PE> {
     pub fn create_aggregate<C: Circuit<E>, S: SynthesisDriver>(
         circuit: &C,
-        inputs: &[(Proof<E>, SxyAdvice<E>)],
+        inputs: &[(Proof<E, PE>, SxyAdvice<E, PE>)],
         srs: &SRS<E>,
         n: usize,
         q: usize,
@@ -40,11 +42,11 @@ impl<E: Engine> Aggregate<E> {
         for &(ref proof, ref s_xy_advice) in inputs {
             {
                 let mut transcript = Transcript::new(&[]);
-                transcript.commit_point(&proof.r_comm);
+                transcript.commit_point::<PE>(&proof.r_comm);
                 y_values.push(transcript.challenge_scalar());
             }
 
-            transcript.commit_point(&s_xy_advice.s_comm);
+            transcript.commit_point::<PE>(&s_xy_advice.s_comm);
         }
 
         let z: E::Fr = transcript.challenge_scalar();
@@ -58,7 +60,7 @@ impl<E: Engine> Aggregate<E> {
         };
 
         // max = srs.d
-        let c_comm = poly_comm(
+        let c_comm = poly_comm::<_, _, PE>(
             srs.d,
             n,
             n + q,
@@ -67,7 +69,7 @@ impl<E: Engine> Aggregate<E> {
                 .chain_ext(s_pos_poly.iter())
         );
 
-        transcript.commit_point(&c_comm);
+        transcript.commit_point::<PE>(&c_comm);
 
         let w: E::Fr = transcript.challenge_scalar();
         let w_inv = w.inverse().ok_or(SynthesisError::DivisionByZero)?;

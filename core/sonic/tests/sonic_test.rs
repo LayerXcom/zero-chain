@@ -11,6 +11,7 @@ use sonic::srs::SRS;
 use sonic::cs::Basic;
 use sonic::helped::adaptor::AdaptorCircuit;
 use sonic::helped::{Proof, MultiVerifier};
+use sonic::polynomials::Polynomial;
 
 pub const MIMC_ROUNDS: usize = 32200;
 
@@ -274,7 +275,7 @@ fn test_sonic_mimc_wo_inputs() {
 
         // println!("Creating proof");
         let start = Instant::now();
-        let proof = Proof::<Bls12>::create_proof::< _, Basic>(&AdaptorCircuit(circuit.clone()), &srs).unwrap();
+        let proof = Proof::<Bls12, Polynomial<Bls12>>::create_proof::< _, Basic>(&AdaptorCircuit(circuit.clone()), &srs).unwrap();
         println!("(Proving SONIC) Done in {:?}", start.elapsed());
 
         // println!("creating advice");
@@ -330,7 +331,7 @@ fn test_sonic_mimc_w_input() {
     };
 
     let start = Instant::now();
-    let proof = Proof::<Bls12>::create_proof::< _, Basic>(&AdaptorCircuit(circuit.clone()), &srs).unwrap();
+    let proof = Proof::<Bls12, Polynomial<Bls12>>::create_proof::< _, Basic>(&AdaptorCircuit(circuit.clone()), &srs).unwrap();
     println!("(Proving SONIC input)done in {:?}", start.elapsed());
 
     let rng = thread_rng();

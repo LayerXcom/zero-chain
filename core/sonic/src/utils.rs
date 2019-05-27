@@ -1,5 +1,5 @@
 use pairing::{Engine, Field, PrimeField, CurveAffine};
-// use bellman::multicore::Worker;
+use bellman::multicore::Worker;
 use crossbeam::channel::unbounded;
 
 /// Basically used for polynomials represented as separeted iterator
@@ -78,7 +78,6 @@ pub fn eval_bivar_poly<'a, E: Engine> (
     first_power: E::Fr,
     base: E::Fr
 ) {
-    use bellman::multicore::Worker;
     let worker = Worker::new();
 
     worker.scope(coeffs.len(), |scope, chunk| {
@@ -104,7 +103,6 @@ pub fn eval_univar_poly<'a, E: Engine> (
     base: E::Fr
 ) -> E::Fr
 {
-    use bellman::multicore::Worker;
     let (tx, rx) = unbounded();
     let worker = Worker::new();
 
@@ -151,8 +149,8 @@ pub fn eval_univar_poly<'a, E: Engine> (
 /// Batching polynomial commitment, Defined in appendix C.1.
 /// Elementwise add coeffs of one polynomial with coeffs of other, that are
 /// first multiplied by a scalar
-pub fn mul_add_poly<E: Engine>(a: &mut [E::Fr], b: &[E::Fr], c: E::Fr) {
-    use bellman::multicore::Worker;
+/// f(x) + g(x) * scalar
+pub fn mul_add_poly<E: Engine>(a: &mut [E::Fr], b: &[E::Fr], scalar: E::Fr) {
     let worker = Worker::new();
     assert_eq!(a.len(), b.len());
 
@@ -161,7 +159,7 @@ pub fn mul_add_poly<E: Engine>(a: &mut [E::Fr], b: &[E::Fr], c: E::Fr) {
             scope.spawn(move |_| {
                 for (a, b) in a.iter_mut().zip(b.iter()) {
                     let mut r = *b;
-                    r.mul_assign(&c);
+                    r.mul_assign(&scalar);
                     a.add_assign(&r);
                 }
             });
@@ -169,6 +167,21 @@ pub fn mul_add_poly<E: Engine>(a: &mut [E::Fr], b: &[E::Fr], c: E::Fr) {
     });
 }
 
+/// Multiply coefficients of the polynomial by the given scalar.
+/// f(X) * scalar
+pub fn mul_poly_by_scalar<E: Engine>(poly: &mut [E::Fr], scalar: E::Fr) {
+    let worker = Worker::new();
+
+    worker.scope(poly.len(), |scope, chunk| {
+        for p in poly.chunks_mut(chunk) {
+            scope.spawn(move |_| {
+                for p in p.iter_mut() {
+                    p.mul_assign(&scalar)
+                }
+            });
+        }
+    });
+}
 
 pub fn multiexp<
     'a,
@@ -183,7 +196,6 @@ where
     IE::IntoIter: ExactSizeIterator + Clone,
     IS::IntoIter: ExactSizeIterator,
 {
-    use bellman::multicore::Worker;
     use bellman::multiexp::{multiexp, FullDensity};
     use std::sync::Arc;
     use futures::Future;

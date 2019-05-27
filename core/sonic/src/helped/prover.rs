@@ -6,17 +6,18 @@ use crate::cs::{SynthesisDriver, Circuit, Backend, Variable, Coeff};
 use crate::srs::SRS;
 use crate::transcript::ProvingTranscript;
 use crate::polynomials::{Polynomial, poly_comm, poly_comm_opening, SxEval, add_polynomials, mul_polynomials};
-use crate::utils::{ChainExt, eval_bivar_poly, eval_univar_poly, mul_add_poly};
+use crate::utils::*;
+use crate::traits::{Commitment, PolyEngine};
 
 pub const NUM_BLINDINGS: usize = 4;
 
 #[derive(Clone, Debug, Eq, PartialEq)]
-pub struct Proof<E: Engine> {
+pub struct Proof<E: Engine, PE: PolyEngine> {
     /// A commitment of `r(X, 1)`
-    pub r_comm: E::G1Affine,
+    pub r_comm: PE::Commitment,
 
     /// A commitment of `t(X, y)`. `y` represents a random challenge from the verifier.
-    pub t_comm: E::G1Affine,
+    pub t_comm: PE::Commitment,
 
     /// An evaluation `r(z, 1)`. `z` represents a random challenge from the verifier.
     pub r_z1: E::Fr,
@@ -31,7 +32,7 @@ pub struct Proof<E: Engine> {
     pub yz_opening: E::G1Affine,
 }
 
-impl<E: Engine> Proof<E> {
+impl<E: Engine, PE: PolyEngine<Pairing = E>> Proof<E, PE> {
     pub fn create_proof<C: Circuit<E>, S: SynthesisDriver>(
         circuit: &C,
         srs: &SRS<E>
@@ -71,7 +72,7 @@ impl<E: Engine> Proof<E> {
         r_x1.push(E::Fr::zero());
         r_x1.extend(wires.a);           // X^{1}...X^{n}
 
-        let r_comm = Polynomial::from_slice(&mut r_x1[..]).commit(
+        let r_comm = Polynomial::from_slice(&mut r_x1[..]).commit::<PE>(
             n,
             2*n + NUM_BLINDINGS,
             n,
@@ -79,7 +80,7 @@ impl<E: Engine> Proof<E> {
         );
 
         // A prover commits polynomial
-        transcript.commit_point(&r_comm);
+        transcript.commit_point::<PE>(&r_comm);
 
 
         // ------------------------------------------------------
@@ -143,14 +144,14 @@ impl<E: Engine> Proof<E> {
                 .collect::<Vec<_>>();
 
         let t_comm = Polynomial::from_slice(&mut t_comm_vec[..])
-                .commit(
+                .commit::<PE>(
                     srs.d,
                     4 * n + 2 * NUM_BLINDINGS,
                     3 * n,
                     srs
                 );
 
-        transcript.commit_point(&t_comm);
+        transcript.commit_point::<PE>(&t_comm);
 
 
         // ------------------------------------------------------
@@ -296,16 +297,16 @@ impl<'a, E: Engine> Backend<E> for &'a mut Wires<E> {
 }
 
 
-pub struct SxyAdvice<E: Engine> {
-    pub s_comm: E::G1Affine, // TODO: commitment type
+pub struct SxyAdvice<E: Engine, PE: PolyEngine> {
+    pub s_comm: PE::Commitment,
     pub s_zy_opening: E::G1Affine, // TODO: W opening type
     pub s_zy: E::Fr, // s(z, y)
 }
 
-impl<E: Engine> SxyAdvice<E> {
+impl<E: Engine, PE: PolyEngine<Pairing = E>> SxyAdvice<E, PE> {
     pub fn create_advice<C: Circuit<E>, S: SynthesisDriver> (
         circuit: &C,
-        proof: &Proof<E>,
+        proof: &Proof<E, PE>,
         srs: &SRS<E>,
         n: usize,
     ) -> Result<Self, SynthesisError>
@@ -316,10 +317,10 @@ impl<E: Engine> SxyAdvice<E> {
         {
             let mut transcript = Transcript::new(&[]);
 
-            transcript.commit_point(&proof.r_comm);
+            transcript.commit_point::<PE>(&proof.r_comm);
             y = transcript.challenge_scalar();
 
-            transcript.commit_point(&proof.t_comm);
+            transcript.commit_point::<PE>(&proof.t_comm);
             z = transcript.challenge_scalar();
         }
 
@@ -333,7 +334,7 @@ impl<E: Engine> SxyAdvice<E> {
         };
 
         // a commitment to s(X, y)
-        let s_comm = poly_comm(
+        let s_comm = poly_comm::<_, _, PE>(
             srs.d,
             n,
             2 * n,
@@ -377,6 +378,7 @@ mod tests {
     use crate::cs::{Basic, ConstraintSystem, LinearCombination};
     use super::super::verifier::MultiVerifier;
     use rand::{thread_rng};
+    use crate::polynomials::{PolyComm, Polynomial};
 
     struct SimpleCircuit;
 
@@ -407,7 +409,7 @@ mod tests {
             Fr::from_str("33333333").unwrap(),
         );
 
-        let proof = Proof::create_proof::<_, Basic>(&SimpleCircuit, &srs).unwrap();
+        let proof: Proof<Bls12, Polynomial<Bls12>> = Proof::create_proof::<_, Basic>(&SimpleCircuit, &srs).unwrap();
 
         let mut batch = MultiVerifier::<Bls12, _, Basic, _>::new(SimpleCircuit, &srs, rng).unwrap();
 
@@ -429,7 +431,7 @@ mod tests {
         // x^-4 + x^-3 + x^-2 + x^-1 + x + x^2
         let mut poly = vec![Fr::one(), Fr::one(), Fr::one(), Fr::one(), Fr::zero(), Fr::one(), Fr::one()];
         // make commitment to the poly
-        let commitment = poly_comm(2, 4, 2, &srs, poly.iter());
+        let commitment = poly_comm::<Bls12, _, Polynomial<Bls12>>(2, 4, 2, &srs, poly.iter()).into_point();
 
         let point: Fr = Fr::one();
         let mut tmp = point.inverse().unwrap();

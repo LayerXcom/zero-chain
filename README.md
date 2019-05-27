@@ -2,13 +2,13 @@
 [![Build Status](https://travis-ci.com/LayerXcom/zero-chain.svg?branch=master)](https://travis-ci.com/LayerXcom/zero-chain)
 [![Gitter](https://badges.gitter.im/LayerXcom/Zerochain.svg)](https://gitter.im/LayerXcom/Zerochain?utm_source=badge&utm_medium=badge&utm_campaign=pr-badge)
 
-Zerochain is a privacy-preserving blockchain on substrate. 
+Zerochain is a privacy-preserving blockchain on substrate.
 It is designed to get efficient zero-knowledge proving, reduce the on-chain storage cost and bring the flexibility for developing applications.
 
 ## Status
 **WARNING: Zerochain is alpha quality software, improvements and fixes are made frequently, and documentation for technical details doesn't yet exist.**
 
-For now, only supported for the "confidential payment PoC".
+For now, only supported for the "confidential payment PoC" inspired by [Zether](https://crypto.stanford.edu/~buenz/papers/zether.pdf) paper.
 
 - Balance for each account is encrypted
 <div align="center">
@@ -94,6 +94,12 @@ You can send the transaction from firefox browser.
 
 ### Documentations
 - [Announcing Zerochain: Applying zk-SNARKs to Substrate](https://medium.com/layerx/announcing-zerochain-5b08e158355d)
+
+### References
+- [Substrate](https://github.com/paritytech/substrate)
+- [Zcash Protocol Specification](https://github.com/zcash/zips/blob/master/protocol/protocol.pdf)
+- [Zether](https://crypto.stanford.edu/~buenz/papers/zether.pdf): Towards Privacy in a Smart Contract World
+- [Sonic](https://eprint.iacr.org/2019/099.pdf): Zero-Knowledge SNARKs from Linear-Size Universal and Updatable Structured Reference Strings
 
 ## Contributing
 - Feel free to submit your own issues and PRs

@@ -5,7 +5,6 @@ use crate::cs::Backend;
 use crate::cs::lc::{Variable, Coeff};
 use super::add_polynomials;
 
-
 /// Defined in Section 5: SYSTEM OF CONSTRAINTS
 /// Evaluation of s(X, Y) at x
 #[derive(Clone)]
@@ -13,43 +12,58 @@ pub struct SyEval<E: Engine> {
     max_n: usize,
     current_q: usize,
 
+    /// Coefficients of u term
     /// x^{-1}, ..., x^{-N}
     a: Vec<E::Fr>,
 
+    /// Coefficients of v term
     /// x^1, ..., x^{N}
     b: Vec<E::Fr>,
 
-    /// x^{N+1}, ..., x^{2*N}
+    /// Coefficients of w term
+    /// x^{N+1}, ..., x^{2*N+1}
     c: Vec<E::Fr>,
 
-    /// coeffs for y^1, ..., y^{N+Q}
+    /// Coefficients of Y^1, ..., Y^{N+Q}
     pos_coeffs: Vec<E::Fr>,
 
-    /// coeffs for y^{-1}, y^{-2}, ..., y^{-N}
+    /// Coefficients of Y^{-1}, Y^{-2}, ..., Y^{-N}
     neg_coeffs: Vec<E::Fr>,
 }
 
 impl<E: Engine> SyEval<E> {
-    pub fn new(x: E::Fr, n: usize, q: usize) -> Result<Self, SynthesisError> {
+    pub fn new(
+        x: E::Fr,
+        n: usize,   // Max N
+        q: usize,   // Max Q
+    ) -> Result<Self, SynthesisError>
+    {
         let x_inv = x.inverse().ok_or(SynthesisError::DivisionByZero)?;
+        let x_n_plus_1 = x.pow(&[(n + 1) as u64]);
 
         let mut a = vec![E::Fr::one(); n];
         let mut b = vec![E::Fr::one(); n];
         let mut c = vec![E::Fr::one(); n];
 
-        // Evaluate polynomial s
+        // Evaluate polynomial S(X, Y) at x for each coefficients u, v ,and w.
         eval_bivar_poly::<E>(&mut a[..], x_inv, x_inv);
         eval_bivar_poly::<E>(&mut b[..], x, x);
-        eval_bivar_poly::<E>(&mut c[..], x.pow(&[(n+1) as u64]), x);
+        eval_bivar_poly::<E>(&mut c[..], x_n_plus_1, x);
 
         let mut minus_one = E::Fr::one();
         minus_one.negate();
 
+        // Coefficients of powers [-1, -n] and [1, n] are fixed to -1
+        // because of -Y^{i}-Y^{-i} term in w_i(Y)
         let mut pos_coeffs = vec![minus_one; n];
-        eval_bivar_poly::<E>(&mut pos_coeffs[..], x.pow(&[(n+1) as u64]), x);
+        eval_bivar_poly::<E>(&mut pos_coeffs[..], x_n_plus_1, x);
         let neg_coeffs = pos_coeffs.clone();
 
-        pos_coeffs.resize(n+q, E::Fr::zero());
+        // Coefficients of powers [1+n, q+n] will be assigned with u, v, and w via synthesizing.
+        // We don't append a, b, and c as coefficients because u, v, and w haven't be determined yet.
+        // We store the a, b, and c as separate elements, so can add those coefficients at the time of
+        // synthesizing u,v,w.
+        pos_coeffs.resize(q + n, E::Fr::zero());
 
         Ok(SyEval {
             max_n: n,
@@ -66,6 +80,20 @@ impl<E: Engine> SyEval<E> {
     pub fn neg_pos_poly(self) -> (Vec<E::Fr>, Vec<E::Fr>) {
         (self.neg_coeffs, self.pos_coeffs)
     }
+
+    // Evaluate S(x, Y) at y
+    pub fn finalize(&self, y: E::Fr) -> Result<E::Fr, SynthesisError> {
+        let y_inv = y.inverse().ok_or(SynthesisError::DivisionByZero)?;
+
+        let pos_eval = eval_univar_poly::<E>(&self.pos_coeffs[..], y, y);
+        let neg_eval = eval_univar_poly::<E>(&self.neg_coeffs[..], y_inv, y_inv);
+
+        let mut acc = E::Fr::zero();
+        acc.add_assign(&pos_eval);
+        acc.add_assign(&neg_eval);
+
+        Ok(acc)
+    }
 }
 
 impl<'a, E: Engine> Backend<E> for &'a mut SyEval<E> {
@@ -73,40 +101,35 @@ impl<'a, E: Engine> Backend<E> for &'a mut SyEval<E> {
         self.current_q += 1;
     }
 
-    fn insert_coefficient(&mut self, var: Variable, coeff: Coeff<E>) {
+    /// Append coefficients u, v, w to Y powers [1+n, Q+n]
+    fn insert_coefficient(
+        &mut self,
+        var: Variable,  // a, b, and c
+        coeff: Coeff<E> // u, v, and w for current q
+    ) {
+        let y_index = self.current_q + self.max_n;
+
         match var {
             Variable::A(index) => {
-                let index = index - 1;
+                // index starts from 1
+                let mut a = self.a[index - 1];
+                coeff.multiply(&mut a);
 
-                // Y^{q+N} += X^{-i} * coeff
-                let mut tmp = self.a[index];
-                coeff.multiply(&mut tmp);
-
-                let y_idnex = self.current_q + self.max_n;
-                self.pos_coeffs[y_idnex - 1].add_assign(&tmp);
-
+                self.pos_coeffs[y_index - 1].add_assign(&a);
             },
             Variable::B(index) => {
-                let index = index - 1;
+                let mut b = self.b[index - 1];
+                coeff.multiply(&mut b);
 
-                // Y^{q+N} += X^{i} * coeff
-                let mut tmp = self.b[index];
-                coeff.multiply(&mut tmp);
-
-                let y_index = self.current_q + self.max_n;
-                self.pos_coeffs[y_index - 1].add_assign(&tmp);
+                self.pos_coeffs[y_index - 1].add_assign(&b);
             },
             Variable::C(index) => {
-                let index = index - 1;
+                let mut c = self.c[index - 1];
+                coeff.multiply(&mut c);
 
-                // Y^{q+N} += X^{i+N} * coeff
-                let mut tmp = self.c[index];
-                coeff.multiply(&mut tmp);
-
-                let y_index = self.current_q + self.max_n;
-                self.pos_coeffs[y_index - 1].add_assign(&tmp);
+                self.pos_coeffs[y_index - 1].add_assign(&c);
             }
-        };
+        }
     }
 }
 
@@ -119,37 +142,39 @@ pub struct SxEval<E: Engine> {
     /// Current value of y^{q+n}
     yqn: E::Fr,
 
-    /// X^{-i} * (Y^{1+n} * u_{1,i}), X^{-i} * (Y^{2+n} * u_{2,i}),... , X^{-i} * (Y^{Q+n} * u_{Q,i})
+    /// Coefficients of X^{-i} term
+    /// Y^{q+n} * u_{q,1}, Y^{q+n} * u_{q,2},... , Y^{q+n} * u_{q,n}
     u: Vec<E::Fr>,
 
-    /// X^{i} * (Y^{1+n} * v_{1,i}), X^{i} * (Y^{2+n} * v_{2,i}),... , X^{i} * (Y^{Q+n} * v_{Q,i})
+    /// Coefficients of X^{i} term
+    /// Y^{q+n} * v_{q,1}, Y^{q+n} * v_{q,2},... , Y^{q+n} * v_{q,n}
     v: Vec<E::Fr>,
 
-    /// X^{i+n} * (-Y^{i}-Y^{-i} + Y^{1+n}*w_{1,i}), X^{i+n} * (-Y^{i}-Y^{-i} + Y^{2+n}*w_{2,i}),... , X^{i+n} * (-Y^{i}-Y^{-i} + Y^{Q+n}*w_{Q,i})
+    /// Coefficients of X^{i+n} term
+    /// -Y^{1}-Y^{-1} + Y^{q+n}*w_{q,1}, -Y^{2}-Y^{-2} + Y^{q+n}*w_{q,2},... , -Y^{n}-Y^{-n} + Y^{q+n}*w_{q,n}
     w: Vec<E::Fr>,
 }
 
 impl<E: Engine> SxEval<E> {
-    ///  Initialize s(X, y) where y is fixed.
-    pub fn new(y: E::Fr, n: usize) -> Result<Self, SynthesisError>  {
+    pub fn new(y: E::Fr, n: usize) -> Result<Self, SynthesisError> {
         let y_inv = y.inverse().ok_or(SynthesisError::DivisionByZero)?;
         let yqn = y.pow(&[n as u64]);
 
-        // because of u_{q,i} is zero
+        // because of u_{q,i} and q is zero
         let u = vec![E::Fr::zero(); n];
 
-        // because of v_{q,i} is zero
+        // because of v_{q,i} and q is zero
         let v = vec![E::Fr::zero(); n];
 
         let mut minus_one = E::Fr::one();
         minus_one.negate();
 
         let mut w = vec![minus_one; n];
-        let mut neg_w = vec![minus_one; n];
+        let mut inv_w = vec![minus_one; n];
 
         eval_bivar_poly::<E>(&mut w[..], y, y);
-        eval_bivar_poly::<E>(&mut neg_w[..], y_inv, y_inv);
-        add_polynomials::<E>(&mut w[..], &neg_w[..]);
+        eval_bivar_poly::<E>(&mut inv_w[..], y_inv, y_inv);
+        add_polynomials::<E>(&mut w[..], &inv_w[..]);
 
         Ok(SxEval {
             y,
@@ -168,20 +193,16 @@ impl<E: Engine> SxEval<E> {
     }
 
     /// Evaluation of s(X, y) at x
-    pub fn finalize(self, x: E::Fr) -> E::Fr {
-        let x_inv = x.inverse().unwrap();
-        let mut res = E::Fr::zero();
+    pub fn finalize(self, x: E::Fr) -> Result<E::Fr, SynthesisError> {
+        let x_inv = x.inverse().ok_or(SynthesisError::DivisionByZero)?;
+        let x_n_plus_1 = x.pow(&[(self.v.len() + 1) as u64]);
+        let mut acc = E::Fr::zero();
 
-        let tmp = x_inv;
-        res.add_assign(&eval_univar_poly::<E>(&self.u[..], tmp, tmp));
+        acc.add_assign(&eval_univar_poly::<E>(&self.u, x_inv, x_inv));
+        acc.add_assign(&eval_univar_poly::<E>(&self.v, x, x));
+        acc.add_assign(&eval_univar_poly::<E>(&self.w, x_n_plus_1, x));
 
-        let tmp = x;
-        res.add_assign(&eval_univar_poly::<E>(&self.v[..], tmp, tmp));
-
-        let tmp = x.pow(&[(self.v.len()+1) as u64]);
-        res.add_assign(&eval_univar_poly::<E>(&self.w[..], tmp, x));
-
-        res
+        Ok(acc)
     }
 }
 
@@ -191,32 +212,28 @@ impl<'a, E: Engine> Backend<E> for &'a mut SxEval<E> {
         self.yqn.mul_assign(&self.y);
     }
 
-    /// Add coefficient to a value of u and v, and w polynomials.
+    /// Add coefficients u, v, and w terms.
     fn insert_coefficient(&mut self, var: Variable, coeff: Coeff<E>) {
-        let uvw_val = match var {
+        let mut yqn = self.yqn;
+
+        match var {
             Variable::A(index) => {
-                &mut self.u[index - 1]
+                coeff.multiply(&mut yqn);
+
+                let u = &mut self.u[index - 1];
+                u.add_assign(&yqn);
             },
             Variable::B(index) => {
-                &mut self.v[index - 1]
+                coeff.multiply(&mut yqn);
+
+                let v = &mut self.v[index - 1];
+                v.add_assign(&yqn);
             },
             Variable::C(index) => {
-                &mut self.w[index - 1]
-            },
-        };
+                coeff.multiply(&mut yqn);
 
-        match coeff {
-            Coeff::Zero => {},
-            Coeff::One => {
-                // Addition is because the current value is not filled.
-                uvw_val.add_assign(&self.yqn);
-            },
-            Coeff::NegativeOne => {
-                uvw_val.sub_assign(&self.yqn);
-            },
-            Coeff::Full(mut val) => {
-                val.mul_assign(&self.yqn);
-                uvw_val.add_assign(&val);
+                let w = &mut self.w[index - 1];
+                w.add_assign(&mut yqn);
             }
         }
     }

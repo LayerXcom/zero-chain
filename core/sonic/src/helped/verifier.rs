@@ -6,11 +6,11 @@ use crate::cs::{Circuit, Backend, SynthesisDriver};
 use crate::srs::SRS;
 use crate::transcript::ProvingTranscript;
 use crate::polynomials::SxEval;
+use crate::traits::{PolyEngine, Commitment};
 use super::prover::{Proof, SxyAdvice};
 use super::helper::Batch;
 use std::marker::PhantomData;
 
-#[derive(Clone)]
 pub struct MultiVerifier<E: Engine, C: Circuit<E>, S: SynthesisDriver, R: Rng> {
     circuit: C,
     pub(crate) batch: Batch<E>,
@@ -64,24 +64,25 @@ impl<E: Engine, C: Circuit<E>, S: SynthesisDriver, R: Rng> MultiVerifier<E, C, S
         })
     }
 
-    pub fn add_proof<F>(&mut self, proof: &Proof<E>, inputs: &[E::Fr], s_xy: F)
+    pub fn add_proof<F, PE>(&mut self, proof: &Proof<E, PE>, inputs: &[E::Fr], s_xy: F)
     where
         F: FnOnce(E::Fr, E::Fr) -> Option<E::Fr>,
+        PE: PolyEngine<Pairing = E>
     {
         let mut transcript = Transcript::new(&[]);
 
-        transcript.commit_point(&proof.r_comm);
+        transcript.commit_point::<PE>(&proof.r_comm);
         let y: E::Fr = transcript.challenge_scalar();
 
-        transcript.commit_point(&proof.t_comm);
+        transcript.commit_point::<PE>(&proof.t_comm);
         let z: E::Fr = transcript.challenge_scalar();
 
         transcript.commit_scalar(&proof.r_z1);
         transcript.commit_scalar(&proof.r_zy);
         let r1: E::Fr = transcript.challenge_scalar();
 
-        transcript.commit_point(&proof.z_opening);
-        transcript.commit_point(&proof.yz_opening);
+        // transcript.commit_point::<PE>(&proof.z_opening);
+        // transcript.commit_point::<PE>(&proof.yz_opening);
 
 
         // Open up proof.r_comm at zy, using proof.yz_opening
@@ -92,7 +93,7 @@ impl<E: Engine, C: Circuit<E>, S: SynthesisDriver, R: Rng> MultiVerifier<E, C, S
             zy.mul_assign(&y);
 
             self.batch.add_opening(proof.yz_opening, random, zy);
-            self.batch.add_comm_max_n(proof.r_comm, random);
+            self.batch.add_comm_max_n::<PE>(proof.r_comm, random);
             self.batch.add_opening_value(proof.r_zy, random);
         }
 
@@ -109,7 +110,7 @@ impl<E: Engine, C: Circuit<E>, S: SynthesisDriver, R: Rng> MultiVerifier<E, C, S
             let mut tmp = SxEval::new(y, self.n).unwrap();
             S::synthesize(&mut tmp, &self.circuit).unwrap();
 
-            tmp.finalize(z)
+            tmp.finalize(z).unwrap()
         });
 
         // Compute t(z, y)
@@ -125,21 +126,22 @@ impl<E: Engine, C: Circuit<E>, S: SynthesisDriver, R: Rng> MultiVerifier<E, C, S
 
             self.batch.add_opening(proof.z_opening, random, z);
             self.batch.add_opening_value(t_zy, random);
-            self.batch.add_comm(proof.t_comm, random);
+            self.batch.add_comm::<PE>(proof.t_comm, random);
 
-            random.mul_assign(&r1);
+            random.mul_assign(&r1); // for batching
 
             self.batch.add_opening_value(proof.r_z1, random);
-            self.batch.add_comm_max_n(proof.r_comm, random);
+            self.batch.add_comm_max_n::<PE>(proof.r_comm, random);
         }
     }
 
-    pub fn add_proof_with_advice(
+    pub fn add_proof_with_advice<PE>(
         &mut self,
-        proof: &Proof<E>,
+        proof: &Proof<E, PE>,
         inputs: &[E::Fr],
-        advice: &SxyAdvice<E>,
+        advice: &SxyAdvice<E, PE>,
     )
+    where PE: PolyEngine<Pairing = E>
     {
         let mut z = None;
         self.add_proof(proof, inputs, |_z, _y| {
@@ -150,13 +152,13 @@ impl<E: Engine, C: Circuit<E>, S: SynthesisDriver, R: Rng> MultiVerifier<E, C, S
         let z = z.unwrap();
 
         let mut transcript = Transcript::new(&[]);
-        transcript.commit_point(&advice.s_zy_opening);
-        transcript.commit_point(&advice.s_comm);
+        // transcript.commit_point::<PE>(&advice.s_zy_opening);
+        transcript.commit_point::<PE>(&advice.s_comm);
         transcript.commit_scalar(&advice.s_zy);
         let random: E::Fr = self.randommness.gen();
 
         self.batch.add_opening(advice.s_zy_opening, random, z);
-        self.batch.add_comm(advice.s_comm, random);
+        self.batch.add_comm::<PE>(advice.s_comm, random);
         self.batch.add_opening_value(advice.s_zy, random);
     }
 
@@ -186,8 +188,8 @@ impl<E: Engine, C: Circuit<E>, S: SynthesisDriver, R: Rng> MultiVerifier<E, C, S
     }
 }
 
-pub fn verify_a_proof<'a, E: Engine>(
-    proof: Proof<E>,
+pub fn verify_a_proof<'a, E: Engine, PE: PolyEngine>(
+    proof: Proof<E, PE>,
     public_inputs: &[E::Fr],
 ) -> Result<bool, SynthesisError>
 {
@@ -195,8 +197,8 @@ pub fn verify_a_proof<'a, E: Engine>(
     unimplemented!();
 }
 
-pub fn verify_proofs<E: Engine, C: Circuit<E>, S: SynthesisDriver, R: Rng>(
-    proofs: &[Proof<E>],
+pub fn verify_proofs<E: Engine, C: Circuit<E>, S: SynthesisDriver, R: Rng, PE: PolyEngine<Pairing = E>>(
+    proofs: &[Proof<E, PE>],
     inputs: &[Vec<E::Fr>],
     circuit: C,
     rng: R,

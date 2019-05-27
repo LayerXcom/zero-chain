@@ -8,6 +8,7 @@ use std::marker::PhantomData;
 use bellman::SynthesisError;
 
 pub mod lc;
+pub mod permutation;
 pub use lc::{Variable, Coeff, LinearCombination};
 
 pub trait Circuit<E: Engine> {
@@ -32,10 +33,10 @@ pub trait ConstraintSystem<E: Engine>: Sized {
     fn alloc_input<F>(&mut self, value: F) -> Result<Variable, SynthesisError>
         where F: FnOnce() -> Result<E::Fr, SynthesisError>;
 
-
+    /// Constrain a linear combination to zero.
     fn enforce_zero(&mut self, lc: LinearCombination<E>);
 
-
+    /// Constrain each varible to multiplication gate.
     fn multiply<F>(&mut self, values: F) -> Result<(Variable, Variable, Variable), SynthesisError>
         where F: FnOnce() -> Result<(E::Fr, E::Fr, E::Fr), SynthesisError>;
 
@@ -91,6 +92,7 @@ impl SynthesisDriver for Basic {
         }
 
         impl<E: Engine, B: Backend<E>> ConstraintSystem<E> for Synthesizer<E, B> {
+            // Variable starts from index 1
             const ONE: Variable = Variable::A(1);
 
             fn alloc<F>(&mut self, value: F) -> Result<Variable, SynthesisError>
