@@ -153,7 +153,7 @@ mod tests {
 
     #[test]
     fn test_perm_s1() {
-        let perm = dummy_s_prove::<Bls12, _, Basic>(&SimpleCircuit, 1 << 4);
-        println!("perm: {:?}", perm);
+        // let perm = dummy_s_prove::<Bls12, _, Basic>(&SimpleCircuit, 1 << 4);
+        // println!("perm: {:?}", perm);
     }
 }
