@@ -213,8 +213,6 @@ fn cli() -> Result<(), String> {
                 HexDisplay::from(&recipient_address),
             );
 
-            // print_random_accounts(&seed, 1);
-
             let pk_path = Path::new(sub_matches.value_of("proving-key-path").unwrap());
             let vk_path = Path::new(sub_matches.value_of("verification-key-path").unwrap());
 
@@ -242,7 +240,6 @@ fn cli() -> Result<(), String> {
             let balance: u32 = balance_str.parse().unwrap();
 
             println!("Transaction >>");
-            // print_tx(&sender_seed[..], &recipient_seed[..], &buf_pk[..], &buf_vk[..], amount, balance);
 
             let rng = &mut OsRng::new().expect("should be able to construct RNG");
 
@@ -259,9 +256,6 @@ fn cli() -> Result<(), String> {
             let ciphertext_balance_a = sub_matches.value_of("encrypted-balance").unwrap();
             let ciphertext_balance_v = hex::decode(ciphertext_balance_a).unwrap();
             let ciphertext_balance = Ciphertext::read(&mut &ciphertext_balance_v[..], &PARAMS as &JubjubBls12).unwrap();
-
-            // let address = EncryptionKey::<Bls12>::from_ok_bytes(&sender_seed[..], &PARAMS);
-            // let ciphertext_balance = Ciphertext::encrypt(100, fs::Fs::one(), &address.0, FixedGenerators::NoteCommitmentRandomness, &PARAMS as &JubjubBls12);
 
             let remaining_balance = balance - amount;
 

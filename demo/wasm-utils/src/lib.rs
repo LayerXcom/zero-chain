@@ -191,8 +191,7 @@ pub fn gen_call(
     mut address_recipient: &[u8],
     value: u32,
     balance: u32,
-    // mut proving_key: &[u8],
-    mut proving_key: &str,
+    mut proving_key: &[u8],
     mut prepared_vk: &[u8],
     seed_slice: &[u32],
 ) -> JsValue
@@ -214,8 +213,8 @@ pub fn gen_call(
     let ciphertext_balance = Ciphertext::encrypt(balance, r_fs, &public_key, p_g, &params);
 
     let address_recipient = EncryptionKey::<Bls12>::read(&mut address_recipient, params).unwrap();
-    // let proving_key = Parameters::<Bls12>::read(&mut proving_key, true).unwrap();
-    let proving_key = Parameters::<Bls12>::read(&mut &hex::decode(proving_key).unwrap()[..], true).unwrap();
+    let proving_key = Parameters::<Bls12>::read(&mut proving_key, true).unwrap();
+    // let proving_key = Parameters::<Bls12>::read(&mut &hex::decode(proving_key).unwrap()[..], true).unwrap();
     let prepared_vk = PreparedVerifyingKey::<Bls12>::read(&mut prepared_vk).unwrap();
 
     let tx = Transaction::gen_tx(
