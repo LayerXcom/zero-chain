@@ -26,9 +26,9 @@ use version::RuntimeVersion;
 use version::NativeVersion;
 
 use zprimitives::{
-	signature::RedjubjubSignature,
-	sig_vk::SigVerificationKey,
-	pkd_address::PkdAddress,
+	RedjubjubSignature,
+	SigVerificationKey,
+	PkdAddress,
 };
 
 // A few exports that help ease life for downstream crates.

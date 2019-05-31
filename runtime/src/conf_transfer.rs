@@ -18,11 +18,11 @@ use jubjub::{
     };
 
 use zprimitives::{
-    pkd_address::PkdAddress,
-    ciphertext::Ciphertext,
-    proof::Proof,
-    sig_vk::SigVerificationKey,
-    prepared_vk::PreparedVk,
+    PkdAddress,
+    Ciphertext,
+    Proof,
+    SigVerificationKey,
+    PreparedVk,
 };
 use keys::EncryptionKey;
 use zcrypto::elgamal;
