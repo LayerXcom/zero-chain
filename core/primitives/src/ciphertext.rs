@@ -14,7 +14,7 @@ use substrate_primitives::hexdisplay::AsBytesRef;
 
 #[derive(Eq, PartialEq, Clone, Default, Encode, Decode)]
 #[cfg_attr(feature = "std", derive(Debug, Serialize, Deserialize))]
-pub struct Ciphertext(pub Vec<u8>);
+pub struct Ciphertext(Vec<u8>);
 
 impl Ciphertext {
     pub fn into_ciphertext(&self) -> Option<elgamal::Ciphertext<Bls12>> {
