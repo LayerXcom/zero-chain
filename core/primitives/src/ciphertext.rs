@@ -26,6 +26,10 @@ impl Ciphertext {
         ciphertext.write(&mut writer[..]).unwrap();
         Ciphertext(writer.to_vec())
     }
+
+    pub fn from_slice(slice: &[u8]) -> Self {
+        Ciphertext(slice.to_vec())
+    }
 }
 
 impl Into<Ciphertext> for elgamal::Ciphertext<Bls12> {

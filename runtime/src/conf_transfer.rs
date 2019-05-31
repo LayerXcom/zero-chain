@@ -328,11 +328,11 @@ mod tests {
 
             assert_ok!(ConfTransfer::confidential_transfer(
                 Origin::signed(1),
-                Proof(proof.to_vec()),
+                Proof::from_slice(&proof[..]),
                 PkdAddress::from_slice(&pkd_addr_alice),
                 PkdAddress::from_slice(&pkd_addr_bob),
-                Ciphertext(enc10_by_alice.to_vec()),
-                Ciphertext(enc10_by_bob.to_vec()),
+                Ciphertext::from_slice(&enc10_by_alice[..]),
+                Ciphertext::from_slice(&enc10_by_bob[..]),
                 SigVerificationKey::from_slice(&rvk)
             ));
         })

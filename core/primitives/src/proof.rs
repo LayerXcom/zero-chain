@@ -24,6 +24,10 @@ impl Proof {
         proof.write(&mut &mut writer[..]).unwrap();
         Proof(writer.to_vec())
     }
+
+    pub fn from_slice(slice: &[u8]) -> Self {
+        Proof(slice.to_vec())
+    }
 }
 
 impl Into<Proof> for bellman_verifier::Proof<Bls12> {
