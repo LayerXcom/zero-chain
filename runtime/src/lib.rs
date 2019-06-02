@@ -218,7 +218,7 @@ construct_runtime!(
 /// The type used as a helper for interpreting the sender of transactions.
 type Context = system::ChainContext<Runtime>;
 /// The address format for describing accounts.
-type Address = <Indices as StaticLookup>::Source; // TODO: Chenge from PkdAddress to SigVerificationKey
+type Address = <Indices as StaticLookup>::Source;
 /// Block header type as expected by this runtime.
 pub type Header = generic::Header<BlockNumber, BlakeTwo256, Log>;
 /// Block type as expected by this runtime.

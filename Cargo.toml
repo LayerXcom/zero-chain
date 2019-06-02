@@ -34,61 +34,61 @@ hex = "0.3.2"
 clap = "~2.32"
 
 [dependencies.basic-authorship]
-git = 'https://github.com/paritytech/substrate.git'
+git = 'https://github.com/osuketh/substrate.git'
 package = 'substrate-basic-authorship'
-rev = '59d5ec144704cec017a01f3e4dbb6b73c5542bf7'
+branch = "patch-zerochain"
 
 [dependencies.consensus]
-git = 'https://github.com/paritytech/substrate.git'
+git = 'https://github.com/osuketh/substrate.git'
 package = 'substrate-consensus-aura'
-rev = '59d5ec144704cec017a01f3e4dbb6b73c5542bf7'
+branch = "patch-zerochain"
 
 [dependencies.ctrlc]
 features = ['termination']
 version = '3.0'
 
 [dependencies.inherents]
-git = 'https://github.com/paritytech/substrate.git'
+git = 'https://github.com/osuketh/substrate.git'
 package = 'substrate-inherents'
-rev = '59d5ec144704cec017a01f3e4dbb6b73c5542bf7'
+branch = "patch-zerochain"
 
 [dependencies.network]
-git = 'https://github.com/paritytech/substrate.git'
+git = 'https://github.com/osuketh/substrate.git'
 package = 'substrate-network'
-rev = '59d5ec144704cec017a01f3e4dbb6b73c5542bf7'
+branch = "patch-zerochain"
 
 [dependencies.zero-chain-runtime]
 path = 'runtime'
 
 [dependencies.primitives]
-git = 'https://github.com/paritytech/substrate.git'
+git = 'https://github.com/osuketh/substrate.git'
 package = 'substrate-primitives'
-rev = '59d5ec144704cec017a01f3e4dbb6b73c5542bf7'
+branch = "patch-zerochain"
 
 [dependencies.sr-io]
-git = 'https://github.com/paritytech/substrate.git'
-rev = '59d5ec144704cec017a01f3e4dbb6b73c5542bf7'
+git = 'https://github.com/osuketh/substrate.git'
+branch = "patch-zerochain"
 
 [dependencies.substrate-cli]
-git = 'https://github.com/paritytech/substrate.git'
-rev = '59d5ec144704cec017a01f3e4dbb6b73c5542bf7'
+git = 'https://github.com/osuketh/substrate.git'
+branch = "patch-zerochain"
 
 [dependencies.substrate-client]
-git = 'https://github.com/paritytech/substrate.git'
-rev = '59d5ec144704cec017a01f3e4dbb6b73c5542bf7'
+git = 'https://github.com/osuketh/substrate.git'
+branch = "patch-zerochain"
 
 [dependencies.substrate-executor]
-git = 'https://github.com/paritytech/substrate.git'
-rev = '59d5ec144704cec017a01f3e4dbb6b73c5542bf7'
+git = 'https://github.com/osuketh/substrate.git'
+branch = "patch-zerochain"
 
 [dependencies.substrate-service]
-git = 'https://github.com/paritytech/substrate.git'
-rev = '59d5ec144704cec017a01f3e4dbb6b73c5542bf7'
+git = 'https://github.com/osuketh/substrate.git'
+branch = "patch-zerochain"
 
 [dependencies.transaction-pool]
-git = 'https://github.com/paritytech/substrate.git'
+git = 'https://github.com/osuketh/substrate.git'
 package = 'substrate-transaction-pool'
-rev = '59d5ec144704cec017a01f3e4dbb6b73c5542bf7'
+branch = "patch-zerochain"
 
 [package]
 authors = ['Osuke Sudo<dish230@gmail.com>']
