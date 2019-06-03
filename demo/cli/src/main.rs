@@ -4,15 +4,20 @@ use proofs::{
     primitives::{EncryptionKey, bytes_to_fs},
     elgamal::Ciphertext,
     };
-use primitives::hexdisplay::{HexDisplay, AsBytesRef};
+use primitives::{hexdisplay::{HexDisplay, AsBytesRef}, blake2_256};
 use pairing::{bls12_381::Bls12, Field, PrimeField, PrimeFieldRepr};
-use scrypto::jubjub::{JubjubBls12, fs, FixedGenerators};
+use scrypto::{jubjub::{JubjubBls12, fs, FixedGenerators}, redjubjub::PrivateKey};
 use std::fs::File;
 use std::path::Path;
 use std::string::String;
 use std::io::{BufWriter, Write, BufReader, Read};
 use wasm_utils::transaction::Transaction;
 use bellman::groth16::{Parameters, PreparedVerifyingKey};
+use polkadot_rs::{Api, Url};
+use zprimitives::{Proof, Ciphertext as zCiphertext, PkdAddress, SigVerificationKey, RedjubjubSignature};
+use runtime_primitives::generic::Era;
+use parity_codec::{Compact, Encode};
+use zerochain_runtime::{UncheckedExtrinsic, Call, ConfTransferCall};
 
 mod setup;
 use setup::setup;
@@ -133,6 +138,14 @@ fn cli() -> Result<(), String> {
                 .takes_value(true)
                 .required(false)
                 .default_value(DEFAULT_ENCRYPTED_BALANCE)
+            )
+            .arg(Arg::with_name("is-submitting")
+                .short("i")
+                .long("is-submitting")
+                .help("Whether the extrinsic is submitted or just print extrinsic")
+                .takes_value(true)
+                .required(false)
+                .default_value("true")
             )
         )
         .subcommand(SubCommand::with_name("decrypt")
@@ -256,9 +269,6 @@ fn cli() -> Result<(), String> {
             let ciphertext_balance_v = hex::decode(ciphertext_balance_a).unwrap();
             let ciphertext_balance = Ciphertext::read(&mut &ciphertext_balance_v[..], &PARAMS as &JubjubBls12).unwrap();
 
-            // let address = EncryptionKey::<Bls12>::from_ok_bytes(&sender_seed[..], &PARAMS);
-            // let ciphertext_balance = Ciphertext::encrypt(100, fs::Fs::one(), &address.0, FixedGenerators::NoteCommitmentRandomness, &PARAMS as &JubjubBls12);
-
             let remaining_balance = balance - amount;
 
             let tx = Transaction::gen_tx(
@@ -303,6 +313,52 @@ fn cli() -> Result<(), String> {
             //     HexDisplay::from(&tx.rvk as &AsBytesRef),
             //     HexDisplay::from(&tx.rsk as &AsBytesRef),
             // );
+
+            if let Some(value) = sub_matches.value_of("is-submitting") {
+                match value.parse() {
+                    Ok(true) => {
+                        let api = Api::init(Url::Local);
+                    let rng = &mut OsRng::new().expect("should be able to construct RNG");
+                    let p_g = FixedGenerators::NoteCommitmentRandomness; // 1
+
+                    let mut rsk_repr = fs::Fs::default().into_repr();
+                    rsk_repr.read_le(&mut &tx.rsk[..]).unwrap();
+                    let rsk = fs::Fs::from_repr(rsk_repr).unwrap();
+
+                    let sig_sk = PrivateKey::<Bls12>(rsk);
+                    let sig_vk = SigVerificationKey::from_slice(&tx.rvk[..]);
+
+                    let calls = Call::ConfTransfer(ConfTransferCall::confidential_transfer(
+                        Proof::from_slice(&tx.proof[..]),
+                        PkdAddress::from_slice(&tx.address_sender[..]),
+                        PkdAddress::from_slice(&tx.address_recipient[..]),
+                        zCiphertext::from_slice(&tx.enc_val_sender[..]),
+                        zCiphertext::from_slice(&tx.enc_val_recipient[..]),
+                        sig_vk,
+                    ));
+
+                    let era = Era::Immortal;
+                    let index = api.get_nonce(&sig_vk).expect("Nonce must be got.");
+                    let checkpoint = api.get_genesis_blockhash().unwrap();
+                    let raw_payload = (Compact(index), calls, era, checkpoint);
+
+                    let sig = raw_payload.using_encoded(|payload| {
+                        let msg = blake2_256(payload);
+                        let sig = sig_sk.sign(&msg[..], rng, p_g, &PARAMS as &JubjubBls12);
+
+                        let sig_vk = sig_vk.into_verification_key().unwrap();
+                        assert!(sig_vk.verify(&msg, &sig, p_g, &PARAMS as &JubjubBls12));
+
+                        sig
+                    });
+
+                    let sig_repr = RedjubjubSignature::from_signature(&sig);
+                    let uxt = UncheckedExtrinsic::new_signed(index, raw_payload.1, sig_vk.into(), sig_repr, era);
+                    let _tx_hash = api.submit_extrinsic(&uxt).unwrap();
+                },
+                _ => {},
+                }
+            }
 
         },
         ("decrypt", Some(sub_matches)) => {
