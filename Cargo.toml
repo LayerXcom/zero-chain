@@ -19,7 +19,6 @@ trie-root = '0.11.0'
 bellman-verifier = { path = "core/bellman-verifier"}
 demo = { package = "zero-chain-cli", path = "demo/cli" }
 zcrypto = { package = "zero-chain-crypto", path = "core/crypto" }
-jubjub = { path = "core/jubjub" }
 zpairing = { package = "zero-chain-pairing", path = "core/pairing" }
 zprimitives = { package = "zero-chain-primitives", path = "core/primitives" }
 proofs = { package = "zero-chain-proofs", path = "core/proofs" }
@@ -32,6 +31,8 @@ lazy_static = "1.3.0"
 wasm-utils = {package = "zerochain-wasm-utils", path = "demo/wasm-utils"}
 hex = "0.3.2"
 clap = "~2.32"
+polkadot-rs = { git = "https://github.com/LayerXcom/polkadot.rs" }
+zjubjub = { package = "jubjub", path = "core/jubjub"}
 
 [dependencies.basic-authorship]
 git = 'https://github.com/osuketh/substrate.git'
@@ -63,6 +64,11 @@ path = 'runtime'
 [dependencies.primitives]
 git = 'https://github.com/osuketh/substrate.git'
 package = 'substrate-primitives'
+branch = "patch-zerochain"
+
+[dependencies.runtime-primitives]
+git = 'https://github.com/osuketh/substrate.git'
+package = 'sr-primitives'
 branch = "patch-zerochain"
 
 [dependencies.sr-io]

@@ -9,7 +9,7 @@ use pairing::{bls12_381::Bls12, Field, PrimeField, PrimeFieldRepr};
 use zpairing::{bls12_381::Bls12 as zBls12, PrimeField as zPrimeField, PrimeFieldRepr as zPrimeFieldRepr};
 use scrypto::jubjub::{JubjubBls12, fs, FixedGenerators};
 use zjubjub::{
-    curve::{JubjubBls12 as zJubjubBls12, fs as zfs, FixedGenerators as zFixedGenerators},
+    curve::{JubjubBls12 as zJubjubBls12, fs as zfs, FixedGenerators as zFixedGenerators, JubjubEngine},
     redjubjub::PrivateKey as zPrivateKey
     };
 use std::fs::File;
@@ -22,8 +22,7 @@ use polkadot_rs::{Api, Url};
 use zprimitives::{Proof, Ciphertext as zCiphertext, PkdAddress, SigVerificationKey, RedjubjubSignature};
 use runtime_primitives::generic::Era;
 use parity_codec::{Compact, Encode};
-use zerochain_runtime::{UncheckedExtrinsic, Call, ConfTransferCall};
-
+use zero_chain_runtime::{UncheckedExtrinsic, Call, ConfTransferCall};
 
 mod setup;
 use setup::setup;
@@ -36,8 +35,20 @@ lazy_static! {
     pub static ref ZPARAMS: zJubjubBls12 = { zJubjubBls12::new() };
 }
 
+// pub struct Keys<E: JubjubEngine> {
+//     seed: [u8; 32],
+//     decryption_key: E::Fs,
+//     encryption_key: EncryptionKey<E>,
+// }
+
+// impl Keys<zBls12> {
+//     pub fn gen_from_seed(seed: &[u8]) -> Self {
+//         unimplemented!();
+//     }
+// }
+
 fn get_address(seed: &[u8]) -> Vec<u8> {
-    let address = EncryptionKey::<Bls12>::from_ok_bytes(seed, &PARAMS);
+    let address = EncryptionKey::<Bls12>::from_seed(seed, &PARAMS);
 
     let mut address_bytes = vec![];
     address.write(&mut address_bytes).unwrap();
@@ -58,6 +69,8 @@ fn cli() -> Result<(), String> {
     const DEFAULT_BALANCE: &str = "100";
     const ALICESEED: &str = "416c696365202020202020202020202020202020202020202020202020202020";
     const BOBSEED: &str = "426f622020202020202020202020202020202020202020202020202020202020";
+    const BOBACCOUNTID: &str = "45e66da531088b55dcb3b273ca825454d79d2d1d5c4fa2ba4a12c1fa1ccd6389";
+    const ALICEDECRYPTIONKEY: &str = "";
     const DEFAULT_ENCRYPTED_BALANCE: &str = "6f4962da776a391c3b03f3e14e8156d2545f39a3ebbed675ea28859252cb006fac776c796563fcd44cc49cfaea8bb796952c266e47779d94574c10ad01754b11";
 
     let matches = App::new("zero-chain-cli")
@@ -155,6 +168,44 @@ fn cli() -> Result<(), String> {
                 .default_value("true")
             )
         )
+        .subcommand(SubCommand::with_name("send-tx")
+            .about("Submit extrinsic to the substrate nodes")
+            .arg(Arg::with_name("amount")
+                .short("a")
+                .long("amount")
+                .help("The coin amount for the confidential transfer. (default: 10)")
+                .takes_value(true)
+                .required(false)
+                .default_value(DEFAULT_AMOUNT)
+            )
+            .arg(Arg::with_name("sender-privatekey")
+                .short("s")
+                .long("sender-privatekey")
+                .help("Sender's private key. (default: Alice)")
+                .takes_value(true)
+                .required(false)
+                .default_value(ALICESEED)
+            )
+            .arg(Arg::with_name("recipient-publickey")
+                .short("r")
+                .long("recipient-publickey")
+                .help("Recipient's public key. (default: Bob)")
+                .takes_value(true)
+                .required(false)
+                .default_value(BOBACCOUNTID)
+            )
+        )
+        .subcommand(SubCommand::with_name("get-balance")
+            .about("Get current balance stored in ConfTransfer module")
+            .arg(Arg::with_name("decryption-key")
+                .short("d")
+                .long("decryption-key")
+                .help("Your decription key")
+                .takes_value(true)
+                .required(true)
+                .default_value(ALICEDECRYPTIONKEY)
+            )
+        )
         .subcommand(SubCommand::with_name("decrypt")
             .about("Decrypt the elgamal encryption")
             .arg(Arg::with_name("encrypted-value")
@@ -229,8 +280,6 @@ fn cli() -> Result<(), String> {
                 HexDisplay::from(&recipient_address),
             );
 
-            // print_random_accounts(&seed, 1);
-
             let pk_path = Path::new(sub_matches.value_of("proving-key-path").unwrap());
             let vk_path = Path::new(sub_matches.value_of("verification-key-path").unwrap());
 
@@ -258,7 +307,6 @@ fn cli() -> Result<(), String> {
             let balance: u32 = balance_str.parse().unwrap();
 
             println!("Transaction >>");
-            // print_tx(&sender_seed[..], &recipient_seed[..], &buf_pk[..], &buf_vk[..], amount, balance);
 
             let rng = &mut OsRng::new().expect("should be able to construct RNG");
 
@@ -270,7 +318,7 @@ fn cli() -> Result<(), String> {
 
             let sk_fs_s = bytes_to_fs::<Bls12>(&sender_seed[..]);
 
-            let address_recipient = EncryptionKey::<Bls12>::from_ok_bytes(&recipient_seed[..], &PARAMS);
+            let address_recipient = EncryptionKey::<Bls12>::from_seed(&recipient_seed[..], &PARAMS);
 
             let ciphertext_balance_a = sub_matches.value_of("encrypted-balance").unwrap();
             let ciphertext_balance_v = hex::decode(ciphertext_balance_a).unwrap();
@@ -366,6 +414,16 @@ fn cli() -> Result<(), String> {
                 _ => {},
                 }
             }
+
+        },
+        ("get-balance", Some(sub_matches)) => {
+            println!("Getting encrypted balance from substrate node");
+            let decryption_key = hex::decode(sub_matches.value_of("decryption-key").unwrap()).unwrap();
+
+
+
+            println!("Decrypting the balance");
+
 
         },
         ("decrypt", Some(sub_matches)) => {

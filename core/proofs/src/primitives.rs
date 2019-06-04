@@ -52,12 +52,12 @@ impl<E: JubjubEngine> ProofGenerationKey<E> {
     }
 
     /// Generate proof generation key from origin key cast as bytes
-    pub fn from_ok_bytes(
-        ok: &[u8],
+    pub fn from_seed(
+        seed: &[u8],
         params: &E::Params
     ) -> Self
     {
-        Self::from_origin_key(&bytes_to_fs::<E>(ok), params)
+        Self::from_origin_key(&bytes_to_fs::<E>(seed), params)
     }
 
     /// Generate the randomized signature-verifying key
@@ -118,12 +118,12 @@ impl<E: JubjubEngine> EncryptionKey<E> {
         proof_generation_key.into_encryption_key(params)
     }
 
-    pub fn from_ok_bytes(
-        ok: &[u8],
+    pub fn from_seed(
+        seed: &[u8],
         params: &E::Params
     ) -> Self
     {
-        Self::from_origin_key(&bytes_to_fs::<E>(ok), params)
+        Self::from_origin_key(&bytes_to_fs::<E>(seed), params)
     }
 
     pub fn write<W: io::Write>(&self, mut writer: W) -> io::Result<()> {

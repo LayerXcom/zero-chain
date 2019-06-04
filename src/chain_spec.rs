@@ -12,7 +12,7 @@ use zprimitives::{
 	SigVerificationKey,
 };
 use keys::{ProofGenerationKey, EncryptionKey};
-use jubjub::{curve::{JubjubBls12, FixedGenerators, fs}};
+use zjubjub::{curve::{JubjubBls12, FixedGenerators, fs}};
 use zpairing::{bls12_381::Bls12, Field};
 use zcrypto::elgamal;
 use std::path::Path;
@@ -156,12 +156,12 @@ fn alice_init() -> (PkdAddress, Ciphertext) {
 
 	let p_g = FixedGenerators::Diversifier; // 1 same as NoteCommitmentRandomness;
 
-	let address = EncryptionKey::<Bls12>::from_ok_bytes(alice_seed, &JUBJUB);
+	let address = EncryptionKey::<Bls12>::from_seed(alice_seed, &JUBJUB);
 
 	// The default balance is not encrypted with randomness.
 	let enc_alice_bal = elgamal::Ciphertext::encrypt(alice_value, fs::Fs::one(), &address.0, p_g, &JUBJUB);
 
-	let bdk = ProofGenerationKey::<Bls12>::from_ok_bytes(alice_seed, &JUBJUB).bdk();
+	let bdk = ProofGenerationKey::<Bls12>::from_seed(alice_seed, &JUBJUB).bdk();
 
 	let dec_alice_bal = enc_alice_bal.decrypt(bdk, p_g, &JUBJUB).unwrap();
 	assert_eq!(dec_alice_bal, alice_value);

@@ -25,7 +25,7 @@ wasm-utils = {package = "zerochain-wasm-utils", path = "../wasm-utils"}
 hex = "0.3.2"
 polkadot-rs = { git = "https://github.com/LayerXcom/polkadot.rs" }
 parity-codec = "3.2"
-zerochain-runtime = { package = "zero-chain-runtime", path = "../../runtime" }
+zero-chain-runtime = { path = "../../runtime" }
 
 [dependencies.blake2-rfc]
 git = "https://github.com/gtank/blake2-rfc"
