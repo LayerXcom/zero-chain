@@ -6,7 +6,12 @@ use proofs::{
     };
 use primitives::{hexdisplay::{HexDisplay, AsBytesRef}, blake2_256};
 use pairing::{bls12_381::Bls12, Field, PrimeField, PrimeFieldRepr};
-use scrypto::{jubjub::{JubjubBls12, fs, FixedGenerators}, redjubjub::PrivateKey};
+use zpairing::{bls12_381::Bls12 as zBls12, PrimeField as zPrimeField, PrimeFieldRepr as zPrimeFieldRepr};
+use scrypto::jubjub::{JubjubBls12, fs, FixedGenerators};
+use zjubjub::{
+    curve::{JubjubBls12 as zJubjubBls12, fs as zfs, FixedGenerators as zFixedGenerators},
+    redjubjub::PrivateKey as zPrivateKey
+    };
 use std::fs::File;
 use std::path::Path;
 use std::string::String;
@@ -19,6 +24,7 @@ use runtime_primitives::generic::Era;
 use parity_codec::{Compact, Encode};
 use zerochain_runtime::{UncheckedExtrinsic, Call, ConfTransferCall};
 
+
 mod setup;
 use setup::setup;
 
@@ -27,6 +33,7 @@ extern crate lazy_static;
 
 lazy_static! {
     pub static ref PARAMS: JubjubBls12 = { JubjubBls12::new() };
+    pub static ref ZPARAMS: zJubjubBls12 = { zJubjubBls12::new() };
 }
 
 fn get_address(seed: &[u8]) -> Vec<u8> {
@@ -319,13 +326,13 @@ fn cli() -> Result<(), String> {
                     Ok(true) => {
                         let api = Api::init(Url::Local);
                     let rng = &mut OsRng::new().expect("should be able to construct RNG");
-                    let p_g = FixedGenerators::NoteCommitmentRandomness; // 1
+                    let p_g = zFixedGenerators::Diversifier; // 1
 
-                    let mut rsk_repr = fs::Fs::default().into_repr();
+                    let mut rsk_repr = zfs::Fs::default().into_repr();
                     rsk_repr.read_le(&mut &tx.rsk[..]).unwrap();
-                    let rsk = fs::Fs::from_repr(rsk_repr).unwrap();
+                    let rsk = zfs::Fs::from_repr(rsk_repr).unwrap();
 
-                    let sig_sk = PrivateKey::<Bls12>(rsk);
+                    let sig_sk = zPrivateKey::<zBls12>(rsk);
                     let sig_vk = SigVerificationKey::from_slice(&tx.rvk[..]);
 
                     let calls = Call::ConfTransfer(ConfTransferCall::confidential_transfer(
@@ -344,10 +351,10 @@ fn cli() -> Result<(), String> {
 
                     let sig = raw_payload.using_encoded(|payload| {
                         let msg = blake2_256(payload);
-                        let sig = sig_sk.sign(&msg[..], rng, p_g, &PARAMS as &JubjubBls12);
+                        let sig = sig_sk.sign(&msg[..], rng, p_g, &ZPARAMS as &zJubjubBls12);
 
                         let sig_vk = sig_vk.into_verification_key().unwrap();
-                        assert!(sig_vk.verify(&msg, &sig, p_g, &PARAMS as &JubjubBls12));
+                        assert!(sig_vk.verify(&msg, &sig, p_g, &ZPARAMS as &zJubjubBls12));
 
                         sig
                     });
