@@ -25,7 +25,7 @@ pub const PRF_EXPAND_PERSONALIZATION: &'static [u8; 16] = b"zech_ExpandSeed_";
 pub const CRH_BDK_PERSONALIZATION: &'static [u8; 8] = b"zech_bdk";
 pub const KEY_DIVERSIFICATION_PERSONALIZATION: &'static [u8; 8] = b"zech_div";
 
-pub fn bytes_to_fs<E: JubjubEngine>(bytes: &[u8]) -> E::Fs {
+pub fn bytes_to_uniform_fs<E: JubjubEngine>(bytes: &[u8]) -> E::Fs {
     let mut h = Blake2b::with_params(64, &[], &[], PRF_EXPAND_PERSONALIZATION);
     h.update(bytes);
     let res = h.finalize();
@@ -57,7 +57,7 @@ impl<E: JubjubEngine> ProofGenerationKey<E> {
         params: &E::Params
     ) -> Self
     {
-        Self::from_origin_key(&bytes_to_fs::<E>(seed), params)
+        Self::from_origin_key(&bytes_to_uniform_fs::<E>(seed), params)
     }
 
     /// Generate the randomized signature-verifying key
@@ -118,12 +118,24 @@ impl<E: JubjubEngine> EncryptionKey<E> {
         proof_generation_key.into_encryption_key(params)
     }
 
+    pub fn from_decryption_key(
+        decryption_key: &E::Fs,
+        params: &E::Params,
+    ) -> Self
+    {
+        let pk_d = params
+            .generator(FixedGenerators::NoteCommitmentRandomness)
+            .mul(*decryption_key, params);
+
+        EncryptionKey(pk_d)
+    }
+
     pub fn from_seed(
         seed: &[u8],
         params: &E::Params
     ) -> Self
     {
-        Self::from_origin_key(&bytes_to_fs::<E>(seed), params)
+        Self::from_origin_key(&bytes_to_uniform_fs::<E>(seed), params)
     }
 
     pub fn write<W: io::Write>(&self, mut writer: W) -> io::Result<()> {

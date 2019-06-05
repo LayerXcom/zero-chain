@@ -32,7 +32,7 @@ use scrypto::{
     jubjub::{fs::Fs, FixedGenerators, JubjubBls12, JubjubParams},
 };
 use proofs::{
-    primitives::{ProofGenerationKey, EncryptionKey, bytes_to_fs},
+    primitives::{ProofGenerationKey, EncryptionKey, bytes_to_uniform_fs},
     elgamal::Ciphertext,
 };
 use bellman::groth16::{Parameters, PreparedVerifyingKey};
@@ -84,7 +84,7 @@ pub fn gen_bdk(seed: &[u8]) -> Vec<u8> {
 // TODO: Add randomness
 #[wasm_bindgen]
 pub fn gen_rsk(seed: &[u8]) -> Vec<u8> {
-    let origin_key: zFs = keys::bytes_to_fs::<zBls12>(seed);
+    let origin_key: zFs = keys::bytes_to_uniform_fs::<zBls12>(seed);
 
     let mut buf = vec![];
     origin_key.into_repr().write_le(&mut buf).unwrap();
@@ -204,7 +204,7 @@ pub fn gen_call(
     // let alpha = Fs::rand(&mut rng);
     let alpha = Fs::zero();
 
-    let origin_key = bytes_to_fs::<Bls12>(seed);
+    let origin_key = bytes_to_uniform_fs::<Bls12>(seed);
     let pkg = ProofGenerationKey::<Bls12>::from_seed(seed, params);
     let bdk: Fs = pkg.bdk();
 

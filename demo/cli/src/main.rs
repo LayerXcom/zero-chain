@@ -1,15 +1,17 @@
 use clap::{Arg, App, SubCommand, AppSettings};
 use rand::OsRng;
 use proofs::{
-    primitives::{EncryptionKey, bytes_to_fs},
-    elgamal::Ciphertext,
+    primitives::{EncryptionKey, bytes_to_uniform_fs},
+    elgamal,
     };
+use zcrypto::elgamal as zelgamal;
+use keys::EncryptionKey as zEncryptionKey;
 use primitives::{hexdisplay::{HexDisplay, AsBytesRef}, blake2_256};
 use pairing::{bls12_381::Bls12, Field, PrimeField, PrimeFieldRepr};
 use zpairing::{bls12_381::Bls12 as zBls12, PrimeField as zPrimeField, PrimeFieldRepr as zPrimeFieldRepr};
 use scrypto::jubjub::{JubjubBls12, fs, FixedGenerators};
 use zjubjub::{
-    curve::{JubjubBls12 as zJubjubBls12, fs as zfs, FixedGenerators as zFixedGenerators, JubjubEngine},
+    curve::{JubjubBls12 as zJubjubBls12, fs::Fs as zFs, FixedGenerators as zFixedGenerators, JubjubEngine},
     redjubjub::PrivateKey as zPrivateKey
     };
 use std::fs::File;
@@ -18,7 +20,7 @@ use std::string::String;
 use std::io::{BufWriter, Write, BufReader, Read};
 use wasm_utils::transaction::Transaction;
 use bellman::groth16::{Parameters, PreparedVerifyingKey};
-use polkadot_rs::{Api, Url};
+use polkadot_rs::{Api, Url, hexstr_to_vec};
 use zprimitives::{Proof, Ciphertext as zCiphertext, PkdAddress, SigVerificationKey, RedjubjubSignature};
 use runtime_primitives::generic::Era;
 use parity_codec::{Compact, Encode};
@@ -26,6 +28,8 @@ use zero_chain_runtime::{UncheckedExtrinsic, Call, ConfTransferCall};
 
 mod setup;
 use setup::setup;
+mod utils;
+use utils::PrintKeys;
 
 #[macro_use]
 extern crate lazy_static;
@@ -34,18 +38,6 @@ lazy_static! {
     pub static ref PARAMS: JubjubBls12 = { JubjubBls12::new() };
     pub static ref ZPARAMS: zJubjubBls12 = { zJubjubBls12::new() };
 }
-
-// pub struct Keys<E: JubjubEngine> {
-//     seed: [u8; 32],
-//     decryption_key: E::Fs,
-//     encryption_key: EncryptionKey<E>,
-// }
-
-// impl Keys<zBls12> {
-//     pub fn gen_from_seed(seed: &[u8]) -> Self {
-//         unimplemented!();
-//     }
-// }
 
 fn get_address(seed: &[u8]) -> Vec<u8> {
     let address = EncryptionKey::<Bls12>::from_seed(seed, &PARAMS);
@@ -98,6 +90,9 @@ fn cli() -> Result<(), String> {
                 .required(false)
                 .default_value(VERIFICATION_KEY_PATH)
             )
+        )
+        .subcommand(SubCommand::with_name("init")
+            .about("Initialize key components")
         )
         .subcommand(SubCommand::with_name("generate-tx")
             .about("Execute zk proving and output tx components")
@@ -261,6 +256,46 @@ fn cli() -> Result<(), String> {
 
             println!("Success! Output >> 'proving.params' and 'verification.params'");
         },
+        ("init", Some(sub_matches)) => {
+            println!("Initialize key components...");
+            let show_num = 5;
+
+            let alice_seed = hex::decode(ALICESEED).unwrap();
+            let mut alice_seed_array = [0u8; 32];
+            let bytes = &alice_seed[..alice_seed_array.len()];
+            alice_seed_array.copy_from_slice(bytes);
+
+            let print_keys_alice = PrintKeys::generate_from_seed(alice_seed_array);
+            let print_keys_bob = PrintKeys::generate();
+            let print_keys_charlie = PrintKeys::generate();
+
+            println!(
+                "
+                \nSeed
+                Alice: 0x{}
+                Bob: 0x{}
+                Charlie: 0x{}
+                \nDecryption Key
+                Alice: 0x{}
+                Bob: 0x{}
+                Charlie: 0x{}
+                \nEncryption Key
+                Alice: 0x{}
+                Bob: 0x{}
+                Charlie: 0x{}
+                ",
+                hex::encode(&alice_seed[..]),
+                hex::encode(&print_keys_bob.seed[..]),
+                hex::encode(&print_keys_charlie.seed[..]),
+                hex::encode(&print_keys_alice.decryption_key[..]),
+                hex::encode(&print_keys_bob.decryption_key[..]),
+                hex::encode(&print_keys_charlie.decryption_key[..]),
+                hex::encode(&print_keys_alice.encryption_key[..]),
+                hex::encode(&print_keys_bob.encryption_key[..]),
+                hex::encode(&print_keys_charlie.encryption_key[..]),
+            );
+
+        },
         ("generate-tx", Some(sub_matches)) => {
             println!("Generate transaction...");
 
@@ -311,18 +346,18 @@ fn cli() -> Result<(), String> {
             let rng = &mut OsRng::new().expect("should be able to construct RNG");
 
             // let alpha = fs::Fs::rand(rng);
-            let alpha = fs::Fs::zero();
+            let alpha = fs::Fs::zero(); // TODO
 
             let proving_key = Parameters::<Bls12>::read(&mut &buf_pk[..], true).unwrap();
             let prepared_vk = PreparedVerifyingKey::<Bls12>::read(&mut &buf_vk[..]).unwrap();
 
-            let sk_fs_s = bytes_to_fs::<Bls12>(&sender_seed[..]);
+            let sk_fs_s = bytes_to_uniform_fs::<Bls12>(&sender_seed[..]);
 
             let address_recipient = EncryptionKey::<Bls12>::from_seed(&recipient_seed[..], &PARAMS);
 
             let ciphertext_balance_a = sub_matches.value_of("encrypted-balance").unwrap();
             let ciphertext_balance_v = hex::decode(ciphertext_balance_a).unwrap();
-            let ciphertext_balance = Ciphertext::read(&mut &ciphertext_balance_v[..], &PARAMS as &JubjubBls12).unwrap();
+            let ciphertext_balance = elgamal::Ciphertext::read(&mut &ciphertext_balance_v[..], &PARAMS as &JubjubBls12).unwrap();
 
             let remaining_balance = balance - amount;
 
@@ -376,9 +411,9 @@ fn cli() -> Result<(), String> {
                     let rng = &mut OsRng::new().expect("should be able to construct RNG");
                     let p_g = zFixedGenerators::Diversifier; // 1
 
-                    let mut rsk_repr = zfs::Fs::default().into_repr();
+                    let mut rsk_repr = zFs::default().into_repr();
                     rsk_repr.read_le(&mut &tx.rsk[..]).unwrap();
-                    let rsk = zfs::Fs::from_repr(rsk_repr).unwrap();
+                    let rsk = zFs::from_repr(rsk_repr).unwrap();
 
                     let sig_sk = zPrivateKey::<zBls12>(rsk);
                     let sig_vk = SigVerificationKey::from_slice(&tx.rvk[..]);
@@ -416,14 +451,42 @@ fn cli() -> Result<(), String> {
             }
 
         },
+        ("send-tx", Some(sub_matches)) => {
+            println!("Start sending extrinsic to substrate node");
+
+
+        },
         ("get-balance", Some(sub_matches)) => {
             println!("Getting encrypted balance from substrate node");
-            let decryption_key = hex::decode(sub_matches.value_of("decryption-key").unwrap()).unwrap();
+            let api = Api::init(Url::Local);
 
+            let p_g = zFixedGenerators::Diversifier; // 1
+            let decryption_key_vec = hex::decode(sub_matches.value_of("decryption-key").unwrap()).unwrap();
 
+            let mut decryption_key_repr = zFs::default().into_repr();
+            decryption_key_repr.read_le(&mut &decryption_key_vec[..]).unwrap();
+            let decryption_key = zFs::from_repr(decryption_key_repr).unwrap();
+
+            let encryption_key = zEncryptionKey::from_decryption_key(&decryption_key, &ZPARAMS as &zJubjubBls12);
+            let account_id = PkdAddress::from_encryption_key(&encryption_key);
+
+            let mut encrypted_balance_str = api.get_storage(
+                "ConfTransfer",
+                "EncryptedBalance",
+                Some(account_id.encode())
+                ).unwrap();
+
+            // Remove prefix "0x"
+            encrypted_balance_str.remove(0);
+            encrypted_balance_str.remove(0);
+
+            let encrypted_balance = hexstr_to_vec(encrypted_balance_str.clone());
+            let ciphertext = zelgamal::Ciphertext::<zBls12>::read(&mut &encrypted_balance[..], &ZPARAMS).expect("Invalid data");
 
             println!("Decrypting the balance");
-
+            let decrypted_balance = ciphertext.decrypt(decryption_key, p_g, &ZPARAMS).unwrap();
+            println!("Encrypted balance is {}", decrypted_balance);
+            println!("Decrypted balance is {}", encrypted_balance_str);
 
         },
         ("decrypt", Some(sub_matches)) => {
@@ -432,7 +495,7 @@ fn cli() -> Result<(), String> {
 
             let enc = sub_matches.value_of("encrypted-value").unwrap();
             let enc_vec = hex::decode(enc).unwrap();
-            let enc_c = Ciphertext::<Bls12>::read(&mut &enc_vec[..], &PARAMS).expect("Invalid data");
+            let enc_c = elgamal::Ciphertext::<Bls12>::read(&mut &enc_vec[..], &PARAMS).expect("Invalid data");
 
             let pk = sub_matches.value_of("private-key").unwrap();
             let pk_vec = hex::decode(pk).unwrap();
