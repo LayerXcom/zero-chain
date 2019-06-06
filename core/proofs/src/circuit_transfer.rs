@@ -480,8 +480,8 @@ mod tests {
         instance.synthesize(&mut cs).unwrap();
 
         assert!(cs.is_satisfied());
-        // assert_eq!(cs.num_constraints(), 18278);
-        // assert_eq!(cs.hash(), "6858d345922e8a5f173dafb61264ea237b9f0fad75f51c656461cd43fdd3db34");
+        assert_eq!(cs.num_constraints(), 21687);
+        assert_eq!(cs.hash(), "006d0e0175bc1154278d7ef3f0e53514840b478ad6db2540d7910cd94a38da24");
 
         assert_eq!(cs.num_inputs(), 19);
         assert_eq!(cs.get_input(0, "ONE"), Fr::one());

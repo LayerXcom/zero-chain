@@ -341,12 +341,13 @@ mod tests {
     #[test]
     fn test_call_function() {
         with_externalities(&mut new_test_ext(), || {
-            let proof: [u8; 192] = hex!("a1200c59de33436d49519ef18ef97fbae1b7187b5fdc2abcb7e323b526fd79947f72698d94c78efe8e4a72eb147078abb9d7d353bfc5a89cba4f1e4ad22224bfe97f8b26b04d45f3986ce82692bc56324391c1ff1363cdc05795add569306ec7052132f40f7491446f7a58e9078f63ea1200a8c633ae43b52e14ee028ba26953bc011c8f7a3766bc481b0d31aee56bb0a5b69897f99a2da23cd43d69bd32e44895303083179202608ac24fcff1f532271642ad3d24959c0a0e00b15dba81fcfc");
+            let proof: [u8; 192] = hex!("a7e763cbdc1d4b78e70534894d9dbef78ac259ab0cd602e65d31459dd03432c5e14dbef9484a9ab36d9db17ad531b50aa8d051dc885599fbefcd1992437ee3453ef66d5921b9082c5ac93ddf7370dac444050147a71849cc1d16d4208984335d1567bb676a30974e8ae228741adbf6ac50d3c35ee14e835762bc4868e6f22d7b69ccbbbc5cfc3fbe49968c1873a99ffcacb71b1139806166e5c491ff9addbcbabc9df058371ef989219ba20c6a718317b4586bbf1d429d4bf4dab47e130bd23f");
             let pkd_addr_alice: [u8; 32] = hex!("fd0c0c0183770c99559bf64df4fe23f77ced9b8b4d02826a282bcd125117dcc2");
             let pkd_addr_bob: [u8; 32] = hex!("45e66da531088b55dcb3b273ca825454d79d2d1d5c4fa2ba4a12c1fa1ccd6389");
-            let enc10_by_alice: [u8; 64] = hex!("5bdecb08dbc3a38be4217c939c30768d990e789431aeee4832cfca84bf04c650eb4ccfaac7dbb7c20dfcf8eea5fe184bacaf249c3e40920d2855013fce9d876d");
-            let enc10_by_bob: [u8; 64] = hex!("c8cd8d37f214f5f000f47e899cd1839a96b42bd98cc3abe42e7261ed083e6d1ceb4ccfaac7dbb7c20dfcf8eea5fe184bacaf249c3e40920d2855013fce9d876d");
+            let enc10_by_alice: [u8; 64] = hex!("087d5aa97ed351a81cea9e7bb46c83bb4a889bc696f623e7812fc59509cc3a6c997173e746fe32c12a70584cdf9dce783cf3daf44c17d40142f2c460324355aa");
+            let enc10_by_bob: [u8; 64] = hex!("88c851325af572216ececdc2e120bfa972ed9e6b901ee45e31288abd84c3b6be997173e746fe32c12a70584cdf9dce783cf3daf44c17d40142f2c460324355aa");
             let rvk: [u8; 32] = hex!("f539db3c0075f6394ff8698c95ca47921669c77bb2b23b366f42a39b05a88c96");
+            let enc1_by_alice: [u8; 64] = hex!("55a75030bd77f5b7914b55575c154f61a721e05df076546d815e877d71ac6dcc997173e746fe32c12a70584cdf9dce783cf3daf44c17d40142f2c460324355aa");
 
             assert_ok!(ConfTransfer::confidential_transfer(
                 Origin::signed(1),
@@ -356,7 +357,7 @@ mod tests {
                 Ciphertext::from_slice(&enc10_by_alice[..]),
                 Ciphertext::from_slice(&enc10_by_bob[..]),
                 SigVerificationKey::from_slice(&rvk),
-                None // fee
+                Ciphertext::from_slice(&enc1_by_alice[..])
             ));
         })
     }
