@@ -1,17 +1,15 @@
 use clap::{Arg, App, SubCommand, AppSettings};
 use rand::OsRng;
 use proofs::{
-    primitives::{EncryptionKey, bytes_to_uniform_fs},
+    primitives::{EncryptionKey, bytes_to_uniform_fs, ProofGenerationKey},
     elgamal,
     };
-use zcrypto::elgamal as zelgamal;
-use keys::EncryptionKey as zEncryptionKey;
 use primitives::{hexdisplay::{HexDisplay, AsBytesRef}, blake2_256};
 use pairing::{bls12_381::Bls12, Field, PrimeField, PrimeFieldRepr};
 use zpairing::{bls12_381::Bls12 as zBls12, PrimeField as zPrimeField, PrimeFieldRepr as zPrimeFieldRepr};
 use scrypto::jubjub::{JubjubBls12, fs, FixedGenerators};
 use zjubjub::{
-    curve::{JubjubBls12 as zJubjubBls12, fs::Fs as zFs, FixedGenerators as zFixedGenerators, JubjubEngine},
+    curve::{JubjubBls12 as zJubjubBls12, fs::Fs as zFs, FixedGenerators as zFixedGenerators},
     redjubjub::PrivateKey as zPrivateKey
     };
 use std::fs::File;
@@ -20,7 +18,7 @@ use std::string::String;
 use std::io::{BufWriter, Write, BufReader, Read};
 use wasm_utils::transaction::Transaction;
 use bellman::groth16::{Parameters, PreparedVerifyingKey};
-use polkadot_rs::{Api, Url, hexstr_to_vec};
+use polkadot_rs::{Api, Url};
 use zprimitives::{Proof, Ciphertext as zCiphertext, PkdAddress, SigVerificationKey, RedjubjubSignature};
 use runtime_primitives::generic::Era;
 use parity_codec::{Compact, Encode};
@@ -29,7 +27,7 @@ use zero_chain_runtime::{UncheckedExtrinsic, Call, ConfTransferCall};
 mod setup;
 use setup::setup;
 mod utils;
-use utils::PrintKeys;
+use utils::*;
 
 #[macro_use]
 extern crate lazy_static;
@@ -62,7 +60,7 @@ fn cli() -> Result<(), String> {
     const ALICESEED: &str = "416c696365202020202020202020202020202020202020202020202020202020";
     const BOBSEED: &str = "426f622020202020202020202020202020202020202020202020202020202020";
     const BOBACCOUNTID: &str = "45e66da531088b55dcb3b273ca825454d79d2d1d5c4fa2ba4a12c1fa1ccd6389";
-    const ALICEDECRYPTIONKEY: &str = "";
+    const ALICEDECRYPTIONKEY: &str = "b0451b0bfab2830a75216779e010e0bfd2e6d0b4e4b1270dfcdfd0d538509e02";
     const DEFAULT_ENCRYPTED_BALANCE: &str = "6f4962da776a391c3b03f3e14e8156d2545f39a3ebbed675ea28859252cb006fac776c796563fcd44cc49cfaea8bb796952c266e47779d94574c10ad01754b11";
 
     let matches = App::new("zero-chain-cli")
@@ -173,18 +171,18 @@ fn cli() -> Result<(), String> {
                 .required(false)
                 .default_value(DEFAULT_AMOUNT)
             )
-            .arg(Arg::with_name("sender-privatekey")
+            .arg(Arg::with_name("sender-seed")
                 .short("s")
-                .long("sender-privatekey")
-                .help("Sender's private key. (default: Alice)")
+                .long("sender-seed")
+                .help("Sender's seed. (default: Alice)")
                 .takes_value(true)
                 .required(false)
                 .default_value(ALICESEED)
             )
-            .arg(Arg::with_name("recipient-publickey")
+            .arg(Arg::with_name("recipient-encryption-key")
                 .short("r")
-                .long("recipient-publickey")
-                .help("Recipient's public key. (default: Bob)")
+                .long("recipient-encryption-key")
+                .help("Recipient's encryption key. (default: Bob)")
                 .takes_value(true)
                 .required(false)
                 .default_value(BOBACCOUNTID)
@@ -256,17 +254,15 @@ fn cli() -> Result<(), String> {
 
             println!("Success! Output >> 'proving.params' and 'verification.params'");
         },
-        ("init", Some(sub_matches)) => {
+        ("init", Some(_)) => {
             println!("Initialize key components...");
-            let show_num = 5;
+            println!("Accounts of alice and bob are fixed");
 
-            let alice_seed = hex::decode(ALICESEED).unwrap();
-            let mut alice_seed_array = [0u8; 32];
-            let bytes = &alice_seed[..alice_seed_array.len()];
-            alice_seed_array.copy_from_slice(bytes);
+            let alice_seed = seed_to_array(ALICESEED);
+            let bob_seed = seed_to_array(BOBSEED);
 
-            let print_keys_alice = PrintKeys::generate_from_seed(alice_seed_array);
-            let print_keys_bob = PrintKeys::generate();
+            let print_keys_alice = PrintKeys::generate_from_seed(alice_seed);
+            let print_keys_bob = PrintKeys::generate_from_seed(bob_seed);
             let print_keys_charlie = PrintKeys::generate();
 
             println!(
@@ -351,7 +347,7 @@ fn cli() -> Result<(), String> {
             let proving_key = Parameters::<Bls12>::read(&mut &buf_pk[..], true).unwrap();
             let prepared_vk = PreparedVerifyingKey::<Bls12>::read(&mut &buf_vk[..]).unwrap();
 
-            let sk_fs_s = bytes_to_uniform_fs::<Bls12>(&sender_seed[..]);
+            let origin_key = bytes_to_uniform_fs::<Bls12>(&sender_seed[..]);
 
             let address_recipient = EncryptionKey::<Bls12>::from_seed(&recipient_seed[..], &PARAMS);
 
@@ -368,7 +364,7 @@ fn cli() -> Result<(), String> {
                             &proving_key,
                             &prepared_vk,
                             &address_recipient,
-                            &sk_fs_s,
+                            &origin_key,
                             ciphertext_balance,
                             rng
                     ).expect("fails to generate the tx");
@@ -407,7 +403,7 @@ fn cli() -> Result<(), String> {
             if let Some(value) = sub_matches.value_of("is-submitting") {
                 match value.parse() {
                     Ok(true) => {
-                        let api = Api::init(Url::Local);
+                    let api = Api::init(Url::Local);
                     let rng = &mut OsRng::new().expect("should be able to construct RNG");
                     let p_g = zFixedGenerators::Diversifier; // 1
 
@@ -452,41 +448,143 @@ fn cli() -> Result<(), String> {
 
         },
         ("send-tx", Some(sub_matches)) => {
-            println!("Start sending extrinsic to substrate node");
+            let api = Api::init(Url::Local);
+            let rng = &mut OsRng::new().expect("should be able to construct RNG");
+            // let alpha = fs::Fs::rand(rng);
+            let alpha = fs::Fs::zero(); // TODO
 
+            let pk_path = Path::new(PROVING_KEY_PATH);
+            let vk_path = Path::new(VERIFICATION_KEY_PATH);
+
+            let pk_file = File::open(&pk_path)
+                .map_err(|why| format!("couldn't open {}: {}", pk_path.display(), why))?;
+            let vk_file = File::open(&vk_path)
+                .map_err(|why| format!("couldn't open {}: {}", vk_path.display(), why))?;
+
+            let mut reader_pk = BufReader::new(pk_file);
+            let mut reader_vk = BufReader::new(vk_file);
+
+            let mut buf_pk = vec![];
+            reader_pk.read_to_end(&mut buf_pk)
+                .map_err(|why| format!("couldn't read {}: {}", pk_path.display(), why))?;
+
+            let mut buf_vk = vec![];
+            reader_vk.read_to_end(&mut buf_vk)
+                .map_err(|why| format!("couldn't read {}: {}", vk_path.display(), why))?;
+
+            let proving_key = Parameters::<Bls12>::read(&mut &buf_pk[..], true).unwrap();
+            let prepared_vk = PreparedVerifyingKey::<Bls12>::read(&mut &buf_vk[..]).unwrap();
+
+            let seed = hex::decode(sub_matches.value_of("sender-seed").unwrap()).unwrap();
+            let amount_str = sub_matches.value_of("amount").unwrap();
+            let amount: u32 = amount_str.parse().unwrap();
+
+            let origin_key = bytes_to_uniform_fs::<Bls12>(&seed[..]);
+            let decryption_key = ProofGenerationKey::<Bls12>::from_seed(&seed[..], &PARAMS).bdk();
+
+            let mut decrypted_key = [0u8; 32];
+            decryption_key.into_repr().write_le(&mut &mut decrypted_key[..]).unwrap();
+
+            let recipient_encryption_key = hex::decode(sub_matches.value_of("recipient-encryption-key").unwrap()).unwrap();
+
+            let (decrypted_balance, encrypted_balance_vec, _) = get_balance_from_decryption_key(&decrypted_key[..] ,api.clone());
+            let remaining_balance = decrypted_balance - amount;
+
+            let recipient_account_id = EncryptionKey::<Bls12>::read(&mut &recipient_encryption_key[..], &PARAMS).unwrap();
+            let encrypted_balance = elgamal::Ciphertext::read(&mut &encrypted_balance_vec[..], &PARAMS as &JubjubBls12).unwrap();
+
+            println!("Computing zk proof...");
+            let tx = Transaction::gen_tx(
+                            amount,
+                            remaining_balance,
+                            alpha,
+                            &proving_key,
+                            &prepared_vk,
+                            &recipient_account_id,
+                            &origin_key,
+                            encrypted_balance,
+                            rng
+                    ).expect("fails to generate the tx");
+
+
+            {
+                println!("Start sending extrinsic to substrate node");
+
+                let p_g = zFixedGenerators::Diversifier; // 1
+
+                let mut rsk_repr = zFs::default().into_repr();
+                rsk_repr.read_le(&mut &tx.rsk[..]).unwrap();
+                let rsk = zFs::from_repr(rsk_repr).unwrap();
+
+                let sig_sk = zPrivateKey::<zBls12>(rsk);
+                let sig_vk = SigVerificationKey::from_slice(&tx.rvk[..]);
+
+                let calls = Call::ConfTransfer(ConfTransferCall::confidential_transfer(
+                    Proof::from_slice(&tx.proof[..]),
+                    PkdAddress::from_slice(&tx.address_sender[..]),
+                    PkdAddress::from_slice(&tx.address_recipient[..]),
+                    zCiphertext::from_slice(&tx.enc_val_sender[..]),
+                    zCiphertext::from_slice(&tx.enc_val_recipient[..]),
+                    sig_vk,
+                ));
+
+                let era = Era::Immortal;
+                let index = api.get_nonce(&sig_vk).expect("Nonce must be got.");
+                let checkpoint = api.get_genesis_blockhash().unwrap();
+                let raw_payload = (Compact(index), calls, era, checkpoint);
+
+                let sig = raw_payload.using_encoded(|payload| {
+                    let msg = blake2_256(payload);
+                    let sig = sig_sk.sign(&msg[..], rng, p_g, &ZPARAMS as &zJubjubBls12);
+
+                    let sig_vk = sig_vk.into_verification_key().unwrap();
+                    assert!(sig_vk.verify(&msg, &sig, p_g, &ZPARAMS as &zJubjubBls12));
+
+                    sig
+                });
+
+                let sig_repr = RedjubjubSignature::from_signature(&sig);
+                let uxt = UncheckedExtrinsic::new_signed(index, raw_payload.1, sig_vk.into(), sig_repr, era);
+                let _tx_hash = api.submit_extrinsic(&uxt).unwrap();
+
+                println!("Remaining balance is {}", remaining_balance);
+            }
 
         },
         ("get-balance", Some(sub_matches)) => {
             println!("Getting encrypted balance from substrate node");
             let api = Api::init(Url::Local);
-
-            let p_g = zFixedGenerators::Diversifier; // 1
             let decryption_key_vec = hex::decode(sub_matches.value_of("decryption-key").unwrap()).unwrap();
 
-            let mut decryption_key_repr = zFs::default().into_repr();
-            decryption_key_repr.read_le(&mut &decryption_key_vec[..]).unwrap();
-            let decryption_key = zFs::from_repr(decryption_key_repr).unwrap();
+            let (decrypted_balance, _, encrypted_balance_str) = get_balance_from_decryption_key(&decryption_key_vec[..], api);
 
-            let encryption_key = zEncryptionKey::from_decryption_key(&decryption_key, &ZPARAMS as &zJubjubBls12);
-            let account_id = PkdAddress::from_encryption_key(&encryption_key);
+            // let p_g = zFixedGenerators::Diversifier; // 1
 
-            let mut encrypted_balance_str = api.get_storage(
-                "ConfTransfer",
-                "EncryptedBalance",
-                Some(account_id.encode())
-                ).unwrap();
+            // let mut decryption_key_repr = zFs::default().into_repr();
+            // decryption_key_repr.read_le(&mut &decryption_key_vec[..]).unwrap();
+            // let decryption_key = zFs::from_repr(decryption_key_repr).unwrap();
 
-            // Remove prefix "0x"
-            encrypted_balance_str.remove(0);
-            encrypted_balance_str.remove(0);
+            // let encryption_key = zEncryptionKey::from_decryption_key(&decryption_key, &ZPARAMS as &zJubjubBls12);
+            // let account_id = PkdAddress::from_encryption_key(&encryption_key);
 
-            let encrypted_balance = hexstr_to_vec(encrypted_balance_str.clone());
-            let ciphertext = zelgamal::Ciphertext::<zBls12>::read(&mut &encrypted_balance[..], &ZPARAMS).expect("Invalid data");
+            // let mut encrypted_balance_str = api.get_storage(
+            //     "ConfTransfer",
+            //     "EncryptedBalance",
+            //     Some(account_id.encode())
+            //     ).unwrap();
 
-            println!("Decrypting the balance");
-            let decrypted_balance = ciphertext.decrypt(decryption_key, p_g, &ZPARAMS).unwrap();
-            println!("Encrypted balance is {}", decrypted_balance);
-            println!("Decrypted balance is {}", encrypted_balance_str);
+            // // TODO: remove unnecessary prefix
+            // for _ in 0..4 {
+            //     encrypted_balance_str.remove(2);
+            // }
+
+            // let encrypted_balance = hexstr_to_vec(encrypted_balance_str.clone());
+            // let ciphertext = zelgamal::Ciphertext::<zBls12>::read(&mut &encrypted_balance[..], &ZPARAMS).expect("Invalid data");
+
+            // let decrypted_balance = ciphertext.decrypt(decryption_key, p_g, &ZPARAMS).unwrap();
+            println!("Decrypted balance is {}", decrypted_balance);
+            println!("Encrypted balance is {}", encrypted_balance_str);
+
 
         },
         ("decrypt", Some(sub_matches)) => {
