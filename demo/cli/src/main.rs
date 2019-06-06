@@ -62,6 +62,7 @@ fn cli() -> Result<(), String> {
     const BOBACCOUNTID: &str = "45e66da531088b55dcb3b273ca825454d79d2d1d5c4fa2ba4a12c1fa1ccd6389";
     const ALICEDECRYPTIONKEY: &str = "b0451b0bfab2830a75216779e010e0bfd2e6d0b4e4b1270dfcdfd0d538509e02";
     const DEFAULT_ENCRYPTED_BALANCE: &str = "6f4962da776a391c3b03f3e14e8156d2545f39a3ebbed675ea28859252cb006fac776c796563fcd44cc49cfaea8bb796952c266e47779d94574c10ad01754b11";
+    const URL: &str = "";
 
     let matches = App::new("zero-chain-cli")
         .setting(AppSettings::SubcommandRequiredElseHelp)
@@ -187,6 +188,14 @@ fn cli() -> Result<(), String> {
                 .required(false)
                 .default_value(BOBACCOUNTID)
             )
+            // .arg(Arg::with_name("url")
+            //     .short("u")
+            //     .long("url")
+            //     .help("Endpoint to connect substrate nodes")
+            //     .takes_value(true)
+            //     .required(false)
+            //     .default_value(URL)
+            // )
         )
         .subcommand(SubCommand::with_name("get-balance")
             .about("Get current balance stored in ConfTransfer module")
@@ -448,7 +457,14 @@ fn cli() -> Result<(), String> {
 
         },
         ("send-tx", Some(sub_matches)) => {
+            // let url_str = sub_matches.value_of("url").unwrap();
+            // let mut url = Url::Local;
+            // if url_str.len() != 0 {
+            //     url = Url::Custom(url_str);
+            // }
+
             let api = Api::init(Url::Local);
+
             let rng = &mut OsRng::new().expect("should be able to construct RNG");
             // let alpha = fs::Fs::rand(rng);
             let alpha = fs::Fs::zero(); // TODO
@@ -558,30 +574,6 @@ fn cli() -> Result<(), String> {
 
             let (decrypted_balance, _, encrypted_balance_str) = get_balance_from_decryption_key(&decryption_key_vec[..], api);
 
-            // let p_g = zFixedGenerators::Diversifier; // 1
-
-            // let mut decryption_key_repr = zFs::default().into_repr();
-            // decryption_key_repr.read_le(&mut &decryption_key_vec[..]).unwrap();
-            // let decryption_key = zFs::from_repr(decryption_key_repr).unwrap();
-
-            // let encryption_key = zEncryptionKey::from_decryption_key(&decryption_key, &ZPARAMS as &zJubjubBls12);
-            // let account_id = PkdAddress::from_encryption_key(&encryption_key);
-
-            // let mut encrypted_balance_str = api.get_storage(
-            //     "ConfTransfer",
-            //     "EncryptedBalance",
-            //     Some(account_id.encode())
-            //     ).unwrap();
-
-            // // TODO: remove unnecessary prefix
-            // for _ in 0..4 {
-            //     encrypted_balance_str.remove(2);
-            // }
-
-            // let encrypted_balance = hexstr_to_vec(encrypted_balance_str.clone());
-            // let ciphertext = zelgamal::Ciphertext::<zBls12>::read(&mut &encrypted_balance[..], &ZPARAMS).expect("Invalid data");
-
-            // let decrypted_balance = ciphertext.decrypt(decryption_key, p_g, &ZPARAMS).unwrap();
             println!("Decrypted balance is {}", decrypted_balance);
             println!("Encrypted balance is {}", encrypted_balance_str);
 

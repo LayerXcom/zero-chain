@@ -206,10 +206,10 @@ mod tests {
 
         let r_fs = Fs::rand(rng);
 
-        let address = EncryptionKey::<Bls12>::from_ok_bytes(alice_seed, params);
+        let address = EncryptionKey::<Bls12>::from_seed(alice_seed, params);
 	    let enc_alice_val = Ciphertext::encrypt(alice_value, r_fs, &address.0, p_g, params);
 
-        let bdk = ProofGenerationKey::<Bls12>::from_ok_bytes(alice_seed, params).bdk();
+        let bdk = ProofGenerationKey::<Bls12>::from_seed(alice_seed, params).bdk();
 
         let dec_alice_val = enc_alice_val.decrypt(bdk, p_g, params).unwrap();
 	    assert_eq!(dec_alice_val, alice_value);
