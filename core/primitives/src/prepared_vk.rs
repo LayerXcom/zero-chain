@@ -13,9 +13,7 @@ use parity_codec_derive::{Encode, Decode};
 /// Prepared Verifying Key for SNARKs proofs
 #[derive(Eq, PartialEq, Clone, Default, Encode, Decode)]
 #[cfg_attr(feature = "std", derive(Debug, Serialize, Deserialize))]
-pub struct PreparedVk(
-    pub Vec<u8>
-);
+pub struct PreparedVk(Vec<u8>);
 
 impl PreparedVk {
     pub fn into_prepared_vk(&self) -> Option<bellman_verifier::PreparedVerifyingKey<Bls12>> {
@@ -32,6 +30,10 @@ impl PreparedVk {
         pvk.write(&mut &mut writer[..]).unwrap();
 
         PreparedVk(writer)
+    }
+
+    pub fn from_slice(slice: &[u8]) -> Self {
+        PreparedVk(slice.to_vec())
     }
 }
 
@@ -76,7 +78,7 @@ mod tests {
         let mut buf_vk = vec![];
         vk_reader.read_to_end(&mut buf_vk).unwrap();
 
-        PreparedVk(buf_vk)
+        PreparedVk::from_slice(&buf_vk[..])
     }
 
     #[test]

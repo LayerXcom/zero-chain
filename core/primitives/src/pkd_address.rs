@@ -80,8 +80,6 @@ impl AsBytesRef for PkdAddress {
 mod tests {
     use super::*;
     use rand::{Rng, SeedableRng, XorShiftRng};
-    use pairing::bls12_381::Bls12;
-    use keys::*;
     use jubjub::curve::JubjubBls12;
 
     #[test]
@@ -90,7 +88,7 @@ mod tests {
         let mut seed = [0u8; 32];
         rng.fill_bytes(&mut seed[..]);
 
-        let addr1 = EncryptionKey::from_ok_bytes(&seed[..], &JUBJUB as &JubjubBls12);
+        let addr1 = EncryptionKey::from_seed(&seed[..], &JUBJUB as &JubjubBls12);
 
         let account_id = PkdAddress::from_encryption_key(&addr1);
         let addr2 = account_id.into_encryption_key().unwrap();

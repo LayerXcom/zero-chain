@@ -23,7 +23,7 @@ pub fn run<I, T, E>(args: I, exit: E, version: VersionInfo) -> error::Result<()>
 			info!("  by {}, 2017, 2018", version.author);
 			info!("Chain specification: {}", config.chain_spec.name());
 			info!("Node name: {}", config.name);
-			info!("Roles: {:?}", config.roles);			
+			info!("Roles: {:?}", config.roles);
 			let runtime = Runtime::new().map_err(|e| format!("{:?}", e))?;
 			let executor = runtime.executor();
 			match config.roles {
@@ -66,6 +66,11 @@ fn run_until_exit<T, C, E>(
 
 	let _ = runtime.block_on(e.into_exit());
 	exit_send.fire();
+	
+	// we eagerly drop the service so that the internal exit future is fired,
+	// but we need to keep holding a reference to the global telemetry guard
+	let _telemetry = service.telemetry();
+	drop(service);
 	Ok(())
 }
 

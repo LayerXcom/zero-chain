@@ -6,8 +6,6 @@ edition = "2018"
 
 [dependencies]
 hex-literal = "0.1.0"
-srml-indices = { path = "../indices", default-features = false }
-# fees = { package = "srml-fees", path = "../fees" }
 
 [dependencies.serde]
 default-features = false
@@ -23,57 +21,61 @@ version = '3.1'
 
 [dependencies.rstd]
 default_features = false
-git = 'https://github.com/paritytech/substrate.git'
+git = 'https://github.com/osuketh/substrate.git'
 package = 'sr-std'
-rev = '9112a28af677b75cd6f935dda34d283bb4f676e7'
+branch = "patch-zerochain"
 
 [dependencies.runtime-io]
 default_features = false
-git = 'https://github.com/paritytech/substrate.git'
+git = 'https://github.com/osuketh/substrate.git'
 package = 'sr-io'
-rev = '9112a28af677b75cd6f935dda34d283bb4f676e7'
-
-[dependencies.runtime-primitives]
-default_features = false
-git = 'https://github.com/paritytech/substrate.git'
-package = 'sr-primitives'
-rev = '9112a28af677b75cd6f935dda34d283bb4f676e7'
-
-[dependencies.support]
-default_features = false
-git = 'https://github.com/paritytech/substrate.git'
-package = 'srml-support'
-rev = '9112a28af677b75cd6f935dda34d283bb4f676e7'
-
-[dependencies.system]
-default_features = false
-git = 'https://github.com/paritytech/substrate.git'
-package = 'srml-system'
-rev = '9112a28af677b75cd6f935dda34d283bb4f676e7'
+branch = "patch-zerochain"
 
 [dependencies.primitives]
 default_features = false
-git = 'https://github.com/paritytech/substrate.git'
-package = 'substrate-primitives'
-rev = '9112a28af677b75cd6f935dda34d283bb4f676e7'
+git = 'https://github.com/osuketh/substrate.git'
+package = 'sr-primitives'
+branch = "patch-zerochain"
+
+[dependencies.srml-support]
+default_features = false
+git = 'https://github.com/osuketh/substrate.git'
+branch = "patch-zerochain"
+
+[dependencies.system]
+default_features = false
+git = 'https://github.com/osuketh/substrate.git'
+package = 'srml-system'
+branch = "patch-zerochain"
+
+[dependencies.indices]
+default_features = false
+git = 'https://github.com/osuketh/substrate.git'
+package = 'srml-indices'
+branch = "patch-zerochain"
+
+[dependencies.substrate-primitives]
+default_features = false
+git = 'https://github.com/osuketh/substrate.git'
+branch = "patch-zerochain"
 
 [dependencies.balances]
 default_features = false
-git = 'https://github.com/paritytech/substrate.git'
+git = 'https://github.com/osuketh/substrate.git'
 package = 'srml-balances'
-rev = '9112a28af677b75cd6f935dda34d283bb4f676e7'
+branch = "patch-zerochain"
 
 [features]
 default = ["std"]
 std = [
 	"rstd/std",
-	"support/std",
+	"srml-support/std",
 	"serde/std",
 	"parity-codec/std",
 	'parity-codec-derive/std',
-	"primitives/std",	
+	"primitives/std",
 	"system/std",
-	"runtime-primitives/std",	
+	"substrate-primitives/std",
 	'runtime-io/std',
 	"balances/std",
 ]

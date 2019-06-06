@@ -25,6 +25,13 @@ pub mod proof;
 pub mod sig_vk;
 pub mod prepared_vk;
 
+pub use pkd_address::PkdAddress;
+pub use signature::RedjubjubSignature;
+pub use ciphertext::Ciphertext;
+pub use proof::Proof;
+pub use sig_vk::SigVerificationKey;
+pub use prepared_vk::PreparedVk;
+
 use lazy_static::lazy_static;
 use jubjub::curve::JubjubBls12;
 

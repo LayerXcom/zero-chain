@@ -32,7 +32,7 @@ use scrypto::{
     jubjub::{fs::Fs, FixedGenerators, JubjubBls12, JubjubParams},
 };
 use proofs::{
-    primitives::{ProofGenerationKey, EncryptionKey, bytes_to_fs},
+    primitives::{ProofGenerationKey, EncryptionKey, bytes_to_uniform_fs},
     elgamal::Ciphertext,
 };
 use bellman::groth16::{Parameters, PreparedVerifyingKey};
@@ -55,10 +55,10 @@ cfg_if! {
 pub struct PkdAddress(pub Vec<u8>);
 
 #[wasm_bindgen]
-pub fn gen_account_id(sk: &[u8]) -> JsValue {
+pub fn gen_account_id(seed: &[u8]) -> JsValue {
     let params = &zJubjubBls12::new();
 
-    let pgk = keys::ProofGenerationKey::<zBls12>::from_ok_bytes(sk, params);
+    let pgk = keys::ProofGenerationKey::<zBls12>::from_seed(seed, params);
     let address = pgk.into_encryption_key(params);
 
     let mut v = [0u8; 32];
@@ -69,33 +69,33 @@ pub fn gen_account_id(sk: &[u8]) -> JsValue {
 }
 
 #[wasm_bindgen]
-pub fn gen_bdk(sk: &[u8]) -> Vec<u8> {
+pub fn gen_bdk(seed: &[u8]) -> Vec<u8> {
     let params = &zJubjubBls12::new();
 
-    let pgk = keys::ProofGenerationKey::<zBls12>::from_ok_bytes(sk, params);
-    let bdk: zFs = pgk.bdk();
+    let pgk = keys::ProofGenerationKey::<zBls12>::from_seed(seed, params);
+    let decryption_key: zFs = pgk.bdk();
 
     let mut buf = vec![];
-    bdk.into_repr().write_le(&mut buf).unwrap();
+    decryption_key.into_repr().write_le(&mut buf).unwrap();
 
     buf
 }
 
 // TODO: Add randomness
 #[wasm_bindgen]
-pub fn gen_rsk(sk: &[u8]) -> Vec<u8> {
-    let sk_fs: zFs = keys::bytes_to_fs::<zBls12>(sk);
+pub fn gen_rsk(seed: &[u8]) -> Vec<u8> {
+    let origin_key: zFs = keys::bytes_to_uniform_fs::<zBls12>(seed);
 
     let mut buf = vec![];
-    sk_fs.into_repr().write_le(&mut buf).unwrap();
+    origin_key.into_repr().write_le(&mut buf).unwrap();
 
     buf
 }
 
 #[wasm_bindgen]
-pub fn gen_rvk(sk: &[u8]) -> Vec<u8> {
+pub fn gen_rvk(seed: &[u8]) -> Vec<u8> {
     let params = &zJubjubBls12::new();
-    let pgk = keys::ProofGenerationKey::<zBls12>::from_ok_bytes(sk, params);
+    let pgk = keys::ProofGenerationKey::<zBls12>::from_seed(seed, params);
 
     let mut buf = vec![];
     pgk.0.write(&mut buf).unwrap();
@@ -104,7 +104,7 @@ pub fn gen_rvk(sk: &[u8]) -> Vec<u8> {
 }
 
 #[wasm_bindgen]
-pub fn sign(mut sk: &[u8], msg: &[u8], seed_slice: &[u32]) -> Vec<u8> {
+pub fn sign_wasm(mut sk: &[u8], msg: &[u8], seed_slice: &[u32]) -> Vec<u8> {
     let params = &zJubjubBls12::new();
     let rng = &mut ChaChaRng::from_seed(seed_slice);
     let p_g = zFixedGenerators::Diversifier;
@@ -144,7 +144,7 @@ pub fn sign(mut sk: &[u8], msg: &[u8], seed_slice: &[u32]) -> Vec<u8> {
 }
 
 #[wasm_bindgen]
-pub fn verify(mut vk: &[u8], msg: &[u8], mut sig: &[u8]) -> bool {
+pub fn verify_wasm(mut vk: &[u8], msg: &[u8], mut sig: &[u8]) -> bool {
     let params = &zJubjubBls12::new();
     let p_g = zFixedGenerators::Diversifier;
 
@@ -188,7 +188,7 @@ struct Calls {
 
 #[wasm_bindgen]
 pub fn gen_call(
-    sk: &[u8],
+    seed: &[u8],
     mut address_recipient: &[u8],
     value: u32,
     balance: u32,
@@ -206,8 +206,8 @@ pub fn gen_call(
     // let alpha = Fs::rand(&mut rng);
     let alpha = Fs::zero();
 
-    let sk_fs = bytes_to_fs::<Bls12>(sk);
-    let pkg = ProofGenerationKey::<Bls12>::from_ok_bytes(sk, params);
+    let origin_key = bytes_to_uniform_fs::<Bls12>(seed);
+    let pkg = ProofGenerationKey::<Bls12>::from_seed(seed, params);
     let bdk: Fs = pkg.bdk();
 
     let r_fs = Fs::rand(&mut rng);
@@ -225,7 +225,7 @@ pub fn gen_call(
                 &proving_key,
                 &prepared_vk,
                 &address_recipient,
-                &sk_fs,
+                &origin_key,
                 ciphertext_balance,
                 rng,
                 fee
