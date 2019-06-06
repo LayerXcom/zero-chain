@@ -4,17 +4,15 @@ use zero_chain_runtime::{
 	SudoConfig, IndicesConfig, ConfTransferConfig
 };
 use substrate_service;
-
 use ed25519::Public as AuthorityId;
-
 use zprimitives::{
-	prepared_vk::PreparedVk,
-	pkd_address::PkdAddress,
-	ciphertext::Ciphertext,
-	sig_vk::SigVerificationKey,
-	};
+	PreparedVk,
+	PkdAddress,
+	Ciphertext,
+	SigVerificationKey,
+};
 use keys::{ProofGenerationKey, EncryptionKey};
-use jubjub::{curve::{JubjubBls12, FixedGenerators, fs}};
+use zjubjub::{curve::{JubjubBls12, FixedGenerators, fs}};
 use zpairing::{bls12_381::Bls12, Field};
 use zcrypto::elgamal;
 use std::path::Path;
@@ -134,10 +132,7 @@ fn testnet_genesis(initial_authorities: Vec<AuthorityId>, endowed_accounts: Vec<
 			key: root_key,
 		}),
 		conf_transfer: Some(ConfTransferConfig {
-			encrypted_balance: vec![
-				alice_init(),
-				(PkdAddress::from_slice(b"Alice                           "),
-					Ciphertext(b"Alice                           Bob                             ".to_vec()))],
+			encrypted_balance: vec![alice_init()],
 			verifying_key: get_pvk(),
 			_genesis_phantom_data: Default::default(),
 		})
@@ -152,7 +147,7 @@ fn get_pvk() -> PreparedVk {
 	let mut buf_vk = vec![];
     vk_reader.read_to_end(&mut buf_vk).unwrap();
 
-	PreparedVk(buf_vk)
+	PreparedVk::from_slice(&buf_vk[..])
 }
 
 fn alice_init() -> (PkdAddress, Ciphertext) {
@@ -161,12 +156,12 @@ fn alice_init() -> (PkdAddress, Ciphertext) {
 
 	let p_g = FixedGenerators::Diversifier; // 1 same as NoteCommitmentRandomness;
 
-	let address = EncryptionKey::<Bls12>::from_ok_bytes(alice_seed, &JUBJUB);
+	let address = EncryptionKey::<Bls12>::from_seed(alice_seed, &JUBJUB);
 
 	// The default balance is not encrypted with randomness.
 	let enc_alice_bal = elgamal::Ciphertext::encrypt(alice_value, fs::Fs::one(), &address.0, p_g, &JUBJUB);
 
-	let bdk = ProofGenerationKey::<Bls12>::from_ok_bytes(alice_seed, &JUBJUB).bdk();
+	let bdk = ProofGenerationKey::<Bls12>::from_seed(alice_seed, &JUBJUB).bdk();
 
 	let dec_alice_bal = enc_alice_bal.decrypt(bdk, p_g, &JUBJUB).unwrap();
 	assert_eq!(dec_alice_bal, alice_value);

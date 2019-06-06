@@ -11,51 +11,51 @@ hex-literal = '0.1'
 
 [dependencies.aura]
 default_features = false
-git = 'https://github.com/paritytech/substrate.git'
+git = 'https://github.com/osuketh/substrate.git'
 package = 'srml-aura'
-rev = '59d5ec144704cec017a01f3e4dbb6b73c5542bf7'
+branch = "patch-zerochain"
 
 [dependencies.balances]
 default_features = false
-git = 'https://github.com/paritytech/substrate.git'
+git = 'https://github.com/osuketh/substrate.git'
 package = 'srml-balances'
-rev = '59d5ec144704cec017a01f3e4dbb6b73c5542bf7'
+branch = "patch-zerochain"
 
 [dependencies.client]
 default_features = false
-git = 'https://github.com/paritytech/substrate.git'
+git = 'https://github.com/osuketh/substrate.git'
 package = 'substrate-client'
-rev = '59d5ec144704cec017a01f3e4dbb6b73c5542bf7'
+branch = "patch-zerochain"
 
 [dependencies.consensus]
 default_features = false
-git = 'https://github.com/paritytech/substrate.git'
+git = 'https://github.com/osuketh/substrate.git'
 package = 'srml-consensus'
-rev = '59d5ec144704cec017a01f3e4dbb6b73c5542bf7'
+branch = "patch-zerochain"
 
 [dependencies.consensus-aura]
 default_features = false
-git = 'https://github.com/paritytech/substrate.git'
+git = 'https://github.com/osuketh/substrate.git'
 package = 'substrate-consensus-aura-primitives'
-rev = '59d5ec144704cec017a01f3e4dbb6b73c5542bf7'
+branch = "patch-zerochain"
 
 [dependencies.consensus-authorities]
 default-features = false
-git = 'https://github.com/paritytech/substrate.git'
+git = 'https://github.com/osuketh/substrate.git'
 package = 'substrate-consensus-authorities'
-rev = '59d5ec144704cec017a01f3e4dbb6b73c5542bf7'
+branch = "patch-zerochain"
 
 [dependencies.indices]
 default_features = false
-git = 'https://github.com/paritytech/substrate.git'
+git = 'https://github.com/osuketh/substrate.git'
 package = 'srml-indices'
-rev = '59d5ec144704cec017a01f3e4dbb6b73c5542bf7'
+branch = "patch-zerochain"
 
 [dependencies.offchain-primitives]
 default-features = false
-git = 'https://github.com/paritytech/substrate.git'
+git = 'https://github.com/osuketh/substrate.git'
 package = 'substrate-offchain-primitives'
-rev = '59d5ec144704cec017a01f3e4dbb6b73c5542bf7'
+branch = "patch-zerochain"
 
 [dependencies.parity-codec]
 default-features = false
@@ -64,27 +64,27 @@ version = '3.2'
 
 [dependencies.primitives]
 default_features = false
-git = 'https://github.com/paritytech/substrate.git'
+git = 'https://github.com/osuketh/substrate.git'
 package = 'substrate-primitives'
-rev = '59d5ec144704cec017a01f3e4dbb6b73c5542bf7'
+branch = "patch-zerochain"
 
 [dependencies.rstd]
 default_features = false
-git = 'https://github.com/paritytech/substrate.git'
+git = 'https://github.com/osuketh/substrate.git'
 package = 'sr-std'
-rev = '59d5ec144704cec017a01f3e4dbb6b73c5542bf7'
+branch = "patch-zerochain"
 
 [dependencies.runtime-io]
 default_features = false
-git = 'https://github.com/paritytech/substrate.git'
+git = 'https://github.com/osuketh/substrate.git'
 package = 'sr-io'
-rev = '59d5ec144704cec017a01f3e4dbb6b73c5542bf7'
+branch = "patch-zerochain"
 
 [dependencies.runtime-primitives]
 default_features = false
-git = 'https://github.com/paritytech/substrate.git'
+git = 'https://github.com/osuketh/substrate.git'
 package = 'sr-primitives'
-rev = '59d5ec144704cec017a01f3e4dbb6b73c5542bf7'
+branch = "patch-zerochain"
 
 [dependencies.safe-mix]
 default-features = false
@@ -100,33 +100,33 @@ version = '1.0'
 
 [dependencies.sudo]
 default_features = false
-git = 'https://github.com/paritytech/substrate.git'
+git = 'https://github.com/osuketh/substrate.git'
 package = 'srml-sudo'
-rev = '59d5ec144704cec017a01f3e4dbb6b73c5542bf7'
+branch = "patch-zerochain"
 
 [dependencies.support]
 default_features = false
-git = 'https://github.com/paritytech/substrate.git'
+git = 'https://github.com/osuketh/substrate.git'
 package = 'srml-support'
-rev = '59d5ec144704cec017a01f3e4dbb6b73c5542bf7'
+branch = "patch-zerochain"
 
 [dependencies.system]
 default_features = false
-git = 'https://github.com/paritytech/substrate.git'
+git = 'https://github.com/osuketh/substrate.git'
 package = 'srml-system'
-rev = '59d5ec144704cec017a01f3e4dbb6b73c5542bf7'
+branch = "patch-zerochain"
 
 [dependencies.timestamp]
 default_features = false
-git = 'https://github.com/paritytech/substrate.git'
+git = 'https://github.com/osuketh/substrate.git'
 package = 'srml-timestamp'
-rev = '59d5ec144704cec017a01f3e4dbb6b73c5542bf7'
+branch = "patch-zerochain"
 
 [dependencies.version]
 default_features = false
-git = 'https://github.com/paritytech/substrate.git'
+git = 'https://github.com/osuketh/substrate.git'
 package = 'sr-version'
-rev = '59d5ec144704cec017a01f3e4dbb6b73c5542bf7'
+branch = "patch-zerochain"
 
 [features]
 default = ['std']

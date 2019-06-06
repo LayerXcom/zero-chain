@@ -26,9 +26,9 @@ use version::RuntimeVersion;
 use version::NativeVersion;
 
 use zprimitives::{
-	signature::RedjubjubSignature,
-	sig_vk::SigVerificationKey,
-	pkd_address::PkdAddress,
+	RedjubjubSignature,
+	SigVerificationKey,
+	PkdAddress,
 };
 
 // A few exports that help ease life for downstream crates.
@@ -37,6 +37,7 @@ pub use runtime_primitives::BuildStorage;
 pub use consensus::Call as ConsensusCall;
 pub use timestamp::Call as TimestampCall;
 pub use balances::Call as BalancesCall;
+pub use conf_transfer::Call as ConfTransferCall;
 pub use runtime_primitives::{Permill, Perbill};
 pub use timestamp::BlockPeriod;
 pub use support::{StorageValue, construct_runtime};
@@ -217,7 +218,7 @@ construct_runtime!(
 /// The type used as a helper for interpreting the sender of transactions.
 type Context = system::ChainContext<Runtime>;
 /// The address format for describing accounts.
-type Address = <Indices as StaticLookup>::Source; // TODO: Chenge from PkdAddress to SigVerificationKey
+type Address = <Indices as StaticLookup>::Source;
 /// Block header type as expected by this runtime.
 pub type Header = generic::Header<BlockNumber, BlakeTwo256, Log>;
 /// Block type as expected by this runtime.
@@ -226,6 +227,7 @@ pub type Block = generic::Block<Header, UncheckedExtrinsic>;
 pub type BlockId = generic::BlockId<Block>;
 /// Unchecked extrinsic type as expected by this runtime.
 pub type UncheckedExtrinsic = generic::UncheckedMortalCompactExtrinsic<Address, Nonce, Call, AccountSignature>;
+// pub type UncheckedExtrinsic = generic::UncheckedExtrinsic<Address, Nonce, Call, AccountSignature>;
 /// Extrinsic type that has already been checked.
 pub type CheckedExtrinsic = generic::CheckedExtrinsic<AccountId, Nonce, Call>;
 /// Executive: handles dispatch to the various modules.

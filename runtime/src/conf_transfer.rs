@@ -18,11 +18,11 @@ use jubjub::{
     };
 
 use zprimitives::{
-    pkd_address::PkdAddress,
-    ciphertext::Ciphertext,
-    proof::Proof,
-    sig_vk::SigVerificationKey,
-    prepared_vk::PreparedVk,
+    PkdAddress,
+    Ciphertext,
+    Proof,
+    SigVerificationKey,
+    PreparedVk,
 };
 use keys::EncryptionKey;
 use zcrypto::elgamal;
@@ -282,12 +282,12 @@ mod tests {
         let params = &JubjubBls12::new();
         let p_g = FixedGenerators::Diversifier; // 1 same as NoteCommitmentRandomness;
 
-        let ek = EncryptionKey::<Bls12>::from_ok_bytes(alice_seed, params);
+        let ek = EncryptionKey::<Bls12>::from_seed(alice_seed, params);
 
         // The default balance is not encrypted with randomness.
         let enc_alice_bal = elgamal::Ciphertext::encrypt(alice_value, fs::Fs::one(), &ek.0, p_g, params);
 
-        let bdk = ProofGenerationKey::<Bls12>::from_ok_bytes(alice_seed, params).bdk();
+        let bdk = ProofGenerationKey::<Bls12>::from_seed(alice_seed, params).bdk();
 
         let dec_alice_bal = enc_alice_bal.decrypt(bdk, p_g, params).unwrap();
         assert_eq!(dec_alice_bal, alice_value);
@@ -303,7 +303,7 @@ mod tests {
         let mut buf_vk = vec![];
         vk_reader.read_to_end(&mut buf_vk).unwrap();
 
-        PreparedVk(buf_vk)
+        PreparedVk::from_slice(&buf_vk[..])
     }
 
     fn new_test_ext() -> runtime_io::TestExternalities<Blake2Hasher> {
@@ -328,11 +328,11 @@ mod tests {
 
             assert_ok!(ConfTransfer::confidential_transfer(
                 Origin::signed(1),
-                Proof(proof.to_vec()),
+                Proof::from_slice(&proof[..]),
                 PkdAddress::from_slice(&pkd_addr_alice),
                 PkdAddress::from_slice(&pkd_addr_bob),
-                Ciphertext(enc10_by_alice.to_vec()),
-                Ciphertext(enc10_by_bob.to_vec()),
+                Ciphertext::from_slice(&enc10_by_alice[..]),
+                Ciphertext::from_slice(&enc10_by_bob[..]),
                 SigVerificationKey::from_slice(&rvk)
             ));
         })

@@ -178,10 +178,10 @@ mod tests {
 
         let r_fs = Fs::rand(rng);
 
-        let address = EncryptionKey::<Bls12>::from_ok_bytes(alice_seed, params);
+        let address = EncryptionKey::<Bls12>::from_seed(alice_seed, params);
 	    let enc_alice_val = Ciphertext::encrypt(alice_value, r_fs, &address.0, p_g, params);
 
-        let bdk = ProofGenerationKey::<Bls12>::from_ok_bytes(alice_seed, params).bdk();
+        let bdk = ProofGenerationKey::<Bls12>::from_seed(alice_seed, params).bdk();
 
         let dec_alice_val = enc_alice_val.decrypt(bdk, p_g, params).unwrap();
 	    assert_eq!(dec_alice_val, alice_value);
@@ -192,7 +192,7 @@ mod tests {
         let params = &JubjubBls12::new();
         let p_g = FixedGenerators::NoteCommitmentRandomness; // 1
         let rng = &mut XorShiftRng::from_seed([0xbc4f6d44, 0xd62f276c, 0xb963afd0, 0x5455863d]);
-               
+
         let sk_fs = Fs::rand(rng);
         let r_fs1 = Fs::rand(rng);
         let r_fs2 = Fs::rand(rng);
