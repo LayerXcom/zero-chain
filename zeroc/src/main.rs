@@ -53,8 +53,8 @@ fn main() {
 }
 
 fn cli() -> Result<(), String> {
-    const VERIFICATION_KEY_PATH: &str = "demo/cli/verification.params";
-    const PROVING_KEY_PATH: &str = "demo/cli/proving.params";
+    const VERIFICATION_KEY_PATH: &str = "cli/verification.params";
+    const PROVING_KEY_PATH: &str = "cli/proving.params";
     const DEFAULT_AMOUNT: &str = "10";
     const DEFAULT_BALANCE: &str = "100";
     const DEFAULT_FEE: &str = "1";
@@ -65,7 +65,7 @@ fn cli() -> Result<(), String> {
     const DEFAULT_ENCRYPTED_BALANCE: &str = "6f4962da776a391c3b03f3e14e8156d2545f39a3ebbed675ea28859252cb006fac776c796563fcd44cc49cfaea8bb796952c266e47779d94574c10ad01754b11";
     const URL: &str = "";
 
-    let matches = App::new("zero-chain-cli")
+    let matches = App::new("zeroc")
         .setting(AppSettings::SubcommandRequiredElseHelp)
         .version("0.1.0")
         .author("Osuke Sudo")

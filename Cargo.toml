@@ -15,9 +15,7 @@ parking_lot = '0.7.1'
 slog = '^2'
 tokio = '0.1'
 trie-root = '0.11.0'
-
 bellman-verifier = { path = "core/bellman-verifier"}
-demo = { package = "zero-chain-cli", path = "demo/cli" }
 zcrypto = { package = "zero-chain-crypto", path = "core/crypto" }
 zpairing = { package = "zero-chain-pairing", path = "core/pairing" }
 zprimitives = { package = "zero-chain-primitives", path = "core/primitives" }
@@ -107,15 +105,11 @@ version = '1.0.0'
 name = 'zero-chain'
 path = 'src/main.rs'
 
-[[bin]]
-name = 'zero-chain-cli'
-path = 'demo/cli/src/main.rs'
-
 [workspace]
 members = [
     "core/bellman-verifier",
     "core/crypto",
-    "demo/cli",
+    "zeroc",
     "core/jubjub",
     "core/pairing",
     "core/primitives",

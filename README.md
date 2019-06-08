@@ -92,6 +92,33 @@ You can send the transaction from firefox browser.
 <img src="https://user-images.githubusercontent.com/20852667/54687970-228b2a00-4b60-11e9-8c26-fdfbbb3a17d8.png" width="1100px">
 </div>
 
+## zeroc: Zerochain command line tool
+
+- Setup
+```
+cargo install --path zeroc
+```
+
+- Setup for zk-SNARKs
+```
+zeroc setup
+```
+
+- Generate key pairs
+```
+zeroc init
+```
+
+- Send extrinsic to substrate node
+```
+zeroc send-tx
+```
+
+- Get balance
+```
+zeroc get-balance
+```
+
 ### Documentations
 - [Announcing Zerochain: Applying zk-SNARKs to Substrate](https://medium.com/layerx/announcing-zerochain-5b08e158355d)
 

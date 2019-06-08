@@ -1,9 +1,7 @@
 //! A simple module for dealing with confidential transfer of fungible assets.
 use support::{decl_module, decl_storage, decl_event, StorageMap, dispatch::Result, ensure};
 use rstd::prelude::*;
-use bellman_verifier::{
-    verify_proof,
-};
+use bellman_verifier::verify_proof;
 use pairing::{
     bls12_381::{
         Bls12,
@@ -11,12 +9,7 @@ use pairing::{
     },
     Field,
 };
-use jubjub::{
-        redjubjub::{
-            PublicKey,
-        },
-    };
-
+use jubjub::redjubjub::PublicKey;
 use zprimitives::{
     PkdAddress,
     Ciphertext,
