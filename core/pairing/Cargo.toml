@@ -1,5 +1,5 @@
 [package]
-name = "zero-chain-pairing"
+name = "zerochain-pairing"
 
 # Remember to change version string in README.md.
 version = "0.14.2"

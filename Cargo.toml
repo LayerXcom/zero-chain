@@ -16,10 +16,10 @@ slog = '^2'
 tokio = '0.1'
 trie-root = '0.11.0'
 bellman-verifier = { path = "core/bellman-verifier"}
-zcrypto = { package = "zero-chain-crypto", path = "core/crypto" }
-zpairing = { package = "zero-chain-pairing", path = "core/pairing" }
-zprimitives = { package = "zero-chain-primitives", path = "core/primitives" }
-proofs = { package = "zero-chain-proofs", path = "core/proofs" }
+zcrypto = { package = "zerochain-crypto", path = "core/crypto" }
+zpairing = { package = "zerochain-pairing", path = "core/pairing" }
+zprimitives = { package = "zerochain-primitives", path = "core/primitives" }
+proofs = { package = "zerochain-proofs", path = "core/proofs" }
 scrypto = { package = "sapling-crypto", git = "https://github.com/LayerXcom/librustzcash", branch = "zero-chain" }
 keys = { path = "core/keys"}
 bellman = { git = "https://github.com/LayerXcom/librustzcash", branch = "zero-chain" }
@@ -56,7 +56,7 @@ git = 'https://github.com/osuketh/substrate.git'
 package = 'substrate-network'
 branch = "patch-zerochain"
 
-[dependencies.zero-chain-runtime]
+[dependencies.zerochain-runtime]
 path = 'runtime'
 
 [dependencies.primitives]
@@ -98,11 +98,11 @@ branch = "patch-zerochain"
 authors = ['Osuke Sudo<dish230@gmail.com>']
 build = 'build.rs'
 edition = '2018'
-name = 'zero-chain'
+name = 'zerochain'
 version = '1.0.0'
 
 [[bin]]
-name = 'zero-chain'
+name = 'zerochain'
 path = 'src/main.rs'
 
 [workspace]

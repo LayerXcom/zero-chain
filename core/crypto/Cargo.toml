@@ -1,12 +1,12 @@
 [package]
-name = "zero-chain-crypto"
+name = "zerochain-crypto"
 version = "0.1.0"
 authors = ["osuke <dish230@gmail.com>"]
 edition = "2018"
 
 [dependencies]
 jubjub = { path = "../jubjub", default-features = false }
-pairing = { package = "zero-chain-pairing", path = "../pairing", default-features = false }
+pairing = { package = "zerochain-pairing", path = "../pairing", default-features = false }
 rand = { version = "0.4", default-features = false }
 keys = { path = "../keys", default-features = false }
 

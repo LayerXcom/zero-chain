@@ -2,4 +2,4 @@
 
 #![cfg_attr(not(feature = "std"), no_std)]
 
-pub use zero_chain_runtime::*;
+pub use zerochain_runtime::*;

@@ -6,7 +6,7 @@ authors = ["osuke <dish230@gmail.com>"]
 edition = "2018"
 
 [dependencies]
-pairing = { package = "zero-chain-pairing", path = "../pairing", default-features = false }
+pairing = { package = "zerochain-pairing", path = "../pairing", default-features = false }
 byteorder = { version = "1", default-features = false }
 rand = { version = "0.4", default-features = false }
 hex-literal = { version = "0.1", optional = true }
@@ -18,9 +18,9 @@ default-features = false
 
 [features]
 default = ["std"]
-std = [    
+std = [
     "pairing/std",
     "byteorder/std",
-    "rand/std",  
+    "rand/std",
     "hex-literal",
 ]

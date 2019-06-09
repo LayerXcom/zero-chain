@@ -96,7 +96,7 @@ You can send the transaction from firefox browser.
 
 - Setup
 ```
-cargo install --path zeroc
+cargo install --force --path zeroc
 ```
 
 - Setup for zk-SNARKs
@@ -111,12 +111,12 @@ zeroc init
 
 - Send extrinsic to substrate node
 ```
-zeroc send-tx
+zeroc send -a <AMOUNT> -s <SEED> -to <RECIPIENT PUBLIC KEY>
 ```
 
 - Get balance
 ```
-zeroc get-balance
+zeroc balance -d <DECRYPTION KEY>
 ```
 
 ### Documentations
