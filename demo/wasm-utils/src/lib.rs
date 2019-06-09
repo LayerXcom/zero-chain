@@ -183,6 +183,7 @@ struct Calls {
     balance_sender: Vec<u8>,
     rvk: Vec<u8>,
     rsk: Vec<u8>,
+    enc_fee: Vec<u8>,
 }
 
 #[wasm_bindgen]
@@ -194,6 +195,7 @@ pub fn gen_call(
     mut proving_key: &[u8],
     mut prepared_vk: &[u8],
     seed_slice: &[u32],
+    fee: u32,
 ) -> JsValue
 {
     let params = &JubjubBls12::new();
@@ -225,7 +227,8 @@ pub fn gen_call(
                 &address_recipient,
                 &origin_key,
                 ciphertext_balance,
-                rng
+                rng,
+                fee
         ).expect("fails to generate the tx");
 
     let calls = Calls {
@@ -237,6 +240,7 @@ pub fn gen_call(
         balance_sender: tx.enc_bal_sender.to_vec(),
         rvk: tx.rvk.to_vec(),
         rsk: tx.rsk.to_vec(),
+        enc_fee: tx.enc_fee.to_vec(),
     };
 
     JsValue::from_serde(&calls).expect("fails to write json")

@@ -57,6 +57,7 @@ fn cli() -> Result<(), String> {
     const PROVING_KEY_PATH: &str = "demo/cli/proving.params";
     const DEFAULT_AMOUNT: &str = "10";
     const DEFAULT_BALANCE: &str = "100";
+    const DEFAULT_FEE: &str = "1";
     const ALICESEED: &str = "416c696365202020202020202020202020202020202020202020202020202020";
     const BOBSEED: &str = "426f622020202020202020202020202020202020202020202020202020202020";
     const BOBACCOUNTID: &str = "45e66da531088b55dcb3b273ca825454d79d2d1d5c4fa2ba4a12c1fa1ccd6389";
@@ -120,6 +121,14 @@ fn cli() -> Result<(), String> {
                 .takes_value(true)
                 .required(false)
                 .default_value(DEFAULT_AMOUNT)
+            )
+            .arg(Arg::with_name("fee")
+                .short("f")
+                .long("fee")
+                .help("The fee for the confidential transfer. (default: 1)")
+                .takes_value(true)
+                .required(false)
+                .default_value(DEFAULT_FEE)
             )
             .arg(Arg::with_name("balance")
                 .short("b")
@@ -187,6 +196,14 @@ fn cli() -> Result<(), String> {
                 .takes_value(true)
                 .required(false)
                 .default_value(BOBACCOUNTID)
+            )
+            .arg(Arg::with_name("fee")
+                .short("f")
+                .long("fee")
+                .help("The fee for the confidential transfer. (default: 1)")
+                .takes_value(true)
+                .required(false)
+                .default_value(DEFAULT_FEE)
             )
             // .arg(Arg::with_name("url")
             //     .short("u")
@@ -342,6 +359,8 @@ fn cli() -> Result<(), String> {
 
             let amount_str = sub_matches.value_of("amount").unwrap();
             let amount: u32 = amount_str.parse().unwrap();
+            let fee_str = sub_matches.value_of("fee").unwrap();
+            let fee: u32 = fee_str.parse().unwrap();
 
             let balance_str = sub_matches.value_of("balance").unwrap();
             let balance: u32 = balance_str.parse().unwrap();
@@ -364,7 +383,7 @@ fn cli() -> Result<(), String> {
             let ciphertext_balance_v = hex::decode(ciphertext_balance_a).unwrap();
             let ciphertext_balance = elgamal::Ciphertext::read(&mut &ciphertext_balance_v[..], &PARAMS as &JubjubBls12).unwrap();
 
-            let remaining_balance = balance - amount;
+            let remaining_balance = balance - amount - fee;
 
             let tx = Transaction::gen_tx(
                             amount,
@@ -375,39 +394,44 @@ fn cli() -> Result<(), String> {
                             &address_recipient,
                             &origin_key,
                             ciphertext_balance,
-                            rng
+                            rng,
+                            fee
                     ).expect("fails to generate the tx");
 
-            println!(
-                "
-                \nzkProof: 0x{}
-                \nEncrypted amount by sender: 0x{}
-                \nEncrypted amount by recipient: 0x{}
-                ",
-                HexDisplay::from(&&tx.proof[..] as &AsBytesRef),
-                HexDisplay::from(&tx.enc_val_sender as &AsBytesRef),
-                HexDisplay::from(&tx.enc_val_recipient as &AsBytesRef),
-            );
             // println!(
             //     "
-            //     \nzkProof(Alice): 0x{}
-            //     \naddress_sender(Alice): 0x{}
-            //     \naddress_recipient(Alice): 0x{}
-            //     \nvalue_sender(Alice): 0x{}
-            //     \nvalue_recipient(Alice): 0x{}
-            //     \nbalance_sender(Alice): 0x{}
-            //     \nrvk(Alice): 0x{}
-            //     \nrsk(Alice): 0x{}
+            //     \nEncrypted fee by sender: 0x{}
+            //     \nzkProof: 0x{}
+            //     \nEncrypted amount by sender: 0x{}
+            //     \nEncrypted amount by recipient: 0x{}
             //     ",
+            //     HexDisplay::from(&tx.enc_fee as &AsBytesRef),
             //     HexDisplay::from(&&tx.proof[..] as &AsBytesRef),
-            //     HexDisplay::from(&tx.address_sender as &AsBytesRef),
-            //     HexDisplay::from(&tx.address_recipient as &AsBytesRef),
             //     HexDisplay::from(&tx.enc_val_sender as &AsBytesRef),
             //     HexDisplay::from(&tx.enc_val_recipient as &AsBytesRef),
-            //     HexDisplay::from(&tx.enc_bal_sender as &AsBytesRef),
-            //     HexDisplay::from(&tx.rvk as &AsBytesRef),
-            //     HexDisplay::from(&tx.rsk as &AsBytesRef),
             // );
+            println!(
+                "
+                \nzkProof(Alice): 0x{}
+                \naddress_sender(Alice): 0x{}
+                \naddress_recipient(Alice): 0x{}
+                \nvalue_sender(Alice): 0x{}
+                \nvalue_recipient(Alice): 0x{}
+                \nbalance_sender(Alice): 0x{}
+                \nrvk(Alice): 0x{}
+                \nrsk(Alice): 0x{}
+                \nEncrypted fee by sender: 0x{}
+                ",
+                HexDisplay::from(&&tx.proof[..] as &AsBytesRef),
+                HexDisplay::from(&tx.address_sender as &AsBytesRef),
+                HexDisplay::from(&tx.address_recipient as &AsBytesRef),
+                HexDisplay::from(&tx.enc_val_sender as &AsBytesRef),
+                HexDisplay::from(&tx.enc_val_recipient as &AsBytesRef),
+                HexDisplay::from(&tx.enc_bal_sender as &AsBytesRef),
+                HexDisplay::from(&tx.rvk as &AsBytesRef),
+                HexDisplay::from(&tx.rsk as &AsBytesRef),
+                HexDisplay::from(&tx.enc_fee as &AsBytesRef),
+            );
 
             if let Some(value) = sub_matches.value_of("is-submitting") {
                 match value.parse() {
@@ -430,6 +454,7 @@ fn cli() -> Result<(), String> {
                         zCiphertext::from_slice(&tx.enc_val_sender[..]),
                         zCiphertext::from_slice(&tx.enc_val_recipient[..]),
                         sig_vk,
+                        zCiphertext::from_slice(&tx.enc_fee[..]),
                     ));
 
                     let era = Era::Immortal;
@@ -462,7 +487,7 @@ fn cli() -> Result<(), String> {
             // if url_str.len() != 0 {
             //     url = Url::Custom(url_str);
             // }
-
+            println!("Computing zk proof...");
             let api = Api::init(Url::Local);
 
             let rng = &mut OsRng::new().expect("should be able to construct RNG");
@@ -494,6 +519,8 @@ fn cli() -> Result<(), String> {
             let seed = hex::decode(sub_matches.value_of("sender-seed").unwrap()).unwrap();
             let amount_str = sub_matches.value_of("amount").unwrap();
             let amount: u32 = amount_str.parse().unwrap();
+            let fee_str = sub_matches.value_of("fee").unwrap();
+            let fee: u32 = fee_str.parse().unwrap();
 
             let origin_key = bytes_to_uniform_fs::<Bls12>(&seed[..]);
             let decryption_key = ProofGenerationKey::<Bls12>::from_seed(&seed[..], &PARAMS).bdk();
@@ -504,7 +531,7 @@ fn cli() -> Result<(), String> {
             let recipient_encryption_key = hex::decode(sub_matches.value_of("recipient-encryption-key").unwrap()).unwrap();
 
             let (decrypted_balance, encrypted_balance_vec, _) = get_balance_from_decryption_key(&decrypted_key[..] ,api.clone());
-            let remaining_balance = decrypted_balance - amount;
+            let remaining_balance = decrypted_balance - amount - fee;
 
             let recipient_account_id = EncryptionKey::<Bls12>::read(&mut &recipient_encryption_key[..], &PARAMS).unwrap();
             let encrypted_balance = elgamal::Ciphertext::read(&mut &encrypted_balance_vec[..], &PARAMS as &JubjubBls12).unwrap();
@@ -519,7 +546,8 @@ fn cli() -> Result<(), String> {
                             &recipient_account_id,
                             &origin_key,
                             encrypted_balance,
-                            rng
+                            rng,
+                            fee
                     ).expect("fails to generate the tx");
 
 
@@ -542,6 +570,7 @@ fn cli() -> Result<(), String> {
                     zCiphertext::from_slice(&tx.enc_val_sender[..]),
                     zCiphertext::from_slice(&tx.enc_val_recipient[..]),
                     sig_vk,
+                    zCiphertext::from_slice(&tx.enc_fee[..]),
                 ));
 
                 let era = Era::Immortal;

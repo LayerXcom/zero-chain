@@ -24,6 +24,7 @@ pub fn setup() -> (Parameters<Bls12>, PreparedVerifyingKey<Bls12>) {
             decryption_key: None,
             pk_d_recipient: None,
             encrypted_balance: None,
+            fee: None,
         };
 
         generate_random_parameters(c, rng).unwrap()
