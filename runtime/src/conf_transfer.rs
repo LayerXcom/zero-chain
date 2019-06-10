@@ -38,57 +38,57 @@ decl_module! {
             zkproof: Proof,
             address_sender: PkdAddress,
             address_recipient: PkdAddress,
-            value_sender: Ciphertext,
-            value_recipient: Ciphertext,
-            rk: SigVerificationKey,  // TODO: Extract from origin
+            amount_sender: Ciphertext,
+            amount_recipient: Ciphertext,
+            rvk: SigVerificationKey,  // TODO: Extract from origin
             fee_sender: Ciphertext
         ) -> Result {
-			// let rk = ensure_signed(origin)?;
+			// let rvk = ensure_signed(origin)?;
 
             // Get zkproofs with the type
-            let szkproof = match zkproof.into_proof() {
+            let typed_zkproof = match zkproof.into_proof() {
                 Some(v) => v,
                 None => return Err("Invalid zkproof"),
             };
 
             // Get address_sender with the type
-            let saddr_sender = match address_sender.into_encryption_key() {
+            let typed_addr_sender = match address_sender.into_encryption_key() {
                 Some(v) => v,
                 None => return Err("Invalid address_sender"),
             };
 
             // Get address_recipient with the type
-            let saddr_recipient = match  address_recipient.into_encryption_key() {
+            let typed_addr_recipient = match  address_recipient.into_encryption_key() {
                 Some(v) => v,
                 None => return Err("Invalid address_recipient"),
             };
 
-            // Get value_sender with the type
-            let svalue_sender = match value_sender.into_ciphertext() {
+            // Get amount_sender with the type
+            let typed_amount_sender = match amount_sender.into_ciphertext() {
                 Some(v) => v,
-                None => return Err("Invalid value_sender"),
+                None => return Err("Invalid amount_sender"),
             };
 
-            // Get value_recipient with the type
-            let svalue_recipient = match value_recipient.into_ciphertext() {
+            // Get amount_recipient with the type
+            let typed_amount_recipient = match amount_recipient.into_ciphertext() {
                 Some(v) => v,
-                None => return Err("Invalid value_recipient"),
+                None => return Err("Invalid amount_recipient"),
             };
 
             // Get fee_sender with the type
-            let sfee_sender = match fee_sender.into_ciphertext() {
+            let typed_fee_sender = match fee_sender.into_ciphertext() {
                 Some(v) => v,
                 None => return Err("Invalid fee_sender"),
             };
 
-            // Get rk with the type
-            let srk = match rk.into_verification_key() {
+            // Get rvk with the type
+            let typed_rvk = match rvk.into_verification_key() {
                 Some(v) => v,
-                None => return Err("Invalid rk"),
+                None => return Err("Invalid rvk"),
             };
 
             // Get balance_sender with the type
-            let bal_sender = match Self::encrypted_balance(address_sender) {
+            let typed_bal_sender = match Self::encrypted_balance(address_sender) {
                 Some(b) => match b.into_ciphertext() {
                     Some(c) => c,
                     None => return Err("Invalid ciphertext of sender balance"),
@@ -99,51 +99,52 @@ decl_module! {
             // Verify the zk proof
             ensure!(
                 Self::validate_proof(
-                    &szkproof,
-                    &saddr_sender,
-                    &saddr_recipient,
-                    &svalue_sender,
-                    &svalue_recipient,
-                    &bal_sender,
-                    &srk,
-                    &sfee_sender,
+                    &typed_zkproof,
+                    &typed_addr_sender,
+                    &typed_addr_recipient,
+                    &typed_amount_sender,
+                    &typed_amount_recipient,
+                    &typed_bal_sender,
+                    &typed_rvk,
+                    &typed_fee_sender,
                 ),
                 "Invalid zkproof"
             );
 
             // Get balance_recipient with the option type
-            let bal_recipient = match Self::encrypted_balance(address_recipient) {
+            let typed_bal_recipient = match Self::encrypted_balance(address_recipient) {
                 Some(b) => b.into_ciphertext(),
                 _ => None
             };
 
-            let amount_plus_fee = svalue_sender.add_no_params(&sfee_sender);
-
-            // Charge transaction fee on the sender's balance
-            // <EncryptedBalance<T>>::mutate(address_sender, |balance| {
-            //     let new_balance = balance.clone().map(
-            //         |_| Ciphertext::from_ciphertext(&bal_sender.sub_no_params(&sfee_sender)));
-            //     *balance = new_balance
-            // });
+            let amount_plus_fee = typed_amount_sender.add_no_params(&typed_fee_sender);
 
             // Update the sender's balance
             <EncryptedBalance<T>>::mutate(address_sender, |balance| {
                 let new_balance = balance.clone().map(
-                    |_| Ciphertext::from_ciphertext(&bal_sender.sub_no_params(&amount_plus_fee)));
+                    |_| Ciphertext::from_ciphertext(&typed_bal_sender.sub_no_params(&amount_plus_fee)));
                 *balance = new_balance
             });
 
             // Update the recipient's balance
             <EncryptedBalance<T>>::mutate(address_recipient, |balance| {
                 let new_balance = balance.clone().map_or(
-                    Some(Ciphertext::from_ciphertext(&svalue_recipient)),
-                    |_| Some(Ciphertext::from_ciphertext(&bal_recipient.unwrap().add_no_params(&svalue_recipient)))
+                    Some(Ciphertext::from_ciphertext(&typed_amount_recipient)),
+                    |_| Some(Ciphertext::from_ciphertext(&typed_bal_recipient.unwrap().add_no_params(&typed_amount_recipient)))
                 );
                 *balance = new_balance
             });
 
             // TODO: tempolaly removed address_sender and address_recipient because of mismatched types
-            Self::deposit_event(RawEvent::ConfTransfer(zkproof, value_sender, value_recipient, Ciphertext::from_ciphertext(&bal_sender), rk));
+            Self::deposit_event(
+                RawEvent::ConfTransfer(
+                    zkproof,
+                    amount_sender,
+                    amount_recipient,
+                    Ciphertext::from_ciphertext(&typed_bal_sender),
+                    rvk
+                )
+            );
 
             Ok(())
 		}
@@ -175,10 +176,10 @@ impl<T: Trait> Module<T> {
         zkproof: &bellman_verifier::Proof<Bls12>,
         address_sender: &EncryptionKey<Bls12>,
         address_recipient: &EncryptionKey<Bls12>,
-        value_sender: &elgamal::Ciphertext<Bls12>,
-        value_recipient: &elgamal::Ciphertext<Bls12>,
+        amount_sender: &elgamal::Ciphertext<Bls12>,
+        amount_recipient: &elgamal::Ciphertext<Bls12>,
         balance_sender: &elgamal::Ciphertext<Bls12>,
-        rk: &PublicKey<Bls12>,
+        rvk: &PublicKey<Bls12>,
         fee_sender: &elgamal::Ciphertext<Bls12>
     ) -> bool {
         // Construct public input for circuit
@@ -195,17 +196,17 @@ impl<T: Trait> Module<T> {
             public_input[3] = y;
         }
         {
-            let (x, y) = value_sender.left.into_xy();
+            let (x, y) = amount_sender.left.into_xy();
             public_input[4] = x;
             public_input[5] = y;
         }
         {
-            let (x, y) = value_recipient.left.into_xy();
+            let (x, y) = amount_recipient.left.into_xy();
             public_input[6] = x;
             public_input[7] = y;
         }
         {
-            let (x, y) = value_sender.right.into_xy();
+            let (x, y) = amount_sender.right.into_xy();
             public_input[8] = x;
             public_input[9] = y;
         }
@@ -225,7 +226,7 @@ impl<T: Trait> Module<T> {
             public_input[15] = y;
         }
         {
-            let (x, y) = rk.0.into_xy();
+            let (x, y) = rvk.0.into_xy();
             public_input[16] = x;
             public_input[17] = y;
         }
@@ -239,10 +240,6 @@ impl<T: Trait> Module<T> {
             _ => {runtime_io::print("Invalid proof!!!!"); false},
         }
     }
-
-    // fn is_small_order<Order>(p: &edwards::Point<Bls12, Order>, params: &JubjubBls12) -> bool {
-    //     p.double(params).double(params).double(params) == edwards::Point::zero()
-    // }
 }
 
 #[cfg(feature = "std")]
@@ -293,7 +290,7 @@ mod tests {
 
     fn alice_init() -> (PkdAddress, Ciphertext) {
         let alice_seed = b"Alice                           ";
-        let alice_value = 100 as u32;
+        let alice_amount = 100 as u32;
 
         let params = &JubjubBls12::new();
         let p_g = FixedGenerators::Diversifier; // 1 same as NoteCommitmentRandomness;
@@ -301,12 +298,12 @@ mod tests {
         let ek = EncryptionKey::<Bls12>::from_seed(alice_seed, params);
 
         // The default balance is not encrypted with randomness.
-        let enc_alice_bal = elgamal::Ciphertext::encrypt(alice_value, fs::Fs::one(), &ek.0, p_g, params);
+        let enc_alice_bal = elgamal::Ciphertext::encrypt(alice_amount, fs::Fs::one(), &ek.0, p_g, params);
 
         let bdk = ProofGenerationKey::<Bls12>::from_seed(alice_seed, params).bdk();
 
         let dec_alice_bal = enc_alice_bal.decrypt(bdk, p_g, params).unwrap();
-        assert_eq!(dec_alice_bal, alice_value);
+        assert_eq!(dec_alice_bal, alice_amount);
 
         (PkdAddress::from_encryption_key(&ek), Ciphertext::from_ciphertext(&enc_alice_bal))
     }
