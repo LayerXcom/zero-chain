@@ -60,7 +60,7 @@ Currently, there are two ways to interact with Zerochain.
 
 Browser UI is not maintenanced well, so might not be working. It is recommended to use with CLI.
 
-### zeroc: Zerochain Command line interface
+### zeroc: Zerochain CLI
 
 zeroc is a command-line utility which can interact with Zerochain.
 
@@ -84,7 +84,7 @@ zeroc setup
 - Generate key pairs
 
 Generate random key pairs(seed, decryption key, and encryption key(public key)).
-Alice's and Bob's key pairs are fixed and Alice has some coins.
+Alice's and Bob's key pairs are fixed and Alice already has some coins.
 
 ```
 zeroc init
@@ -95,12 +95,24 @@ zeroc init
 zeroc send -a <AMOUNT> -s <Sender's SEED> -to <Recipient's PUBLIC KEY>
 ```
 
+In the case, Alice sends 10 coins to Bob...
+
+```
+zeroc send -a 10 -s 416c696365202020202020202020202020202020202020202020202020202020 -to 45e66da531088b55dcb3b273ca825454d79d2d1d5c4fa2ba4a12c1fa1ccd6389
+```
+
 - Get balance
 
 Get a decrypyed balance using the user's decryption key.
 
 ```
 zeroc balance -d <DECRYPTION KEY>
+```
+
+To get alice's balance...
+
+```
+zeroc balance -d b0451b0bfab2830a75216779e010e0bfd2e6d0b4e4b1270dfcdfd0d538509e02
 ```
 
 ### Browser
