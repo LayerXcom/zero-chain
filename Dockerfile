@@ -1,5 +1,5 @@
 FROM phusion/baseimage:0.11 as builder
-LABEL maintaienr="osuke.sudo@layerx.co.jp"
+LABEL maintainer="osuke.sudo@layerx.co.jp"
 LABEL description="This is the build stage for Zerochain. Here we create the binary."
 
 ARG PROFILE=release
@@ -24,7 +24,7 @@ RUN curl https://sh.rustup.rs -sSf | sh -s -- -y && \
 # ===== SECOND STAGE ======
 
 FROM phusion/baseimage:0.11
-LABEL maintaienr="osuke.sudo@layerx.co.jp"
+LABEL maintainer="osuke.sudo@layerx.co.jp"
 LABEL description="This is the 2nd stage: a very small image where we copy the Zerochain binary."
 ARG PROFILE=release
 
