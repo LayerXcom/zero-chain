@@ -3,3 +3,4 @@ doc
 .idea/
 Dockerfile
 .dockerignore
+!runtime/wasm/target/wasm32-unknown-unknown/release/*.compact.wasm
