@@ -1,6 +1,8 @@
 doc
-**target*
+target/
+demo/wasm-utils/target/
+runtime/wasm/target/*
+!runtime/wasm/target/wasm32-unknown-unknown/release/*.compact.wasm
 .idea/
 Dockerfile
 .dockerignore
-!runtime/wasm/target/wasm32-unknown-unknown/release/*.compact.wasm
