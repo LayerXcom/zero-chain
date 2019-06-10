@@ -2398,7 +2398,7 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 [[package]]
 name = "polkadot-rs"
 version = "0.1.0"
-source = "git+https://github.com/LayerXcom/polkadot.rs#f478d200d86a8de88e435bd9b962d18b8030aaa8"
+source = "git+https://github.com/LayerXcom/polkadot.rs#3e92412523e931d00cd4202a3f04b910870b1183"
 dependencies = [
  "byteorder 1.3.1 (registry+https://github.com/rust-lang/crates.io-index)",
  "crossbeam 0.7.1 (registry+https://github.com/rust-lang/crates.io-index)",

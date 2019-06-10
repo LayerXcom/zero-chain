@@ -96,7 +96,6 @@ decl_module! {
                 None => return Err("Invalid sender balance"),
             };
 
-
             // Verify the zk proof
             ensure!(
                 Self::validate_proof(
@@ -118,17 +117,19 @@ decl_module! {
                 _ => None
             };
 
+            let amount_plus_fee = svalue_sender.add_no_params(&sfee_sender);
+
             // Charge transaction fee on the sender's balance
-            <EncryptedBalance<T>>::mutate(address_sender, |balance| {
-                let new_balance = balance.clone().map(
-                    |_| Ciphertext::from_ciphertext(&bal_sender.sub_no_params(&sfee_sender)));
-                *balance = new_balance
-            });
+            // <EncryptedBalance<T>>::mutate(address_sender, |balance| {
+            //     let new_balance = balance.clone().map(
+            //         |_| Ciphertext::from_ciphertext(&bal_sender.sub_no_params(&sfee_sender)));
+            //     *balance = new_balance
+            // });
 
             // Update the sender's balance
             <EncryptedBalance<T>>::mutate(address_sender, |balance| {
                 let new_balance = balance.clone().map(
-                    |_| Ciphertext::from_ciphertext(&bal_sender.sub_no_params(&svalue_sender)));
+                    |_| Ciphertext::from_ciphertext(&bal_sender.sub_no_params(&amount_plus_fee)));
                 *balance = new_balance
             });
 

@@ -22,7 +22,7 @@ use polkadot_rs::{Api, Url};
 use zprimitives::{Proof, Ciphertext as zCiphertext, PkdAddress, SigVerificationKey, RedjubjubSignature};
 use runtime_primitives::generic::Era;
 use parity_codec::{Compact, Encode};
-use zero_chain_runtime::{UncheckedExtrinsic, Call, ConfTransferCall};
+use zerochain_runtime::{UncheckedExtrinsic, Call, ConfTransferCall};
 
 mod setup;
 use setup::setup;
@@ -53,8 +53,8 @@ fn main() {
 }
 
 fn cli() -> Result<(), String> {
-    const VERIFICATION_KEY_PATH: &str = "cli/verification.params";
-    const PROVING_KEY_PATH: &str = "cli/proving.params";
+    const VERIFICATION_KEY_PATH: &str = "zeroc/verification.params";
+    const PROVING_KEY_PATH: &str = "zeroc/proving.params";
     const DEFAULT_AMOUNT: &str = "10";
     const DEFAULT_BALANCE: &str = "100";
     const DEFAULT_FEE: &str = "1";
@@ -532,6 +532,7 @@ fn cli() -> Result<(), String> {
 
             let (decrypted_balance, encrypted_balance_vec, _) = get_balance_from_decryption_key(&decrypted_key[..] ,api.clone());
             let remaining_balance = decrypted_balance - amount - fee;
+            assert!(decrypted_balance >= amount + fee, "Too large amount or fee");
 
             let recipient_account_id = EncryptionKey::<Bls12>::read(&mut &recipient_encryption_key[..], &PARAMS).unwrap();
             let encrypted_balance = elgamal::Ciphertext::read(&mut &encrypted_balance_vec[..], &PARAMS as &JubjubBls12).unwrap();
@@ -552,7 +553,7 @@ fn cli() -> Result<(), String> {
 
 
             {
-                println!("Start sending extrinsic to substrate node");
+                println!("Start submitting a transaction to Zerochain");
 
                 let p_g = zFixedGenerators::Diversifier; // 1
 
@@ -597,7 +598,7 @@ fn cli() -> Result<(), String> {
 
         },
         ("balance", Some(sub_matches)) => {
-            println!("Getting encrypted balance from substrate node");
+            println!("Getting encrypted balance from zerochain");
             let api = Api::init(Url::Local);
             let decryption_key_vec = hex::decode(sub_matches.value_of("decryption-key").unwrap()).unwrap();
 
