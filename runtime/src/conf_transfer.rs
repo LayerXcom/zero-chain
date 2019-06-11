@@ -309,7 +309,7 @@ mod tests {
     }
 
     fn get_pvk() -> PreparedVk {
-        let vk_path = Path::new("../demo/cli/verification.params");
+        let vk_path = Path::new("../zeroc/verification.params");
         let vk_file = File::open(&vk_path).unwrap();
         let mut vk_reader = BufReader::new(vk_file);
 
