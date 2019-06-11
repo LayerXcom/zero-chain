@@ -20,7 +20,7 @@ case $TARGET in
 		sudo apt-get -y update
 		sudo apt-get install -y cmake pkg-config libssl-dev
 
-		cargo test --all --release --locked --exclude zero-chain-pairing
+		cargo test --all --release --locked --exclude zerochain-pairing
 		;;
 
 	"wasm")

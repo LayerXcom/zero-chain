@@ -17,13 +17,13 @@ serde = "1.0.80"
 serde_derive = "1.0.80"
 serde_json = "1.0.33"
 zjubjub = { package = "jubjub", path = "../../core/jubjub"}
-zpairing = { package = "zero-chain-pairing", path = "../../core/pairing" }
+zpairing = { package = "zerochain-pairing", path = "../../core/pairing" }
 pairing = { git = "https://github.com/LayerXcom/librustzcash", branch = "zero-chain" }
 keys = { path = "../../core/keys" }
 scrypto = { package = "sapling-crypto", git = "https://github.com/LayerXcom/librustzcash", branch = "zero-chain" }
-proofs = { package = "zero-chain-proofs", path = "../../core/proofs" }
+proofs = { package = "zerochain-proofs", path = "../../core/proofs" }
 bellman = { git = "https://github.com/LayerXcom/librustzcash", branch = "zero-chain" }
-zcrypto = { package = "zero-chain-crypto", path = "../../core/crypto"}
+zcrypto = { package = "zerochain-crypto", path = "../../core/crypto"}
 bellman-verifier = { path = "../../core/bellman-verifier"}
 hex = "0.3.2"
 

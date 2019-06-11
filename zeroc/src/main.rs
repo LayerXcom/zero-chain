@@ -22,7 +22,7 @@ use polkadot_rs::{Api, Url};
 use zprimitives::{Proof, Ciphertext as zCiphertext, PkdAddress, SigVerificationKey, RedjubjubSignature};
 use runtime_primitives::generic::Era;
 use parity_codec::{Compact, Encode};
-use zero_chain_runtime::{UncheckedExtrinsic, Call, ConfTransferCall};
+use zerochain_runtime::{UncheckedExtrinsic, Call, ConfTransferCall};
 
 mod setup;
 use setup::setup;
@@ -53,8 +53,8 @@ fn main() {
 }
 
 fn cli() -> Result<(), String> {
-    const VERIFICATION_KEY_PATH: &str = "demo/cli/verification.params";
-    const PROVING_KEY_PATH: &str = "demo/cli/proving.params";
+    const VERIFICATION_KEY_PATH: &str = "zeroc/verification.params";
+    const PROVING_KEY_PATH: &str = "zeroc/proving.params";
     const DEFAULT_AMOUNT: &str = "10";
     const DEFAULT_BALANCE: &str = "100";
     const DEFAULT_FEE: &str = "1";
@@ -65,7 +65,7 @@ fn cli() -> Result<(), String> {
     const DEFAULT_ENCRYPTED_BALANCE: &str = "6f4962da776a391c3b03f3e14e8156d2545f39a3ebbed675ea28859252cb006fac776c796563fcd44cc49cfaea8bb796952c266e47779d94574c10ad01754b11";
     const URL: &str = "";
 
-    let matches = App::new("zero-chain-cli")
+    let matches = App::new("zeroc")
         .setting(AppSettings::SubcommandRequiredElseHelp)
         .version("0.1.0")
         .author("Osuke Sudo")
@@ -171,7 +171,7 @@ fn cli() -> Result<(), String> {
                 .default_value("true")
             )
         )
-        .subcommand(SubCommand::with_name("send-tx")
+        .subcommand(SubCommand::with_name("send")
             .about("Submit extrinsic to the substrate nodes")
             .arg(Arg::with_name("amount")
                 .short("a")
@@ -190,7 +190,7 @@ fn cli() -> Result<(), String> {
                 .default_value(ALICESEED)
             )
             .arg(Arg::with_name("recipient-encryption-key")
-                .short("r")
+                .short("to")
                 .long("recipient-encryption-key")
                 .help("Recipient's encryption key. (default: Bob)")
                 .takes_value(true)
@@ -214,7 +214,7 @@ fn cli() -> Result<(), String> {
             //     .default_value(URL)
             // )
         )
-        .subcommand(SubCommand::with_name("get-balance")
+        .subcommand(SubCommand::with_name("balance")
             .about("Get current balance stored in ConfTransfer module")
             .arg(Arg::with_name("decryption-key")
                 .short("d")
@@ -481,7 +481,7 @@ fn cli() -> Result<(), String> {
             }
 
         },
-        ("send-tx", Some(sub_matches)) => {
+        ("send", Some(sub_matches)) => {
             // let url_str = sub_matches.value_of("url").unwrap();
             // let mut url = Url::Local;
             // if url_str.len() != 0 {
@@ -532,6 +532,7 @@ fn cli() -> Result<(), String> {
 
             let (decrypted_balance, encrypted_balance_vec, _) = get_balance_from_decryption_key(&decrypted_key[..] ,api.clone());
             let remaining_balance = decrypted_balance - amount - fee;
+            assert!(decrypted_balance >= amount + fee, "Too large amount or fee");
 
             let recipient_account_id = EncryptionKey::<Bls12>::read(&mut &recipient_encryption_key[..], &PARAMS).unwrap();
             let encrypted_balance = elgamal::Ciphertext::read(&mut &encrypted_balance_vec[..], &PARAMS as &JubjubBls12).unwrap();
@@ -552,7 +553,7 @@ fn cli() -> Result<(), String> {
 
 
             {
-                println!("Start sending extrinsic to substrate node");
+                println!("Start submitting a transaction to Zerochain");
 
                 let p_g = zFixedGenerators::Diversifier; // 1
 
@@ -596,8 +597,8 @@ fn cli() -> Result<(), String> {
             }
 
         },
-        ("get-balance", Some(sub_matches)) => {
-            println!("Getting encrypted balance from substrate node");
+        ("balance", Some(sub_matches)) => {
+            println!("Getting encrypted balance from zerochain");
             let api = Api::init(Url::Local);
             let decryption_key_vec = hex::decode(sub_matches.value_of("decryption-key").unwrap()).unwrap();
 

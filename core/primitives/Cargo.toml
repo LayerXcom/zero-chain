@@ -1,5 +1,5 @@
 [package]
-name = "zero-chain-primitives"
+name = "zerochain-primitives"
 version = "0.1.0"
 authors = ["osuke <dish230@gmail.com>"]
 edition = "2018"
@@ -10,10 +10,10 @@ parity-codec-derive = { version = "3.1", default-features = false }
 serde = { version = "1.0", optional = true, default-features = false }
 serde_derive = { version = "1.0", optional = true }
 byteorder = { version = "1", default-features = false }
-pairing = { package = "zero-chain-pairing", path = "../pairing", default-features = false }
+pairing = { package = "zerochain-pairing", path = "../pairing", default-features = false }
 bellman-verifier = { path = "../bellman-verifier", default-features = false }
 jubjub = { path = "../jubjub", default-features = false }
-zcrypto = { package = "zero-chain-crypto", path = "../crypto", default-features = false }
+zcrypto = { package = "zerochain-crypto", path = "../crypto", default-features = false }
 rand = { version = "0.4", default-features = false }
 fixed-hash = { version = "0.3.0", default-features = false }
 substrate-primitives = { git = "https://github.com/osuketh/substrate.git", branch = "patch-zerochain", default-features = false }

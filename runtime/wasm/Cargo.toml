@@ -4,18 +4,18 @@ panic = 'abort'
 
 [lib]
 crate-type = ['cdylib']
-[dependencies.zero-chain-runtime]
+[dependencies.zerochain-runtime]
 default-features = false
 path = '..'
 
 [features]
 default = []
-std = ['zero-chain-runtime/std']
+std = ['zerochain-runtime/std']
 
 [package]
 authors = ['Osuke Sudo <dish230@gmail.com>']
 edition = '2018'
-name = 'zero-chain-runtime-wasm'
+name = 'zerochain-runtime-wasm'
 version = '0.9.0'
 
 [workspace]

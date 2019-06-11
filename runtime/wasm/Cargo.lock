@@ -124,7 +124,7 @@ version = "0.1.0"
 dependencies = [
  "byteorder 1.3.1 (registry+https://github.com/rust-lang/crates.io-index)",
  "rand 0.4.6 (registry+https://github.com/rust-lang/crates.io-index)",
- "zero-chain-pairing 0.14.2",
+ "zerochain-pairing 0.14.2",
 ]
 
 [[package]]
@@ -829,7 +829,7 @@ dependencies = [
  "byteorder 1.3.1 (registry+https://github.com/rust-lang/crates.io-index)",
  "hex-literal 0.1.4 (registry+https://github.com/rust-lang/crates.io-index)",
  "rand 0.4.6 (registry+https://github.com/rust-lang/crates.io-index)",
- "zero-chain-pairing 0.14.2",
+ "zerochain-pairing 0.14.2",
 ]
 
 [[package]]
@@ -853,7 +853,7 @@ dependencies = [
  "blake2-rfc 0.2.18 (git+https://github.com/gtank/blake2-rfc?rev=7a5b5fc99ae483a0043db7547fb79a6fa44b88a9)",
  "jubjub 0.1.0",
  "rand 0.4.6 (registry+https://github.com/rust-lang/crates.io-index)",
- "zero-chain-pairing 0.14.2",
+ "zerochain-pairing 0.14.2",
 ]
 
 [[package]]
@@ -3286,18 +3286,18 @@ dependencies = [
 ]
 
 [[package]]
-name = "zero-chain-crypto"
+name = "zerochain-crypto"
 version = "0.1.0"
 dependencies = [
  "blake2-rfc 0.2.18 (git+https://github.com/gtank/blake2-rfc?rev=7a5b5fc99ae483a0043db7547fb79a6fa44b88a9)",
  "jubjub 0.1.0",
  "keys 0.1.0",
  "rand 0.4.6 (registry+https://github.com/rust-lang/crates.io-index)",
- "zero-chain-pairing 0.14.2",
+ "zerochain-pairing 0.14.2",
 ]
 
 [[package]]
-name = "zero-chain-pairing"
+name = "zerochain-pairing"
 version = "0.14.2"
 dependencies = [
  "blake2 0.7.1 (registry+https://github.com/rust-lang/crates.io-index)",
@@ -3306,7 +3306,7 @@ dependencies = [
 ]
 
 [[package]]
-name = "zero-chain-primitives"
+name = "zerochain-primitives"
 version = "0.1.0"
 dependencies = [
  "bellman-verifier 0.1.0",
@@ -3324,12 +3324,12 @@ dependencies = [
  "serde_derive 1.0.92 (registry+https://github.com/rust-lang/crates.io-index)",
  "sr-primitives 1.0.0 (git+https://github.com/osuketh/substrate.git?branch=patch-zerochain)",
  "substrate-primitives 1.0.0 (git+https://github.com/osuketh/substrate.git?branch=patch-zerochain)",
- "zero-chain-crypto 0.1.0",
- "zero-chain-pairing 0.14.2",
+ "zerochain-crypto 0.1.0",
+ "zerochain-pairing 0.14.2",
 ]
 
 [[package]]
-name = "zero-chain-runtime"
+name = "zerochain-runtime"
 version = "1.0.0"
 dependencies = [
  "bellman-verifier 0.1.0",
@@ -3359,16 +3359,16 @@ dependencies = [
  "substrate-consensus-authorities 1.0.0 (git+https://github.com/osuketh/substrate.git?branch=patch-zerochain)",
  "substrate-offchain-primitives 0.1.0 (git+https://github.com/osuketh/substrate.git?branch=patch-zerochain)",
  "substrate-primitives 1.0.0 (git+https://github.com/osuketh/substrate.git?branch=patch-zerochain)",
- "zero-chain-crypto 0.1.0",
- "zero-chain-pairing 0.14.2",
- "zero-chain-primitives 0.1.0",
+ "zerochain-crypto 0.1.0",
+ "zerochain-pairing 0.14.2",
+ "zerochain-primitives 0.1.0",
 ]
 
 [[package]]
-name = "zero-chain-runtime-wasm"
+name = "zerochain-runtime-wasm"
 version = "0.9.0"
 dependencies = [
- "zero-chain-runtime 1.0.0",
+ "zerochain-runtime 1.0.0",
 ]
 
 [[package]]

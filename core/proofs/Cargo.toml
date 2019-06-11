@@ -1,5 +1,5 @@
 [package]
-name = "zero-chain-proofs"
+name = "zerochain-proofs"
 version = "0.1.0"
 authors = ["osuke <dish230@gmail.com>"]
 edition = "2018"
@@ -10,7 +10,7 @@ bellman = { git = "https://github.com/LayerXcom/librustzcash", branch = "zero-ch
 scrypto = { package = "sapling-crypto", git = "https://github.com/LayerXcom/librustzcash", branch = "zero-chain" }
 rand = "0.4"
 byteorder = "1"
-zcrypto = { package = "zero-chain-crypto", path = "../crypto" }
+zcrypto = { package = "zerochain-crypto", path = "../crypto" }
 bellman-verifier = { path = "../bellman-verifier" }
 hex-literal = '0.1'
 

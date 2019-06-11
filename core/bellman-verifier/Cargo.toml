@@ -6,13 +6,13 @@ edition = "2018"
 
 [dependencies]
 rand = { version = "0.4", default-features = false }
-pairing = { package = "zero-chain-pairing", path = "../pairing", default-features = false }
+pairing = { package = "zerochain-pairing", path = "../pairing", default-features = false }
 byteorder = { version = "1", default-features = false }
 
 [features]
 default = ["std"]
 std = [
-    "rand/std",                
+    "rand/std",
     "pairing/std",
     "byteorder/std"
 ]

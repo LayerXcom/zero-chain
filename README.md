@@ -2,7 +2,7 @@
 [![Build Status](https://travis-ci.com/LayerXcom/zero-chain.svg?branch=master)](https://travis-ci.com/LayerXcom/zero-chain)
 [![Gitter](https://badges.gitter.im/LayerXcom/Zerochain.svg)](https://gitter.im/LayerXcom/Zerochain?utm_source=badge&utm_medium=badge&utm_campaign=pr-badge)
 
-Zerochain is a privacy-preserving blockchain on substrate.
+Zerochain is a generic parivacy-protecting layer on top of Substrate. It provides some useful substrate modules and toolkit for protecting user's privacy and sensitive data stored on chain.
 It is designed to get efficient zero-knowledge proving, reduce the on-chain storage cost and bring the flexibility for developing applications.
 
 ## Status
@@ -52,6 +52,70 @@ cargo build --release
 
 ## A brief tutorial for Sending transactions
 This tutorial will explain the basic confidential transfer on Zerochain. Alice has the **encrypted** balance of 100 coins and sends **encrypted** 10 coins to Bob. So, Alice's balance will be 90 coins and Bob will get the 10 coins. All operations are done encrypted by ElGamal encryption and zk-SNARKs.
+
+Currently, there are two ways to interact with Zerochain.
+
+- CLI (recommended)
+- Browser
+
+Browser UI is not maintenanced well, so might not be working. It is recommended to use with CLI.
+
+### zeroc: Zerochain CLI
+
+zeroc is a command-line utility which can interact with Zerochain.
+
+#### Initial setup
+
+- Install zeroc
+```
+cargo install --force --path zeroc
+```
+
+- Setup for zk-SNARKs
+
+Generating a proving key and verifying key of zk-SNARKs, which are used for confidential payments.
+
+```
+zeroc setup
+```
+
+#### Interacting with Zerochain
+
+- Generate key pairs
+
+Generate random key pairs(seed, decryption key, and encryption key(public key)).
+Alice's and Bob's key pairs are fixed and Alice already has some coins.
+
+```
+zeroc init
+```
+
+- Send transaction for confidential payment
+```
+zeroc send -a <AMOUNT> -s <Sender's SEED> -to <Recipient's PUBLIC KEY>
+```
+
+In the case, Alice sends 10 coins to Bob...
+
+```
+zeroc send -a 10 -s 416c696365202020202020202020202020202020202020202020202020202020 -to 45e66da531088b55dcb3b273ca825454d79d2d1d5c4fa2ba4a12c1fa1ccd6389
+```
+
+- Get balance
+
+Get a decrypyed balance using the user's decryption key.
+
+```
+zeroc balance -d <DECRYPTION KEY>
+```
+
+To get alice's balance...
+
+```
+zeroc balance -d b0451b0bfab2830a75216779e010e0bfd2e6d0b4e4b1270dfcdfd0d538509e02
+```
+
+### Browser
 
 1. Setup for zkSNARKs from CLI
 - Get the proving key and the veifying key for zk-SNARKs

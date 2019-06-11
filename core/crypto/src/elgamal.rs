@@ -74,8 +74,9 @@ impl<E: JubjubEngine> Ciphertext<E> {
         let neg_sr_point = sr_point.negate();
         let v_point = self.left.add(&neg_sr_point, params);
 
+        // FIXME: Brute-force decrypt balance for [0, 2^32-1]
         // for i in 0..u32::MAX {
-        for i in 0..1000 { // FIXME:
+        for i in 0..1000 {
             if find_point(i, &v_point, p_g, params) {
                 return Some(i);
             }
