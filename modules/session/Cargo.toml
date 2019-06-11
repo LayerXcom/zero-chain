@@ -1,0 +1,38 @@
+[package]
+name = "srml-session"
+version = "1.0.0"
+authors = ["Parity Technologies <admin@parity.io>"]
+edition =  "2018"
+
+[dependencies]
+hex-literal = "0.1.0"
+serde = { version = "1.0", optional = true }
+safe-mix = { version = "1.0", default-features = false}
+parity-codec = { version = "3.2", default-features = false }
+parity-codec-derive = { version = "3.1", default-features = false }
+rstd = { package = "sr-std", git = "https://github.com/osuketh/substrate.git", branch = "patch-zerochain", default-features = false }
+primitives = { package = "sr-primitives", git = "https://github.com/osuketh/substrate.git", branch = "patch-zerochain", default-features = false }
+srml-support = { git = "https://github.com/osuketh/substrate.git", branch = "patch-zerochain", default-features = false }
+consensus = { package = "srml-consensus", path = "../consensus", default-features = false }
+system = { package = "srml-system", path = "../system", default-features = false }
+timestamp = { package = "srml-timestamp", path = "../timestamp", default-features = false }
+
+[dev-dependencies]
+substrate-primitives = { git = "https://github.com/osuketh/substrate.git", branch = "patch-zerochain" }
+runtime_io = { package = "sr-io", git = "https://github.com/osuketh/substrate.git", branch = "patch-zerochain" }
+lazy_static = "1.0"
+
+[features]
+default = ["std"]
+std = [
+	"serde",
+	"safe-mix/std",
+	"parity-codec/std",
+	"parity-codec-derive/std",
+	"rstd/std",
+	"srml-support/std",
+	"primitives/std",
+	"consensus/std",
+	"system/std",
+	"timestamp/std"
+]

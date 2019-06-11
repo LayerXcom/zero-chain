@@ -116,7 +116,16 @@ members = [
     "core/proofs",
     "runtime",
     "core/keys",
+    "modules/aura",
+    "modules/balances",
+    "modules/consensus",
     "modules/executive",
+    "modules/indices",
+    "modules/session",
+    "modules/staking",
+    "modules/sudo",
+    "modules/system",
+    "modules/timestamp",
 ]
 exclude = [
     "runtime/wasm",

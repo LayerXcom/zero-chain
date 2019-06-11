@@ -1,0 +1,31 @@
+[package]
+name = "srml-timestamp"
+version = "1.0.0"
+authors = ["Parity Technologies <admin@parity.io>"]
+edition = "2018"
+
+[dependencies]
+hex-literal = "0.1.0"
+serde = { version = "1.0", optional = true }
+parity-codec = { version = "3.2", default-features = false, features = ["derive"] }
+rstd = { package = "sr-std", git = "https://github.com/osuketh/substrate.git", branch = "patch-zerochain", default-features = false }
+runtime_primitives = { package = "sr-primitives", git = "https://github.com/osuketh/substrate.git", branch = "patch-zerochain", default-features = false }
+inherents = { package = "substrate-inherents", git = "https://github.com/osuketh/substrate.git", branch = "patch-zerochain", default-features = false }
+srml-support = { git = "https://github.com/osuketh/substrate.git", branch = "patch-zerochain", default-features = false }
+system = { package = "srml-system", path = "../system", default-features = false }
+
+[dev-dependencies]
+runtime_io = { package = "sr-io", git = "https://github.com/osuketh/substrate.git", branch = "patch-zerochain" }
+substrate-primitives = { git = "https://github.com/osuketh/substrate.git", branch = "patch-zerochain" }
+
+[features]
+default = ["std"]
+std = [
+	"inherents/std",
+	"parity-codec/std",
+	"rstd/std",
+	"runtime_primitives/std",
+	"srml-support/std",
+	"serde",
+	"system/std",
+]

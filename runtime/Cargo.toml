@@ -7,30 +7,19 @@ zcrypto = { package = "zerochain-crypto", path = "../core/crypto", default-featu
 keys = { path = "../core/keys", default-features = false }
 rand = { version = "0.4", default-features = false }
 executive = { package = "srml-executive", path = "../modules/executive", default-features = false }
+system = { package = "srml-system", path = "../modules/system", default-features = false }
+consensus = { package = "srml-consensus", path = "../modules/consensus", default-features = false }
+balances = { package = "srml-balances", path = "../modules/balances", default-features = false }
+aura = { package = "srml-aura", path = "../modules/aura", default-features = false }
+indices = { package = "srml-indices", path = "../modules/indices", default-features = false }
+sudo = { package = "srml-sudo", path = "../modules/sudo", default-features = false }
+timestamp = { package = "srml-timestamp", path = "../modules/timestamp", default-features = false }
 hex-literal = '0.1'
-
-[dependencies.aura]
-default_features = false
-git = 'https://github.com/osuketh/substrate.git'
-package = 'srml-aura'
-branch = "patch-zerochain"
-
-[dependencies.balances]
-default_features = false
-git = 'https://github.com/osuketh/substrate.git'
-package = 'srml-balances'
-branch = "patch-zerochain"
 
 [dependencies.client]
 default_features = false
 git = 'https://github.com/osuketh/substrate.git'
 package = 'substrate-client'
-branch = "patch-zerochain"
-
-[dependencies.consensus]
-default_features = false
-git = 'https://github.com/osuketh/substrate.git'
-package = 'srml-consensus'
 branch = "patch-zerochain"
 
 [dependencies.consensus-aura]
@@ -43,12 +32,6 @@ branch = "patch-zerochain"
 default-features = false
 git = 'https://github.com/osuketh/substrate.git'
 package = 'substrate-consensus-authorities'
-branch = "patch-zerochain"
-
-[dependencies.indices]
-default_features = false
-git = 'https://github.com/osuketh/substrate.git'
-package = 'srml-indices'
 branch = "patch-zerochain"
 
 [dependencies.offchain-primitives]
@@ -98,28 +81,10 @@ version = '1.0'
 optional = true
 version = '1.0'
 
-[dependencies.sudo]
-default_features = false
-git = 'https://github.com/osuketh/substrate.git'
-package = 'srml-sudo'
-branch = "patch-zerochain"
-
 [dependencies.support]
 default_features = false
 git = 'https://github.com/osuketh/substrate.git'
 package = 'srml-support'
-branch = "patch-zerochain"
-
-[dependencies.system]
-default_features = false
-git = 'https://github.com/osuketh/substrate.git'
-package = 'srml-system'
-branch = "patch-zerochain"
-
-[dependencies.timestamp]
-default_features = false
-git = 'https://github.com/osuketh/substrate.git'
-package = 'srml-timestamp'
 branch = "patch-zerochain"
 
 [dependencies.version]

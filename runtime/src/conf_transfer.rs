@@ -160,7 +160,7 @@ decl_storage! {
         /// The fee required to make a transfer.
         pub TransferFee get(transfer_fee) config(): FeeAmount;
         /// The fee required to create an account.
-        pub CreationFee get(cratetion_fee) config(): FeeAmount;
+        pub CreationFee get(creation_fee) config(): FeeAmount;
         /// The fee to be paid for making a transaction; the base.
         pub TransactionBaseFee get(transaction_base_fee) config(): FeeAmount;
         /// The fee to be paid for making a transaction; the per-byte portion.
