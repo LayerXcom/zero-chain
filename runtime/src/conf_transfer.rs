@@ -27,6 +27,8 @@ pub trait Trait: system::Trait {
 	type Event: From<Event<Self>> + Into<<Self as system::Trait>::Event>;
 }
 
+type FeeAmount = u32;
+
 decl_module! {
 	pub struct Module<T: Trait> for enum Call where origin: T::Origin {
         // Initializing events
@@ -153,9 +155,17 @@ decl_module! {
 
 decl_storage! {
     trait Store for Module<T: Trait> as ConfTransfer {
-        // The encrypted balance for each account
+        /// The encrypted balance for each account
         pub EncryptedBalance get(encrypted_balance) config() : map PkdAddress => Option<Ciphertext>;
-        // The verification key of zk proofs (only readable)
+        /// The fee required to make a transfer.
+        pub TransferFee get(transfer_fee) config(): FeeAmount;
+        /// The fee required to create an account.
+        pub CreationFee get(cratetion_fee) config(): FeeAmount;
+        /// The fee to be paid for making a transaction; the base.
+        pub TransactionBaseFee get(transaction_base_fee) config(): FeeAmount;
+        /// The fee to be paid for making a transaction; the per-byte portion.
+        pub TransactionByteFee get(transaction_byte_fee) config(): FeeAmount;
+        /// The verification key of zk proofs (only readable)
         pub VerifyingKey get(verifying_key) config(): PreparedVk;
     }
 }

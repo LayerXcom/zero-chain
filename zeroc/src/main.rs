@@ -162,14 +162,6 @@ fn cli() -> Result<(), String> {
                 .required(false)
                 .default_value(DEFAULT_ENCRYPTED_BALANCE)
             )
-            .arg(Arg::with_name("is-submitting")
-                .short("i")
-                .long("is-submitting")
-                .help("Whether the extrinsic is submitted or just print extrinsic")
-                .takes_value(true)
-                .required(false)
-                .default_value("true")
-            )
         )
         .subcommand(SubCommand::with_name("send")
             .about("Submit extrinsic to the substrate nodes")
@@ -432,54 +424,6 @@ fn cli() -> Result<(), String> {
                 HexDisplay::from(&tx.rsk as &AsBytesRef),
                 HexDisplay::from(&tx.enc_fee as &AsBytesRef),
             );
-
-            if let Some(value) = sub_matches.value_of("is-submitting") {
-                match value.parse() {
-                    Ok(true) => {
-                    let api = Api::init(Url::Local);
-                    let rng = &mut OsRng::new().expect("should be able to construct RNG");
-                    let p_g = zFixedGenerators::Diversifier; // 1
-
-                    let mut rsk_repr = zFs::default().into_repr();
-                    rsk_repr.read_le(&mut &tx.rsk[..]).unwrap();
-                    let rsk = zFs::from_repr(rsk_repr).unwrap();
-
-                    let sig_sk = zPrivateKey::<zBls12>(rsk);
-                    let sig_vk = SigVerificationKey::from_slice(&tx.rvk[..]);
-
-                    let calls = Call::ConfTransfer(ConfTransferCall::confidential_transfer(
-                        Proof::from_slice(&tx.proof[..]),
-                        PkdAddress::from_slice(&tx.address_sender[..]),
-                        PkdAddress::from_slice(&tx.address_recipient[..]),
-                        zCiphertext::from_slice(&tx.enc_val_sender[..]),
-                        zCiphertext::from_slice(&tx.enc_val_recipient[..]),
-                        sig_vk,
-                        zCiphertext::from_slice(&tx.enc_fee[..]),
-                    ));
-
-                    let era = Era::Immortal;
-                    let index = api.get_nonce(&sig_vk).expect("Nonce must be got.");
-                    let checkpoint = api.get_genesis_blockhash().unwrap();
-                    let raw_payload = (Compact(index), calls, era, checkpoint);
-
-                    let sig = raw_payload.using_encoded(|payload| {
-                        let msg = blake2_256(payload);
-                        let sig = sig_sk.sign(&msg[..], rng, p_g, &ZPARAMS as &zJubjubBls12);
-
-                        let sig_vk = sig_vk.into_verification_key().unwrap();
-                        assert!(sig_vk.verify(&msg, &sig, p_g, &ZPARAMS as &zJubjubBls12));
-
-                        sig
-                    });
-
-                    let sig_repr = RedjubjubSignature::from_signature(&sig);
-                    let uxt = UncheckedExtrinsic::new_signed(index, raw_payload.1, sig_vk.into(), sig_repr, era);
-                    let _tx_hash = api.submit_extrinsic(&uxt).unwrap();
-                },
-                _ => {},
-                }
-            }
-
         },
         ("send", Some(sub_matches)) => {
             // let url_str = sub_matches.value_of("url").unwrap();
