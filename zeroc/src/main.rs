@@ -57,13 +57,11 @@ fn cli() -> Result<(), String> {
     const PROVING_KEY_PATH: &str = "zeroc/proving.params";
     const DEFAULT_AMOUNT: &str = "10";
     const DEFAULT_BALANCE: &str = "100";
-    const DEFAULT_FEE: &str = "1";
     const ALICESEED: &str = "416c696365202020202020202020202020202020202020202020202020202020";
     const BOBSEED: &str = "426f622020202020202020202020202020202020202020202020202020202020";
     const BOBACCOUNTID: &str = "45e66da531088b55dcb3b273ca825454d79d2d1d5c4fa2ba4a12c1fa1ccd6389";
     const ALICEDECRYPTIONKEY: &str = "b0451b0bfab2830a75216779e010e0bfd2e6d0b4e4b1270dfcdfd0d538509e02";
     const DEFAULT_ENCRYPTED_BALANCE: &str = "6f4962da776a391c3b03f3e14e8156d2545f39a3ebbed675ea28859252cb006fac776c796563fcd44cc49cfaea8bb796952c266e47779d94574c10ad01754b11";
-    const URL: &str = "";
 
     let matches = App::new("zeroc")
         .setting(AppSettings::SubcommandRequiredElseHelp)
@@ -122,14 +120,6 @@ fn cli() -> Result<(), String> {
                 .required(false)
                 .default_value(DEFAULT_AMOUNT)
             )
-            // .arg(Arg::with_name("fee")
-            //     .short("f")
-            //     .long("fee")
-            //     .help("The fee for the confidential transfer. (default: 1)")
-            //     .takes_value(true)
-            //     .required(false)
-            //     .default_value(DEFAULT_FEE)
-            // )
             .arg(Arg::with_name("balance")
                 .short("b")
                 .long("balance")
@@ -189,22 +179,21 @@ fn cli() -> Result<(), String> {
                 .required(false)
                 .default_value(BOBACCOUNTID)
             )
-            .arg(Arg::with_name("fee")
-                .short("f")
-                .long("fee")
-                .help("The fee for the confidential transfer. (default: 1)")
-                .takes_value(true)
-                .required(false)
-                .default_value(DEFAULT_FEE)
-            )
-            // .arg(Arg::with_name("url")
-            //     .short("u")
-            //     .long("url")
-            //     .help("Endpoint to connect substrate nodes")
+            // .arg(Arg::with_name("fee")
+            //     .short("f")
+            //     .long("fee")
+            //     .help("The fee for the confidential transfer. (default: 1)")
             //     .takes_value(true)
             //     .required(false)
-            //     .default_value(URL)
+            //     .default_value(DEFAULT_FEE)
             // )
+            .arg(Arg::with_name("url")
+                .short("u")
+                .long("url")
+                .help("Endpoint to connect zerochain nodes")
+                .takes_value(true)
+                .required(false)
+            )
         )
         .subcommand(SubCommand::with_name("balance")
             .about("Get current balance stored in ConfTransfer module")
@@ -351,8 +340,9 @@ fn cli() -> Result<(), String> {
 
             let amount_str = sub_matches.value_of("amount").unwrap();
             let amount: u32 = amount_str.parse().unwrap();
-            let fee_str = sub_matches.value_of("fee").unwrap();
-            let fee: u32 = fee_str.parse().unwrap();
+            // let fee_str = sub_matches.value_of("fee").unwrap();
+            // let fee: u32 = fee_str.parse().unwrap();
+            let fee = 1 as u32;
 
             let balance_str = sub_matches.value_of("balance").unwrap();
             let balance: u32 = balance_str.parse().unwrap();
@@ -426,13 +416,13 @@ fn cli() -> Result<(), String> {
             );
         },
         ("send", Some(sub_matches)) => {
-            // let url_str = sub_matches.value_of("url").unwrap();
-            // let mut url = Url::Local;
-            // if url_str.len() != 0 {
-            //     url = Url::Custom(url_str);
-            // }
             println!("Preparing paramters...");
-            let api = Api::init(Url::Local);
+
+            let url = match sub_matches.value_of("url") {
+                Some(u) => Url::Custom(u.to_string()),
+                None => Url::Local,
+            };
+            let api = Api::init(url);
 
             let rng = &mut OsRng::new().expect("should be able to construct RNG");
             // let alpha = fs::Fs::rand(rng);
