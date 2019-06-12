@@ -18,7 +18,7 @@ use std::string::String;
 use std::io::{BufWriter, Write, BufReader, Read};
 use wasm_utils::transaction::Transaction;
 use bellman::groth16::{Parameters, PreparedVerifyingKey};
-use polkadot_rs::{Api, Url};
+use polkadot_rs::{Api, Url, hexstr_to_u64};
 use zprimitives::{Proof, Ciphertext as zCiphertext, PkdAddress, SigVerificationKey, RedjubjubSignature};
 use runtime_primitives::generic::Era;
 use parity_codec::{Compact, Encode};
@@ -94,8 +94,8 @@ fn cli() -> Result<(), String> {
         .subcommand(SubCommand::with_name("init")
             .about("Initialize key components")
         )
-        .subcommand(SubCommand::with_name("generate-tx")
-            .about("Execute zk proving and output tx components")
+        .subcommand(SubCommand::with_name("print-tx")
+            .about("Show transaction components for sending it from a browser")
             .arg(Arg::with_name("proving-key-path")
                 .short("p")
                 .long("proving-key-path")
@@ -122,18 +122,18 @@ fn cli() -> Result<(), String> {
                 .required(false)
                 .default_value(DEFAULT_AMOUNT)
             )
-            .arg(Arg::with_name("fee")
-                .short("f")
-                .long("fee")
-                .help("The fee for the confidential transfer. (default: 1)")
-                .takes_value(true)
-                .required(false)
-                .default_value(DEFAULT_FEE)
-            )
+            // .arg(Arg::with_name("fee")
+            //     .short("f")
+            //     .long("fee")
+            //     .help("The fee for the confidential transfer. (default: 1)")
+            //     .takes_value(true)
+            //     .required(false)
+            //     .default_value(DEFAULT_FEE)
+            // )
             .arg(Arg::with_name("balance")
                 .short("b")
                 .long("balance")
-                .help("The coin balance for the confidential transfer. (default: 100)")
+                .help("The coin balance for the confidential transfer.")
                 .takes_value(true)
                 .required(false)
                 .default_value(DEFAULT_BALANCE)
@@ -310,7 +310,7 @@ fn cli() -> Result<(), String> {
             );
 
         },
-        ("generate-tx", Some(sub_matches)) => {
+        ("print-tx", Some(sub_matches)) => {
             println!("Generate transaction...");
 
             let sender_seed = hex::decode(sub_matches.value_of("sender-privatekey").unwrap()).unwrap();
@@ -431,7 +431,7 @@ fn cli() -> Result<(), String> {
             // if url_str.len() != 0 {
             //     url = Url::Custom(url_str);
             // }
-            println!("Computing zk proof...");
+            println!("Preparing paramters...");
             let api = Api::init(Url::Local);
 
             let rng = &mut OsRng::new().expect("should be able to construct RNG");
@@ -463,8 +463,9 @@ fn cli() -> Result<(), String> {
             let seed = hex::decode(sub_matches.value_of("sender-seed").unwrap()).unwrap();
             let amount_str = sub_matches.value_of("amount").unwrap();
             let amount: u32 = amount_str.parse().unwrap();
-            let fee_str = sub_matches.value_of("fee").unwrap();
-            let fee: u32 = fee_str.parse().unwrap();
+
+            let fee_str = api.get_storage("ConfTransfer", "TransactionBaseFee", None).unwrap();
+            let fee = hexstr_to_u64(fee_str) as u32;
 
             let origin_key = bytes_to_uniform_fs::<Bls12>(&seed[..]);
             let decryption_key = ProofGenerationKey::<Bls12>::from_seed(&seed[..], &PARAMS).bdk();
@@ -476,7 +477,7 @@ fn cli() -> Result<(), String> {
 
             let (decrypted_balance, encrypted_balance_vec, _) = get_balance_from_decryption_key(&decrypted_key[..] ,api.clone());
             let remaining_balance = decrypted_balance - amount - fee;
-            assert!(decrypted_balance >= amount + fee, "Too large amount or fee");
+            assert!(decrypted_balance >= amount + fee, "Not enough balance you have");
 
             let recipient_account_id = EncryptionKey::<Bls12>::read(&mut &recipient_encryption_key[..], &PARAMS).unwrap();
             let encrypted_balance = elgamal::Ciphertext::read(&mut &encrypted_balance_vec[..], &PARAMS as &JubjubBls12).unwrap();
@@ -497,7 +498,7 @@ fn cli() -> Result<(), String> {
 
 
             {
-                println!("Start submitting a transaction to Zerochain");
+                println!("Start submitting a transaction to Zerochain...");
 
                 let p_g = zFixedGenerators::Diversifier; // 1
 
@@ -548,8 +549,8 @@ fn cli() -> Result<(), String> {
 
             let (decrypted_balance, _, encrypted_balance_str) = get_balance_from_decryption_key(&decryption_key_vec[..], api);
 
-            println!("Decrypted balance is {}", decrypted_balance);
-            println!("Encrypted balance is {}", encrypted_balance_str);
+            println!("Decrypted balance: {}", decrypted_balance);
+            println!("Encrypted balance: {}", encrypted_balance_str);
 
 
         },
