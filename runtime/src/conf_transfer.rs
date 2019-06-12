@@ -285,6 +285,7 @@ mod tests {
         type Hashing = BlakeTwo256;
         type Digest = Digest;
         type AccountId = u64;
+        type SigVerificationKey = u64;
         type Lookup = IdentityLookup<u64>;
         type Header = Header;
         type Event = ();
@@ -296,7 +297,6 @@ mod tests {
     }
 
     type ConfTransfer = Module<Test>;
-
 
     fn alice_init() -> (PkdAddress, Ciphertext) {
         let alice_seed = b"Alice                           ";
@@ -334,6 +334,10 @@ mod tests {
         t.extend(GenesisConfig::<Test>{
             encrypted_balance: vec![alice_init()],
             verifying_key: get_pvk(),
+            transaction_base_fee: 1,
+			transaction_byte_fee: 0,
+			transfer_fee: 0,
+			creation_fee: 0,
             _genesis_phantom_data: Default::default(),
         }.build_storage().unwrap().0);
         t.into()

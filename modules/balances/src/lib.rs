@@ -618,6 +618,7 @@ impl<T: Subtrait<I>, I: Instance> system::Trait for ElevatedTrait<T, I> {
 	type Hashing = T::Hashing;
 	type Digest = T::Digest;
 	type AccountId = T::AccountId;
+	type SigVerificationKey = T::SigVerificationKey;
 	type Lookup = T::Lookup;
 	type Header = T::Header;
 	type Event = ();
