@@ -12,7 +12,6 @@ use scrypto::{
             FixedGenerators,
             ToUniform,
         },
-        redjubjub::PrivateKey,
 };
 use std::io;
 

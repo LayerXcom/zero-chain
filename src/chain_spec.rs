@@ -156,7 +156,7 @@ fn get_pvk() -> PreparedVk {
 
 fn alice_init() -> (PkdAddress, Ciphertext) {
 	let alice_seed = b"Alice                           ";
-	let alice_value = 100 as u32;
+	let alice_value = 10_000 as u32;
 
 	let p_g = FixedGenerators::Diversifier; // 1 same as NoteCommitmentRandomness;
 
