@@ -133,6 +133,10 @@ fn testnet_genesis(initial_authorities: Vec<AuthorityId>, endowed_accounts: Vec<
 		}),
 		conf_transfer: Some(ConfTransferConfig {
 			encrypted_balance: vec![alice_init()],
+			transaction_base_fee: 1,
+			transaction_byte_fee: 0,
+			transfer_fee: 0,
+			creation_fee: 0,
 			verifying_key: get_pvk(),
 			_genesis_phantom_data: Default::default(),
 		})
@@ -152,7 +156,7 @@ fn get_pvk() -> PreparedVk {
 
 fn alice_init() -> (PkdAddress, Ciphertext) {
 	let alice_seed = b"Alice                           ";
-	let alice_value = 100 as u32;
+	let alice_value = 10_000 as u32;
 
 	let p_g = FixedGenerators::Diversifier; // 1 same as NoteCommitmentRandomness;
 

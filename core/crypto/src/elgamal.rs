@@ -74,11 +74,14 @@ impl<E: JubjubEngine> Ciphertext<E> {
         let neg_sr_point = sr_point.negate();
         let v_point = self.left.add(&neg_sr_point, params);
 
-        // FIXME: Brute-force decrypt balance for [0, 2^32-1]
-        // for i in 0..u32::MAX {
-        for i in 0..1000 {
-            if find_point(i, &v_point, p_g, params) {
-                return Some(i);
+        let one = params.generator(p_g);
+        let mut acc = edwards::Point::<E, PrimeOrder>::zero();
+
+        // Brute-force decryption
+        for i in 0..1_000_000 {
+            acc = acc.add(&one, params);
+            if acc == v_point {
+                return Some(i + 1)
             }
         }
 
@@ -149,18 +152,6 @@ impl<E: JubjubEngine> Ciphertext<E> {
             right
         }
     }
-}
-
-/// Find the point of the value
-fn find_point<E: JubjubEngine>(
-    value: u32,
-    point: &edwards::Point<E, PrimeOrder>,
-    p_g: FixedGenerators,
-    params: &E::Params
-) -> bool
-{
-    let v_point: edwards::Point<E, PrimeOrder> = params.generator(p_g).mul(value as u64, params).into();
-    &v_point == point
 }
 
 /// Extend the secret key to 64 bits for the scalar field generation.

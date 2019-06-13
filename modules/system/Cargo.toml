@@ -1,6 +1,6 @@
 [package]
-name = "srml-executive"
-version = "0.1.0"
+name = "srml-system"
+version = "1.0.0"
 authors = [
 	"Parity Technologies <admin@parity.io>",
 	"Osuke Sudo <osuke.sudo@layerx.co.jp>",
@@ -9,9 +9,7 @@ edition = "2018"
 
 [dependencies]
 hex-literal = "0.1.0"
-system = { package = "srml-system", path = "../system", default-features = false }
-indices = { package = "srml-indices", path = "../indices", default-features = false }
-balances = { package = "srml-balances", path = "../balances", default-features = false }
+serde_derive = { version = "1.0", optional = true }
 
 [dependencies.serde]
 default-features = false
@@ -24,6 +22,11 @@ version = '3.1'
 [dependencies.parity-codec-derive]
 default-features = false
 version = '3.1'
+
+[dependencies.substrate-primitives]
+default_features = false
+git = 'https://github.com/osuketh/substrate.git'
+branch = "patch-zerochain"
 
 [dependencies.rstd]
 default_features = false
@@ -48,22 +51,20 @@ default_features = false
 git = 'https://github.com/osuketh/substrate.git'
 branch = "patch-zerochain"
 
-[dependencies.substrate-primitives]
-default_features = false
-git = 'https://github.com/osuketh/substrate.git'
-branch = "patch-zerochain"
+[dependencies.safe-mix]
+default-features = false
+version = '1.0'
 
 [features]
 default = ["std"]
 std = [
-	"rstd/std",
-	"srml-support/std",
 	"serde/std",
+	"serde_derive",
+	"safe-mix/std",
 	"parity-codec/std",
-	'parity-codec-derive/std',
-	"primitives/std",
-	"system/std",
 	"substrate-primitives/std",
-	'runtime-io/std',
-	"balances/std",
+	"rstd/std",
+	"runtime-io/std",
+	"srml-support/std",
+	"primitives/std",
 ]

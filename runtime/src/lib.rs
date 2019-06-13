@@ -50,6 +50,10 @@ pub type AuthoritySignature = ed25519::Signature;
 
 /// Alias to pubkey that identifies an account on the chain.
 pub type AccountId = <AccountSignature as Verify>::Signer;
+// pub type AccountId = PkdAddress;
+
+// Alias to a signature verification key
+// pub type SigVerificationKey = <AccountSignature as Verify>::Signer;
 
 /// The type used by authorities to prove their ID.
 pub type AccountSignature = RedjubjubSignature;
@@ -119,6 +123,8 @@ pub fn native_version() -> NativeVersion {
 impl system::Trait for Runtime {
 	/// The identifier used to distinguish between accounts.
 	type AccountId = AccountId;
+	/// The verification key for user account's signature
+	type SigVerificationKey = SigVerificationKey;
 	/// The lookup mechanism to get account ID from whatever is passed in dispatchers.
 	type Lookup = Indices;
 	/// The index type for storing how many extrinsics an account has signed.
@@ -227,7 +233,6 @@ pub type Block = generic::Block<Header, UncheckedExtrinsic>;
 pub type BlockId = generic::BlockId<Block>;
 /// Unchecked extrinsic type as expected by this runtime.
 pub type UncheckedExtrinsic = generic::UncheckedMortalCompactExtrinsic<Address, Nonce, Call, AccountSignature>;
-// pub type UncheckedExtrinsic = generic::UncheckedExtrinsic<Address, Nonce, Call, AccountSignature>;
 /// Extrinsic type that has already been checked.
 pub type CheckedExtrinsic = generic::CheckedExtrinsic<AccountId, Nonce, Call>;
 /// Executive: handles dispatch to the various modules.
