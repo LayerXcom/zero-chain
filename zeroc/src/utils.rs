@@ -1,5 +1,6 @@
 use crate::ZPARAMS;
 use keys;
+use primitives::crypto::{Ss58Codec, Drive, DeriveJunction};
 use zpairing::{bls12_381::Bls12 as zBls12, PrimeField as zPrimeField, PrimeFieldRepr as zPrimeFieldRepr};
 use zjubjub::{
     curve::{JubjubBls12 as zJubjubBls12, fs::Fs as zFs, FixedGenerators as zFixedGenerators}

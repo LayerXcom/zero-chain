@@ -14,12 +14,13 @@ mod std {
     pub use crate::alloc::borrow;
 }
 
+use parity_codec::{Encode, Decode};
+use primitives::crypto::{Derive, DeriveJunction};
 use pairing::{
     PrimeField,
     PrimeFieldRepr,
     io,
 };
-
 use jubjub::{
         curve::{
             JubjubEngine,
@@ -30,7 +31,6 @@ use jubjub::{
             ToUniform,
         },
 };
-
 use blake2_rfc::{
     blake2s::Blake2s,
     blake2b::Blake2b
@@ -162,6 +162,44 @@ impl<E: JubjubEngine> EncryptionKey<E> {
         let pk_d = edwards::Point::<E, _>::read(reader, params)?;
         let pk_d = pk_d.as_prime_order(params).unwrap();
         Ok(EncryptionKey(pk_d))
+    }
+}
+
+// impl<E: JubjubEngine> From<EncryptionKeyBytes> for EncryptionKey<E> {
+//     fn from<E: JubjubEngine>(ek_bytes: EncryptionKeyBytes, params: &E::params) -> Self {
+//         let mut tmp = ek_bytes.0;
+//         EncryptionKey::read(&mut &tmp[..], params).expect("Something wrong with reading as bytes")
+//     }
+// }
+
+#[derive(PartialEq, Eq, PartialOrd, Ord, Clone, Encode, Decode, Default)]
+pub struct EncryptionKeyBytes(pub [u8; 32]);
+
+impl AsRef<EncryptionKeyBytes> for EncryptionKeyBytes {
+    fn as_ref(&self) -> &EncryptionKeyBytes {
+        &self
+    }
+}
+
+impl AsRef<[u8]> for EncryptionKeyBytes {
+    fn as_ref(&self) -> &[u8] {
+        &self.0[..]
+    }
+}
+
+impl AsMut<[u8]> for EncryptionKeyBytes {
+    fn as_mut(&mut self) -> &mut [u8] {
+        &mut self.0[..]
+    }
+}
+
+#[cfg(feature = "std")]
+impl Derive for EncryptionKeyBytes {
+    /// Derive a child key from a series of given junctions.
+	///
+	/// `None` if there are any hard junctions in there.
+    fn derive<Iter: Iterator<Item=DeriveJunction>>(&self, path: Iter) -> Option<EncryptionKeyBytes> {
+        unimplemented!();
     }
 }
 

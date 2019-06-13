@@ -4,7 +4,7 @@ use proofs::{
     primitives::{EncryptionKey, bytes_to_uniform_fs, ProofGenerationKey},
     elgamal,
     };
-use primitives::{hexdisplay::{HexDisplay, AsBytesRef}, blake2_256};
+use primitives::{hexdisplay::{HexDisplay, AsBytesRef}, blake2_256, crypto::{Ss58Codec, Drive, DeriveJunction}};
 use pairing::{bls12_381::Bls12, Field, PrimeField, PrimeFieldRepr};
 use zpairing::{bls12_381::Bls12 as zBls12, PrimeField as zPrimeField, PrimeFieldRepr as zPrimeFieldRepr};
 use scrypto::jubjub::{JubjubBls12, fs, FixedGenerators};

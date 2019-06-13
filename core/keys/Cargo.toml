@@ -5,9 +5,17 @@ authors = ["Osuke Sudo <dish230@gmail.com>"]
 edition = "2018"
 
 [dependencies]
+parity-codec = { version = "3.1", default-features = false }
+parity-codec-derive = { version = "3.1", default-features = false }
 pairing = { package = "zerochain-pairing", path = "../pairing", default-features = false }
 jubjub = { path = "../jubjub", default-features = false }
 rand = { version = "0.4", default-features = false }
+
+[dependencies.primitives]
+default_features = false
+git = 'https://github.com/osuketh/substrate.git'
+package = 'substrate-primitives'
+branch = "patch-zerochain"
 
 [dependencies.blake2-rfc]
 git = "https://github.com/gtank/blake2-rfc"
@@ -17,6 +25,8 @@ default-features = false
 [features]
 default = ["std"]
 std = [
+    "parity-codec/std",
+	"parity-codec-derive/std",
     "pairing/std",
     "jubjub/std",
     "blake2-rfc/std",
