@@ -96,6 +96,15 @@ fn cli() -> Result<(), String> {
         .subcommand(SubCommand::with_name("wallet-init")
             .about("Initialize your wallet")
         )
+        .subcommand(SubCommand::with_name("inspect")
+            .about("Gets a encryption key and a SS58 address from the provided Secret URI")
+            .args(Arg::with_name("uri")
+                .short("u")
+                .long("uri")
+                .help("A Key URI to be inspected like a secret seed, SS58 or public URI.")
+                .required(true)
+            )
+        )
         .subcommand(SubCommand::with_name("print-tx")
             .about("Show transaction components for sending it from a browser")
             .arg(Arg::with_name("proving-key-path")
@@ -210,23 +219,6 @@ fn cli() -> Result<(), String> {
                 .default_value(ALICEDECRYPTIONKEY)
             )
         )
-        .subcommand(SubCommand::with_name("decrypt")
-            .about("Decrypt the elgamal encryption")
-            .arg(Arg::with_name("encrypted-value")
-                .short("e")
-                .long("encrypted-value")
-                .help("Encrypted transfer amount or balance (w/o 0x prefix)")
-                .takes_value(true)
-                .required(true)
-            )
-            .arg(Arg::with_name("private-key")
-                .short("p")
-                .long("private-key")
-                .help("The private key for decryption")
-                .takes_value(true)
-                .required(true)
-            )
-        )
         .get_matches();
 
     match matches.subcommand() {
@@ -306,7 +298,10 @@ fn cli() -> Result<(), String> {
                 hex::encode(&print_keys_bob.encryption_key[..]),
                 hex::encode(&print_keys_charlie.encryption_key[..]),
             );
-
+        },
+        ("inspect", Some(sub_matches)) => {
+            let uri = sub_matches.value_of("uri")
+                .expect("URI parameter is required; qed");
         },
         ("print-tx", Some(sub_matches)) => {
             println!("Generate transaction...");
@@ -459,8 +454,11 @@ fn cli() -> Result<(), String> {
             let proving_key = Parameters::<Bls12>::read(&mut &buf_pk[..], true).unwrap();
             let prepared_vk = PreparedVerifyingKey::<Bls12>::read(&mut &buf_vk[..]).unwrap();
 
-            let seed = hex::decode(sub_matches.value_of("sender-seed").unwrap()).unwrap();
-            let amount_str = sub_matches.value_of("amount").unwrap();
+            let seed = hex::decode(sub_matches.value_of("sender-seed")
+                .expect("Seed parameter is required; qed")
+                ).expect("should be decoded to hex.");
+            let amount_str = sub_matches.value_of("amount")
+                .expect("Amount parameter is required; qed");
             let amount: u32 = amount_str.parse().unwrap();
 
             let fee_str = api.get_storage("ConfTransfer", "TransactionBaseFee", None).unwrap();
@@ -472,7 +470,9 @@ fn cli() -> Result<(), String> {
             let mut decrypted_key = [0u8; 32];
             decryption_key.into_repr().write_le(&mut &mut decrypted_key[..]).unwrap();
 
-            let recipient_encryption_key = hex::decode(sub_matches.value_of("recipient-encryption-key").unwrap()).unwrap();
+            let recipient_encryption_key = hex::decode(sub_matches.value_of("recipient-encryption-key")
+                .expect("Recipient's encryption key parameter is required; qed")
+                ).expect("should be decoded to hex.");
 
             let (decrypted_balance, encrypted_balance_vec, _) = get_balance_from_decryption_key(&decrypted_key[..] ,api.clone());
             let remaining_balance = decrypted_balance - amount - fee;
@@ -544,7 +544,9 @@ fn cli() -> Result<(), String> {
         ("balance", Some(sub_matches)) => {
             println!("Getting encrypted balance from zerochain");
             let api = Api::init(Url::Local);
-            let decryption_key_vec = hex::decode(sub_matches.value_of("decryption-key").unwrap()).unwrap();
+            let decryption_key_vec = hex::decode(sub_matches.value_of("decryption-key")
+                .expect("Decryption key parameter is required; qed")
+                ).expect("should be decoded to hex.");
 
             let (decrypted_balance, _, encrypted_balance_str) = get_balance_from_decryption_key(&decryption_key_vec[..], api);
 
@@ -552,23 +554,6 @@ fn cli() -> Result<(), String> {
             println!("Encrypted balance: {}", encrypted_balance_str);
 
 
-        },
-        ("decrypt", Some(sub_matches)) => {
-            println!("Decrypting the data...");
-            let p_g = FixedGenerators::NoteCommitmentRandomness; // 1
-
-            let enc = sub_matches.value_of("encrypted-value").unwrap();
-            let enc_vec = hex::decode(enc).unwrap();
-            let enc_c = elgamal::Ciphertext::<Bls12>::read(&mut &enc_vec[..], &PARAMS).expect("Invalid data");
-
-            let pk = sub_matches.value_of("private-key").unwrap();
-            let pk_vec = hex::decode(pk).unwrap();
-
-            let mut pk_repr = fs::Fs::default().into_repr();
-            pk_repr.read_le(&mut &pk_vec[..]).unwrap();
-
-            let dec = enc_c.decrypt(fs::Fs::from_repr(pk_repr).unwrap(), p_g, &PARAMS).unwrap();
-            println!("Decrypted value is {}", dec);
         },
         _ => unreachable!()
     }
