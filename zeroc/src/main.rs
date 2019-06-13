@@ -4,7 +4,7 @@ use proofs::{
     primitives::{EncryptionKey, bytes_to_uniform_fs, ProofGenerationKey},
     elgamal,
     };
-use primitives::{hexdisplay::{HexDisplay, AsBytesRef}, blake2_256, crypto::{Ss58Codec, Drive, DeriveJunction}};
+use primitives::{hexdisplay::{HexDisplay, AsBytesRef}, blake2_256, crypto::{Ss58Codec, Derive, DeriveJunction}};
 use pairing::{bls12_381::Bls12, Field, PrimeField, PrimeFieldRepr};
 use zpairing::{bls12_381::Bls12 as zBls12, PrimeField as zPrimeField, PrimeFieldRepr as zPrimeFieldRepr};
 use scrypto::jubjub::{JubjubBls12, fs, FixedGenerators};
@@ -23,6 +23,7 @@ use zprimitives::{Proof, Ciphertext as zCiphertext, PkdAddress, SigVerificationK
 use runtime_primitives::generic::Era;
 use parity_codec::{Compact, Encode};
 use zerochain_runtime::{UncheckedExtrinsic, Call, ConfTransferCall};
+use bip39::{Mnemonic, Language, MnemonicType};
 
 mod setup;
 use setup::setup;
@@ -89,8 +90,11 @@ fn cli() -> Result<(), String> {
                 .default_value(VERIFICATION_KEY_PATH)
             )
         )
-        .subcommand(SubCommand::with_name("init")
+        .subcommand(SubCommand::with_name("wallet-test")
             .about("Initialize key components")
+        )
+        .subcommand(SubCommand::with_name("wallet-init")
+            .about("Initialize your wallet")
         )
         .subcommand(SubCommand::with_name("print-tx")
             .about("Show transaction components for sending it from a browser")
@@ -261,7 +265,12 @@ fn cli() -> Result<(), String> {
 
             println!("Success! Output >> 'proving.params' and 'verification.params'");
         },
-        ("init", Some(_)) => {
+        ("wallet-init", Some(_)) => {
+            // create a new randomly generated mnemonic phrase
+            let mnemonic = Mnemonic::new(MnemonicType::Words12, Language::English);
+            PrintKeys::print_from_phrase(mnemonic.phrase(), None);
+        },
+        ("wallet-test", Some(_)) => {
             println!("Initialize key components...");
             println!("Accounts of alice and bob are fixed");
 

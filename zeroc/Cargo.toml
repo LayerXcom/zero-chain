@@ -26,6 +26,8 @@ hex = "0.3.2"
 polkadot-rs = { git = "https://github.com/LayerXcom/polkadot.rs" }
 parity-codec = "3.2"
 zerochain-runtime = { path = "../runtime" }
+tiny-bip39 = "0.6.0"
+substrate-bip39 = { git = "https://github.com/paritytech/substrate-bip39" }
 
 [dependencies.blake2-rfc]
 git = "https://github.com/gtank/blake2-rfc"
