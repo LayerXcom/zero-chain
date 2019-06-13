@@ -303,6 +303,153 @@ fn cli() -> Result<(), String> {
             let uri = sub_matches.value_of("uri")
                 .expect("URI parameter is required; qed");
         },
+        ("send", Some(sub_matches)) => {
+            println!("Preparing paramters...");
+
+            let url = match sub_matches.value_of("url") {
+                Some(u) => Url::Custom(u.to_string()),
+                None => Url::Local,
+            };
+            let api = Api::init(url);
+
+            let rng = &mut OsRng::new().expect("should be able to construct RNG");
+            // let alpha = fs::Fs::rand(rng);
+            let alpha = fs::Fs::zero(); // TODO
+
+            let pk_path = Path::new(PROVING_KEY_PATH);
+            let vk_path = Path::new(VERIFICATION_KEY_PATH);
+
+            let pk_file = File::open(&pk_path)
+                .map_err(|why| format!("couldn't open {}: {}", pk_path.display(), why))?;
+            let vk_file = File::open(&vk_path)
+                .map_err(|why| format!("couldn't open {}: {}", vk_path.display(), why))?;
+
+            let mut reader_pk = BufReader::new(pk_file);
+            let mut reader_vk = BufReader::new(vk_file);
+
+            let mut buf_pk = vec![];
+            reader_pk.read_to_end(&mut buf_pk)
+                .map_err(|why| format!("couldn't read {}: {}", pk_path.display(), why))?;
+
+            let mut buf_vk = vec![];
+            reader_vk.read_to_end(&mut buf_vk)
+                .map_err(|why| format!("couldn't read {}: {}", vk_path.display(), why))?;
+
+            let proving_key = Parameters::<Bls12>::read(&mut &buf_pk[..], true).
+                .expect("should be casted to Parameters<Bls12> type.");
+            let prepared_vk = PreparedVerifyingKey::<Bls12>::read(&mut &buf_vk[..]).
+                .expect("should ne casted to PreparedVerifyingKey<Bls12> type");
+
+            let seed = hex::decode(sub_matches.value_of("sender-seed")
+                .expect("Seed parameter is required; qed"))
+                .expect("should be decoded to hex.");
+
+            let amount_str = sub_matches.value_of("amount")
+                .expect("Amount parameter is required; qed");
+            let amount: u32 = amount_str.parse().
+                .expect("should be parsed to u32 number; qed");
+
+            let fee_str = api.get_storage("ConfTransfer", "TransactionBaseFee", None).
+                .expect("should be fetched TransactionBaseFee from ConfTransfer module of Zerochain.");
+            let fee = hexstr_to_u64(fee_str) as u32;
+
+            let origin_key = bytes_to_uniform_fs::<Bls12>(&seed[..]);
+            let decryption_key = ProofGenerationKey::<Bls12>::from_seed(&seed[..], &PARAMS).bdk();
+
+            let mut decrypted_key = [0u8; 32];
+            decryption_key.into_repr().write_le(&mut &mut decrypted_key[..])
+                .expect("should be casted as bytes-array.");
+
+            let recipient_encryption_key = hex::decode(sub_matches.value_of("recipient-encryption-key")
+                .expect("Recipient's encryption key parameter is required; qed")
+                ).expect("should be decoded to hex.");
+
+            let (decrypted_balance, encrypted_balance_vec, _) = get_balance_from_decryption_key(&decrypted_key[..] ,api.clone());
+            let remaining_balance = decrypted_balance - amount - fee;
+            assert!(decrypted_balance >= amount + fee, "Not enough balance you have");
+
+            let recipient_account_id = EncryptionKey::<Bls12>::read(&mut &recipient_encryption_key[..], &PARAMS)
+                .expect("should be casted to EncryptionKey<Bls12> type.");
+            let encrypted_balance = elgamal::Ciphertext::read(&mut &encrypted_balance_vec[..], &PARAMS as &JubjubBls12)
+                .expect("should be casted to Ciphertext type.");
+
+            println!("Computing zk proof...");
+            let tx = Transaction::gen_tx(
+                            amount,
+                            remaining_balance,
+                            alpha,
+                            &proving_key,
+                            &prepared_vk,
+                            &recipient_account_id,
+                            &origin_key,
+                            encrypted_balance,
+                            rng,
+                            fee
+                    ).expect("fails to generate the tx");
+
+
+            {
+                println!("Start submitting a transaction to Zerochain...");
+
+                let p_g = zFixedGenerators::Diversifier; // 1
+
+                let mut rsk_repr = zFs::default().into_repr();
+                rsk_repr.read_le(&mut &tx.rsk[..])
+                    .expect("should be casted to Fs's repr type.");
+                let rsk = zFs::from_repr(rsk_repr)
+                    .expect("should be casted to Fs type from repr type.");
+
+                let sig_sk = zPrivateKey::<zBls12>(rsk);
+                let sig_vk = SigVerificationKey::from_slice(&tx.rvk[..]);
+
+                let calls = Call::ConfTransfer(ConfTransferCall::confidential_transfer(
+                    Proof::from_slice(&tx.proof[..]),
+                    PkdAddress::from_slice(&tx.address_sender[..]),
+                    PkdAddress::from_slice(&tx.address_recipient[..]),
+                    zCiphertext::from_slice(&tx.enc_val_sender[..]),
+                    zCiphertext::from_slice(&tx.enc_val_recipient[..]),
+                    sig_vk,
+                    zCiphertext::from_slice(&tx.enc_fee[..]),
+                ));
+
+                let era = Era::Immortal;
+                let index = api.get_nonce(&sig_vk).expect("Nonce must be got.");
+                let checkpoint = api.get_genesis_blockhash()
+                    .expect("should be fetched the genesis block hash from zerochain node.");
+                let raw_payload = (Compact(index), calls, era, checkpoint);
+
+                let sig = raw_payload.using_encoded(|payload| {
+                    let msg = blake2_256(payload);
+                    let sig = sig_sk.sign(&msg[..], rng, p_g, &ZPARAMS as &zJubjubBls12);
+
+                    let sig_vk = sig_vk.into_verification_key()
+                        .expect("should be casted to redjubjub::PublicKey<Bls12> type.");
+                    assert!(sig_vk.verify(&msg, &sig, p_g, &ZPARAMS as &zJubjubBls12));
+
+                    sig
+                });
+
+                let sig_repr = RedjubjubSignature::from_signature(&sig);
+                let uxt = UncheckedExtrinsic::new_signed(index, raw_payload.1, sig_vk.into(), sig_repr, era);
+                let _tx_hash = api.submit_extrinsic(&uxt)
+                    .expect("Faild to submit a extrinsic to zerochain node.");
+
+                println!("Remaining balance is {}", remaining_balance);
+            }
+
+        },
+        ("balance", Some(sub_matches)) => {
+            println!("Getting encrypted balance from zerochain");
+            let api = Api::init(Url::Local);
+            let decryption_key_vec = hex::decode(sub_matches.value_of("decryption-key")
+                .expect("Decryption key parameter is required; qed"))
+                .expect("should be decoded to hex.");
+
+            let (decrypted_balance, _, encrypted_balance_str) = get_balance_from_decryption_key(&decryption_key_vec[..], api);
+
+            println!("Decrypted balance: {}", decrypted_balance);
+            println!("Encrypted balance: {}", encrypted_balance_str);
+        },
         ("print-tx", Some(sub_matches)) => {
             println!("Generate transaction...");
 
@@ -344,8 +491,6 @@ fn cli() -> Result<(), String> {
 
             let amount_str = sub_matches.value_of("amount").unwrap();
             let amount: u32 = amount_str.parse().unwrap();
-            // let fee_str = sub_matches.value_of("fee").unwrap();
-            // let fee: u32 = fee_str.parse().unwrap();
             let fee = 1 as u32;
 
             let balance_str = sub_matches.value_of("balance").unwrap();
@@ -418,142 +563,6 @@ fn cli() -> Result<(), String> {
                 HexDisplay::from(&tx.rsk as &AsBytesRef),
                 HexDisplay::from(&tx.enc_fee as &AsBytesRef),
             );
-        },
-        ("send", Some(sub_matches)) => {
-            println!("Preparing paramters...");
-
-            let url = match sub_matches.value_of("url") {
-                Some(u) => Url::Custom(u.to_string()),
-                None => Url::Local,
-            };
-            let api = Api::init(url);
-
-            let rng = &mut OsRng::new().expect("should be able to construct RNG");
-            // let alpha = fs::Fs::rand(rng);
-            let alpha = fs::Fs::zero(); // TODO
-
-            let pk_path = Path::new(PROVING_KEY_PATH);
-            let vk_path = Path::new(VERIFICATION_KEY_PATH);
-
-            let pk_file = File::open(&pk_path)
-                .map_err(|why| format!("couldn't open {}: {}", pk_path.display(), why))?;
-            let vk_file = File::open(&vk_path)
-                .map_err(|why| format!("couldn't open {}: {}", vk_path.display(), why))?;
-
-            let mut reader_pk = BufReader::new(pk_file);
-            let mut reader_vk = BufReader::new(vk_file);
-
-            let mut buf_pk = vec![];
-            reader_pk.read_to_end(&mut buf_pk)
-                .map_err(|why| format!("couldn't read {}: {}", pk_path.display(), why))?;
-
-            let mut buf_vk = vec![];
-            reader_vk.read_to_end(&mut buf_vk)
-                .map_err(|why| format!("couldn't read {}: {}", vk_path.display(), why))?;
-
-            let proving_key = Parameters::<Bls12>::read(&mut &buf_pk[..], true).unwrap();
-            let prepared_vk = PreparedVerifyingKey::<Bls12>::read(&mut &buf_vk[..]).unwrap();
-
-            let seed = hex::decode(sub_matches.value_of("sender-seed")
-                .expect("Seed parameter is required; qed")
-                ).expect("should be decoded to hex.");
-            let amount_str = sub_matches.value_of("amount")
-                .expect("Amount parameter is required; qed");
-            let amount: u32 = amount_str.parse().unwrap();
-
-            let fee_str = api.get_storage("ConfTransfer", "TransactionBaseFee", None).unwrap();
-            let fee = hexstr_to_u64(fee_str) as u32;
-
-            let origin_key = bytes_to_uniform_fs::<Bls12>(&seed[..]);
-            let decryption_key = ProofGenerationKey::<Bls12>::from_seed(&seed[..], &PARAMS).bdk();
-
-            let mut decrypted_key = [0u8; 32];
-            decryption_key.into_repr().write_le(&mut &mut decrypted_key[..]).unwrap();
-
-            let recipient_encryption_key = hex::decode(sub_matches.value_of("recipient-encryption-key")
-                .expect("Recipient's encryption key parameter is required; qed")
-                ).expect("should be decoded to hex.");
-
-            let (decrypted_balance, encrypted_balance_vec, _) = get_balance_from_decryption_key(&decrypted_key[..] ,api.clone());
-            let remaining_balance = decrypted_balance - amount - fee;
-            assert!(decrypted_balance >= amount + fee, "Not enough balance you have");
-
-            let recipient_account_id = EncryptionKey::<Bls12>::read(&mut &recipient_encryption_key[..], &PARAMS).unwrap();
-            let encrypted_balance = elgamal::Ciphertext::read(&mut &encrypted_balance_vec[..], &PARAMS as &JubjubBls12).unwrap();
-
-            println!("Computing zk proof...");
-            let tx = Transaction::gen_tx(
-                            amount,
-                            remaining_balance,
-                            alpha,
-                            &proving_key,
-                            &prepared_vk,
-                            &recipient_account_id,
-                            &origin_key,
-                            encrypted_balance,
-                            rng,
-                            fee
-                    ).expect("fails to generate the tx");
-
-
-            {
-                println!("Start submitting a transaction to Zerochain...");
-
-                let p_g = zFixedGenerators::Diversifier; // 1
-
-                let mut rsk_repr = zFs::default().into_repr();
-                rsk_repr.read_le(&mut &tx.rsk[..]).unwrap();
-                let rsk = zFs::from_repr(rsk_repr).unwrap();
-
-                let sig_sk = zPrivateKey::<zBls12>(rsk);
-                let sig_vk = SigVerificationKey::from_slice(&tx.rvk[..]);
-
-                let calls = Call::ConfTransfer(ConfTransferCall::confidential_transfer(
-                    Proof::from_slice(&tx.proof[..]),
-                    PkdAddress::from_slice(&tx.address_sender[..]),
-                    PkdAddress::from_slice(&tx.address_recipient[..]),
-                    zCiphertext::from_slice(&tx.enc_val_sender[..]),
-                    zCiphertext::from_slice(&tx.enc_val_recipient[..]),
-                    sig_vk,
-                    zCiphertext::from_slice(&tx.enc_fee[..]),
-                ));
-
-                let era = Era::Immortal;
-                let index = api.get_nonce(&sig_vk).expect("Nonce must be got.");
-                let checkpoint = api.get_genesis_blockhash().unwrap();
-                let raw_payload = (Compact(index), calls, era, checkpoint);
-
-                let sig = raw_payload.using_encoded(|payload| {
-                    let msg = blake2_256(payload);
-                    let sig = sig_sk.sign(&msg[..], rng, p_g, &ZPARAMS as &zJubjubBls12);
-
-                    let sig_vk = sig_vk.into_verification_key().unwrap();
-                    assert!(sig_vk.verify(&msg, &sig, p_g, &ZPARAMS as &zJubjubBls12));
-
-                    sig
-                });
-
-                let sig_repr = RedjubjubSignature::from_signature(&sig);
-                let uxt = UncheckedExtrinsic::new_signed(index, raw_payload.1, sig_vk.into(), sig_repr, era);
-                let _tx_hash = api.submit_extrinsic(&uxt).unwrap();
-
-                println!("Remaining balance is {}", remaining_balance);
-            }
-
-        },
-        ("balance", Some(sub_matches)) => {
-            println!("Getting encrypted balance from zerochain");
-            let api = Api::init(Url::Local);
-            let decryption_key_vec = hex::decode(sub_matches.value_of("decryption-key")
-                .expect("Decryption key parameter is required; qed")
-                ).expect("should be decoded to hex.");
-
-            let (decrypted_balance, _, encrypted_balance_str) = get_balance_from_decryption_key(&decryption_key_vec[..], api);
-
-            println!("Decrypted balance: {}", decrypted_balance);
-            println!("Encrypted balance: {}", encrypted_balance_str);
-
-
         },
         _ => unreachable!()
     }
