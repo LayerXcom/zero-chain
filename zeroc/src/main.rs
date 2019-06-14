@@ -37,6 +37,7 @@ use bip39::{Mnemonic, Language, MnemonicType};
 mod setup;
 mod utils;
 mod config;
+pub mod term;
 use setup::setup;
 use utils::*;
 use config::*;

@@ -1,6 +1,6 @@
 use dirs;
 use clap::{Arg, App, SubCommand, AppSettings, ArgMatches};
-use super::utils::term;
+use super::term;
 use std::path::PathBuf;
 
 const APPLICATION_DIRECTORY_NAME: &'static str = "zeroc";

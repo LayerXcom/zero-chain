@@ -19,8 +19,6 @@ use hex;
 use bip39::{Mnemonic, Language, MnemonicType};
 use substrate_bip39::mini_secret_from_entropy;
 
-pub mod term;
-
 pub struct PrintKeys {
     pub phrase: Option<String>,
     pub seed: [u8; 32],
