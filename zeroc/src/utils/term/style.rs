@@ -1,4 +1,4 @@
-use console::{Self, set_colors_enabled};
+use console::{self, set_colors_enabled};
 use super::config::ColorChoice;
 
 pub struct Style {

@@ -1,5 +1,7 @@
 #[macro_use]
 extern crate log;
+#[macro_use]
+extern crate clap;
 
 use clap::{Arg, App, SubCommand, AppSettings, ArgMatches};
 use rand::OsRng;
@@ -68,6 +70,8 @@ const DEFAULT_ENCRYPTED_BALANCE: &str = "6f4962da776a391c3b03f3e14e8156d2545f39a
 const APPLICATION_DIRECTORY_NAME: &'static str = "zeroc";
 const APPLICATION_ENVIRONMENT_ROOT_DIR: &'static str = "ZEROC_ROOT_DIR";
 
+// root directory configuration
+
 fn get_default_root_dir() -> PathBuf {
     match dirs::data_local_dir() {
         Some(dir) => dir.join(APPLICATION_DIRECTORY_NAME),
@@ -90,8 +94,78 @@ fn global_rootdir_match<'a>(default: &'a PathBuf, matches: &ArgMatches<'a>) -> P
     }
 }
 
-fn config_terminal(matches: &ArgMatches) -> term::Config {
+// quiet configuration
 
+fn global_quiet_difinition() -> Arg {
+    Arg::with_name("QUIET")
+        .long("quiet")
+        .global(true)
+        .help("run the command quietly, do not print anything to the command line output")
+}
+
+fn global_quiet_option(matches: &ArgMatches) -> bool {
+    matches.is_present("QUIET")
+}
+
+// color configuration
+
+fn global_color_definition() -> Arg {
+    Arg::with_name("COLOR")
+        .long("color")
+        .takes_value(true)
+        .default_value("auto")
+        .possible_values(&["auto", "always", "never"])
+        .global(true)
+        .help("enable output colors or not")
+}
+
+fn global_color_option(matches: &ArgMatches) -> term::ColorChoice {
+    match matches.value_of("COLOR") {
+        None => term::ColorChoice::Auto,
+        Some("auto") => term::ColorChoice::Auto,
+        Some("always") => term::ColorChoice::Always,
+        Some("never") => term::ColorChoice::Never,
+        Some(&_) => unreachable!(),
+    }
+}
+
+// verbosity configuration
+
+fn global_verbose_definition<'a, 'b>() -> Arg<'a, 'b> {
+    Arg::with_name("VERBOSITY")
+        .long("verbose")
+        .short("v")
+        .multiple(true)
+        .global(true)
+        .help("set the verbosity mode, multiple occurrences means more verbosity")
+}
+
+fn global_verbose_option<'a>(matches: &ArgMatches<'a>) -> u64 {
+    matches.occurrences_of("VERBOSITY")
+}
+
+fn config_terminal(matches: &ArgMatches) -> term::Config {
+    let quiet = global_quiet_option(matches);
+    let color = global_color_option(matches);
+    let verbosity = global_verbose_option(matches);
+
+    if !quiet {
+        let log_level = match verbosity {
+            0 => log::LevelFilter::Warn,
+            1 => log::LevelFilter::Info,
+            2 => log::LevelFilter::Debug,
+            _ => log::LevelFilter::Trace,
+        };
+
+        env_logger::Builder::from_default_env()
+            .filter_level(log_level)
+            .init();
+    }
+
+    term::Config {
+        color,
+        quiet,
+    }
 }
 
 fn main() {
@@ -99,9 +173,12 @@ fn main() {
 
     let matches = App::new("zeroc")
         .setting(AppSettings::SubcommandRequiredElseHelp)
-        .version("0.1.0")
-        .author("Osuke Sudo")
+        .version(crate_version!())
+        .author(crate_authors!())
         .about("zeroc: Zerochain Command Line Interface")
+        .arg(global_verbose_definition())
+        .arg(global_quiet_difinition())
+        .arg(global_color_definition())
         .arg(global_rootdir_definition(&default_root_dir))
         .subcommand(snark_commands_definition())
         .subcommand(wallet_commands_definition())
@@ -475,9 +552,9 @@ fn cli() -> Result<(), String> {
             reader_vk.read_to_end(&mut buf_vk)
                 .map_err(|why| format!("couldn't read {}: {}", vk_path.display(), why))?;
 
-            let proving_key = Parameters::<Bls12>::read(&mut &buf_pk[..], true).
+            let proving_key = Parameters::<Bls12>::read(&mut &buf_pk[..], true)
                 .expect("should be casted to Parameters<Bls12> type.");
-            let prepared_vk = PreparedVerifyingKey::<Bls12>::read(&mut &buf_vk[..]).
+            let prepared_vk = PreparedVerifyingKey::<Bls12>::read(&mut &buf_vk[..])
                 .expect("should ne casted to PreparedVerifyingKey<Bls12> type");
 
             let seed = hex::decode(sub_matches.value_of("sender-seed")
@@ -486,10 +563,10 @@ fn cli() -> Result<(), String> {
 
             let amount_str = sub_matches.value_of("amount")
                 .expect("Amount parameter is required; qed");
-            let amount: u32 = amount_str.parse().
+            let amount: u32 = amount_str.parse()
                 .expect("should be parsed to u32 number; qed");
 
-            let fee_str = api.get_storage("ConfTransfer", "TransactionBaseFee", None).
+            let fee_str = api.get_storage("ConfTransfer", "TransactionBaseFee", None)
                 .expect("should be fetched TransactionBaseFee from ConfTransfer module of Zerochain.");
             let fee = hexstr_to_u64(fee_str) as u32;
 

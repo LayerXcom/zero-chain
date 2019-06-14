@@ -31,6 +31,7 @@ substrate-bip39 = { git = "https://github.com/paritytech/substrate-bip39" }
 dirs = "2.0"
 console = "0.7"
 log = "0.4"
+env_logger = "0.5"
 
 [dependencies.blake2-rfc]
 git = "https://github.com/gtank/blake2-rfc"

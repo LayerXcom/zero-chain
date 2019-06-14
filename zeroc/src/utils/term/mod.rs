@@ -8,9 +8,7 @@ pub use self::style::Style;
 
 pub struct Term {
     pub config: Config,
-
     pub style: Style,
-
     pub term: console::Term,
 }
 
