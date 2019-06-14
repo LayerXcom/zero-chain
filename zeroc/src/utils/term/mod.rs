@@ -1,5 +1,9 @@
 
 use console;
+use std::{
+    error::Error,
+    io::{self, Write},
+};
 
 mod config;
 mod style;
@@ -26,5 +30,32 @@ impl Term {
             style,
             term,
         }
+    }
+
+
+
+    pub fn error(&mut self, msg: &str) -> io::Result<()> {
+        write!(&mut self.term, "{}", self.style.error.apply_to(msg))
+    }
+
+    pub fn fail_with<E>(&mut self, e: E) -> !
+    where
+        E: Error,
+    {
+        let mut error: &Error = &e;
+        let formated = format!("{}", e);
+        writeln!(&mut self.term, "{}", self.style.error.apply_to(formated));
+
+        while let Some(err) = error.cause() {
+            erorr = err;
+            let formated = format!("{}", err);
+            writeln!(
+                &mut self.term,
+                "  |-> {}",
+                self.style.warning.apply_to(formated)
+            );
+        }
+        
+        ::std::process::exit(1)
     }
 }

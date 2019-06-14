@@ -190,18 +190,19 @@ fn main() {
     let root_dir = global_rootdir_match(&default_root_dir, &matches);
 
     match matches.subcommand() {
-        (SNARK_COMMAND, Some(matches)) => subcommand_snark(root_dir, matches),
-        (WALLET_COMMAND, Some(matches)) => subcommand_wallet(root_dir, matches),
-        (TRANSACTION_COMMAND, Some(matches)) => subcommand_transaction(root_dir, matches),
+        (SNARK_COMMAND, Some(matches)) => subcommand_snark(term, root_dir, matches),
+        (WALLET_COMMAND, Some(matches)) => subcommand_wallet(term, root_dir, matches),
+        (TRANSACTION_COMMAND, Some(matches)) => subcommand_transaction(term, root_dir, matches),
         _ => {
-            std::process::exit(1);
+            term.error(matches.usage()).unwrap();
+            ::std::process::exit(1);
         }
     }
 
-    cli().unwrap_or_else(|e| {
-        println!("{}", e);
-        std::process::exit(1);
-    });
+    // cli().unwrap_or_else(|e| {
+    //     println!("{}", e);
+    //     std::process::exit(1);
+    // });
 }
 
 //
@@ -210,7 +211,7 @@ fn main() {
 
 const SNARK_COMMAND: &'static str = "snark";
 
-fn subcommand_snark(root_dir: PathBuf, matches: &ArgMatches) {
+fn subcommand_snark(mut term: term::Term, root_dir: PathBuf, matches: &ArgMatches) {
     let res = match matches.subcommand() {
         ("setup", Some(sub_matches)) => {
             println!("Performing setup...");
@@ -252,7 +253,7 @@ fn subcommand_snark(root_dir: PathBuf, matches: &ArgMatches) {
     res.unwrap()
 }
 
-fn snark_commands_definition<'a, 'b>() -> App<'a, 'b> {
+fn snark_commands_definition() -> App {
     SubCommand::with_name(SNARK_COMMAND)
         .about("zk-snarks operations")
         .subcommand(SubCommand::with_name("setup")
@@ -277,6 +278,100 @@ fn snark_commands_definition<'a, 'b>() -> App<'a, 'b> {
             )
         )
 }
+
+//
+// Wallet Sub Commands
+//
+
+const WALLET_COMMAND: &'static = "wallet";
+
+fn subcommand_wallet(mut term: term::Term, root_dir: PathBuf, matches: &ArgMatches) {
+    let res = match matches.subcommand() {
+        ("wallet-init", Some(_)) => {
+            // create a new randomly generated mnemonic phrase
+            let mnemonic = Mnemonic::new(MnemonicType::Words12, Language::English);
+            PrintKeys::print_from_phrase(mnemonic.phrase(), None);
+        },
+        ("wallet-test", Some(_)) => {
+            println!("Initialize key components...");
+            println!("Accounts of alice and bob are fixed");
+
+            let alice_seed = seed_to_array(ALICESEED);
+            let bob_seed = seed_to_array(BOBSEED);
+
+            let print_keys_alice = PrintKeys::generate_from_seed(alice_seed);
+            let print_keys_bob = PrintKeys::generate_from_seed(bob_seed);
+            let print_keys_charlie = PrintKeys::generate();
+
+            println!(
+                "
+                \nSeed
+                Alice: 0x{}
+                Bob: 0x{}
+                Charlie: 0x{}
+                \nDecryption Key
+                Alice: 0x{}
+                Bob: 0x{}
+                Charlie: 0x{}
+                \nEncryption Key
+                Alice: 0x{}
+                Bob: 0x{}
+                Charlie: 0x{}
+                ",
+                hex::encode(&alice_seed[..]),
+                hex::encode(&print_keys_bob.seed[..]),
+                hex::encode(&print_keys_charlie.seed[..]),
+                hex::encode(&print_keys_alice.decryption_key[..]),
+                hex::encode(&print_keys_bob.decryption_key[..]),
+                hex::encode(&print_keys_charlie.decryption_key[..]),
+                hex::encode(&print_keys_alice.encryption_key[..]),
+                hex::encode(&print_keys_bob.encryption_key[..]),
+                hex::encode(&print_keys_charlie.encryption_key[..]),
+            );
+        },
+        ("inspect", Some(sub_matches)) => {
+            let uri = sub_matches.value_of("uri")
+                .expect("URI parameter is required; qed");
+        },
+    };
+
+    res.unwrap_or_else(|e| term.fail_with(e))
+}
+
+fn wallet_commands_definition() -> App {
+    SubCommand::with_name(WALLET_COMMAND)
+        .about("wallet operations")
+        .subcommand(SubCommand::with_name("wallet-test")
+            .about("Initialize key components")
+        )
+        .subcommand(SubCommand::with_name("wallet-init")
+            .about("Initialize your wallet")
+        )
+        .subcommand(SubCommand::with_name("inspect")
+            .about("Gets a encryption key and a SS58 address from the provided Secret URI")
+            .args(Arg::with_name("uri")
+                .short("u")
+                .long("uri")
+                .help("A Key URI to be inspected like a secret seed, SS58 or public URI.")
+                .required(true)
+            )
+        )
+}
+
+//
+// Transaction Sub Commands
+//
+
+const TRANSACTION_COMMAND: &'static = "transaction";
+
+fn subcommand_transaction(mut term: term::Term, root_dir: PathBuf, matches: &ArgMatches) {
+
+}
+
+fn transaction_commands_definition() -> App {
+
+}
+
 
 fn cli() -> Result<(), String> {
     let matches = App::new("zeroc")
