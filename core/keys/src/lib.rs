@@ -15,7 +15,6 @@ mod std {
 }
 
 use parity_codec::{Encode, Decode};
-use primitives::crypto::{Derive, DeriveJunction};
 use pairing::{
     PrimeField,
     PrimeFieldRepr,
@@ -193,15 +192,15 @@ impl AsMut<[u8]> for EncryptionKeyBytes {
     }
 }
 
-#[cfg(feature = "std")]
-impl Derive for EncryptionKeyBytes {
-    /// Derive a child key from a series of given junctions.
-	///
-	/// `None` if there are any hard junctions in there.
-    fn derive<Iter: Iterator<Item=DeriveJunction>>(&self, path: Iter) -> Option<EncryptionKeyBytes> {
-        unimplemented!();
-    }
-}
+// impl Derive for EncryptionKeyBytes {
+//     // /// Derive a child key from a series of given junctions.
+// 	// ///
+// 	// /// `None` if there are any hard junctions in there.
+//     fn derive<Iter: Iterator<Item=DeriveJunction>>(&self, path: Iter) -> Option<EncryptionKeyBytes> {
+//         unimplemented!();
+//     }
+//     unimplemented!()
+// }
 
 #[cfg(test)]
 mod tests {

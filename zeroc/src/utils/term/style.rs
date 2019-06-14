@@ -9,7 +9,7 @@ pub struct Style {
 }
 
 impl Style {
-    fn new(color_choice: &ColorChoice) -> Self {
+    pub fn new(color_choice: &ColorChoice) -> Self {
         match color_choice {
             ColorChoice::Auto => {},
             ColorChoice::Never => set_colors_enabled(false),

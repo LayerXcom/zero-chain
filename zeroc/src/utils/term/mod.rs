@@ -47,7 +47,7 @@ impl Term {
         writeln!(&mut self.term, "{}", self.style.error.apply_to(formated));
 
         while let Some(err) = error.cause() {
-            erorr = err;
+            error = err;
             let formated = format!("{}", err);
             writeln!(
                 &mut self.term,
@@ -55,7 +55,7 @@ impl Term {
                 self.style.warning.apply_to(formated)
             );
         }
-        
+
         ::std::process::exit(1)
     }
 }

@@ -2,6 +2,13 @@
 extern crate log;
 #[macro_use]
 extern crate clap;
+#[macro_use]
+extern crate lazy_static;
+
+use std::fs::File;
+use std::path::{Path, PathBuf};
+use std::string::String;
+use std::io::{BufWriter, Write, BufReader, Read};
 
 use clap::{Arg, App, SubCommand, AppSettings, ArgMatches};
 use rand::OsRng;
@@ -17,10 +24,6 @@ use zjubjub::{
     curve::{JubjubBls12 as zJubjubBls12, fs::Fs as zFs, FixedGenerators as zFixedGenerators},
     redjubjub::PrivateKey as zPrivateKey
     };
-use std::fs::File;
-use std::path::{Path, PathBuf};
-use std::string::String;
-use std::io::{BufWriter, Write, BufReader, Read};
 use wasm_utils::transaction::Transaction;
 use bellman::groth16::{Parameters, PreparedVerifyingKey};
 use polkadot_rs::{Api, Url, hexstr_to_u64};
@@ -35,10 +38,6 @@ mod setup;
 use setup::setup;
 mod utils;
 use utils::*;
-
-
-#[macro_use]
-extern crate lazy_static;
 
 lazy_static! {
     pub static ref PARAMS: JubjubBls12 = { JubjubBls12::new() };
@@ -96,7 +95,7 @@ fn global_rootdir_match<'a>(default: &'a PathBuf, matches: &ArgMatches<'a>) -> P
 
 // quiet configuration
 
-fn global_quiet_difinition() -> Arg {
+fn global_quiet_difinition<'a, 'b>() -> Arg<'a, 'b> {
     Arg::with_name("QUIET")
         .long("quiet")
         .global(true)
@@ -109,7 +108,7 @@ fn global_quiet_option(matches: &ArgMatches) -> bool {
 
 // color configuration
 
-fn global_color_definition() -> Arg {
+fn global_color_definition<'a, 'b>() -> Arg<'a, 'b> {
     Arg::with_name("COLOR")
         .long("color")
         .takes_value(true)
@@ -185,7 +184,7 @@ fn main() {
         .subcommand(transaction_commands_definition())
         .get_matches();
 
-    let mut term = term::Term::new(configure_terminal(&matches));
+    let mut term = term::Term::new(config_terminal(&matches));
 
     let root_dir = global_rootdir_match(&default_root_dir, &matches);
 
@@ -198,11 +197,6 @@ fn main() {
             ::std::process::exit(1);
         }
     }
-
-    // cli().unwrap_or_else(|e| {
-    //     println!("{}", e);
-    //     std::process::exit(1);
-    // });
 }
 
 //
@@ -213,16 +207,16 @@ const SNARK_COMMAND: &'static str = "snark";
 
 fn subcommand_snark(mut term: term::Term, root_dir: PathBuf, matches: &ArgMatches) {
     let res = match matches.subcommand() {
-        ("setup", Some(sub_matches)) => {
+        ("setup", Some(matches)) => {
             println!("Performing setup...");
 
-            let pk_path = Path::new(sub_matches.value_of("proving-key-path").unwrap());
-            let vk_path = Path::new(sub_matches.value_of("verification-key-path").unwrap());
+            let pk_path = Path::new(matches.value_of("proving-key-path").unwrap());
+            let vk_path = Path::new(matches.value_of("verification-key-path").unwrap());
 
             let pk_file = File::create(&pk_path)
-                .map_err(|why| format!("couldn't create {}: {}", pk_path.display(), why))?;
+                .map_err(|why| format!("couldn't create {}: {}", pk_path.display(), why)).unwrap();
             let vk_file = File::create(&vk_path)
-                .map_err(|why| format!("couldn't create {}: {}", vk_path.display(), why))?;
+                .map_err(|why| format!("couldn't create {}: {}", vk_path.display(), why)).unwrap();
 
             let mut bw_pk = BufWriter::new(pk_file);
             let mut bw_vk = BufWriter::new(vk_file);
@@ -235,25 +229,29 @@ fn subcommand_snark(mut term: term::Term, root_dir: PathBuf, matches: &ArgMatche
             prepared_vk.write(&mut &mut v_vk).unwrap();
 
             bw_pk.write(&v_pk[..])
-                .map_err(|_| "Unable to write proving key data to file.".to_string())?;
+                .map_err(|_| "Unable to write proving key data to file.".to_string()).unwrap();
 
             bw_vk.write(&v_vk[..])
-                .map_err(|_| "Unable to write verification key data to file.".to_string())?;
+                .map_err(|_| "Unable to write verification key data to file.".to_string()).unwrap();
 
             bw_pk.flush()
-                .map_err(|_| "Unable to flush proving key buffer.".to_string())?;
+                .map_err(|_| "Unable to flush proving key buffer.".to_string()).unwrap();
 
             bw_vk.flush()
-                .map_err(|_| "Unable to flush verification key buffer.".to_string())?;
+                .map_err(|_| "Unable to flush verification key buffer.".to_string()).unwrap();
 
             println!("Success! Output >> 'proving.params' and 'verification.params'");
         },
+        _ => {
+            term.error(matches.usage()).unwrap();
+            ::std::process::exit(1)
+        }
     };
 
-    res.unwrap()
+    // res.unwrap_or_else(|e| term.fail_with(e))
 }
 
-fn snark_commands_definition() -> App {
+fn snark_commands_definition<'a, 'b>() -> App<'a, 'b> {
     SubCommand::with_name(SNARK_COMMAND)
         .about("zk-snarks operations")
         .subcommand(SubCommand::with_name("setup")
@@ -283,7 +281,7 @@ fn snark_commands_definition() -> App {
 // Wallet Sub Commands
 //
 
-const WALLET_COMMAND: &'static = "wallet";
+const WALLET_COMMAND: &'static str = "wallet";
 
 fn subcommand_wallet(mut term: term::Term, root_dir: PathBuf, matches: &ArgMatches) {
     let res = match matches.subcommand() {
@@ -333,12 +331,16 @@ fn subcommand_wallet(mut term: term::Term, root_dir: PathBuf, matches: &ArgMatch
             let uri = sub_matches.value_of("uri")
                 .expect("URI parameter is required; qed");
         },
+        _ => {
+            term.error(matches.usage()).unwrap();
+            ::std::process::exit(1)
+        }
     };
 
-    res.unwrap_or_else(|e| term.fail_with(e))
+    // res.unwrap_or_else(|e| term.fail_with(e))
 }
 
-fn wallet_commands_definition() -> App {
+fn wallet_commands_definition<'a, 'b>() -> App<'a, 'b> {
     SubCommand::with_name(WALLET_COMMAND)
         .about("wallet operations")
         .subcommand(SubCommand::with_name("wallet-test")
@@ -349,7 +351,7 @@ fn wallet_commands_definition() -> App {
         )
         .subcommand(SubCommand::with_name("inspect")
             .about("Gets a encryption key and a SS58 address from the provided Secret URI")
-            .args(Arg::with_name("uri")
+            .arg(Arg::with_name("uri")
                 .short("u")
                 .long("uri")
                 .help("A Key URI to be inspected like a secret seed, SS58 or public URI.")
@@ -362,259 +364,10 @@ fn wallet_commands_definition() -> App {
 // Transaction Sub Commands
 //
 
-const TRANSACTION_COMMAND: &'static = "transaction";
+const TRANSACTION_COMMAND: &'static str = "transaction";
 
 fn subcommand_transaction(mut term: term::Term, root_dir: PathBuf, matches: &ArgMatches) {
-
-}
-
-fn transaction_commands_definition() -> App {
-
-}
-
-
-fn cli() -> Result<(), String> {
-    let matches = App::new("zeroc")
-        .setting(AppSettings::SubcommandRequiredElseHelp)
-        .version("0.1.0")
-        .author("Osuke Sudo")
-        .about("Zerochain: Privacy-protecting blockchain on top of Substrate.")
-        .subcommand(SubCommand::with_name("setup")
-            .about("Performs a trusted setup for a given constraint system")
-            .arg(Arg::with_name("proving-key-path")
-                .short("p")
-                .long("proving-key-path")
-                .help("Path of the generated proving key file")
-                .value_name("FILE")
-                .takes_value(true)
-                .required(false)
-                .default_value(PROVING_KEY_PATH)
-            )
-            .arg(Arg::with_name("verification-key-path")
-                .short("v")
-                .long("verification-key-path")
-                .help("Path of the generated verification key file")
-                .value_name("FILE")
-                .takes_value(true)
-                .required(false)
-                .default_value(VERIFICATION_KEY_PATH)
-            )
-        )
-        .subcommand(SubCommand::with_name("wallet-test")
-            .about("Initialize key components")
-        )
-        .subcommand(SubCommand::with_name("wallet-init")
-            .about("Initialize your wallet")
-        )
-        .subcommand(SubCommand::with_name("inspect")
-            .about("Gets a encryption key and a SS58 address from the provided Secret URI")
-            .args(Arg::with_name("uri")
-                .short("u")
-                .long("uri")
-                .help("A Key URI to be inspected like a secret seed, SS58 or public URI.")
-                .required(true)
-            )
-        )
-        .subcommand(SubCommand::with_name("print-tx")
-            .about("Show transaction components for sending it from a browser")
-            .arg(Arg::with_name("proving-key-path")
-                .short("p")
-                .long("proving-key-path")
-                .help("Path of the proving key file")
-                .value_name("FILE")
-                .takes_value(true)
-                .required(false)
-                .default_value(PROVING_KEY_PATH)
-            )
-            .arg(Arg::with_name("verification-key-path")
-                .short("v")
-                .long("verification-key-path")
-                .help("Path of the generated verification key file")
-                .value_name("FILE")
-                .takes_value(true)
-                .required(false)
-                .default_value(VERIFICATION_KEY_PATH)
-            )
-            .arg(Arg::with_name("amount")
-                .short("a")
-                .long("amount")
-                .help("The coin amount for the confidential transfer. (default: 10)")
-                .takes_value(true)
-                .required(false)
-                .default_value(DEFAULT_AMOUNT)
-            )
-            .arg(Arg::with_name("balance")
-                .short("b")
-                .long("balance")
-                .help("The coin balance for the confidential transfer.")
-                .takes_value(true)
-                .required(false)
-                .default_value(DEFAULT_BALANCE)
-            )
-            .arg(Arg::with_name("sender-privatekey")
-                .short("s")
-                .long("sender-privatekey")
-                .help("Sender's private key. (default: Alice)")
-                .takes_value(true)
-                .required(false)
-                .default_value(ALICESEED)
-            )
-            .arg(Arg::with_name("recipient-privatekey")
-                .short("r")
-                .long("recipient-privatekey")
-                .help("Recipient's private key. (default: Bob)")
-                .takes_value(true)
-                .required(false)
-                .default_value(BOBSEED)
-            )
-            .arg(Arg::with_name("encrypted-balance")
-                .short("e")
-                .long("encrypted-balance")
-                .help("Encrypted balance by sender stored in on-chain")
-                .takes_value(true)
-                .required(false)
-                .default_value(DEFAULT_ENCRYPTED_BALANCE)
-            )
-        )
-        .subcommand(SubCommand::with_name("send")
-            .about("Submit extrinsic to the substrate nodes")
-            .arg(Arg::with_name("amount")
-                .short("a")
-                .long("amount")
-                .help("The coin amount for the confidential transfer. (default: 10)")
-                .takes_value(true)
-                .required(false)
-                .default_value(DEFAULT_AMOUNT)
-            )
-            .arg(Arg::with_name("sender-seed")
-                .short("s")
-                .long("sender-seed")
-                .help("Sender's seed. (default: Alice)")
-                .takes_value(true)
-                .required(false)
-                .default_value(ALICESEED)
-            )
-            .arg(Arg::with_name("recipient-encryption-key")
-                .short("to")
-                .long("recipient-encryption-key")
-                .help("Recipient's encryption key. (default: Bob)")
-                .takes_value(true)
-                .required(false)
-                .default_value(BOBACCOUNTID)
-            )
-            // .arg(Arg::with_name("fee")
-            //     .short("f")
-            //     .long("fee")
-            //     .help("The fee for the confidential transfer. (default: 1)")
-            //     .takes_value(true)
-            //     .required(false)
-            //     .default_value(DEFAULT_FEE)
-            // )
-            .arg(Arg::with_name("url")
-                .short("u")
-                .long("url")
-                .help("Endpoint to connect zerochain nodes")
-                .takes_value(true)
-                .required(false)
-            )
-        )
-        .subcommand(SubCommand::with_name("balance")
-            .about("Get current balance stored in ConfTransfer module")
-            .arg(Arg::with_name("decryption-key")
-                .short("d")
-                .long("decryption-key")
-                .help("Your decription key")
-                .takes_value(true)
-                .required(true)
-                .default_value(ALICEDECRYPTIONKEY)
-            )
-        )
-        .get_matches();
-
-    match matches.subcommand() {
-        ("setup", Some(sub_matches)) => {
-            println!("Performing setup...");
-
-            let pk_path = Path::new(sub_matches.value_of("proving-key-path").unwrap());
-            let vk_path = Path::new(sub_matches.value_of("verification-key-path").unwrap());
-
-            let pk_file = File::create(&pk_path)
-                .map_err(|why| format!("couldn't create {}: {}", pk_path.display(), why))?;
-            let vk_file = File::create(&vk_path)
-                .map_err(|why| format!("couldn't create {}: {}", vk_path.display(), why))?;
-
-            let mut bw_pk = BufWriter::new(pk_file);
-            let mut bw_vk = BufWriter::new(vk_file);
-
-            let (proving_key, prepared_vk) = setup();
-            let mut v_pk = vec![];
-            let mut v_vk = vec![];
-
-            proving_key.write(&mut &mut v_pk).unwrap();
-            prepared_vk.write(&mut &mut v_vk).unwrap();
-
-            bw_pk.write(&v_pk[..])
-                .map_err(|_| "Unable to write proving key data to file.".to_string())?;
-
-            bw_vk.write(&v_vk[..])
-                .map_err(|_| "Unable to write verification key data to file.".to_string())?;
-
-            bw_pk.flush()
-                .map_err(|_| "Unable to flush proving key buffer.".to_string())?;
-
-            bw_vk.flush()
-                .map_err(|_| "Unable to flush verification key buffer.".to_string())?;
-
-            println!("Success! Output >> 'proving.params' and 'verification.params'");
-        },
-        ("wallet-init", Some(_)) => {
-            // create a new randomly generated mnemonic phrase
-            let mnemonic = Mnemonic::new(MnemonicType::Words12, Language::English);
-            PrintKeys::print_from_phrase(mnemonic.phrase(), None);
-        },
-        ("wallet-test", Some(_)) => {
-            println!("Initialize key components...");
-            println!("Accounts of alice and bob are fixed");
-
-            let alice_seed = seed_to_array(ALICESEED);
-            let bob_seed = seed_to_array(BOBSEED);
-
-            let print_keys_alice = PrintKeys::generate_from_seed(alice_seed);
-            let print_keys_bob = PrintKeys::generate_from_seed(bob_seed);
-            let print_keys_charlie = PrintKeys::generate();
-
-            println!(
-                "
-                \nSeed
-                Alice: 0x{}
-                Bob: 0x{}
-                Charlie: 0x{}
-                \nDecryption Key
-                Alice: 0x{}
-                Bob: 0x{}
-                Charlie: 0x{}
-                \nEncryption Key
-                Alice: 0x{}
-                Bob: 0x{}
-                Charlie: 0x{}
-                ",
-                hex::encode(&alice_seed[..]),
-                hex::encode(&print_keys_bob.seed[..]),
-                hex::encode(&print_keys_charlie.seed[..]),
-                hex::encode(&print_keys_alice.decryption_key[..]),
-                hex::encode(&print_keys_bob.decryption_key[..]),
-                hex::encode(&print_keys_charlie.decryption_key[..]),
-                hex::encode(&print_keys_alice.encryption_key[..]),
-                hex::encode(&print_keys_bob.encryption_key[..]),
-                hex::encode(&print_keys_charlie.encryption_key[..]),
-            );
-        },
-        ("inspect", Some(sub_matches)) => {
-            let uri = sub_matches.value_of("uri")
-                .expect("URI parameter is required; qed");
-
-
-        },
+    let res = match matches.subcommand() {
         ("send", Some(sub_matches)) => {
             println!("Preparing paramters...");
 
@@ -632,20 +385,20 @@ fn cli() -> Result<(), String> {
             let vk_path = Path::new(VERIFICATION_KEY_PATH);
 
             let pk_file = File::open(&pk_path)
-                .map_err(|why| format!("couldn't open {}: {}", pk_path.display(), why))?;
+                .map_err(|why| format!("couldn't open {}: {}", pk_path.display(), why)).unwrap();
             let vk_file = File::open(&vk_path)
-                .map_err(|why| format!("couldn't open {}: {}", vk_path.display(), why))?;
+                .map_err(|why| format!("couldn't open {}: {}", vk_path.display(), why)).unwrap();
 
             let mut reader_pk = BufReader::new(pk_file);
             let mut reader_vk = BufReader::new(vk_file);
 
             let mut buf_pk = vec![];
             reader_pk.read_to_end(&mut buf_pk)
-                .map_err(|why| format!("couldn't read {}: {}", pk_path.display(), why))?;
+                .map_err(|why| format!("couldn't read {}: {}", pk_path.display(), why)).unwrap();
 
             let mut buf_vk = vec![];
             reader_vk.read_to_end(&mut buf_vk)
-                .map_err(|why| format!("couldn't read {}: {}", vk_path.display(), why))?;
+                .map_err(|why| format!("couldn't read {}: {}", vk_path.display(), why)).unwrap();
 
             let proving_key = Parameters::<Bls12>::read(&mut &buf_pk[..], true)
                 .expect("should be casted to Parameters<Bls12> type.");
@@ -762,121 +515,70 @@ fn cli() -> Result<(), String> {
             println!("Decrypted balance: {}", decrypted_balance);
             println!("Encrypted balance: {}", encrypted_balance_str);
         },
-        ("print-tx", Some(sub_matches)) => {
-            println!("Generate transaction...");
+        _ => {
+            term.error(matches.usage()).unwrap();
+            ::std::process::exit(1)
+        }
+    };
 
-            let sender_seed = hex::decode(sub_matches.value_of("sender-privatekey").unwrap()).unwrap();
-            let recipient_seed  = hex::decode(sub_matches.value_of("recipient-privatekey").unwrap()).unwrap();
+    // res.unwrap_or_else(|e| term.fail_with(e))
 
-            let sender_address = get_address(&sender_seed[..]);
-            let recipient_address = get_address(&recipient_seed[..]);
+}
 
-            println!("Private Key(Sender): 0x{}\nAddress(Sender): 0x{}\n",
-                HexDisplay::from(&sender_seed),
-                HexDisplay::from(&sender_address),
-            );
-
-            println!("Private Key(Recipient): 0x{}\nAddress(Recipient): 0x{}\n",
-                HexDisplay::from(&recipient_seed),
-                HexDisplay::from(&recipient_address),
-            );
-
-            let pk_path = Path::new(sub_matches.value_of("proving-key-path").unwrap());
-            let vk_path = Path::new(sub_matches.value_of("verification-key-path").unwrap());
-
-            let pk_file = File::open(&pk_path)
-                .map_err(|why| format!("couldn't open {}: {}", pk_path.display(), why))?;
-            let vk_file = File::open(&vk_path)
-                .map_err(|why| format!("couldn't open {}: {}", vk_path.display(), why))?;
-
-            let mut reader_pk = BufReader::new(pk_file);
-            let mut reader_vk = BufReader::new(vk_file);
-
-            let mut buf_pk = vec![];
-            reader_pk.read_to_end(&mut buf_pk)
-                .map_err(|why| format!("couldn't read {}: {}", pk_path.display(), why))?;
-
-            let mut buf_vk = vec![];
-            reader_vk.read_to_end(&mut buf_vk)
-                .map_err(|why| format!("couldn't read {}: {}", vk_path.display(), why))?;
-
-
-            let amount_str = sub_matches.value_of("amount").unwrap();
-            let amount: u32 = amount_str.parse().unwrap();
-            let fee = 1 as u32;
-
-            let balance_str = sub_matches.value_of("balance").unwrap();
-            let balance: u32 = balance_str.parse().unwrap();
-
-            println!("Transaction >>");
-
-            let rng = &mut OsRng::new().expect("should be able to construct RNG");
-
-            // let alpha = fs::Fs::rand(rng);
-            let alpha = fs::Fs::zero(); // TODO
-
-            let proving_key = Parameters::<Bls12>::read(&mut &buf_pk[..], true).unwrap();
-            let prepared_vk = PreparedVerifyingKey::<Bls12>::read(&mut &buf_vk[..]).unwrap();
-
-            let origin_key = bytes_to_uniform_fs::<Bls12>(&sender_seed[..]);
-
-            let address_recipient = EncryptionKey::<Bls12>::from_seed(&recipient_seed[..], &PARAMS);
-
-            let ciphertext_balance_a = sub_matches.value_of("encrypted-balance").unwrap();
-            let ciphertext_balance_v = hex::decode(ciphertext_balance_a).unwrap();
-            let ciphertext_balance = elgamal::Ciphertext::read(&mut &ciphertext_balance_v[..], &PARAMS as &JubjubBls12).unwrap();
-
-            let remaining_balance = balance - amount - fee;
-
-            let tx = Transaction::gen_tx(
-                            amount,
-                            remaining_balance,
-                            alpha,
-                            &proving_key,
-                            &prepared_vk,
-                            &address_recipient,
-                            &origin_key,
-                            ciphertext_balance,
-                            rng,
-                            fee
-                    ).expect("fails to generate the tx");
-
-            // println!(
-            //     "
-            //     \nEncrypted fee by sender: 0x{}
-            //     \nzkProof: 0x{}
-            //     \nEncrypted amount by sender: 0x{}
-            //     \nEncrypted amount by recipient: 0x{}
-            //     ",
-            //     HexDisplay::from(&tx.enc_fee as &AsBytesRef),
-            //     HexDisplay::from(&&tx.proof[..] as &AsBytesRef),
-            //     HexDisplay::from(&tx.enc_val_sender as &AsBytesRef),
-            //     HexDisplay::from(&tx.enc_val_recipient as &AsBytesRef),
-            // );
-            println!(
-                "
-                \nzkProof(Alice): 0x{}
-                \naddress_sender(Alice): 0x{}
-                \naddress_recipient(Alice): 0x{}
-                \nvalue_sender(Alice): 0x{}
-                \nvalue_recipient(Alice): 0x{}
-                \nbalance_sender(Alice): 0x{}
-                \nrvk(Alice): 0x{}
-                \nrsk(Alice): 0x{}
-                \nEncrypted fee by sender: 0x{}
-                ",
-                HexDisplay::from(&&tx.proof[..] as &AsBytesRef),
-                HexDisplay::from(&tx.address_sender as &AsBytesRef),
-                HexDisplay::from(&tx.address_recipient as &AsBytesRef),
-                HexDisplay::from(&tx.enc_val_sender as &AsBytesRef),
-                HexDisplay::from(&tx.enc_val_recipient as &AsBytesRef),
-                HexDisplay::from(&tx.enc_bal_sender as &AsBytesRef),
-                HexDisplay::from(&tx.rvk as &AsBytesRef),
-                HexDisplay::from(&tx.rsk as &AsBytesRef),
-                HexDisplay::from(&tx.enc_fee as &AsBytesRef),
-            );
-        },
-        _ => unreachable!()
-    }
-    Ok(())
+fn transaction_commands_definition<'a, 'b>() -> App<'a, 'b> {
+    SubCommand::with_name(TRANSACTION_COMMAND)
+        .about("transaction operations")
+        .subcommand(SubCommand::with_name("send")
+            .about("Submit extrinsic to the substrate nodes")
+            .arg(Arg::with_name("amount")
+                .short("a")
+                .long("amount")
+                .help("The coin amount for the confidential transfer. (default: 10)")
+                .takes_value(true)
+                .required(false)
+                .default_value(DEFAULT_AMOUNT)
+            )
+            .arg(Arg::with_name("sender-seed")
+                .short("s")
+                .long("sender-seed")
+                .help("Sender's seed. (default: Alice)")
+                .takes_value(true)
+                .required(false)
+                .default_value(ALICESEED)
+            )
+            .arg(Arg::with_name("recipient-encryption-key")
+                .short("to")
+                .long("recipient-encryption-key")
+                .help("Recipient's encryption key. (default: Bob)")
+                .takes_value(true)
+                .required(false)
+                .default_value(BOBACCOUNTID)
+            )
+            // .arg(Arg::with_name("fee")
+            //     .short("f")
+            //     .long("fee")
+            //     .help("The fee for the confidential transfer. (default: 1)")
+            //     .takes_value(true)
+            //     .required(false)
+            //     .default_value(DEFAULT_FEE)
+            // )
+            .arg(Arg::with_name("url")
+                .short("u")
+                .long("url")
+                .help("Endpoint to connect zerochain nodes")
+                .takes_value(true)
+                .required(false)
+            )
+        )
+        .subcommand(SubCommand::with_name("balance")
+            .about("Get current balance stored in ConfTransfer module")
+            .arg(Arg::with_name("decryption-key")
+                .short("d")
+                .long("decryption-key")
+                .help("Your decription key")
+                .takes_value(true)
+                .required(true)
+                .default_value(ALICEDECRYPTIONKEY)
+            )
+        )
 }
