@@ -1,7 +1,8 @@
-use crate::ZPARAMS;
+use crate::{ZPARAMS, PARAMS};
 use keys;
 use primitives::{hexdisplay::{HexDisplay, AsBytesRef}, crypto::{Ss58Codec, Derive, DeriveJunction}};
 use zpairing::{bls12_381::Bls12 as zBls12, PrimeField as zPrimeField, PrimeFieldRepr as zPrimeFieldRepr};
+use pairing::bls12_381::Bls12;
 use zjubjub::{
     curve::{JubjubBls12 as zJubjubBls12, fs::Fs as zFs, FixedGenerators as zFixedGenerators}
 };
@@ -127,4 +128,12 @@ pub fn get_balance_from_decryption_key(mut decryption_key: &[u8], api: Api) -> (
     let decrypted_balance = ciphertext.decrypt(decryption_key, p_g, &ZPARAMS).unwrap();
 
     (decrypted_balance, encrypted_balance, encrypted_balance_str)
+}
+
+pub fn get_address(seed: &[u8]) -> Vec<u8> {
+    let address = EncryptionKey::<Bls12>::from_seed(seed, &PARAMS);
+
+    let mut address_bytes = vec![];
+    address.write(&mut address_bytes).unwrap();
+    address_bytes
 }

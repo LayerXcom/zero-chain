@@ -32,28 +32,22 @@ use runtime_primitives::generic::Era;
 use parity_codec::{Compact, Encode};
 use zerochain_runtime::{UncheckedExtrinsic, Call, ConfTransferCall};
 use bip39::{Mnemonic, Language, MnemonicType};
-use dirs;
+
 
 mod setup;
-use setup::setup;
 mod utils;
+mod config;
+use setup::setup;
 use utils::*;
+use config::*;
 
 lazy_static! {
     pub static ref PARAMS: JubjubBls12 = { JubjubBls12::new() };
     pub static ref ZPARAMS: zJubjubBls12 = { zJubjubBls12::new() };
 }
 
-fn get_address(seed: &[u8]) -> Vec<u8> {
-    let address = EncryptionKey::<Bls12>::from_seed(seed, &PARAMS);
-
-    let mut address_bytes = vec![];
-    address.write(&mut address_bytes).unwrap();
-    address_bytes
-}
-
 //
-// Global options
+// Global constants
 //
 
 const VERIFICATION_KEY_PATH: &str = "zeroc/verification.params";
@@ -65,107 +59,6 @@ const BOBSEED: &str = "426f62202020202020202020202020202020202020202020202020202
 const BOBACCOUNTID: &str = "45e66da531088b55dcb3b273ca825454d79d2d1d5c4fa2ba4a12c1fa1ccd6389";
 const ALICEDECRYPTIONKEY: &str = "b0451b0bfab2830a75216779e010e0bfd2e6d0b4e4b1270dfcdfd0d538509e02";
 const DEFAULT_ENCRYPTED_BALANCE: &str = "6f4962da776a391c3b03f3e14e8156d2545f39a3ebbed675ea28859252cb006fac776c796563fcd44cc49cfaea8bb796952c266e47779d94574c10ad01754b11";
-
-const APPLICATION_DIRECTORY_NAME: &'static str = "zeroc";
-const APPLICATION_ENVIRONMENT_ROOT_DIR: &'static str = "ZEROC_ROOT_DIR";
-
-// root directory configuration
-
-fn get_default_root_dir() -> PathBuf {
-    match dirs::data_local_dir() {
-        Some(dir) => dir.join(APPLICATION_DIRECTORY_NAME),
-        None => panic!("Undefined the local data directory."),
-    }
-}
-
-fn global_rootdir_definition<'a, 'b>(default: &'a PathBuf) -> Arg<'a, 'b> {
-    Arg::with_name("ROOT_DIR")
-        .long("root_dir")
-        .help("the zeroc root direction")
-        .default_value(default.to_str().unwrap())
-        .env(APPLICATION_ENVIRONMENT_ROOT_DIR)
-}
-
-fn global_rootdir_match<'a>(default: &'a PathBuf, matches: &ArgMatches<'a>) -> PathBuf {
-    match matches.value_of("ROOT_DIR") {
-        Some(dir) => PathBuf::from(dir),
-        None => PathBuf::from(default),
-    }
-}
-
-// quiet configuration
-
-fn global_quiet_difinition<'a, 'b>() -> Arg<'a, 'b> {
-    Arg::with_name("QUIET")
-        .long("quiet")
-        .global(true)
-        .help("run the command quietly, do not print anything to the command line output")
-}
-
-fn global_quiet_option(matches: &ArgMatches) -> bool {
-    matches.is_present("QUIET")
-}
-
-// color configuration
-
-fn global_color_definition<'a, 'b>() -> Arg<'a, 'b> {
-    Arg::with_name("COLOR")
-        .long("color")
-        .takes_value(true)
-        .default_value("auto")
-        .possible_values(&["auto", "always", "never"])
-        .global(true)
-        .help("enable output colors or not")
-}
-
-fn global_color_option(matches: &ArgMatches) -> term::ColorChoice {
-    match matches.value_of("COLOR") {
-        None => term::ColorChoice::Auto,
-        Some("auto") => term::ColorChoice::Auto,
-        Some("always") => term::ColorChoice::Always,
-        Some("never") => term::ColorChoice::Never,
-        Some(&_) => unreachable!(),
-    }
-}
-
-// verbosity configuration
-
-fn global_verbose_definition<'a, 'b>() -> Arg<'a, 'b> {
-    Arg::with_name("VERBOSITY")
-        .long("verbose")
-        .short("v")
-        .multiple(true)
-        .global(true)
-        .help("set the verbosity mode, multiple occurrences means more verbosity")
-}
-
-fn global_verbose_option<'a>(matches: &ArgMatches<'a>) -> u64 {
-    matches.occurrences_of("VERBOSITY")
-}
-
-fn config_terminal(matches: &ArgMatches) -> term::Config {
-    let quiet = global_quiet_option(matches);
-    let color = global_color_option(matches);
-    let verbosity = global_verbose_option(matches);
-
-    if !quiet {
-        let log_level = match verbosity {
-            0 => log::LevelFilter::Warn,
-            1 => log::LevelFilter::Info,
-            2 => log::LevelFilter::Debug,
-            _ => log::LevelFilter::Trace,
-        };
-
-        env_logger::Builder::from_default_env()
-            .filter_level(log_level)
-            .init();
-    }
-
-    term::Config {
-        color,
-        quiet,
-    }
-}
 
 fn main() {
     let default_root_dir = get_default_root_dir();
@@ -181,7 +74,7 @@ fn main() {
         .arg(global_rootdir_definition(&default_root_dir))
         .subcommand(snark_commands_definition())
         .subcommand(wallet_commands_definition())
-        .subcommand(transaction_commands_definition())
+        .subcommand(tx_commands_definition())
         .get_matches();
 
     let mut term = term::Term::new(config_terminal(&matches));
@@ -191,7 +84,7 @@ fn main() {
     match matches.subcommand() {
         (SNARK_COMMAND, Some(matches)) => subcommand_snark(term, root_dir, matches),
         (WALLET_COMMAND, Some(matches)) => subcommand_wallet(term, root_dir, matches),
-        (TRANSACTION_COMMAND, Some(matches)) => subcommand_transaction(term, root_dir, matches),
+        (TX_COMMAND, Some(matches)) => subcommand_tx(term, root_dir, matches),
         _ => {
             term.error(matches.usage()).unwrap();
             ::std::process::exit(1);
@@ -364,9 +257,9 @@ fn wallet_commands_definition<'a, 'b>() -> App<'a, 'b> {
 // Transaction Sub Commands
 //
 
-const TRANSACTION_COMMAND: &'static str = "transaction";
+const TX_COMMAND: &'static str = "tx";
 
-fn subcommand_transaction(mut term: term::Term, root_dir: PathBuf, matches: &ArgMatches) {
+fn subcommand_tx(mut term: term::Term, root_dir: PathBuf, matches: &ArgMatches) {
     let res = match matches.subcommand() {
         ("send", Some(sub_matches)) => {
             println!("Preparing paramters...");
@@ -525,8 +418,8 @@ fn subcommand_transaction(mut term: term::Term, root_dir: PathBuf, matches: &Arg
 
 }
 
-fn transaction_commands_definition<'a, 'b>() -> App<'a, 'b> {
-    SubCommand::with_name(TRANSACTION_COMMAND)
+fn tx_commands_definition<'a, 'b>() -> App<'a, 'b> {
+    SubCommand::with_name(TX_COMMAND)
         .about("transaction operations")
         .subcommand(SubCommand::with_name("send")
             .about("Submit extrinsic to the substrate nodes")
@@ -557,7 +450,7 @@ fn transaction_commands_definition<'a, 'b>() -> App<'a, 'b> {
             // .arg(Arg::with_name("fee")
             //     .short("f")
             //     .long("fee")
-            //     .help("The fee for the confidential transfer. (default: 1)")
+            //     .help("The fee for the confidential transfer.")
             //     .takes_value(true)
             //     .required(false)
             //     .default_value(DEFAULT_FEE)
