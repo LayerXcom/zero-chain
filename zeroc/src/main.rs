@@ -1,4 +1,4 @@
-use clap::{Arg, App, SubCommand, AppSettings};
+use clap::{Arg, App, SubCommand, AppSettings, ArgMatches};
 use rand::OsRng;
 use proofs::{
     primitives::{EncryptionKey, bytes_to_uniform_fs, ProofGenerationKey},
@@ -13,7 +13,7 @@ use zjubjub::{
     redjubjub::PrivateKey as zPrivateKey
     };
 use std::fs::File;
-use std::path::Path;
+use std::path::{Path, PathBuf};
 use std::string::String;
 use std::io::{BufWriter, Write, BufReader, Read};
 use wasm_utils::transaction::Transaction;
@@ -24,6 +24,7 @@ use runtime_primitives::generic::Era;
 use parity_codec::{Compact, Encode};
 use zerochain_runtime::{UncheckedExtrinsic, Call, ConfTransferCall};
 use bip39::{Mnemonic, Language, MnemonicType};
+use dirs;
 
 mod setup;
 use setup::setup;
@@ -46,29 +47,157 @@ fn get_address(seed: &[u8]) -> Vec<u8> {
     address_bytes
 }
 
+//
+// Global options
+//
+
+const VERIFICATION_KEY_PATH: &str = "zeroc/verification.params";
+const PROVING_KEY_PATH: &str = "zeroc/proving.params";
+const DEFAULT_AMOUNT: &str = "10";
+const DEFAULT_BALANCE: &str = "100";
+const ALICESEED: &str = "416c696365202020202020202020202020202020202020202020202020202020";
+const BOBSEED: &str = "426f622020202020202020202020202020202020202020202020202020202020";
+const BOBACCOUNTID: &str = "45e66da531088b55dcb3b273ca825454d79d2d1d5c4fa2ba4a12c1fa1ccd6389";
+const ALICEDECRYPTIONKEY: &str = "b0451b0bfab2830a75216779e010e0bfd2e6d0b4e4b1270dfcdfd0d538509e02";
+const DEFAULT_ENCRYPTED_BALANCE: &str = "6f4962da776a391c3b03f3e14e8156d2545f39a3ebbed675ea28859252cb006fac776c796563fcd44cc49cfaea8bb796952c266e47779d94574c10ad01754b11";
+
+const APPLICATION_DIRECTORY_NAME: &'static str = "zeroc";
+const APPLICATION_ENVIRONMENT_ROOT_DIR: &'static str = "ZEROC_ROOT_DIR";
+
+fn get_default_root_dir() -> PathBuf {
+    match dirs::data_local_dir() {
+        Some(dir) => dir.join(APPLICATION_DIRECTORY_NAME),
+        None => panic!("Undefined the local data directory."),
+    }
+}
+
+fn global_rootdir_definition<'a, 'b>(default: &'a PathBuf) -> Arg<'a, 'b> {
+    Arg::with_name("ROOT_DIR")
+        .long("root_dir")
+        .help("the zeroc root direction")
+        .default_value(default.to_str().unwrap())
+        .env(APPLICATION_ENVIRONMENT_ROOT_DIR)
+}
+
+fn global_rootdir_match<'a>(default: &'a PathBuf, matches: &ArgMatches<'a>) -> PathBuf {
+    match matches.value_of("ROOT_DIR") {
+        Some(dir) => PathBuf::from(dir),
+        None => PathBuf::from(default),
+    }
+}
+
+
 fn main() {
+    let default_root_dir = get_default_root_dir();
+
+    let matches = App::new("zeroc")
+        .setting(AppSettings::SubcommandRequiredElseHelp)
+        .version("0.1.0")
+        .author("Osuke Sudo")
+        .about("zeroc: Zerochain Command Line Interface")
+        .arg(global_rootdir_definition(&default_root_dir))
+        .subcommand(snark_commands_definition())
+        .subcommand(wallet_commands_definition())
+        .subcommand(transaction_commands_definition())
+        .get_matches();
+
+    let root_dir = global_rootdir_match(&default_root_dir, &matches);
+
+    match matches.subcommand() {
+        (SNARK_COMMAND, Some(matches)) => subcommand_snark(root_dir, matches),
+        (WALLET_COMMAND, Some(matches)) => subcommand_wallet(root_dir, matches),
+        (TRANSACTION_COMMAND, Some(matches)) => subcommand_transaction(root_dir, matches),
+        _ => {
+            std::process::exit(1);
+        }
+    }
+
     cli().unwrap_or_else(|e| {
         println!("{}", e);
         std::process::exit(1);
     });
 }
 
-fn cli() -> Result<(), String> {
-    const VERIFICATION_KEY_PATH: &str = "zeroc/verification.params";
-    const PROVING_KEY_PATH: &str = "zeroc/proving.params";
-    const DEFAULT_AMOUNT: &str = "10";
-    const DEFAULT_BALANCE: &str = "100";
-    const ALICESEED: &str = "416c696365202020202020202020202020202020202020202020202020202020";
-    const BOBSEED: &str = "426f622020202020202020202020202020202020202020202020202020202020";
-    const BOBACCOUNTID: &str = "45e66da531088b55dcb3b273ca825454d79d2d1d5c4fa2ba4a12c1fa1ccd6389";
-    const ALICEDECRYPTIONKEY: &str = "b0451b0bfab2830a75216779e010e0bfd2e6d0b4e4b1270dfcdfd0d538509e02";
-    const DEFAULT_ENCRYPTED_BALANCE: &str = "6f4962da776a391c3b03f3e14e8156d2545f39a3ebbed675ea28859252cb006fac776c796563fcd44cc49cfaea8bb796952c266e47779d94574c10ad01754b11";
+//
+//  Snark Sub Commands
+//
 
+const SNARK_COMMAND: &'static str = "snark";
+
+fn subcommand_snark(root_dir: PathBuf, matches: &ArgMatches) {
+    let res = match matches.subcommand() {
+        ("setup", Some(sub_matches)) => {
+            println!("Performing setup...");
+
+            let pk_path = Path::new(sub_matches.value_of("proving-key-path").unwrap());
+            let vk_path = Path::new(sub_matches.value_of("verification-key-path").unwrap());
+
+            let pk_file = File::create(&pk_path)
+                .map_err(|why| format!("couldn't create {}: {}", pk_path.display(), why))?;
+            let vk_file = File::create(&vk_path)
+                .map_err(|why| format!("couldn't create {}: {}", vk_path.display(), why))?;
+
+            let mut bw_pk = BufWriter::new(pk_file);
+            let mut bw_vk = BufWriter::new(vk_file);
+
+            let (proving_key, prepared_vk) = setup();
+            let mut v_pk = vec![];
+            let mut v_vk = vec![];
+
+            proving_key.write(&mut &mut v_pk).unwrap();
+            prepared_vk.write(&mut &mut v_vk).unwrap();
+
+            bw_pk.write(&v_pk[..])
+                .map_err(|_| "Unable to write proving key data to file.".to_string())?;
+
+            bw_vk.write(&v_vk[..])
+                .map_err(|_| "Unable to write verification key data to file.".to_string())?;
+
+            bw_pk.flush()
+                .map_err(|_| "Unable to flush proving key buffer.".to_string())?;
+
+            bw_vk.flush()
+                .map_err(|_| "Unable to flush verification key buffer.".to_string())?;
+
+            println!("Success! Output >> 'proving.params' and 'verification.params'");
+        },
+    };
+
+    res.unwrap()
+}
+
+fn snark_commands_definition<'a, 'b>() -> App<'a, 'b> {
+    SubCommand::with_name(SNARK_COMMAND)
+        .about("zk-snarks operations")
+        .subcommand(SubCommand::with_name("setup")
+            .about("Performs a trusted setup for a given constraint system")
+            .arg(Arg::with_name("proving-key-path")
+                .short("p")
+                .long("proving-key-path")
+                .help("Path of the generated proving key file")
+                .value_name("FILE")
+                .takes_value(true)
+                .required(false)
+                .default_value(PROVING_KEY_PATH)
+            )
+            .arg(Arg::with_name("verification-key-path")
+                .short("v")
+                .long("verification-key-path")
+                .help("Path of the generated verification key file")
+                .value_name("FILE")
+                .takes_value(true)
+                .required(false)
+                .default_value(VERIFICATION_KEY_PATH)
+            )
+        )
+}
+
+fn cli() -> Result<(), String> {
     let matches = App::new("zeroc")
         .setting(AppSettings::SubcommandRequiredElseHelp)
         .version("0.1.0")
         .author("Osuke Sudo")
-        .about("Privacy oriented blockchain framework")
+        .about("Zerochain: Privacy-protecting blockchain on top of Substrate.")
         .subcommand(SubCommand::with_name("setup")
             .about("Performs a trusted setup for a given constraint system")
             .arg(Arg::with_name("proving-key-path")
@@ -302,6 +431,8 @@ fn cli() -> Result<(), String> {
         ("inspect", Some(sub_matches)) => {
             let uri = sub_matches.value_of("uri")
                 .expect("URI parameter is required; qed");
+
+
         },
         ("send", Some(sub_matches)) => {
             println!("Preparing paramters...");
