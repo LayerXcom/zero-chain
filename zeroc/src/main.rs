@@ -1,3 +1,6 @@
+#[macro_use]
+extern crate log;
+
 use clap::{Arg, App, SubCommand, AppSettings, ArgMatches};
 use rand::OsRng;
 use proofs::{
@@ -30,6 +33,7 @@ mod setup;
 use setup::setup;
 mod utils;
 use utils::*;
+
 
 #[macro_use]
 extern crate lazy_static;
@@ -86,6 +90,9 @@ fn global_rootdir_match<'a>(default: &'a PathBuf, matches: &ArgMatches<'a>) -> P
     }
 }
 
+fn config_terminal(matches: &ArgMatches) -> term::Config {
+
+}
 
 fn main() {
     let default_root_dir = get_default_root_dir();
@@ -100,6 +107,8 @@ fn main() {
         .subcommand(wallet_commands_definition())
         .subcommand(transaction_commands_definition())
         .get_matches();
+
+    let mut term = term::Term::new(configure_terminal(&matches));
 
     let root_dir = global_rootdir_match(&default_root_dir, &matches);
 
