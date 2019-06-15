@@ -1,4 +1,5 @@
 use crate::{ZPARAMS, PARAMS};
+use crate::derive::EncryptionKeyBytes;
 use keys;
 use primitives::{hexdisplay::{HexDisplay, AsBytesRef}, crypto::{Ss58Codec, Derive, DeriveJunction}};
 use zpairing::{bls12_381::Bls12 as zBls12, PrimeField as zPrimeField, PrimeFieldRepr as zPrimeFieldRepr};
@@ -7,7 +8,7 @@ use zjubjub::{
     curve::{JubjubBls12 as zJubjubBls12, fs::Fs as zFs, FixedGenerators as zFixedGenerators}
 };
 use proofs::{
-    primitives::{EncryptionKey, bytes_to_uniform_fs, EncryptionKeyBytes},
+    primitives::{EncryptionKey, bytes_to_uniform_fs},
 };
 use keys::EncryptionKey as zEncryptionKey;
 use zprimitives::PkdAddress;
@@ -63,10 +64,10 @@ impl PrintKeys {
 
 fn gen_from_seed(seed: [u8; 32], phrase: Option<&str>) -> PrintKeys {
     let pgk = keys::ProofGenerationKey::<zBls12>::from_seed(&seed[..], &ZPARAMS);
-    let decryption_key: zFs = pgk.bdk();
+    let decryption_key = pgk.into_decryption_key();
 
     let mut dk_buf = [0u8; 32];
-    decryption_key.into_repr().write_le(&mut &mut dk_buf[..]).unwrap();
+    decryption_key.0.into_repr().write_le(&mut &mut dk_buf[..]).unwrap();
 
     let encryption_key = pgk.into_encryption_key(&ZPARAMS);
 
@@ -104,7 +105,8 @@ pub fn get_balance_from_decryption_key(mut decryption_key: &[u8], api: Api) -> (
 
     let mut decryption_key_repr = zFs::default().into_repr();
     decryption_key_repr.read_le(&mut decryption_key).unwrap();
-    let decryption_key = zFs::from_repr(decryption_key_repr).unwrap();
+    let decryption_key_fs = zFs::from_repr(decryption_key_repr).unwrap();
+    let decryption_key = keys::DecryptionKey(decryption_key_fs);
 
     let encryption_key = zEncryptionKey::from_decryption_key(&decryption_key, &ZPARAMS as &zJubjubBls12);
     let account_id = PkdAddress::from_encryption_key(&encryption_key);

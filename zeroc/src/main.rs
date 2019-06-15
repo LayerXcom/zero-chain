@@ -36,6 +36,7 @@ mod setup;
 mod utils;
 mod config;
 mod transaction;
+pub mod derive;
 pub mod term;
 use setup::setup;
 use utils::*;

@@ -1,3 +1,5 @@
+//! Zerochain key components.
+
 #![cfg_attr(not(feature = "std"), no_std)]
 #![cfg_attr(not(feature = "std"), feature(alloc))]
 
@@ -39,55 +41,83 @@ pub const PRF_EXPAND_PERSONALIZATION: &'static [u8; 16] = b"zech_ExpandSeed_";
 pub const CRH_BDK_PERSONALIZATION: &'static [u8; 8] = b"zech_bdk";
 pub const KEY_DIVERSIFICATION_PERSONALIZATION: &'static [u8; 8] = b"zech_div";
 
-pub fn bytes_to_uniform_fs<E: JubjubEngine>(bytes: &[u8]) -> E::Fs {
-    let mut h = Blake2b::with_params(64, &[], &[], PRF_EXPAND_PERSONALIZATION);
-    h.update(bytes);
-    let res = h.finalize();
-    E::Fs::to_uniform(res.as_bytes())
+// pub fn bytes_to_uniform_fs<E: JubjubEngine>(bytes: &[u8]) -> E::Fs {
+//     let mut h = Blake2b::with_params(64, &[], &[], PRF_EXPAND_PERSONALIZATION);
+//     h.update(bytes);
+//     let res = h.finalize();
+//     E::Fs::to_uniform(res.as_bytes())
+// }
+
+#[derive(Clone)]
+pub struct SpendingKey<E: JubjubEngine>(E::Fs);
+
+impl<E: JubjubEngine> SpendingKey<E> {
+    pub fn from_seed(seed: &[u8]) -> Self {
+        let mut h = Blake2b::with_params(64, &[], &[], PRF_EXPAND_PERSONALIZATION);
+        h.update(seed);
+        let res = h.finalize();
+        let fs = E::Fs::to_uniform(res.as_bytes());
+        SpendingKey(fs)
+    }
 }
+
+
 
 #[derive(Clone)]
 pub struct ProofGenerationKey<E: JubjubEngine> (
     pub edwards::Point<E, PrimeOrder>
 );
 
+#[derive(Clone)]
+pub struct RandomizedSigVk<E: JubjubEngine>(
+    pub edwards::Point<E, PrimeOrder>
+);
+
+#[derive(Clone)]
+pub struct DecryptionKey<E: JubjubEngine>(pub E::Fs);
+
 impl<E: JubjubEngine> ProofGenerationKey<E> {
-    /// Generate proof generation key key from origin key
-    pub fn from_origin_key(
-        origin_key: &E::Fs,
+    /// Generate a proof generation key from a seed
+    pub fn from_seed(
+        seed: &[u8],
+        params: &E::Params
+    ) -> Self
+    {
+        Self::from_spending_key(
+            &SpendingKey::from_seed(seed),
+            params
+        )
+    }
+
+    /// Generate a proof generation key from a spending key
+    pub fn from_spending_key(
+        spending_key: &SpendingKey<E>,
         params: &E::Params
     ) -> Self
     {
         ProofGenerationKey (
             params
                 .generator(FixedGenerators::Diversifier)
-                .mul(origin_key.into_repr(), params)
+                .mul(spending_key.0.into_repr(), params)
         )
-    }
-
-    /// Generate proof generation key from seed
-    pub fn from_seed(
-        seed: &[u8],
-        params: &E::Params
-    ) -> Self
-    {
-        Self::from_origin_key(&bytes_to_uniform_fs::<E>(seed), params)
     }
 
     /// Generate the randomized signature-verifying key
-    pub fn rvk(
+    pub fn into_rvk(
         &self,
         alpha: E::Fs,
         params: &E::Params
-    ) -> edwards::Point<E, PrimeOrder> {
-        self.0.add(
+    ) -> RandomizedSigVk<E> {
+        let point = self.0.add(
             &params.generator(FixedGenerators::Diversifier).mul(alpha, params),
             params
-        )
+        );
+
+        RandomizedSigVk(point)
     }
 
-    /// Generate the decryption key
-    pub fn bdk(&self) -> E::Fs {
+    /// Generate a decryption key
+    pub fn into_decryption_key(&self) -> DecryptionKey<E> {
         let mut preimage = [0; 32];
         self.0.write(&mut &mut preimage[..]).unwrap();
 
@@ -100,10 +130,12 @@ impl<E: JubjubEngine> ProofGenerationKey<E> {
 
         // Reads a little endian integer into this representation.
         e.read_le(&mut &h[..]).unwrap();
-        E::Fs::from_repr(e).expect("should be a vaild scalar")
+        let fs = E::Fs::from_repr(e).expect("should be a vaild scalar");
+
+        DecryptionKey(fs)
     }
 
-    /// Generate the payment address from proof generation key.
+    /// Generate a encryption key from a proof generation key.
     pub fn into_encryption_key(
         &self,
         params: &E::Params
@@ -111,7 +143,7 @@ impl<E: JubjubEngine> ProofGenerationKey<E> {
     {
         let pk_d = params
             .generator(FixedGenerators::Diversifier)
-            .mul(self.bdk(), params);
+            .mul(self.into_decryption_key().0, params);
 
         EncryptionKey(pk_d)
     }
@@ -123,33 +155,33 @@ pub struct EncryptionKey<E: JubjubEngine> (
 );
 
 impl<E: JubjubEngine> EncryptionKey<E> {
-    pub fn from_origin_key(
-        origin_key: &E::Fs,
-        params: &E::Params,
-    ) -> Self
-    {
-        let proof_generation_key = ProofGenerationKey::from_origin_key(origin_key, params);
-        proof_generation_key.into_encryption_key(params)
-    }
-
-    pub fn from_decryption_key(
-        decryption_key: &E::Fs,
-        params: &E::Params,
-    ) -> Self
-    {
-        let pk_d = params
-            .generator(FixedGenerators::Diversifier)
-            .mul(*decryption_key, params);
-
-        EncryptionKey(pk_d)
-    }
-
     pub fn from_seed(
         seed: &[u8],
         params: &E::Params
     ) -> Self
     {
-        Self::from_origin_key(&bytes_to_uniform_fs::<E>(seed), params)
+        Self::from_spending_key(&SpendingKey::from_seed(seed), params)
+    }
+
+    pub fn from_spending_key(
+        spending_key: &SpendingKey<E>,
+        params: &E::Params,
+    ) -> Self
+    {
+        let proof_generation_key = ProofGenerationKey::from_spending_key(spending_key, params);
+        proof_generation_key.into_encryption_key(params)
+    }
+
+    pub fn from_decryption_key(
+        decryption_key: &DecryptionKey<E>,
+        params: &E::Params,
+    ) -> Self
+    {
+        let pk_d = params
+            .generator(FixedGenerators::Diversifier)
+            .mul(decryption_key.0, params);
+
+        EncryptionKey(pk_d)
     }
 
     pub fn write<W: io::Write>(&self, mut writer: W) -> io::Result<()> {
@@ -164,44 +196,6 @@ impl<E: JubjubEngine> EncryptionKey<E> {
     }
 }
 
-// impl<E: JubjubEngine> From<EncryptionKeyBytes> for EncryptionKey<E> {
-//     fn from<E: JubjubEngine>(ek_bytes: EncryptionKeyBytes, params: &E::params) -> Self {
-//         let mut tmp = ek_bytes.0;
-//         EncryptionKey::read(&mut &tmp[..], params).expect("Something wrong with reading as bytes")
-//     }
-// }
-
-#[derive(PartialEq, Eq, PartialOrd, Ord, Clone, Encode, Decode, Default)]
-pub struct EncryptionKeyBytes(pub [u8; 32]);
-
-impl AsRef<EncryptionKeyBytes> for EncryptionKeyBytes {
-    fn as_ref(&self) -> &EncryptionKeyBytes {
-        &self
-    }
-}
-
-impl AsRef<[u8]> for EncryptionKeyBytes {
-    fn as_ref(&self) -> &[u8] {
-        &self.0[..]
-    }
-}
-
-impl AsMut<[u8]> for EncryptionKeyBytes {
-    fn as_mut(&mut self) -> &mut [u8] {
-        &mut self.0[..]
-    }
-}
-
-// impl Derive for EncryptionKeyBytes {
-//     // /// Derive a child key from a series of given junctions.
-// 	// ///
-// 	// /// `None` if there are any hard junctions in there.
-//     fn derive<Iter: Iterator<Item=DeriveJunction>>(&self, path: Iter) -> Option<EncryptionKeyBytes> {
-//         unimplemented!();
-//     }
-//     unimplemented!()
-// }
-
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -214,8 +208,8 @@ mod tests {
         let params = &JubjubBls12::new();
         let rng = &mut XorShiftRng::from_seed([0x3dbe6259, 0x8d313d76, 0x3237db17, 0xe5bc0654]);
 
-        let origin_key = fs::Fs::rand(rng);
-        let addr1 = EncryptionKey::from_origin_key(&origin_key, params);
+        let spending_key = fs::Fs::rand(rng);
+        let addr1 = EncryptionKey::from_spending_key(&SpendingKey(spending_key), params);
 
         let mut v = vec![];
         addr1.write(&mut v).unwrap();
@@ -223,3 +217,4 @@ mod tests {
         assert!(addr1 == addr2);
     }
 }
+
