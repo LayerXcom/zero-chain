@@ -318,7 +318,7 @@ mod tests {
 
         let decryption_key = ProofGenerationKey::<Bls12>::from_seed(alice_seed, params).into_decryption_key();
 
-        let dec_alice_bal = enc_alice_bal.decrypt(decryption_key, p_g, params).unwrap();
+        let dec_alice_bal = enc_alice_bal.decrypt(&decryption_key, p_g, params).unwrap();
         assert_eq!(dec_alice_bal, alice_amount);
 
         (PkdAddress::from_encryption_key(&encryption_key), Ciphertext::from_ciphertext(&enc_alice_bal))
@@ -346,7 +346,7 @@ mod tests {
 			creation_fee: 0,
             _genesis_phantom_data: Default::default(),
         }.build_storage().unwrap().0);
-        
+
         t.into()
     }
 

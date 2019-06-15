@@ -182,7 +182,7 @@ mod tests {
         let public_key = EncryptionKey(params.generator(p_g).mul(sk_fs, params));
 
         let ciphetext = Ciphertext::encrypt(value, r_fs, &public_key, p_g, params);
-        let decrypted_value = ciphetext.decrypt(DecryptionKey(sk_fs), p_g, params).unwrap();
+        let decrypted_value = ciphetext.decrypt(&DecryptionKey(sk_fs), p_g, params).unwrap();
 
         assert_eq!(value, decrypted_value);
     }
@@ -203,7 +203,7 @@ mod tests {
 
         let bdk = ProofGenerationKey::<Bls12>::from_seed(alice_seed, params).into_decryption_key();
 
-        let dec_alice_val = enc_alice_val.decrypt(bdk, p_g, params).unwrap();
+        let dec_alice_val = enc_alice_val.decrypt(&bdk, p_g, params).unwrap();
 	    assert_eq!(dec_alice_val, alice_value);
     }
 
@@ -229,7 +229,7 @@ mod tests {
 
         let decryption_key = DecryptionKey(sk_fs);
 
-        let decrypted_value7 = homo_ciphetext7.decrypt(decryption_key, p_g, params).unwrap();
+        let decrypted_value7 = homo_ciphetext7.decrypt(&decryption_key, p_g, params).unwrap();
         assert_eq!(decrypted_value7, value7);
     }
 
@@ -256,8 +256,8 @@ mod tests {
 
         let decryption_key = DecryptionKey(sk_fs);
 
-        let decrypted_value19 = homo_ciphetext19.decrypt(decryption_key, p_g, params).unwrap();
-        let decrypted_value19_params = homo_ciphetext19_params.decrypt(decryption_key, p_g, params).unwrap();
+        let decrypted_value19 = homo_ciphetext19.decrypt(&decryption_key, p_g, params).unwrap();
+        let decrypted_value19_params = homo_ciphetext19_params.decrypt(&decryption_key, p_g, params).unwrap();
 
         assert_eq!(decrypted_value19, value19);
         assert!(homo_ciphetext19 == homo_ciphetext19_params);
@@ -289,7 +289,7 @@ mod tests {
 
         let decryption_key = DecryptionKey(sk_fs1);
 
-        let expected_value7 = homo_ciphetext7.decrypt(decryption_key, p_g, params).unwrap();
+        let expected_value7 = homo_ciphetext7.decrypt(&decryption_key, p_g, params).unwrap();
         assert_eq!(expected_value7, value7);
     }
 
