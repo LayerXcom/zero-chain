@@ -1,3 +1,4 @@
+use crate::PARAMS;
 use bellman::groth16::{Parameters, PreparedVerifyingKey};
 use pairing::bls12_381::Bls12;
 use zpairing::io;
@@ -10,6 +11,7 @@ use proofs::{
 	keys::{
 		EncryptionKey,
 		ProofGenerationKey,
+		SpendingKey,
 		},
 	prover::TransferProof,
 };
@@ -35,16 +37,17 @@ impl Transaction {
         proving_key: &Parameters<Bls12>,
 		prepared_vk: &PreparedVerifyingKey<Bls12>,
 		address_recipient: &EncryptionKey<Bls12>,
-		ok_sender: &fs::Fs,
+		seed: &[u8],
         ciphertext_balance: proofs::elgamal::Ciphertext<Bls12>,
 		rng: &mut R,
 		fee: u32,
     ) -> Result<Self, io::Error>
 	{
-		// The pramaters from std environment
-		let params = JubjubBls12::new();
-
-		let proof_generation_key = ProofGenerationKey::from_origin_key(ok_sender, &params);
+		let spending_key = SpendingKey::from_seed(seed);
+		let proof_generation_key = ProofGenerationKey::from_spending_key(
+			&spending_key,
+			&PARAMS as &JubjubBls12
+		);
 
 		// Generate the zk proof
 		let proof_output = TransferProof::gen_proof(
@@ -57,12 +60,12 @@ impl Transaction {
 			address_recipient.clone(),
             ciphertext_balance.clone(),
 			rng,
-			&params,
+			&PARAMS,
 			fee
 		).unwrap();
 
 		// Generate the re-randomized sign key
-		let rsk = PrivateKey::<Bls12>(*ok_sender).randomize(alpha);
+		let rsk = spending_key.into_rsk(alpha, &PARAMS);
 		let mut rsk_bytes = [0u8; 32];
 		rsk.write(&mut rsk_bytes[..]).map_err(|_| io::Error::InvalidData)?;
 

@@ -31,6 +31,7 @@ use jubjub::{
             FixedGenerators,
             ToUniform,
         },
+        redjubjub::PrivateKey,
 };
 use blake2_rfc::{
     blake2s::Blake2s,
@@ -54,6 +55,16 @@ impl<E: JubjubEngine> SpendingKey<E> {
         let res = h.finalize();
         let fs = E::Fs::to_uniform(res.as_bytes());
         SpendingKey(fs)
+    }
+
+    /// Generate a re-randomized signature signing key
+    pub fn into_rsk(
+        &self,
+        alpha: E::Fs,
+        params: &E::Params
+    ) -> PrivateKey<E>
+    {
+        PrivateKey(self.0).randomize(alpha)
     }
 }
 

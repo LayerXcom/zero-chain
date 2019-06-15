@@ -12,7 +12,7 @@ use std::io::{BufWriter, Write, BufReader, Read};
 use clap::{Arg, App, SubCommand, AppSettings, ArgMatches};
 use rand::OsRng;
 use proofs::{
-    keys::{EncryptionKey, bytes_to_uniform_fs, ProofGenerationKey},
+    keys::{EncryptionKey, ProofGenerationKey},
     elgamal,
     };
 use primitives::{hexdisplay::{HexDisplay, AsBytesRef}, blake2_256, crypto::{Ss58Codec, Derive, DeriveJunction}};
@@ -313,11 +313,10 @@ fn subcommand_tx(mut term: term::Term, root_dir: PathBuf, matches: &ArgMatches) 
                 .expect("should be fetched TransactionBaseFee from ConfTransfer module of Zerochain.");
             let fee = hexstr_to_u64(fee_str) as u32;
 
-            let origin_key = bytes_to_uniform_fs::<Bls12>(&seed[..]);
-            let decryption_key = ProofGenerationKey::<Bls12>::from_seed(&seed[..], &PARAMS).bdk();
+            let decryption_key = ProofGenerationKey::<Bls12>::from_seed(&seed[..], &PARAMS).into_decryption_key();
 
             let mut decrypted_key = [0u8; 32];
-            decryption_key.into_repr().write_le(&mut &mut decrypted_key[..])
+            decryption_key.0.into_repr().write_le(&mut &mut decrypted_key[..])
                 .expect("should be casted as bytes-array.");
 
             let recipient_encryption_key = hex::decode(sub_matches.value_of("recipient-encryption-key")
@@ -341,7 +340,7 @@ fn subcommand_tx(mut term: term::Term, root_dir: PathBuf, matches: &ArgMatches) 
                             &proving_key,
                             &prepared_vk,
                             &recipient_account_id,
-                            &origin_key,
+                            &seed[..],
                             encrypted_balance,
                             rng,
                             fee

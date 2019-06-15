@@ -14,6 +14,7 @@ use scrypto::{
             FixedGenerators,
             ToUniform,
         },
+        redjubjub::PrivateKey,
 };
 use std::io;
 use parity_codec::{Encode, Decode};
@@ -39,6 +40,16 @@ impl<E: JubjubEngine> SpendingKey<E> {
         let res = h.finalize();
         let fs = E::Fs::to_uniform(res.as_bytes());
         SpendingKey(fs)
+    }
+
+    /// Generate a re-randomized signature signing key
+    pub fn into_rsk(
+        &self,
+        alpha: E::Fs,
+        params: &E::Params
+    ) -> PrivateKey<E>
+    {
+        PrivateKey(self.0).randomize(alpha)
     }
 }
 

@@ -65,7 +65,7 @@ impl<E: JubjubEngine> Ciphertext<E> {
     /// Decryption of the ciphetext for the value
     pub fn decrypt(
         &self,
-        decryption_key: keys::DecryptionKey<E>,
+        decryption_key: &keys::DecryptionKey<E>,
         p_g: FixedGenerators,
         params: &E::Params
     ) -> Option<u32>

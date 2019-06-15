@@ -165,9 +165,9 @@ fn alice_init() -> (PkdAddress, Ciphertext) {
 	// The default balance is not encrypted with randomness.
 	let enc_alice_bal = elgamal::Ciphertext::encrypt(alice_value, fs::Fs::one(), &address, p_g, &JUBJUB);
 
-	let bdk = ProofGenerationKey::<Bls12>::from_seed(alice_seed, &JUBJUB).into_decryption_key();
+	let decryption_key = ProofGenerationKey::<Bls12>::from_seed(alice_seed, &JUBJUB).into_decryption_key();
 
-	let dec_alice_bal = enc_alice_bal.decrypt(bdk, p_g, &JUBJUB).unwrap();
+	let dec_alice_bal = enc_alice_bal.decrypt(&decryption_key, p_g, &JUBJUB).unwrap();
 	assert_eq!(dec_alice_bal, alice_value);
 
 	(PkdAddress::from_encryption_key(&address), Ciphertext::from_ciphertext(&enc_alice_bal))

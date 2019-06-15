@@ -7,9 +7,7 @@ use pairing::bls12_381::Bls12;
 use zjubjub::{
     curve::{JubjubBls12 as zJubjubBls12, fs::Fs as zFs, FixedGenerators as zFixedGenerators}
 };
-use proofs::{
-    keys::{EncryptionKey, bytes_to_uniform_fs},
-};
+use proofs::keys::EncryptionKey;
 use keys::EncryptionKey as zEncryptionKey;
 use zprimitives::PkdAddress;
 use zcrypto::elgamal as zelgamal;
@@ -125,7 +123,7 @@ pub fn get_balance_from_decryption_key(mut decryption_key: &[u8], api: Api) -> (
     let encrypted_balance = hexstr_to_vec(encrypted_balance_str.clone());
     let ciphertext = zelgamal::Ciphertext::<zBls12>::read(&mut &encrypted_balance[..], &ZPARAMS).expect("Invalid data");
 
-    let decrypted_balance = ciphertext.decrypt(decryption_key, p_g, &ZPARAMS).unwrap();
+    let decrypted_balance = ciphertext.decrypt(&decryption_key, p_g, &ZPARAMS).unwrap();
 
     (decrypted_balance, encrypted_balance, encrypted_balance_str)
 }
