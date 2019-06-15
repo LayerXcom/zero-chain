@@ -51,7 +51,7 @@ impl<E: JubjubEngine> TransferProof<E> {
     {
         let randomness = E::Fs::rand(rng);
 
-        let bdk = proof_generation_key.bdk();
+        let bdk = proof_generation_key.into_decryption_key();
         let ek_sender = proof_generation_key.into_encryption_key(params);
 
         let rvk = PublicKey(proof_generation_key.0.clone().into())
@@ -68,7 +68,7 @@ impl<E: JubjubEngine> TransferProof<E> {
             randomness: Some(randomness.clone()),
             alpha: Some(alpha.clone()),
             proof_generation_key: Some(proof_generation_key.clone()),
-            decryption_key: Some(bdk.clone()),
+            decryption_key: Some(bdk.0.clone()),
             pk_d_recipient: Some(address_recipient.0.clone()),
             encrypted_balance: Some(ciphertext_balance.clone()),
             fee: Some(fee)
