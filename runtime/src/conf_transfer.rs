@@ -305,17 +305,23 @@ mod tests {
         let params = &JubjubBls12::new();
         let p_g = FixedGenerators::Diversifier; // 1 same as NoteCommitmentRandomness;
 
-        let ek = EncryptionKey::<Bls12>::from_seed(alice_seed, params);
+        let encryption_key = EncryptionKey::<Bls12>::from_seed(alice_seed, params);
 
         // The default balance is not encrypted with randomness.
-        let enc_alice_bal = elgamal::Ciphertext::encrypt(alice_amount, fs::Fs::one(), &ek.0, p_g, params);
+        let enc_alice_bal = elgamal::Ciphertext::encrypt(
+            alice_amount,
+            fs::Fs::one(),
+            &encryption_key,
+            p_g,
+            params
+        );
 
-        let bdk = ProofGenerationKey::<Bls12>::from_seed(alice_seed, params).bdk();
+        let decryption_key = ProofGenerationKey::<Bls12>::from_seed(alice_seed, params).into_decryption_key();
 
-        let dec_alice_bal = enc_alice_bal.decrypt(bdk, p_g, params).unwrap();
+        let dec_alice_bal = enc_alice_bal.decrypt(decryption_key, p_g, params).unwrap();
         assert_eq!(dec_alice_bal, alice_amount);
 
-        (PkdAddress::from_encryption_key(&ek), Ciphertext::from_ciphertext(&enc_alice_bal))
+        (PkdAddress::from_encryption_key(&encryption_key), Ciphertext::from_ciphertext(&enc_alice_bal))
     }
 
     fn get_pvk() -> PreparedVk {
@@ -340,6 +346,7 @@ mod tests {
 			creation_fee: 0,
             _genesis_phantom_data: Default::default(),
         }.build_storage().unwrap().0);
+        
         t.into()
     }
 

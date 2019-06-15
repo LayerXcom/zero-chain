@@ -1,3 +1,5 @@
+//! Alias of `/core/keys` crate due to std and no_std compatibility.
+
 use pairing::{
     PrimeField,
     PrimeFieldRepr,

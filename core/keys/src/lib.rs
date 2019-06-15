@@ -41,15 +41,11 @@ pub const PRF_EXPAND_PERSONALIZATION: &'static [u8; 16] = b"zech_ExpandSeed_";
 pub const CRH_BDK_PERSONALIZATION: &'static [u8; 8] = b"zech_bdk";
 pub const KEY_DIVERSIFICATION_PERSONALIZATION: &'static [u8; 8] = b"zech_div";
 
-// pub fn bytes_to_uniform_fs<E: JubjubEngine>(bytes: &[u8]) -> E::Fs {
-//     let mut h = Blake2b::with_params(64, &[], &[], PRF_EXPAND_PERSONALIZATION);
-//     h.update(bytes);
-//     let res = h.finalize();
-//     E::Fs::to_uniform(res.as_bytes())
-// }
-
+/// Each account needs the spending key to send transactions.
 #[derive(Clone)]
 pub struct SpendingKey<E: JubjubEngine>(E::Fs);
+
+impl<E: JubjubEngine> Copy for SpendingKey<E> {}
 
 impl<E: JubjubEngine> SpendingKey<E> {
     pub fn from_seed(seed: &[u8]) -> Self {
@@ -61,20 +57,26 @@ impl<E: JubjubEngine> SpendingKey<E> {
     }
 }
 
-
-
+/// Proof generation key is needed when each user generate zk-proofs.
+/// (NOTE): To delegate proof generations,
+/// user needs to pass the decryption key, not proof generation key
+/// because of the current's statement in circuit.
 #[derive(Clone)]
 pub struct ProofGenerationKey<E: JubjubEngine> (
     pub edwards::Point<E, PrimeOrder>
 );
 
+/// Re-randomized signature verification key
 #[derive(Clone)]
 pub struct RandomizedSigVk<E: JubjubEngine>(
     pub edwards::Point<E, PrimeOrder>
 );
 
+/// Decryption key for decrypting transferred ammounts and balances
 #[derive(Clone)]
 pub struct DecryptionKey<E: JubjubEngine>(pub E::Fs);
+
+impl<E: JubjubEngine> Copy for DecryptionKey<E> {}
 
 impl<E: JubjubEngine> ProofGenerationKey<E> {
     /// Generate a proof generation key from a seed
@@ -149,6 +151,8 @@ impl<E: JubjubEngine> ProofGenerationKey<E> {
     }
 }
 
+/// Encryption key can be used for encrypting transferred amounts and balances
+/// and also alias of account id in Zerochain.
 #[derive(Clone, PartialEq)]
 pub struct EncryptionKey<E: JubjubEngine> (
     pub edwards::Point<E, PrimeOrder>
