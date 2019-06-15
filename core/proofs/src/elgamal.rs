@@ -147,7 +147,7 @@ mod tests {
     use rand::{SeedableRng, XorShiftRng, Rand};
     use scrypto::jubjub::{JubjubBls12, fs::Fs};
     use pairing::bls12_381::Bls12;
-    use crate::primitives::{ProofGenerationKey, EncryptionKey};
+    use crate::keys::{ProofGenerationKey, EncryptionKey};
 
     #[test]
     fn test_elgamal_enc_dec() {

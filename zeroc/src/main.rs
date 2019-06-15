@@ -12,7 +12,7 @@ use std::io::{BufWriter, Write, BufReader, Read};
 use clap::{Arg, App, SubCommand, AppSettings, ArgMatches};
 use rand::OsRng;
 use proofs::{
-    primitives::{EncryptionKey, bytes_to_uniform_fs, ProofGenerationKey},
+    keys::{EncryptionKey, bytes_to_uniform_fs, ProofGenerationKey},
     elgamal,
     };
 use primitives::{hexdisplay::{HexDisplay, AsBytesRef}, blake2_256, crypto::{Ss58Codec, Derive, DeriveJunction}};

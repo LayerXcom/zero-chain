@@ -8,7 +8,7 @@ use zjubjub::{
     curve::{JubjubBls12 as zJubjubBls12, fs::Fs as zFs, FixedGenerators as zFixedGenerators}
 };
 use proofs::{
-    primitives::{EncryptionKey, bytes_to_uniform_fs},
+    keys::{EncryptionKey, bytes_to_uniform_fs},
 };
 use keys::EncryptionKey as zEncryptionKey;
 use zprimitives::PkdAddress;

@@ -19,9 +19,7 @@ use scrypto::jubjub::{
     PrimeOrder,
     edwards
 };
-use crate::primitives::{
-    ProofGenerationKey,
-};
+use crate::keys::ProofGenerationKey;
 use scrypto::circuit::{
     boolean::{self, Boolean},
     ecc::{self, EdwardsPoint},
@@ -412,7 +410,7 @@ mod tests {
     use rand::{SeedableRng, Rng, XorShiftRng, Rand};
     use crate::circuit_test::TestConstraintSystem;
     use scrypto::jubjub::{JubjubBls12, fs, edwards, JubjubParams};
-    use crate::primitives::EncryptionKey;
+    use crate::keys::EncryptionKey;
 
     #[test]
     fn test_circuit_transfer() {

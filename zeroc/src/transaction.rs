@@ -7,7 +7,7 @@ use scrypto::{
 	};
 use proofs::{
     self,
-	primitives::{
+	keys::{
 		EncryptionKey,
 		ProofGenerationKey,
 		},

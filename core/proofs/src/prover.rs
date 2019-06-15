@@ -17,7 +17,7 @@ use scrypto::{
     },
 };
 use crate::circuit_transfer::Transfer;
-use crate::primitives::{
+use crate::keys::{
     EncryptionKey,
     ProofGenerationKey,
 };
@@ -173,7 +173,7 @@ impl<E: JubjubEngine> TransferProof<E> {
 mod tests {
     use super::*;
     use rand::{SeedableRng, XorShiftRng, Rng};
-    use crate::primitives::{ProofGenerationKey, EncryptionKey};
+    use crate::keys::{ProofGenerationKey, EncryptionKey};
     use scrypto::jubjub::{fs, ToUniform, JubjubParams, JubjubBls12};
     use crate::elgamal::elgamal_extend;
     use pairing::{PrimeField, bls12_381::Bls12};

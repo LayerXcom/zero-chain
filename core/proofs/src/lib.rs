@@ -2,7 +2,7 @@ pub mod circuit_transfer;
 pub mod circuit_mimc;
 pub mod prover;
 pub mod circuit_test;
-pub mod primitives;
+pub mod keys;
 pub mod elgamal;
 
 use bellman::SynthesisError;
