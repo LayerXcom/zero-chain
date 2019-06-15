@@ -4973,7 +4973,6 @@ dependencies = [
  "zerochain-primitives 0.1.0",
  "zerochain-proofs 0.1.0",
  "zerochain-runtime 1.0.0",
- "zerochain-wasm-utils 0.1.0",
 ]
 
 [[package]]

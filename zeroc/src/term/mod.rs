@@ -46,7 +46,7 @@ impl Term {
         let formated = format!("{}", e);
         writeln!(&mut self.term, "{}", self.style.error.apply_to(formated));
 
-        while let Some(err) = error.cause() {
+        while let Some(err) = error.source() {
             error = err;
             let formated = format!("{}", err);
             writeln!(

@@ -9,7 +9,6 @@ use std::fs::File;
 use std::path::{Path, PathBuf};
 use std::string::String;
 use std::io::{BufWriter, Write, BufReader, Read};
-
 use clap::{Arg, App, SubCommand, AppSettings, ArgMatches};
 use rand::OsRng;
 use proofs::{
@@ -24,7 +23,6 @@ use zjubjub::{
     curve::{JubjubBls12 as zJubjubBls12, fs::Fs as zFs, FixedGenerators as zFixedGenerators},
     redjubjub::PrivateKey as zPrivateKey
     };
-use wasm_utils::transaction::Transaction;
 use bellman::groth16::{Parameters, PreparedVerifyingKey};
 use polkadot_rs::{Api, Url, hexstr_to_u64};
 use zprimitives::{Proof, Ciphertext as zCiphertext, PkdAddress, SigVerificationKey, RedjubjubSignature};
@@ -37,10 +35,12 @@ use bip39::{Mnemonic, Language, MnemonicType};
 mod setup;
 mod utils;
 mod config;
+mod transaction;
 pub mod term;
 use setup::setup;
 use utils::*;
 use config::*;
+use transaction::Transaction;
 
 lazy_static! {
     pub static ref PARAMS: JubjubBls12 = { JubjubBls12::new() };
@@ -179,7 +179,7 @@ const WALLET_COMMAND: &'static str = "wallet";
 
 fn subcommand_wallet(mut term: term::Term, root_dir: PathBuf, matches: &ArgMatches) {
     let res = match matches.subcommand() {
-        ("wallet-init", Some(_)) => {
+        ("init", Some(_)) => {
             // create a new randomly generated mnemonic phrase
             let mnemonic = Mnemonic::new(MnemonicType::Words12, Language::English);
             PrintKeys::print_from_phrase(mnemonic.phrase(), None);
@@ -240,7 +240,7 @@ fn wallet_commands_definition<'a, 'b>() -> App<'a, 'b> {
         .subcommand(SubCommand::with_name("wallet-test")
             .about("Initialize key components")
         )
-        .subcommand(SubCommand::with_name("wallet-init")
+        .subcommand(SubCommand::with_name("init")
             .about("Initialize your wallet")
         )
         .subcommand(SubCommand::with_name("inspect")

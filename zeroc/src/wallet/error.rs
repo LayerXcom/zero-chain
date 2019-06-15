@@ -15,14 +15,14 @@ impl From<io::Error> for Error {
 
 impl fmt::Display for Error {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        match self {
+        match *self {
             Error::IoError(_) => write!(f, "I/O error occurred")
         }
     }
 }
 
 impl error::Error for Error {
-    fn cause(&self) -> Option<&error::Error> {
+    fn source(&self) -> Option<&error::Error> {
         match self {
             Error::IoError(ref err) => Some(err),
         }
