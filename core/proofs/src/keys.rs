@@ -1,4 +1,4 @@
-//! Alias of `/core/keys` crate due to std and no_std compatibility.
+//! Alias module of `/core/keys` crate due to std and no_std compatibility.
 
 use pairing::{
     PrimeField,
@@ -189,7 +189,7 @@ impl<E: JubjubEngine> EncryptionKey<E> {
 mod tests {
     use super::*;
     use rand::{Rng, SeedableRng, XorShiftRng, Rand};
-    use jubjub::curve::{JubjubBls12, fs};
+    use scrypto::jubjub::{JubjubBls12, fs};
     use pairing::bls12_381::Bls12;
 
     #[test]

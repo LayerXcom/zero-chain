@@ -1,3 +1,5 @@
+//! Alias module of `/core/crypto` crate due to std and no_std compatibility.
+
 use scrypto::jubjub::{
         JubjubEngine,
         JubjubParams,
@@ -5,11 +7,10 @@ use scrypto::jubjub::{
         PrimeOrder,
         FixedGenerators,
 };
-
+use crate::keys::{EncryptionKey, DecryptionKey};
 use blake2_rfc::{
     blake2b::{Blake2b, Blake2bResult}
 };
-
 use std::io;
 
 pub const ELGAMAL_EXTEND_PERSONALIZATION: &'static [u8; 16] = b"zech_elgamal_ext";
@@ -35,14 +36,14 @@ impl<E: JubjubEngine> Ciphertext<E> {
     pub fn encrypt(
         value: u32, // 32-bits restriction for the decryption.
         randomness: E::Fs,
-        public_key: &edwards::Point<E, PrimeOrder>,
+        public_key: &EncryptionKey<E>,
         p_g: FixedGenerators,
         params: &E::Params
     ) -> Self
     {
         let right = params.generator(p_g).mul(randomness, params).into();
         let v_point: edwards::Point<E, PrimeOrder> = params.generator(p_g).mul(value as u64, params).into();
-        let r_point = public_key.mul(randomness, params);
+        let r_point = public_key.0.mul(randomness, params);
         let left = v_point.add(&r_point, params);
 
         Ciphertext {
@@ -54,19 +55,23 @@ impl<E: JubjubEngine> Ciphertext<E> {
     /// Decryption of the ciphetext for the value
     pub fn decrypt(
         &self,
-        sk_fs: E::Fs,
+        decryption_key: &DecryptionKey<E>,
         p_g: FixedGenerators,
         params: &E::Params
     ) -> Option<u32>
     {
-        let sr_point = self.right.mul(sk_fs, params);
+        let sr_point = self.right.mul(decryption_key.0, params);
         let neg_sr_point = sr_point.negate();
         let v_point = self.left.add(&neg_sr_point, params);
 
-        // for i in 0..u32::MAX {
-        for i in 0..1000 { // FIXME:
-            if find_point(i, &v_point, p_g, params) {
-                return Some(i);
+        let one = params.generator(p_g);
+        let mut acc = edwards::Point::<E, PrimeOrder>::zero();
+
+        // Brute-force decryption
+        for i in 0..1_000_000 {
+            acc = acc.add(&one, params);
+            if acc == v_point {
+                return Some(i + 1)
             }
         }
 
@@ -122,18 +127,6 @@ impl<E: JubjubEngine> Ciphertext<E> {
     }
 }
 
-/// Find the point of the value
-fn find_point<E: JubjubEngine>(
-    value: u32,
-    point: &edwards::Point<E, PrimeOrder>,
-    p_g: FixedGenerators,
-    params: &E::Params
-) -> bool
-{
-    let v_point: edwards::Point<E, PrimeOrder> = params.generator(p_g).mul(value as u64, params).into();
-    &v_point == point
-}
-
 /// Extend the secret key to 64 bits for the scalar field generation.
 pub fn elgamal_extend(sk: &[u8]) -> Blake2bResult {
     let mut h = Blake2b::with_params(64, &[], &[], ELGAMAL_EXTEND_PERSONALIZATION);
@@ -159,10 +152,10 @@ mod tests {
         let sk_fs = Fs::rand(rng);
         let r_fs = Fs::rand(rng);
 
-        let public_key = params.generator(p_g).mul(sk_fs, params);
+        let public_key = EncryptionKey(params.generator(p_g).mul(sk_fs, params));
 
         let ciphetext = Ciphertext::encrypt(value, r_fs, &public_key, p_g, params);
-        let decrypted_value = ciphetext.decrypt(sk_fs, p_g, params).unwrap();
+        let decrypted_value = ciphetext.decrypt(&DecryptionKey(sk_fs), p_g, params).unwrap();
 
         assert_eq!(value, decrypted_value);
     }
@@ -179,11 +172,11 @@ mod tests {
         let r_fs = Fs::rand(rng);
 
         let address = EncryptionKey::<Bls12>::from_seed(alice_seed, params);
-	    let enc_alice_val = Ciphertext::encrypt(alice_value, r_fs, &address.0, p_g, params);
+	    let enc_alice_val = Ciphertext::encrypt(alice_value, r_fs, &address, p_g, params);
 
-        let bdk = ProofGenerationKey::<Bls12>::from_seed(alice_seed, params).bdk();
+        let bdk = ProofGenerationKey::<Bls12>::from_seed(alice_seed, params).into_decryption_key();
 
-        let dec_alice_val = enc_alice_val.decrypt(bdk, p_g, params).unwrap();
+        let dec_alice_val = enc_alice_val.decrypt(&bdk, p_g, params).unwrap();
 	    assert_eq!(dec_alice_val, alice_value);
     }
 
@@ -196,7 +189,7 @@ mod tests {
         let r_fs1 = Fs::rand(rng);
         let r_fs2 = Fs::rand(rng);
 
-        let public_key = params.generator(p_g).mul(sk_fs, params).into();
+        let public_key = EncryptionKey(params.generator(p_g).mul(sk_fs, params));
         let value20: u32 = 20 as u32;
         let value13: u32 = 13 as u32;
         let value7: u32 = 7 as u32;
@@ -206,7 +199,7 @@ mod tests {
 
         let homo_ciphetext7 = ciphetext20.sub(&ciphetext13, params);
 
-        let decrypted_value7 = homo_ciphetext7.decrypt(sk_fs, p_g, params).unwrap();
+        let decrypted_value7 = homo_ciphetext7.decrypt(&DecryptionKey(sk_fs), p_g, params).unwrap();
         assert_eq!(decrypted_value7, value7);
     }
 
@@ -222,8 +215,8 @@ mod tests {
         let r_fs1 = Fs::rand(rng);
         let r_fs2 = Fs::rand(rng);
 
-        let public_key1 = params.generator(p_g).mul(sk_fs1, params).into();
-        let public_key2 = params.generator(p_g).mul(sk_fs2, params).into();
+        let public_key1 = EncryptionKey(params.generator(p_g).mul(sk_fs1, params));
+        let public_key2 = EncryptionKey(params.generator(p_g).mul(sk_fs2, params));
         let value20: u32 = 20 as u32;
         let value13: u32 = 13 as u32;
         let value7: u32 = 7 as u32;
@@ -233,7 +226,7 @@ mod tests {
 
         let homo_ciphetext7 = ciphetext20.sub(&ciphetext13, params);
 
-        let expected_value7 = homo_ciphetext7.decrypt(sk_fs1, p_g, params).unwrap();
+        let expected_value7 = homo_ciphetext7.decrypt(&DecryptionKey(sk_fs1), p_g, params).unwrap();
         assert_eq!(expected_value7, value7);
     }
 
@@ -246,7 +239,7 @@ mod tests {
         let sk_fs = Fs::rand(rng);
         let r_fs = Fs::rand(rng);
 
-        let public_key = params.generator(p_g).mul(sk_fs, params).into();
+        let public_key = EncryptionKey(params.generator(p_g).mul(sk_fs, params));
         let value: u32 = 6 as u32;
 
         let ciphetext1 = Ciphertext::encrypt(value, r_fs, &public_key, p_g, params);
