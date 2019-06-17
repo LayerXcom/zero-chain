@@ -2,7 +2,7 @@ use crate::{ZPARAMS, PARAMS};
 use crate::derive::EncryptionKeyBytes;
 use keys;
 use primitives::{hexdisplay::{HexDisplay, AsBytesRef}, crypto::{Ss58Codec, Derive, DeriveJunction}};
-use zpairing::{bls12_381::Bls12 as zBls12, PrimeField as zPrimeField, PrimeFieldRepr as zPrimeFieldRepr};
+use zpairing::{bls12_381::Bls12 as zBls12, PrimeField as zPrimeField, PrimeFieldRepr as zPrimeFieldRepr, io};
 use pairing::bls12_381::Bls12;
 use zjubjub::{
     curve::{JubjubBls12 as zJubjubBls12, fs::Fs as zFs, FixedGenerators as zFixedGenerators}
@@ -30,11 +30,11 @@ impl PrintKeys {
     pub fn generate() -> Self {
         let rng = &mut OsRng::new().expect("should be able to construct RNG");
         let seed: [u8; 32] = rng.gen();
-        gen_from_seed(seed, None)
+        gen_from_seed(seed, None).unwrap()
     }
 
     pub fn generate_from_seed(seed: [u8; 32]) -> Self {
-        gen_from_seed(seed, None)
+        gen_from_seed(seed, None).unwrap()
     }
 
     pub fn print_from_phrase(phrase: &str, password: Option<&str>) {
@@ -48,7 +48,7 @@ impl PrintKeys {
         .expect("32 bytes can always build a key; qed")
         .to_bytes();
 
-        let print_keys = gen_from_seed(seed, Some(phrase));
+        let print_keys = gen_from_seed(seed, Some(phrase)).unwrap();
 
         println!("Phrase `{}` is account:\n Seed: 0x{}\n Decryption key: 0x{}\n Encryption key (hex): 0x{}\n Address (SS58): {}",
             phrase,
@@ -60,17 +60,18 @@ impl PrintKeys {
     }
 }
 
-fn gen_from_seed(seed: [u8; 32], phrase: Option<&str>) -> PrintKeys {
+fn gen_from_seed(seed: [u8; 32], phrase: Option<&str>) -> io::Result<PrintKeys> {
     let pgk = keys::ProofGenerationKey::<zBls12>::from_seed(&seed[..], &ZPARAMS);
-    let decryption_key = pgk.into_decryption_key();
+    let decryption_key = pgk.into_decryption_key()?;
 
     let mut dk_buf = [0u8; 32];
-    decryption_key.0.into_repr().write_le(&mut &mut dk_buf[..]).unwrap();
+    decryption_key.0.into_repr().write_le(&mut &mut dk_buf[..])?;
 
-    let encryption_key = pgk.into_encryption_key(&ZPARAMS);
+    let encryption_key = pgk.into_encryption_key(&ZPARAMS)?;
 
     let mut ek_buf = [0u8; 32];
-    encryption_key.write(&mut ek_buf[..]).expect("fails to write payment address");
+    encryption_key.write(&mut ek_buf[..])?;
+    // .expect("fails to write payment address");
 
     let ek_ss58 = EncryptionKeyBytes(ek_buf).to_ss58check();
 
@@ -79,13 +80,13 @@ fn gen_from_seed(seed: [u8; 32], phrase: Option<&str>) -> PrintKeys {
     //     None => None,
     // }
 
-    PrintKeys {
+    Ok(PrintKeys {
         phrase: phrase.map(|e| e.to_string()),
         seed: seed,
         decryption_key: dk_buf,
         encryption_key: ek_buf,
         ss58_encryption_key: ek_ss58,
-    }
+    })
 }
 
 pub fn seed_to_array(seed: &str) -> [u8; 32] {
@@ -128,10 +129,11 @@ pub fn get_balance_from_decryption_key(mut decryption_key: &[u8], api: Api) -> (
     (decrypted_balance, encrypted_balance, encrypted_balance_str)
 }
 
-pub fn get_address(seed: &[u8]) -> Vec<u8> {
-    let address = EncryptionKey::<Bls12>::from_seed(seed, &PARAMS);
+pub fn get_address(seed: &[u8]) -> std::io::Result<Vec<u8>> {
+    let address = EncryptionKey::<Bls12>::from_seed(seed, &PARAMS)?;
 
     let mut address_bytes = vec![];
-    address.write(&mut address_bytes).unwrap();
-    address_bytes
+    address.write(&mut address_bytes)?;
+    
+    Ok(address_bytes)
 }

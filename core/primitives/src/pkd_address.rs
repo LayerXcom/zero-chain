@@ -88,7 +88,7 @@ mod tests {
         let mut seed = [0u8; 32];
         rng.fill_bytes(&mut seed[..]);
 
-        let addr1 = EncryptionKey::from_seed(&seed[..], &JUBJUB as &JubjubBls12);
+        let addr1 = EncryptionKey::from_seed(&seed[..], &JUBJUB as &JubjubBls12).unwrap();
 
         let account_id = PkdAddress::from_encryption_key(&addr1);
         let addr2 = account_id.into_encryption_key().unwrap();

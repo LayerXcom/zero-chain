@@ -1,4 +1,5 @@
 //! (TODO) Alias module of `/core/keys` crate due to std and no_std compatibility.
+//! (WARNING) Not yet completed review for cofactor checks.
 
 use pairing::{
     PrimeField,
@@ -70,10 +71,9 @@ impl<E: JubjubEngine> SpendingKey<E> {
         let mut s_repr = <E::Fs as PrimeField>::Repr::default();
         s_repr.read_le(&mut reader)?;
 
-        match E::Fs::from_repr(s_repr) {
-            Ok(s) => Ok(SpendingKey(s)),
-            Err(_) => Err(io::Error::new(io::ErrorKind::InvalidInput, "Not in field.")),
-        }
+        let fs = E::Fs::from_repr(s_repr).map_err(|_| io::Error::new(io::ErrorKind::InvalidInput, "Not in field."))?;
+
+        Ok(SpendingKey(fs))
     }
 
     pub fn write<W: io::Write>(&self, mut writer: W) -> io::Result<()> {
@@ -163,7 +163,8 @@ impl<E: JubjubEngine> ProofGenerationKey<E> {
 
         // Reads a little endian integer into this representation.
         e.read_le(&mut &h[..])?;
-        let fs = E::Fs::from_repr(e).expect("should be a vaild scalar");
+
+        let fs = E::Fs::from_repr(e).map_err(|_| io::Error::new(io::ErrorKind::InvalidInput, "Not in field."))?;
 
         Ok(DecryptionKey(fs))
     }
@@ -226,16 +227,18 @@ impl<E: JubjubEngine> EncryptionKey<E> {
 
     pub fn read<R: io::Read>(reader: &mut R, params: &E::Params) -> io::Result<Self> {
         let pk_d = edwards::Point::<E, _>::read(reader, params)?;
-        let pk_d = pk_d.as_prime_order(params).unwrap();
+        let pk_d = pk_d
+            .as_prime_order(params)
+            .ok_or(io::Error::new(io::ErrorKind::InvalidInput, "Not in the prime order subgroup."))?;
+
         Ok(EncryptionKey(pk_d))
     }
 
-    pub fn into_bytes(&self) -> [u8; 32] {
+    pub fn into_bytes(&self) -> io::Result<[u8; 32]> {
         let mut res = [0u8; 32];
-        self.write(&mut res[..])
-            .expect("should be able to serialize an EncryptionKey");
+        self.write(&mut res[..])?;
 
-        res
+        Ok(res)
     }
 }
 

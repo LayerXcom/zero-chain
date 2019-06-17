@@ -1,4 +1,5 @@
 //! Zerochain key components.
+//! (WARNING) Not yet completed review for cofactor checks.
 
 #![cfg_attr(not(feature = "std"), no_std)]
 #![cfg_attr(not(feature = "std"), feature(alloc))]
@@ -85,10 +86,9 @@ impl<E: JubjubEngine> SpendingKey<E> {
         let mut s_repr = <E::Fs as PrimeField>::Repr::default();
         s_repr.read_le(&mut reader)?;
 
-        match E::Fs::from_repr(s_repr) {
-            Ok(s) => Ok(SpendingKey(s)),
-            Err(_) => Err(io::Error::NotInField),
-        }
+        let fs = E::Fs::from_repr(s_repr).map_err(|_| io::Error::NotInField)?;
+
+        Ok(SpendingKey(fs))
     }
 
     pub fn write<W: io::Write>(&self, mut writer: W) -> io::Result<()> {
@@ -165,9 +165,9 @@ impl<E: JubjubEngine> ProofGenerationKey<E> {
     }
 
     /// Generate a decryption key
-    pub fn into_decryption_key(&self) -> DecryptionKey<E> {
+    pub fn into_decryption_key(&self) -> io::Result<DecryptionKey<E>> {
         let mut preimage = [0; 32];
-        self.0.write(&mut &mut preimage[..]).unwrap();
+        self.0.write(&mut &mut preimage[..])?;
 
         let mut h = Blake2s::with_params(32, &[], &[], CRH_BDK_PERSONALIZATION);
         h.update(&preimage);
@@ -177,23 +177,24 @@ impl<E: JubjubEngine> ProofGenerationKey<E> {
         let mut e = <E::Fs as PrimeField>::Repr::default();
 
         // Reads a little endian integer into this representation.
-        e.read_le(&mut &h[..]).unwrap();
-        let fs = E::Fs::from_repr(e).expect("should be a vaild scalar");
+        e.read_le(&mut &h[..])?;
 
-        DecryptionKey(fs)
+        let fs = E::Fs::from_repr(e).map_err(|_| io::Error::NotInField)?;
+
+        Ok(DecryptionKey(fs))
     }
 
     /// Generate a encryption key from a proof generation key.
     pub fn into_encryption_key(
         &self,
         params: &E::Params
-    ) -> EncryptionKey<E>
+    ) -> io::Result<EncryptionKey<E>>
     {
         let pk_d = params
             .generator(FixedGenerators::Diversifier)
-            .mul(self.into_decryption_key().0, params);
+            .mul(self.into_decryption_key()?.0, params);
 
-        EncryptionKey(pk_d)
+        Ok(EncryptionKey(pk_d))
     }
 }
 
@@ -208,7 +209,7 @@ impl<E: JubjubEngine> EncryptionKey<E> {
     pub fn from_seed(
         seed: &[u8],
         params: &E::Params
-    ) -> Self
+    ) -> io::Result<Self>
     {
         Self::from_spending_key(&SpendingKey::from_seed(seed), params)
     }
@@ -216,7 +217,7 @@ impl<E: JubjubEngine> EncryptionKey<E> {
     pub fn from_spending_key(
         spending_key: &SpendingKey<E>,
         params: &E::Params,
-    ) -> Self
+    ) -> io::Result<Self>
     {
         let proof_generation_key = ProofGenerationKey::from_spending_key(spending_key, params);
         proof_generation_key.into_encryption_key(params)
@@ -241,16 +242,16 @@ impl<E: JubjubEngine> EncryptionKey<E> {
 
     pub fn read<R: io::Read>(reader: &mut R, params: &E::Params) -> io::Result<Self> {
         let pk_d = edwards::Point::<E, _>::read(reader, params)?;
-        let pk_d = pk_d.as_prime_order(params).unwrap();
+        let pk_d = pk_d.as_prime_order(params).ok_or(io::Error::NotInField)?;
+
         Ok(EncryptionKey(pk_d))
     }
 
-    pub fn into_bytes(&self) -> [u8; 32] {
+    pub fn into_bytes(&self) -> io::Result<[u8; 32]> {
         let mut res = [0u8; 32];
-        self.write(&mut res[..])
-            .expect("should be able to serialize an EncryptionKey");
+        self.write(&mut res[..])?;
 
-        res
+        Ok(res)
     }
 }
 
@@ -267,7 +268,7 @@ mod tests {
         let rng = &mut XorShiftRng::from_seed([0x3dbe6259, 0x8d313d76, 0x3237db17, 0xe5bc0654]);
 
         let spending_key = fs::Fs::rand(rng);
-        let addr1 = EncryptionKey::from_spending_key(&SpendingKey(spending_key), params);
+        let addr1 = EncryptionKey::from_spending_key(&SpendingKey(spending_key), params).unwrap();
 
         let mut v = vec![];
         addr1.write(&mut v).unwrap();

@@ -157,12 +157,15 @@ fn alice_init() -> (PkdAddress, Ciphertext) {
 
 	let p_g = FixedGenerators::Diversifier; // 1 same as NoteCommitmentRandomness;
 
-	let address = EncryptionKey::<Bls12>::from_seed(alice_seed, &JUBJUB);
+	let address = EncryptionKey::<Bls12>::from_seed(alice_seed, &JUBJUB)
+		.expect("should be generated encryption key from seed.");
 
 	// The default balance is not encrypted with randomness.
 	let enc_alice_bal = elgamal::Ciphertext::encrypt(alice_value, fs::Fs::one(), &address, p_g, &JUBJUB);
 
-	let decryption_key = ProofGenerationKey::<Bls12>::from_seed(alice_seed, &JUBJUB).into_decryption_key();
+	let decryption_key = ProofGenerationKey::<Bls12>::from_seed(alice_seed, &JUBJUB)
+		.into_decryption_key()
+		.expect("should be converted to decryption key.");
 
 	let dec_alice_bal = enc_alice_bal.decrypt(&decryption_key, p_g, &JUBJUB).unwrap();
 	assert_eq!(dec_alice_bal, alice_value);

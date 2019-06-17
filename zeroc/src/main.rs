@@ -312,7 +312,8 @@ fn subcommand_tx(mut term: term::Term, root_dir: PathBuf, matches: &ArgMatches) 
                 .expect("should be fetched TransactionBaseFee from ConfTransfer module of Zerochain.");
             let fee = hexstr_to_u64(fee_str) as u32;
 
-            let decryption_key = ProofGenerationKey::<Bls12>::from_seed(&seed[..], &PARAMS).into_decryption_key();
+            let decryption_key = ProofGenerationKey::<Bls12>::from_seed(&seed[..], &PARAMS).into_decryption_key()
+                .expect("should be generated decryption key from seed.");
 
             let mut decrypted_key = [0u8; 32];
             decryption_key.0.into_repr().write_le(&mut &mut decrypted_key[..])
