@@ -80,6 +80,27 @@ impl<E: JubjubEngine> SpendingKey<E> {
     {
         PrivateKey(self.0).randomize(alpha)
     }
+
+    pub fn read<R: io::Read>(mut reader: R) -> io::Result<Self> {
+        let mut s_repr = <E::Fs as PrimeField>::Repr::default();
+        s_repr.read_le(&mut reader)?;
+
+        match E::Fs::from_repr(s_repr) {
+            Ok(s) => Ok(SpendingKey(s)),
+            Err(_) => Err(io::Error::NotInField),
+        }
+    }
+
+    pub fn write<W: io::Write>(&self, mut writer: W) -> io::Result<()> {
+        self.0.into_repr().write_le(&mut writer)?;
+        Ok(())
+    }
+
+    pub fn into_bytes(&self) -> io::Result<[u8; 32]> {
+        let mut res = [0u8; 32];
+        self.write(&mut &mut res[..])?;
+        Ok(res)
+    }
 }
 
 /// Proof generation key is needed when each user generate zk-proofs.
@@ -224,7 +245,7 @@ impl<E: JubjubEngine> EncryptionKey<E> {
         Ok(EncryptionKey(pk_d))
     }
 
-    pub fn to_bytes(&self) -> [u8; 32] {
+    pub fn into_bytes(&self) -> [u8; 32] {
         let mut res = [0u8; 32];
         self.write(&mut res[..])
             .expect("should be able to serialize an EncryptionKey");

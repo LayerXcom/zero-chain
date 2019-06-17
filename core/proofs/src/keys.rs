@@ -65,6 +65,27 @@ impl<E: JubjubEngine> SpendingKey<E> {
     {
         PrivateKey(self.0).randomize(alpha)
     }
+
+    pub fn read<R: io::Read>(mut reader: R) -> io::Result<Self> {
+        let mut s_repr = <E::Fs as PrimeField>::Repr::default();
+        s_repr.read_le(&mut reader)?;
+
+        match E::Fs::from_repr(s_repr) {
+            Ok(s) => Ok(SpendingKey(s)),
+            Err(_) => Err(io::Error::new(io::ErrorKind::InvalidInput, "Not in field.")),
+        }
+    }
+
+    pub fn write<W: io::Write>(&self, mut writer: W) -> io::Result<()> {
+        self.0.into_repr().write_le(&mut writer)?;
+        Ok(())
+    }
+
+    pub fn into_bytes(&self) -> io::Result<[u8; 32]> {
+        let mut res = [0u8; 32];
+        self.write(&mut &mut res[..])?;
+        Ok(res)
+    }
 }
 
 /// Proof generation key is needed when each user generate zk-proofs.
@@ -129,9 +150,9 @@ impl<E: JubjubEngine> ProofGenerationKey<E> {
     }
 
     /// Generate a decryption key
-    pub fn into_decryption_key(&self) -> DecryptionKey<E> {
+    pub fn into_decryption_key(&self) -> io::Result<DecryptionKey<E>> {
         let mut preimage = [0; 32];
-        self.0.write(&mut &mut preimage[..]).unwrap();
+        self.0.write(&mut &mut preimage[..])?;
 
         let mut h = Blake2s::with_params(32, &[], &[], CRH_BDK_PERSONALIZATION);
         h.update(&preimage);
@@ -141,10 +162,10 @@ impl<E: JubjubEngine> ProofGenerationKey<E> {
         let mut e = <E::Fs as PrimeField>::Repr::default();
 
         // Reads a little endian integer into this representation.
-        e.read_le(&mut &h[..]).unwrap();
+        e.read_le(&mut &h[..])?;
         let fs = E::Fs::from_repr(e).expect("should be a vaild scalar");
 
-        DecryptionKey(fs)
+        Ok(DecryptionKey(fs))
     }
 
     /// Generate a encryption key from a proof generation key.
@@ -209,7 +230,7 @@ impl<E: JubjubEngine> EncryptionKey<E> {
         Ok(EncryptionKey(pk_d))
     }
 
-    pub fn to_bytes(&self) -> [u8; 32] {
+    pub fn into_bytes(&self) -> [u8; 32] {
         let mut res = [0u8; 32];
         self.write(&mut res[..])
             .expect("should be able to serialize an EncryptionKey");

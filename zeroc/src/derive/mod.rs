@@ -4,7 +4,7 @@
 use parity_codec::{Encode, Decode};
 use primitives::crypto::{Ss58Codec, Derive, DeriveJunction};
 use blake2_rfc::blake2b::Blake2b;
-use proofs::keys::{EncryptionKey, SpendingKey};
+use proofs::keys::{EncryptionKey, SpendingKey, prf_expand_vec};
 use scrypto::jubjub::JubjubEngine;
 use pairing::bls12_381::Bls12;
 use byteorder::{ByteOrder, LittleEndian, ReadBytesExt, WriteBytesExt};
@@ -26,7 +26,7 @@ struct EncKeyFingerPrint([u8; FINGER_PRINT_LENGTH]);
 impl<E: JubjubEngine> From<&EncryptionKey<E>> for EncKeyFingerPrint {
     fn from(enc_key: &EncryptionKey<E>) -> Self {
         let mut h = Blake2b::with_params(32, &[], &[], EKFP_PERSONALIZATION);
-        h.update(&enc_key.to_bytes());
+        h.update(&enc_key.into_bytes());
 
         let mut enckey_fp = [0u8; 32];
         enckey_fp.copy_from_slice(h.finalize().as_bytes());
@@ -83,11 +83,18 @@ impl Derivation for ExtendedSpendingKey {
             ChildIndex::Hardened(i) => {
                 let mut i_le = [0u8; 4];
                 LittleEndian::write_u32(&mut i_le, i + (1 << 31));
-
-
+                prf_expand_vec(
+                    &self.chain_code.0,
+                    &[&[0x11], &self.spending_key.into_bytes(), &i_le],
+                )
             },
             ChildIndex::NonHardened(i) => {
-
+                let mut i_le = [0u8; 4];
+                LittleEndian::write_u32(&mut i_le, i);
+                prf_expand_vec(
+                    &self.chain_code.0,
+                    &[&[0x12], &enc_key.into_bytes(), &i_le],
+                )
             }
         };
 
@@ -95,7 +102,7 @@ impl Derivation for ExtendedSpendingKey {
             depth: self.depth + 1,
             parent_enckey_tag: EncKeyFingerPrint::from(&enc_key).tag(),
             child_index: i,
-            chain_code: 
+            chain_code:
         }
     }
 }
