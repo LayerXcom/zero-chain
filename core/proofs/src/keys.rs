@@ -20,12 +20,25 @@ use std::io;
 use parity_codec::{Encode, Decode};
 use blake2_rfc::{
     blake2s::Blake2s,
-    blake2b::Blake2b,
+    blake2b::{Blake2b, Blake2bResult},
 };
 
 pub const PRF_EXPAND_PERSONALIZATION: &'static [u8; 16] = b"zech_ExpandSeed_";
 pub const CRH_BDK_PERSONALIZATION: &'static [u8; 8] = b"zech_bdk";
 pub const KEY_DIVERSIFICATION_PERSONALIZATION: &'static [u8; 8] = b"zech_div";
+
+fn prf_expand(sk: &[u8], t: &[u8]) -> Blake2bResult {
+    prf_expand_vec(sk, &[t])
+}
+
+pub fn prf_expand_vec(sk: &[u8], ts: &[&[u8]]) -> Blake2bResult {
+    let mut h = Blake2b::with_params(64, &[], &[], PRF_EXPAND_PERSONALIZATION);
+    h.update(sk);
+    for t in ts {
+        h.update(t);
+    }
+    h.finalize()
+}
 
 /// Each account needs the spending key to send transactions.
 #[derive(Clone)]
@@ -35,6 +48,7 @@ impl<E: JubjubEngine> Copy for SpendingKey<E> {}
 
 impl<E: JubjubEngine> SpendingKey<E> {
     pub fn from_seed(seed: &[u8]) -> Self {
+        // TODO: let fs = E::Fs::to_uniform(prf_expand(seed, &[0x00]).as_bytes());
         let mut h = Blake2b::with_params(64, &[], &[], PRF_EXPAND_PERSONALIZATION);
         h.update(seed);
         let res = h.finalize();
@@ -193,6 +207,14 @@ impl<E: JubjubEngine> EncryptionKey<E> {
         let pk_d = edwards::Point::<E, _>::read(reader, params)?;
         let pk_d = pk_d.as_prime_order(params).unwrap();
         Ok(EncryptionKey(pk_d))
+    }
+
+    pub fn to_bytes(&self) -> [u8; 32] {
+        let mut res = [0u8; 32];
+        self.write(&mut res[..])
+            .expect("should be able to serialize an EncryptionKey");
+
+        res
     }
 }
 

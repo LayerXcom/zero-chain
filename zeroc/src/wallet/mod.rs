@@ -1,5 +1,5 @@
 use std::{
-    collections::BTreeMap,
+    collections::HashMap,
     fmt, fs,
     io::{Read, Write},
     path::{Path, PathBuf},
@@ -12,32 +12,40 @@ mod error;
 
 
 #[derive(Clone, PartialEq, Eq, PartialOrd, Ord)]
-pub struct WalletName(String);
+pub struct AccountName(String);
+
+pub struct Encrypted();
 
 /// Wallet object
 pub struct Wallet {
-    pub name: WalletName,
-    pub encrypted_key: Vec<u8>,
+    // pub name: WalletName,
+    pub encrypted_keys: HashMap<AccountName, Vec<u8>>,
     pub root_dir: PathBuf,
+    pub current_index: ,
+    pub account_name_map: 
     pub config: config::Config;
 }
 
 impl Wallet {
     pub fn new<P: AsRef<Path>>(
         root_dir: P,
-        name: WalletName,
         config: config::Config,
+        account_name: AccountName,
         encrypted_key: Vec<u8>,
     ) -> Self {
         Wallet {
-            name: name,
-            encrypted_key: Vec<u8>,
+            encrypted_key: HashMap::new(),
             root_dir: root_dir,
             config: config,
         }
     }
 
-    pub fn save(&self) -> Result<()> {
+    pub fn save(
+        &self,
+        account_name: AccountName,
+        encrypted_key: Vec<u8>
+    ) -> Result<()>
+    {
 
     }
 
@@ -53,5 +61,9 @@ impl Wallet {
         // 3. (Optional) save the public key
 
         Ok(())
+    }
+
+    pub fn load() -> Self {
+
     }
 }
