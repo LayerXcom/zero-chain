@@ -1,4 +1,4 @@
-//! Alias module of `/core/crypto` crate due to std and no_std compatibility.
+//! (TODO) Alias module of `/core/crypto` crate due to std and no_std compatibility.
 
 use scrypto::jubjub::{
         JubjubEngine,

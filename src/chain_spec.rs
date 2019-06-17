@@ -134,9 +134,6 @@ fn testnet_genesis(initial_authorities: Vec<AuthorityId>, endowed_accounts: Vec<
 		conf_transfer: Some(ConfTransferConfig {
 			encrypted_balance: vec![alice_init()],
 			transaction_base_fee: 1,
-			transaction_byte_fee: 0,
-			transfer_fee: 0,
-			creation_fee: 0,
 			verifying_key: get_pvk(),
 			_genesis_phantom_data: Default::default(),
 		})

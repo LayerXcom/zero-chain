@@ -31,7 +31,6 @@ use parity_codec::{Compact, Encode};
 use zerochain_runtime::{UncheckedExtrinsic, Call, ConfTransferCall};
 use bip39::{Mnemonic, Language, MnemonicType};
 
-
 mod setup;
 mod utils;
 mod config;
@@ -346,7 +345,6 @@ fn subcommand_tx(mut term: term::Term, root_dir: PathBuf, matches: &ArgMatches) 
                             fee
                     ).expect("fails to generate the tx");
 
-
             {
                 println!("Start submitting a transaction to Zerochain...");
 
@@ -365,8 +363,8 @@ fn subcommand_tx(mut term: term::Term, root_dir: PathBuf, matches: &ArgMatches) 
                     Proof::from_slice(&tx.proof[..]),
                     PkdAddress::from_slice(&tx.address_sender[..]),
                     PkdAddress::from_slice(&tx.address_recipient[..]),
-                    zCiphertext::from_slice(&tx.enc_val_sender[..]),
-                    zCiphertext::from_slice(&tx.enc_val_recipient[..]),
+                    zCiphertext::from_slice(&tx.enc_amount_sender[..]),
+                    zCiphertext::from_slice(&tx.enc_amount_recipient[..]),
                     sig_vk,
                     zCiphertext::from_slice(&tx.enc_fee[..]),
                 ));

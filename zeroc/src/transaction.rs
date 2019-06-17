@@ -17,16 +17,16 @@ use proofs::{
 };
 use rand::Rng;
 
+/// Transaction components which is needed to create a signed `UncheckedExtrinsic`.
 pub struct Transaction{
-    pub rvk: [u8; 32],                   // 32 bytes
     pub proof: [u8; 192],                // 192 bytes
     pub address_sender: [u8; 32],        // 32 bytes
     pub address_recipient: [u8; 32],     // 32 bytes
-    pub enc_val_recipient: [u8; 64],     // 64 bytes
-	pub enc_val_sender: [u8; 64],        // 64 bytes
-	pub enc_bal_sender: [u8; 64],        // 64 bytes
+    pub enc_amount_recipient: [u8; 64],  // 64 bytes
+	pub enc_amount_sender: [u8; 64],     // 64 bytes
+	pub enc_fee: [u8; 64],			     // 64 bytes
 	pub rsk: [u8; 32],                   // 32 bytes
-	pub enc_fee: [u8; 64]				 // 64 bytes
+	pub rvk: [u8; 32],                   // 32 bytes
 }
 
 impl Transaction {
@@ -62,7 +62,7 @@ impl Transaction {
 			rng,
 			&PARAMS,
 			fee
-		).unwrap();
+		).expect("Should not be faild to generate a proof.");
 
 		// Generate the re-randomized sign key
 		let rsk = spending_key.into_rsk(alpha, &PARAMS);
@@ -81,14 +81,11 @@ impl Transaction {
 		let mut b_address_recipient = [0u8; 32];
 		proof_output.address_recipient.write(&mut b_address_recipient[..]).map_err(|_| io::Error::InvalidData)?;
 
-		let mut enc_val_recipient = [0u8; 64];
-		proof_output.cipher_val_r.write(&mut enc_val_recipient[..]).map_err(|_| io::Error::InvalidData)?;
+		let mut enc_amount_recipient = [0u8; 64];
+		proof_output.cipher_val_r.write(&mut enc_amount_recipient[..]).map_err(|_| io::Error::InvalidData)?;
 
-		let mut enc_val_sender = [0u8; 64];
-		proof_output.cipher_val_s.write(&mut enc_val_sender[..]).map_err(|_| io::Error::InvalidData)?;
-
-		let mut enc_bal_sender = [0u8; 64];
-		proof_output.cipher_balance.write(&mut enc_bal_sender[..]).map_err(|_| io::Error::InvalidData)?;
+		let mut enc_amount_sender = [0u8; 64];
+		proof_output.cipher_val_s.write(&mut enc_amount_sender[..]).map_err(|_| io::Error::InvalidData)?;
 
 		let mut enc_fee_sender = [0u8; 64];
 		proof_output.cipher_fee_s.write(&mut enc_fee_sender[..]).map_err(|_| io::Error::InvalidData)?;
@@ -98,9 +95,8 @@ impl Transaction {
 			rvk: rvk_bytes,
 			address_sender: b_address_sender,
 			address_recipient: b_address_recipient,
-			enc_val_recipient: enc_val_recipient,
-			enc_val_sender: enc_val_sender,
-			enc_bal_sender: enc_bal_sender,
+			enc_amount_recipient,
+			enc_amount_sender,
 			rsk: rsk_bytes,
 			enc_fee: enc_fee_sender,
 		};

@@ -157,14 +157,8 @@ decl_storage! {
     trait Store for Module<T: Trait> as ConfTransfer {
         /// The encrypted balance for each account
         pub EncryptedBalance get(encrypted_balance) config() : map PkdAddress => Option<Ciphertext>;
-        /// The fee required to make a transfer.
-        pub TransferFee get(transfer_fee) config(): FeeAmount;
-        /// The fee required to create an account.
-        pub CreationFee get(creation_fee) config(): FeeAmount;
         /// The fee to be paid for making a transaction; the base.
         pub TransactionBaseFee get(transaction_base_fee) config(): FeeAmount;
-        /// The fee to be paid for making a transaction; the per-byte portion.
-        pub TransactionByteFee get(transaction_byte_fee) config(): FeeAmount;
         /// The verification key of zk proofs (only readable)
         pub VerifyingKey get(verifying_key) config(): PreparedVk;
     }
@@ -341,9 +335,6 @@ mod tests {
             encrypted_balance: vec![alice_init()],
             verifying_key: get_pvk(),
             transaction_base_fee: 1,
-			transaction_byte_fee: 0,
-			transfer_fee: 0,
-			creation_fee: 0,
             _genesis_phantom_data: Default::default(),
         }.build_storage().unwrap().0);
 

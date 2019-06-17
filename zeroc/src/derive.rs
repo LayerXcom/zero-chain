@@ -1,5 +1,9 @@
 use parity_codec::{Encode, Decode};
 use primitives::crypto::{Ss58Codec, Derive, DeriveJunction};
+use blake2_rfc::blake2b::Blake2b;
+use proofs::keys::{EncryptionKey, SpendingKey};
+
+const EKFP_PERSONALIZATION: &'static [u8; 16] = b"ZerochainEFinger";
 
 #[derive(Clone, Copy, Debug, PartialEq)]
 struct ChainCode([u8; 32]);
@@ -9,8 +13,8 @@ struct ChainCode([u8; 32]);
 //     pub chaincode: ChainCode,
 // }
 
-
-
+/// A encryption key fingerprint
+struct EncKeyFingerPrint([u8; 32]);
 
 
 #[derive(PartialEq, Eq, PartialOrd, Ord, Clone, Encode, Decode, Default)]

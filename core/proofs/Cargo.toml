@@ -15,6 +15,8 @@ bellman-verifier = { path = "../bellman-verifier" }
 hex-literal = '0.1'
 parity-codec = "3.1"
 parity-codec-derive = "3.1"
+keys = { path = "../keys"}
+zjubjub = { package = "jubjub", path = "../jubjub" }
 
 [dependencies.primitives]
 git = 'https://github.com/osuketh/substrate.git'
