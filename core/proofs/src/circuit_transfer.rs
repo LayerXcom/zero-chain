@@ -423,11 +423,11 @@ mod tests {
         let proof_generation_key_s = ProofGenerationKey::<Bls12>::from_seed(&sk_fs_s[..], params);
         let proof_generation_key_r = ProofGenerationKey::<Bls12>::from_seed(&sk_fs_r[..], params);
 
-        let decryption_key_s = proof_generation_key_s.into_decryption_key();
-        let decryption_key_r = proof_generation_key_r.into_decryption_key();
+        let decryption_key_s = proof_generation_key_s.into_decryption_key().unwrap();
+        let decryption_key_r = proof_generation_key_r.into_decryption_key().unwrap();
 
-        let address_recipient = EncryptionKey::from_seed(&sk_fs_r, params);
-        let address_sender_xy = proof_generation_key_s.into_encryption_key(params).0.into_xy();
+        let address_recipient = EncryptionKey::from_seed(&sk_fs_r, params).unwrap();
+        let address_sender_xy = proof_generation_key_s.into_encryption_key(params).unwrap().0.into_xy();
         let address_recipient_xy = address_recipient.0.into_xy();
 
         let alpha: fs::Fs = rng.gen();

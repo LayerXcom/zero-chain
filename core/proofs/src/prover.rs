@@ -1,9 +1,12 @@
-use bellman::groth16::{
-    create_random_proof,
-    verify_proof,
-    Parameters,
-    PreparedVerifyingKey,
-    Proof,
+use bellman::{
+        groth16::{
+            create_random_proof,
+            verify_proof,
+            Parameters,
+            PreparedVerifyingKey,
+            Proof,
+        },
+        SynthesisError,
 };
 use pairing::Field;
 use rand::{Rand, Rng};
@@ -47,12 +50,12 @@ impl<E: JubjubEngine> TransferProof<E> {
         rng: &mut R,
         params: &E::Params,
         fee: u32,
-    ) -> Result<Self, &'static str>
+    ) -> Result<Self, SynthesisError>
     {
         let randomness = E::Fs::rand(rng);
 
-        let bdk = proof_generation_key.into_decryption_key();
-        let ek_sender = proof_generation_key.into_encryption_key(params);
+        let bdk = proof_generation_key.into_decryption_key()?;
+        let ek_sender = proof_generation_key.into_encryption_key(params)?;
 
         let rvk = PublicKey(proof_generation_key.0.clone().into())
             .randomize(
@@ -75,8 +78,7 @@ impl<E: JubjubEngine> TransferProof<E> {
         };
 
         // Crate proof
-        let proof = create_random_proof(instance, proving_key, rng)
-            .expect("proving should not fail");
+        let proof = create_random_proof(instance, proving_key, rng)?;
 
         let mut public_input = [E::Fr::zero(); 18];
 
@@ -150,9 +152,11 @@ impl<E: JubjubEngine> TransferProof<E> {
             public_input[17] = y;
         }
 
-        if let Err(_) = verify_proof(prepared_vk, &proof, &public_input[..]) {
-            return Err("Invalid zk proof")
-        }
+        assert!(verify_proof(prepared_vk, &proof, &public_input[..])?);
+
+        // if let Err(_) = verify_proof(prepared_vk, &proof, &public_input[..]) {
+        //     return Err("Invalid zk proof")
+        // }
 
         let transfer_proof = TransferProof {
             proof: proof,
@@ -222,8 +226,8 @@ mod tests {
         let proof_generation_key = ProofGenerationKey::<Bls12>::from_seed(&sender_seed, params);
 
         let pgk_sender = ProofGenerationKey::<Bls12>::from_seed(&sender_seed, params);
-        let ek_recipient = EncryptionKey::<Bls12>::from_seed(&recipient_seed, params);
-        let bdk = pgk_sender.into_decryption_key();
+        let ek_recipient = EncryptionKey::<Bls12>::from_seed(&recipient_seed, params).unwrap();
+        let bdk = pgk_sender.into_decryption_key().unwrap();
 
         let r_fs = fs::Fs::rand(rng);
         let public_key = EncryptionKey(params.generator(p_g).mul(bdk.0, params));

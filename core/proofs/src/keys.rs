@@ -172,13 +172,13 @@ impl<E: JubjubEngine> ProofGenerationKey<E> {
     pub fn into_encryption_key(
         &self,
         params: &E::Params
-    ) -> EncryptionKey<E>
+    ) -> io::Result<EncryptionKey<E>>
     {
         let pk_d = params
             .generator(FixedGenerators::NoteCommitmentRandomness)
-            .mul(self.into_decryption_key().0, params);
+            .mul(self.into_decryption_key()?.0, params);
 
-        EncryptionKey(pk_d)
+        Ok(EncryptionKey(pk_d))
     }
 }
 
@@ -193,7 +193,7 @@ impl<E: JubjubEngine> EncryptionKey<E> {
     pub fn from_seed(
         seed: &[u8],
         params: &E::Params
-    ) -> Self
+    ) -> io::Result<Self>
     {
         Self::from_spending_key(&SpendingKey::from_seed(seed), params)
     }
@@ -201,7 +201,7 @@ impl<E: JubjubEngine> EncryptionKey<E> {
     pub fn from_spending_key(
         spending_key: &SpendingKey<E>,
         params: &E::Params,
-    ) -> Self
+    ) -> io::Result<Self>
     {
         let proof_generation_key = ProofGenerationKey::from_spending_key(spending_key, params);
         proof_generation_key.into_encryption_key(params)
@@ -252,7 +252,7 @@ mod tests {
         let rng = &mut XorShiftRng::from_seed([0x3dbe6259, 0x8d313d76, 0x3237db17, 0xe5bc0654]);
 
         let spending_key = fs::Fs::rand(rng);
-        let addr1 = EncryptionKey::from_spending_key(&SpendingKey(spending_key), params);
+        let addr1 = EncryptionKey::from_spending_key(&SpendingKey(spending_key), params).unwrap();
 
         let mut v = vec![];
         addr1.write(&mut v).unwrap();
