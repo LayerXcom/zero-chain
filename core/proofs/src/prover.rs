@@ -152,11 +152,9 @@ impl<E: JubjubEngine> TransferProof<E> {
             public_input[17] = y;
         }
 
-        assert!(verify_proof(prepared_vk, &proof, &public_input[..])?);
-
-        // if let Err(_) = verify_proof(prepared_vk, &proof, &public_input[..]) {
-        //     return Err("Invalid zk proof")
-        // }
+        if let Err(_) = verify_proof(prepared_vk, &proof, &public_input[..]) {
+            return Err(SynthesisError::MalformedVerifyingKey)
+        }
 
         let transfer_proof = TransferProof {
             proof: proof,

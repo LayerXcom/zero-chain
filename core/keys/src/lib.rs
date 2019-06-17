@@ -98,7 +98,7 @@ impl<E: JubjubEngine> SpendingKey<E> {
 
     pub fn into_bytes(&self) -> io::Result<[u8; 32]> {
         let mut res = [0u8; 32];
-        self.write(&mut &mut res[..])?;
+        self.write(&mut res[..])?;
         Ok(res)
     }
 }
