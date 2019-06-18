@@ -64,6 +64,7 @@ mod tests {
     use pairing::PrimeField;
     use jubjub::curve::{FixedGenerators, JubjubBls12, fs::Fs, ToUniform, JubjubParams};
     use parity_codec::{Encode, Decode};
+    use keys::EncryptionKey;
 
     #[test]
     fn test_ciphertext_into_from() {
@@ -80,7 +81,7 @@ mod tests {
         let params = &JubjubBls12::new();
         let p_g = FixedGenerators::Diversifier;
 
-        let public_key = params.generator(p_g).mul(sk_fs, params).into();
+        let public_key = EncryptionKey(params.generator(p_g).mul(sk_fs, params));
         let value: u32 = 5 as u32;
 
         let ciphertext1 = elgamal::Ciphertext::encrypt(value, r_fs, &public_key, p_g, params);
@@ -106,7 +107,7 @@ mod tests {
         let params = &JubjubBls12::new();
         let p_g = FixedGenerators::Diversifier;
 
-        let public_key = params.generator(p_g).mul(sk_fs, params).into();
+        let public_key = EncryptionKey(params.generator(p_g).mul(sk_fs, params));
         let value: u32 = 5 as u32;
 
         let ciphertext1 = elgamal::Ciphertext::encrypt(value, r_fs, &public_key, p_g, params);
@@ -127,7 +128,7 @@ mod tests {
         let sk_fs = Fs::rand(rng);
         let r_fs = Fs::rand(rng);
 
-        let public_key = params.generator(p_g).mul(sk_fs, params);
+        let public_key = EncryptionKey(params.generator(p_g).mul(sk_fs, params));
         let value = 10 as u32;
 
         let ciphertext = elgamal::Ciphertext::encrypt(value, r_fs, &public_key, p_g, params);

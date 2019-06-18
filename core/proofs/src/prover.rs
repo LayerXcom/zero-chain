@@ -1,9 +1,12 @@
-use bellman::groth16::{
-    create_random_proof,
-    verify_proof,
-    Parameters,
-    PreparedVerifyingKey,
-    Proof,
+use bellman::{
+        groth16::{
+            create_random_proof,
+            verify_proof,
+            Parameters,
+            PreparedVerifyingKey,
+            Proof,
+        },
+        SynthesisError,
 };
 use pairing::Field;
 use rand::{Rand, Rng};
@@ -17,7 +20,7 @@ use scrypto::{
     },
 };
 use crate::circuit_transfer::Transfer;
-use crate::primitives::{
+use crate::keys::{
     EncryptionKey,
     ProofGenerationKey,
 };
@@ -47,12 +50,12 @@ impl<E: JubjubEngine> TransferProof<E> {
         rng: &mut R,
         params: &E::Params,
         fee: u32,
-    ) -> Result<Self, &'static str>
+    ) -> Result<Self, SynthesisError>
     {
         let randomness = E::Fs::rand(rng);
 
-        let bdk = proof_generation_key.bdk();
-        let ek_sender = proof_generation_key.into_encryption_key(params);
+        let bdk = proof_generation_key.into_decryption_key()?;
+        let ek_sender = proof_generation_key.into_encryption_key(params)?;
 
         let rvk = PublicKey(proof_generation_key.0.clone().into())
             .randomize(
@@ -65,25 +68,24 @@ impl<E: JubjubEngine> TransferProof<E> {
             params: params,
             value: Some(value),
             remaining_balance: Some(remaining_balance),
-            randomness: Some(randomness.clone()),
-            alpha: Some(alpha.clone()),
-            proof_generation_key: Some(proof_generation_key.clone()),
-            decryption_key: Some(bdk.clone()),
+            randomness: Some(&randomness),
+            alpha: Some(&alpha),
+            proof_generation_key: Some(&proof_generation_key),
+            decryption_key: Some(&bdk.0),
             pk_d_recipient: Some(address_recipient.0.clone()),
-            encrypted_balance: Some(ciphertext_balance.clone()),
+            encrypted_balance: Some(&ciphertext_balance),
             fee: Some(fee)
         };
 
         // Crate proof
-        let proof = create_random_proof(instance, proving_key, rng)
-            .expect("proving should not fail");
+        let proof = create_random_proof(instance, proving_key, rng)?;
 
         let mut public_input = [E::Fr::zero(); 18];
 
         let cipher_val_s = Ciphertext::encrypt(
             value,
             randomness,
-            &ek_sender.0,
+            &ek_sender,
             FixedGenerators::NoteCommitmentRandomness,
             params
         );
@@ -91,7 +93,7 @@ impl<E: JubjubEngine> TransferProof<E> {
         let cipher_val_r = Ciphertext::encrypt(
             value,
             randomness,
-            &address_recipient.0,
+            &address_recipient,
             FixedGenerators::NoteCommitmentRandomness,
             params
         );
@@ -99,7 +101,7 @@ impl<E: JubjubEngine> TransferProof<E> {
         let cipher_fee_s = Ciphertext::encrypt(
             fee,
             randomness,
-            &ek_sender.0,
+            &ek_sender,
             FixedGenerators::NoteCommitmentRandomness,
             params
         );
@@ -151,7 +153,7 @@ impl<E: JubjubEngine> TransferProof<E> {
         }
 
         if let Err(_) = verify_proof(prepared_vk, &proof, &public_input[..]) {
-            return Err("Invalid zk proof")
+            return Err(SynthesisError::MalformedVerifyingKey)
         }
 
         let transfer_proof = TransferProof {
@@ -173,7 +175,7 @@ impl<E: JubjubEngine> TransferProof<E> {
 mod tests {
     use super::*;
     use rand::{SeedableRng, XorShiftRng, Rng};
-    use crate::primitives::{ProofGenerationKey, EncryptionKey};
+    use crate::keys::{ProofGenerationKey, EncryptionKey};
     use scrypto::jubjub::{fs, ToUniform, JubjubParams, JubjubBls12};
     use crate::elgamal::elgamal_extend;
     use pairing::{PrimeField, bls12_381::Bls12};
@@ -216,17 +218,17 @@ mod tests {
         let alpha = fs::Fs::rand(rng);
         let fee = 1 as u32;
 
-        let sender_ok = fs::Fs::rand(rng);
-        let recipient_ok = fs::Fs::rand(rng);
+        let sender_seed: [u8; 32] = rng.gen();
+        let recipient_seed: [u8; 32] = rng.gen();
 
-        let proof_generation_key = ProofGenerationKey::<Bls12>::from_origin_key(&sender_ok, params);
+        let proof_generation_key = ProofGenerationKey::<Bls12>::from_seed(&sender_seed, params);
 
-        let pgk_sender = ProofGenerationKey::<Bls12>::from_origin_key(&sender_ok, params);
-        let ek_recipient = EncryptionKey::<Bls12>::from_origin_key(&recipient_ok, params);
-        let bdk = pgk_sender.bdk();
+        let pgk_sender = ProofGenerationKey::<Bls12>::from_seed(&sender_seed, params);
+        let ek_recipient = EncryptionKey::<Bls12>::from_seed(&recipient_seed, params).unwrap();
+        let bdk = pgk_sender.into_decryption_key().unwrap();
 
         let r_fs = fs::Fs::rand(rng);
-        let public_key = params.generator(p_g).mul(bdk, params).into();
+        let public_key = EncryptionKey(params.generator(p_g).mul(bdk.0, params));
         let ciphertext_balance = Ciphertext::encrypt(balance, r_fs, &public_key, p_g, params);
 
         let (proving_key, prepared_vk) = get_pk_and_vk();

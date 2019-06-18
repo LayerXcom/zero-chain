@@ -19,7 +19,8 @@ RUN curl https://sh.rustup.rs -sSf | sh -s -- -y && \
     rustup default nightly && \
     ./build.sh && \
     rustup default stable && \
-    cargo build --$PROFILE
+    cargo build --$PROFILE --all && \
+    ./target/$PROFILE/zeroc snark setup
 
 # ===== SECOND STAGE ======
 
@@ -29,6 +30,7 @@ LABEL description="This is the 2nd stage: a very small image where we copy the Z
 ARG PROFILE=release
 
 COPY --from=builder /zerochain/target/$PROFILE/zerochain /usr/local/bin
+COPY --from=builder /zerochain/zeroc/verification.params /usr/local/bin/zeroc/verification.params
 
 RUN rm -rf /usr/lib/python* && \
     mkdir -p /root/.local/share && \
@@ -37,4 +39,5 @@ RUN rm -rf /usr/lib/python* && \
 EXPOSE 30333 9933 9944
 VOLUME ["/data"]
 
-CMD ["/usr/local/bin/zerochain", "--dev"]
+WORKDIR /usr/local/bin
+CMD ["zerochain", "--dev", "--ws-external"]

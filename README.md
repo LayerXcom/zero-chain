@@ -51,7 +51,7 @@ cargo build --release
 ```
 
 ## A brief tutorial for Sending transactions
-This tutorial will explain the basic confidential transfer on Zerochain. Alice has the **encrypted** balance of 100 coins and sends **encrypted** 10 coins to Bob. So, Alice's balance will be 90 coins and Bob will get the 10 coins. All operations are done encrypted by ElGamal encryption and zk-SNARKs.
+This tutorial will explain the basic confidential transfer on Zerochain. Alice has the **encrypted** balance of 100 coins and sends **encrypted** 10 coins to Bob. The encrypted fee will be  subtracted from her balance. (By default, a base fee parameter is set to 1.) So, Alice's balance will be 89 coins and Bob will get the 10 coins. All operations are done encrypted by ElGamal encryption and zk-SNARKs.
 
 Currently, there are two ways to interact with Zerochain.
 
@@ -76,46 +76,75 @@ cargo install --force --path zeroc
 Generating a proving key and verifying key of zk-SNARKs, which are used for confidential payments.
 
 ```
-zeroc setup
+zeroc snark setup
 ```
 
 #### Interacting with Zerochain
 
 - Generate key pairs
 
-Generate random key pairs(seed, decryption key, and encryption key(public key)).
+Generate random key pairs(mnemonic, seed, decryption key, and encryption key(public key)).
 Alice's and Bob's key pairs are fixed and Alice already has some coins.
 
 ```
-zeroc init
+zeroc wallet init
+```
+This commands will print out like
+
+```
+Phrase `engage garden health add describe opinion penalty jelly wire tower moral inside` is account:
+Seed: 0x3bb3f2f1667b7fccbf41818cc15c568a69eea54d86c8a035a82529bf1935dcc5
+Decryption key: 0x9635af3157964b7f6c94a58166dece3872f67835a4453b47c7ec7c1c7afc5104
+Encryption key (hex): 0xe035954716e1b3f4ff4c46d3f8ab4ad9453194381b9de7bae3789d97cd144b3c
+Address (SS58): 5H8gW16RYqv9pqCVPv8GrxMm3byTiCfe16aA16uXwENsbytA
 ```
 
 - Send transaction for confidential payment
 ```
-zeroc send -a <AMOUNT> -s <Sender's SEED> -to <Recipient's PUBLIC KEY>
+zeroc tx send -a <AMOUNT> -s <Sender's SEED> -to <Recipient's PUBLIC KEY>
 ```
 
 In the case, Alice sends 10 coins to Bob...
+- Alice's seed: `0x416c696365202020202020202020202020202020202020202020202020202020`
+- Bob's public key: `0x45e66da531088b55dcb3b273ca825454d79d2d1d5c4fa2ba4a12c1fa1ccd6389`
 
 ```
 zeroc send -a 10 -s 416c696365202020202020202020202020202020202020202020202020202020 -to 45e66da531088b55dcb3b273ca825454d79d2d1d5c4fa2ba4a12c1fa1ccd6389
 ```
+
+This alice's seed is fixed and she already has 10,000 coins as initial supply.
+For a convenient quick tutorial, all default parameters are set by default so you can just type the following command instead of above one.
+
+```
+zerc tx send
+```
+
+Alice, then, will have 9989 coins and Bob will have 10 coins.
+
 
 - Get balance
 
 Get a decrypyed balance using the user's decryption key.
 
 ```
-zeroc balance -d <DECRYPTION KEY>
+zeroc tx balance -d <DECRYPTION KEY>
 ```
 
 To get alice's balance...
 
 ```
-zeroc balance -d b0451b0bfab2830a75216779e010e0bfd2e6d0b4e4b1270dfcdfd0d538509e02
+zeroc tx balance -d b0451b0bfab2830a75216779e010e0bfd2e6d0b4e4b1270dfcdfd0d538509e02
 ```
 
-### Browser
+As tutorial, you can just type the following commands to get Alice's balance.
+
+```
+zeroc tx balance
+```
+
+It will print out `9989` coins in this tutorial.
+
+### Browser (MAY be obsoleted)
 
 1. Setup for zkSNARKs from CLI
 - Get the proving key and the veifying key for zk-SNARKs
@@ -158,6 +187,7 @@ You can send the transaction from firefox browser.
 
 ### Documentations
 - [Announcing Zerochain: Applying zk-SNARKs to Substrate](https://medium.com/layerx/announcing-zerochain-5b08e158355d)
+- (Work in progress) [Zerochain Book](https://layerxcom.github.io/zerochain-book/)
 
 ### References
 - [Substrate](https://github.com/paritytech/substrate)

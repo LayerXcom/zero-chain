@@ -19,9 +19,7 @@ use scrypto::jubjub::{
     PrimeOrder,
     edwards
 };
-use crate::primitives::{
-    ProofGenerationKey,
-};
+use crate::keys::ProofGenerationKey;
 use scrypto::circuit::{
     boolean::{self, Boolean},
     ecc::{self, EdwardsPoint},
@@ -34,12 +32,12 @@ pub struct Transfer<'a, E: JubjubEngine> {
     pub params: &'a E::Params,
     pub value: Option<u32>,
     pub remaining_balance: Option<u32>,
-    pub randomness: Option<E::Fs>,
-    pub alpha: Option<E::Fs>,
-    pub proof_generation_key: Option<ProofGenerationKey<E>>,
-    pub decryption_key: Option<E::Fs>,
+    pub randomness: Option<&'a E::Fs>,
+    pub alpha: Option<&'a E::Fs>,
+    pub proof_generation_key: Option<&'a ProofGenerationKey<E>>,
+    pub decryption_key: Option<&'a E::Fs>,
     pub pk_d_recipient: Option<edwards::Point<E, PrimeOrder>>,
-    pub encrypted_balance: Option<Ciphertext<E>>,
+    pub encrypted_balance: Option<&'a Ciphertext<E>>,
     pub fee: Option<u32>,
 }
 
@@ -72,7 +70,7 @@ impl<'a, E: JubjubEngine> Circuit<E> for Transfer<'a, E> {
         // decryption_key in circuit
         let decryption_key_v = boolean::field_into_boolean_vec_le(
             cs.namespace(|| format!("decryption_key")),
-            self.decryption_key
+            self.decryption_key.map(|e| *e)
         )?;
 
         // Ensure the validity of pk_d_sender
@@ -105,7 +103,7 @@ impl<'a, E: JubjubEngine> Circuit<E> for Transfer<'a, E> {
         // Generate the randomness into the circuit
         let rcv = boolean::field_into_boolean_vec_le(
             cs.namespace(|| format!("rcv")),
-            self.randomness
+            self.randomness.map(|e| *e)
         )?;
 
         // Generate the randomness * pk_d_sender in circuit
@@ -342,7 +340,7 @@ impl<'a, E: JubjubEngine> Circuit<E> for Transfer<'a, E> {
         // Re-randomized parameter for pgk
         let alpha = boolean::field_into_boolean_vec_le(
             cs.namespace(|| "alpha"),
-            self.alpha
+            self.alpha.map(|e| *e)
         )?;
 
         // Make the alpha on the curve
@@ -412,24 +410,24 @@ mod tests {
     use rand::{SeedableRng, Rng, XorShiftRng, Rand};
     use crate::circuit_test::TestConstraintSystem;
     use scrypto::jubjub::{JubjubBls12, fs, edwards, JubjubParams};
-    use crate::primitives::EncryptionKey;
+    use crate::keys::{EncryptionKey, DecryptionKey};
 
     #[test]
     fn test_circuit_transfer() {
         let params = &JubjubBls12::new();
         let rng = &mut XorShiftRng::from_seed([0x3dbe6258, 0x8d313d76, 0x3237db17, 0xe5bc0654]);
 
-        let sk_fs_s: fs::Fs = rng.gen();
-        let sk_fs_r: fs::Fs = rng.gen();
+        let sk_fs_s: [u8; 32] = rng.gen();
+        let sk_fs_r: [u8; 32] = rng.gen();
 
-        let proof_generation_key_s = ProofGenerationKey::<Bls12>::from_origin_key(&sk_fs_s, params);
-        let proof_generation_key_r = ProofGenerationKey::<Bls12>::from_origin_key(&sk_fs_r, params);
+        let proof_generation_key_s = ProofGenerationKey::<Bls12>::from_seed(&sk_fs_s[..], params);
+        let proof_generation_key_r = ProofGenerationKey::<Bls12>::from_seed(&sk_fs_r[..], params);
 
-        let decryption_key_s: fs::Fs = proof_generation_key_s.bdk();
-        let decryption_key_r: fs::Fs = proof_generation_key_r.bdk();
+        let decryption_key_s = proof_generation_key_s.into_decryption_key().unwrap();
+        let decryption_key_r = proof_generation_key_r.into_decryption_key().unwrap();
 
-        let address_recipient = EncryptionKey::from_origin_key(&sk_fs_r, params);
-        let address_sender_xy = proof_generation_key_s.into_encryption_key(params).0.into_xy();
+        let address_recipient = EncryptionKey::from_seed(&sk_fs_r, params).unwrap();
+        let address_sender_xy = proof_generation_key_s.into_encryption_key(params).unwrap().0.into_xy();
         let address_recipient_xy = address_recipient.0.into_xy();
 
         let alpha: fs::Fs = rng.gen();
@@ -443,7 +441,7 @@ mod tests {
         let r_fs_v = fs::Fs::rand(rng);
 
         let p_g = FixedGenerators::NoteCommitmentRandomness;
-        let public_key_s = params.generator(p_g).mul(decryption_key_s, params).into();
+        let public_key_s = EncryptionKey(params.generator(p_g).mul(decryption_key_s.0, params));
         let ciphetext_balance = Ciphertext::encrypt(current_balance, r_fs_b, &public_key_s, p_g, params);
 
         let c_bal_left = ciphetext_balance.left.into_xy();
@@ -456,11 +454,11 @@ mod tests {
         let ciphertext_fee_sender = Ciphertext::encrypt(fee, r_fs_v, &public_key_s, p_g, params);
         let c_fee_s_left = ciphertext_fee_sender.left.into_xy();
 
-        let public_key_r = params.generator(p_g).mul(decryption_key_r, params).into();
+        let public_key_r = EncryptionKey(params.generator(p_g).mul(decryption_key_r.0, params));
         let ciphertext_value_recipient = Ciphertext::encrypt(value, r_fs_v, &public_key_r, p_g, params);
         let c_val_r_left = ciphertext_value_recipient.left.into_xy();
 
-        let rvk = proof_generation_key_s.rvk(alpha, params).into_xy();
+        let rvk = proof_generation_key_s.into_rvk(alpha, params).0.into_xy();
 
         let mut cs = TestConstraintSystem::<Bls12>::new();
 
@@ -468,12 +466,12 @@ mod tests {
             params: params,
             value: Some(value),
             remaining_balance: Some(remaining_balance),
-            randomness: Some(r_fs_v.clone()),
-            alpha: Some(alpha.clone()),
-            proof_generation_key: Some(proof_generation_key_s.clone()),
-            decryption_key: Some(decryption_key_s.clone()),
+            randomness: Some(&r_fs_v),
+            alpha: Some(&alpha),
+            proof_generation_key: Some(&proof_generation_key_s),
+            decryption_key: Some(&decryption_key_s.0),
             pk_d_recipient: Some(address_recipient.0.clone()),
-            encrypted_balance: Some(ciphetext_balance.clone()),
+            encrypted_balance: Some(&ciphetext_balance),
             fee: Some(fee),
         };
 

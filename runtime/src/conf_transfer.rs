@@ -157,14 +157,8 @@ decl_storage! {
     trait Store for Module<T: Trait> as ConfTransfer {
         /// The encrypted balance for each account
         pub EncryptedBalance get(encrypted_balance) config() : map PkdAddress => Option<Ciphertext>;
-        /// The fee required to make a transfer.
-        pub TransferFee get(transfer_fee) config(): FeeAmount;
-        /// The fee required to create an account.
-        pub CreationFee get(creation_fee) config(): FeeAmount;
         /// The fee to be paid for making a transaction; the base.
         pub TransactionBaseFee get(transaction_base_fee) config(): FeeAmount;
-        /// The fee to be paid for making a transaction; the per-byte portion.
-        pub TransactionByteFee get(transaction_byte_fee) config(): FeeAmount;
         /// The verification key of zk proofs (only readable)
         pub VerifyingKey get(verifying_key) config(): PreparedVk;
     }
@@ -305,17 +299,23 @@ mod tests {
         let params = &JubjubBls12::new();
         let p_g = FixedGenerators::Diversifier; // 1 same as NoteCommitmentRandomness;
 
-        let ek = EncryptionKey::<Bls12>::from_seed(alice_seed, params);
+        let encryption_key = EncryptionKey::<Bls12>::from_seed(alice_seed, params).unwrap();
 
         // The default balance is not encrypted with randomness.
-        let enc_alice_bal = elgamal::Ciphertext::encrypt(alice_amount, fs::Fs::one(), &ek.0, p_g, params);
+        let enc_alice_bal = elgamal::Ciphertext::encrypt(
+            alice_amount,
+            fs::Fs::one(),
+            &encryption_key,
+            p_g,
+            params
+        );
 
-        let bdk = ProofGenerationKey::<Bls12>::from_seed(alice_seed, params).bdk();
+        let decryption_key = ProofGenerationKey::<Bls12>::from_seed(alice_seed, params).into_decryption_key().unwrap();
 
-        let dec_alice_bal = enc_alice_bal.decrypt(bdk, p_g, params).unwrap();
+        let dec_alice_bal = enc_alice_bal.decrypt(&decryption_key, p_g, params).unwrap();
         assert_eq!(dec_alice_bal, alice_amount);
 
-        (PkdAddress::from_encryption_key(&ek), Ciphertext::from_ciphertext(&enc_alice_bal))
+        (PkdAddress::from_encryption_key(&encryption_key), Ciphertext::from_ciphertext(&enc_alice_bal))
     }
 
     fn get_pvk() -> PreparedVk {
@@ -335,18 +335,42 @@ mod tests {
             encrypted_balance: vec![alice_init()],
             verifying_key: get_pvk(),
             transaction_base_fee: 1,
-			transaction_byte_fee: 0,
-			transfer_fee: 0,
-			creation_fee: 0,
             _genesis_phantom_data: Default::default(),
         }.build_storage().unwrap().0);
+
         t.into()
     }
 
     #[test]
     fn test_call_function() {
         with_externalities(&mut new_test_ext(), || {
-            let proof: [u8; 192] = hex!("a7e763cbdc1d4b78e70534894d9dbef78ac259ab0cd602e65d31459dd03432c5e14dbef9484a9ab36d9db17ad531b50aa8d051dc885599fbefcd1992437ee3453ef66d5921b9082c5ac93ddf7370dac444050147a71849cc1d16d4208984335d1567bb676a30974e8ae228741adbf6ac50d3c35ee14e835762bc4868e6f22d7b69ccbbbc5cfc3fbe49968c1873a99ffcacb71b1139806166e5c491ff9addbcbabc9df058371ef989219ba20c6a718317b4586bbf1d429d4bf4dab47e130bd23f");
+            // Needed to be updated manually once snark paramters are pre-processed.
+            let proof: [u8; 192] = hex!("80820f58804a32f4ecc8a7469275cac8bc0a728fca43fea67317519745e607aeb5b4bd4366b62fb6c5e9cd3a83bd232a99932412198c014b509d2e88bf5f01075202eab7c02adbf8a7f10be3e46c7a8c48e0393d16d1379f6671978892d363350b2bf0665b201523b294dc20f2427b531c17f3f6a513cad8e31184a31effca26bae94f7e43c0e01e18b2cf55bfa66c21a6c065a94df6c9199db5f4e1a3414037b2a3538bf99ca2e797f24158dec752017facff03bd11f2ebe3c33308e4b40115");
+            let pkd_addr_alice: [u8; 32] = hex!("fd0c0c0183770c99559bf64df4fe23f77ced9b8b4d02826a282bcd125117dcc2");
+            let pkd_addr_bob: [u8; 32] = hex!("45e66da531088b55dcb3b273ca825454d79d2d1d5c4fa2ba4a12c1fa1ccd6389");
+            let enc10_by_alice: [u8; 64] = hex!("e9ef0a4f4b07f7ae5bfab360e3daa312c2d288e21eb4b9ccc9946c7926efa50ea846bca1ff93a24c5bb8efbde8a42424ef343244b729eaa367df7bb7ac0c3fcf");
+            let enc10_by_bob: [u8; 64] = hex!("018ba6d82d18eaa6751306dcf188daa771bb0ce270cadb91a8b13846b85cc457a846bca1ff93a24c5bb8efbde8a42424ef343244b729eaa367df7bb7ac0c3fcf");
+            let rvk: [u8; 32] = hex!("f539db3c0075f6394ff8698c95ca47921669c77bb2b23b366f42a39b05a88c96");
+            let enc1_by_alice: [u8; 64] = hex!("dc98926ce4d481770442acd13814a923cc2024d31463fcc7ce0dd9aed6ae64afa846bca1ff93a24c5bb8efbde8a42424ef343244b729eaa367df7bb7ac0c3fcf");
+
+            assert_ok!(ConfTransfer::confidential_transfer(
+                Origin::signed(1),
+                Proof::from_slice(&proof[..]),
+                PkdAddress::from_slice(&pkd_addr_alice),
+                PkdAddress::from_slice(&pkd_addr_bob),
+                Ciphertext::from_slice(&enc10_by_alice[..]),
+                Ciphertext::from_slice(&enc10_by_bob[..]),
+                SigVerificationKey::from_slice(&rvk),
+                Ciphertext::from_slice(&enc1_by_alice[..])
+            ));
+        })
+    }
+
+    #[test]
+    #[should_panic]
+    fn test_call_with_worng_proof() {
+        with_externalities(&mut new_test_ext(), || {
+            let proof: [u8; 192] = hex!("b7e763cbdc1d4b78e70534894d9dbef78ac259ab0cd602e65d31459dd03432c5e14dbef9484a9ab36d9db17ad531b50aa8d051dc885599fbefcd1992437ee3453ef66d5921b9082c5ac93ddf7370dac444050147a71849cc1d16d4208984335d1567bb676a30974e8ae228741adbf6ac50d3c35ee14e835762bc4868e6f22d7b69ccbbbc5cfc3fbe49968c1873a99ffcacb71b1139806166e5c491ff9addbcbabc9df058371ef989219ba20c6a718317b4586bbf1d429d4bf4dab47e130bd23f");
             let pkd_addr_alice: [u8; 32] = hex!("fd0c0c0183770c99559bf64df4fe23f77ced9b8b4d02826a282bcd125117dcc2");
             let pkd_addr_bob: [u8; 32] = hex!("45e66da531088b55dcb3b273ca825454d79d2d1d5c4fa2ba4a12c1fa1ccd6389");
             let enc10_by_alice: [u8; 64] = hex!("087d5aa97ed351a81cea9e7bb46c83bb4a889bc696f623e7812fc59509cc3a6c997173e746fe32c12a70584cdf9dce783cf3daf44c17d40142f2c460324355aa");
@@ -366,4 +390,6 @@ mod tests {
             ));
         })
     }
+
+
 }

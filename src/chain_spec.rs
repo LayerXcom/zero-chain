@@ -134,9 +134,6 @@ fn testnet_genesis(initial_authorities: Vec<AuthorityId>, endowed_accounts: Vec<
 		conf_transfer: Some(ConfTransferConfig {
 			encrypted_balance: vec![alice_init()],
 			transaction_base_fee: 1,
-			transaction_byte_fee: 0,
-			transfer_fee: 0,
-			creation_fee: 0,
 			verifying_key: get_pvk(),
 			_genesis_phantom_data: Default::default(),
 		})
@@ -160,14 +157,17 @@ fn alice_init() -> (PkdAddress, Ciphertext) {
 
 	let p_g = FixedGenerators::Diversifier; // 1 same as NoteCommitmentRandomness;
 
-	let address = EncryptionKey::<Bls12>::from_seed(alice_seed, &JUBJUB);
+	let address = EncryptionKey::<Bls12>::from_seed(alice_seed, &JUBJUB)
+		.expect("should be generated encryption key from seed.");
 
 	// The default balance is not encrypted with randomness.
-	let enc_alice_bal = elgamal::Ciphertext::encrypt(alice_value, fs::Fs::one(), &address.0, p_g, &JUBJUB);
+	let enc_alice_bal = elgamal::Ciphertext::encrypt(alice_value, fs::Fs::one(), &address, p_g, &JUBJUB);
 
-	let bdk = ProofGenerationKey::<Bls12>::from_seed(alice_seed, &JUBJUB).bdk();
+	let decryption_key = ProofGenerationKey::<Bls12>::from_seed(alice_seed, &JUBJUB)
+		.into_decryption_key()
+		.expect("should be converted to decryption key.");
 
-	let dec_alice_bal = enc_alice_bal.decrypt(bdk, p_g, &JUBJUB).unwrap();
+	let dec_alice_bal = enc_alice_bal.decrypt(&decryption_key, p_g, &JUBJUB).unwrap();
 	assert_eq!(dec_alice_bal, alice_value);
 
 	(PkdAddress::from_encryption_key(&address), Ciphertext::from_ciphertext(&enc_alice_bal))

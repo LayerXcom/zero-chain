@@ -13,6 +13,15 @@ byteorder = "1"
 zcrypto = { package = "zerochain-crypto", path = "../crypto" }
 bellman-verifier = { path = "../bellman-verifier" }
 hex-literal = '0.1'
+parity-codec = "3.1"
+parity-codec-derive = "3.1"
+keys = { path = "../keys"}
+zjubjub = { package = "jubjub", path = "../jubjub" }
+
+[dependencies.primitives]
+git = 'https://github.com/osuketh/substrate.git'
+package = 'substrate-primitives'
+branch = "patch-zerochain"
 
 [dependencies.blake2-rfc]
 git = "https://github.com/gtank/blake2-rfc"
