@@ -39,7 +39,7 @@ pub struct TransferProof<E: JubjubEngine> {
 
 impl<E: JubjubEngine> TransferProof<E> {
     pub fn gen_proof<R: Rng>(
-        value: u32,
+        amount: u32,
         remaining_balance: u32,
         alpha: E::Fs,
         proving_key: &Parameters<E>,
@@ -66,13 +66,13 @@ impl<E: JubjubEngine> TransferProof<E> {
 
         let instance = Transfer {
             params: params,
-            value: Some(value),
+            amount: Some(amount),
             remaining_balance: Some(remaining_balance),
             randomness: Some(&randomness),
             alpha: Some(&alpha),
             proof_generation_key: Some(&proof_generation_key),
-            decryption_key: Some(&bdk.0),
-            pk_d_recipient: Some(address_recipient.0.clone()),
+            dec_key_sender: Some(&bdk),
+            enc_key_recipient: Some(address_recipient.clone()),
             encrypted_balance: Some(&ciphertext_balance),
             fee: Some(fee)
         };
@@ -83,7 +83,7 @@ impl<E: JubjubEngine> TransferProof<E> {
         let mut public_input = [E::Fr::zero(); 18];
 
         let cipher_val_s = Ciphertext::encrypt(
-            value,
+            amount,
             randomness,
             &ek_sender,
             FixedGenerators::NoteCommitmentRandomness,
@@ -91,7 +91,7 @@ impl<E: JubjubEngine> TransferProof<E> {
         );
 
         let cipher_val_r = Ciphertext::encrypt(
-            value,
+            amount,
             randomness,
             &address_recipient,
             FixedGenerators::NoteCommitmentRandomness,
@@ -212,7 +212,7 @@ mod tests {
         let mut rng = &mut XorShiftRng::from_seed([0x5dbe6259, 0x8d313d76, 0x3237db17, 0xe5bc0654]);
         let p_g = FixedGenerators::NoteCommitmentRandomness;
 
-        let value = 10 as u32;
+        let amount = 10 as u32;
         let remaining_balance = 89 as u32;
         let balance = 100 as u32;
         let alpha = fs::Fs::rand(rng);
@@ -234,7 +234,7 @@ mod tests {
         let (proving_key, prepared_vk) = get_pk_and_vk();
 
         let proofs = TransferProof::gen_proof(
-            value,
+            amount,
             remaining_balance,
             alpha,
             &proving_key,

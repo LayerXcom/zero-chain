@@ -16,13 +16,13 @@ pub fn setup() -> (Parameters<Bls12>, PreparedVerifyingKey<Bls12>) {
     let proving_key = {
         let c = Transfer::<Bls12> {
             params: &PARAMS,
-            value: None,
+            amount: None,
             remaining_balance: None,
             randomness: None,
             alpha: None,
             proof_generation_key: None,
-            decryption_key: None,
-            pk_d_recipient: None,
+            dec_key_sender: None,
+            enc_key_recipient: None,
             encrypted_balance: None,
             fee: None,
         };

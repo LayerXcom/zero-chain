@@ -19,7 +19,7 @@ use scrypto::jubjub::{
     PrimeOrder,
     edwards
 };
-use crate::keys::ProofGenerationKey;
+use crate::keys::{ProofGenerationKey, EncryptionKey, DecryptionKey};
 use scrypto::circuit::{
     boolean::{self, Boolean},
     ecc::{self, EdwardsPoint},
@@ -30,13 +30,13 @@ use crate::{elgamal::Ciphertext, Assignment};
 // An instance of the Transfer circuit.
 pub struct Transfer<'a, E: JubjubEngine> {
     pub params: &'a E::Params,
-    pub value: Option<u32>,
+    pub amount: Option<u32>,
     pub remaining_balance: Option<u32>,
     pub randomness: Option<&'a E::Fs>,
     pub alpha: Option<&'a E::Fs>,
     pub proof_generation_key: Option<&'a ProofGenerationKey<E>>,
-    pub decryption_key: Option<&'a E::Fs>,
-    pub pk_d_recipient: Option<edwards::Point<E, PrimeOrder>>,
+    pub dec_key_sender: Option<&'a DecryptionKey<E>>,
+    pub enc_key_recipient: Option< EncryptionKey<E>>,
     pub encrypted_balance: Option<&'a Ciphertext<E>>,
     pub fee: Option<u32>,
 }
@@ -49,14 +49,14 @@ impl<'a, E: JubjubEngine> Circuit<E> for Transfer<'a, E> {
     {
         let params = self.params;
 
-        // Ensure the value is u32.
-        let value_bits = u32_into_boolean_vec_le(
-            cs.namespace(|| "range proof of value"),
-            self.value
+        // Ensure the amount is u32.
+        let amount_bits = u32_into_boolean_vec_le(
+            cs.namespace(|| "range proof of amount"),
+            self.amount
         )?;
 
         // Ensure the remaining balance is u32.
-        let rem_bal_bits = u32_into_boolean_vec_le(
+        let remaining_balance_bits = u32_into_boolean_vec_le(
             cs.namespace(|| "range proof of remaining_balance"),
             self.remaining_balance
         )?;
@@ -67,28 +67,28 @@ impl<'a, E: JubjubEngine> Circuit<E> for Transfer<'a, E> {
             self.fee
         )?;
 
-        // decryption_key in circuit
-        let decryption_key_v = boolean::field_into_boolean_vec_le(
-            cs.namespace(|| format!("decryption_key")),
-            self.decryption_key.map(|e| *e)
+        // dec_key_sender in circuit
+        let dec_key_sender_bits = boolean::field_into_boolean_vec_le(
+            cs.namespace(|| format!("dec_key_sender")),
+            self.dec_key_sender.map(|e| e.0)
         )?;
 
-        // Ensure the validity of pk_d_sender
-        let pk_d_sender_v = ecc::fixed_base_multiplication(
-            cs.namespace(|| format!("compute pk_d_sender")),
+        // Ensure the validity of enc_key_sender
+        let enc_key_sender_alloc = ecc::fixed_base_multiplication(
+            cs.namespace(|| format!("compute enc_key_sender")),
             FixedGenerators::NoteCommitmentRandomness,
-            &decryption_key_v,
+            &dec_key_sender_bits,
             params
         )?;
 
-        // Expose the pk_d_sender publicly
-        pk_d_sender_v.inputize(cs.namespace(|| format!("inputize pk_d_sender")))?;
+        // Expose the enc_key_sender publicly
+        enc_key_sender_alloc.inputize(cs.namespace(|| format!("inputize enc_key_sender")))?;
 
-        // Multiply the value to the base point same as FixedGenerators::ElGamal.
-        let value_g = ecc::fixed_base_multiplication(
-            cs.namespace(|| format!("compute the value in the exponent")),
+        // Multiply the amount to the base point same as FixedGenerators::ElGamal.
+        let amount_g = ecc::fixed_base_multiplication(
+            cs.namespace(|| format!("compute the amount in the exponent")),
             FixedGenerators::NoteCommitmentRandomness,
-            &value_bits,
+            &amount_bits,
             params
         )?;
 
@@ -100,57 +100,57 @@ impl<'a, E: JubjubEngine> Circuit<E> for Transfer<'a, E> {
             params
         )?;
 
-        // Generate the randomness into the circuit
-        let rcv = boolean::field_into_boolean_vec_le(
-            cs.namespace(|| format!("rcv")),
+        // Generate the randomness for elgamal encryption into the circuit
+        let randomness_bits = boolean::field_into_boolean_vec_le(
+            cs.namespace(|| format!("randomness_bits")),
             self.randomness.map(|e| *e)
         )?;
 
-        // Generate the randomness * pk_d_sender in circuit
-        let val_rls = pk_d_sender_v.mul(
-            cs.namespace(|| format!("compute sender value cipher")),
-            &rcv,
+        // Generate the randomness * enc_key_sender in circuit
+        let val_rls = enc_key_sender_alloc.mul(
+            cs.namespace(|| format!("compute sender amount cipher")),
+            &randomness_bits,
             params
         )?;
 
-        let fee_rls = pk_d_sender_v.mul(
+        let fee_rls = enc_key_sender_alloc.mul(
             cs.namespace(|| format!("compute sender fee cipher")),
-            &rcv,
+            &randomness_bits,
             params
         )?;
 
-        // Ensures recipient pk_d is on the curve
-        let recipient_pk_d_v = ecc::EdwardsPoint::witness(
-            cs.namespace(|| "recipient pk_d witness"),
-            self.pk_d_recipient.as_ref().map(|e| e.clone()),
+        // Ensures recipient enc_key is on the curve
+        let recipient_enc_key_bits = ecc::EdwardsPoint::witness(
+            cs.namespace(|| "recipient enc_key witness"),
+            self.enc_key_recipient.as_ref().map(|e| e.0.clone()),
             params
         )?;
 
-        // Check the recipient pk_d is not small order
-        recipient_pk_d_v.assert_not_small_order(
+        // Check the recipient enc_key is not small order
+        recipient_enc_key_bits.assert_not_small_order(
             cs.namespace(|| "val_gl not small order"),
             params
         )?;
 
-        // Generate the randomness * pk_d_recipient in circuit
-        let val_rlr = recipient_pk_d_v.mul(
-            cs.namespace(|| format!("compute recipient value cipher")),
-            &rcv,
+        // Generate the randomness * enc_key_recipient in circuit
+        let val_rlr = recipient_enc_key_bits.mul(
+            cs.namespace(|| format!("compute recipient amount cipher")),
+            &randomness_bits,
             params
         )?;
 
-        recipient_pk_d_v.inputize(cs.namespace(|| format!("inputize pk_d_recipient")))?;
+        recipient_enc_key_bits.inputize(cs.namespace(|| format!("inputize enc_key_recipient")))?;
 
 
         // Generate the left elgamal component for sender in circuit
-        let c_left_sender = value_g.add(
+        let c_left_sender = amount_g.add(
             cs.namespace(|| format!("computation of sender's c_left")),
             &val_rls,
             params
         )?;
 
         // Generate the left elgamal component for recipient in circuit
-        let c_left_recipient = value_g.add(
+        let c_left_recipient = amount_g.add(
             cs.namespace(|| format!("computation of recipient's c_left")),
             &val_rlr,
             params
@@ -160,7 +160,7 @@ impl<'a, E: JubjubEngine> Circuit<E> for Transfer<'a, E> {
         let c_right = ecc::fixed_base_multiplication(
             cs.namespace(|| format!("compute the right elgamal component")),
             FixedGenerators::NoteCommitmentRandomness,
-            &rcv,
+            &randomness_bits,
             params
         )?;
 
@@ -179,15 +179,15 @@ impl<'a, E: JubjubEngine> Circuit<E> for Transfer<'a, E> {
 
         // The balance encryption validity.
         // It is a bit complicated bacause we can not know the randomness of balance.
-        // Enc_sender(sender_balance).cl - Enc_sender(value).cl
-        //     == (remaining_balance)G + decryption_key(Enc_sender(sender_balance).cr - (random)G)
-        // <==> Enc_sender(sender_balance).cl + decryption_key * (random)G
-        //       == (remaining_balance)G + decryption_key * Enc_sender(sender_balance).cr + Enc_sender(value).cl
+        // Enc_sender(sender_balance).cl - Enc_sender(amount).cl
+        //     == (remaining_balance)G + dec_key_sender(Enc_sender(sender_balance).cr - (random)G)
+        // <==> Enc_sender(sender_balance).cl + dec_key_sender * (random)G
+        //       == (remaining_balance)G + dec_key_sender * Enc_sender(sender_balance).cr + Enc_sender(amount).cl
         //
-        // Enc_sender(sender_balance).cl - Enc_sender(value).cl - Enc_sender(fee).cl
-        //  == (remaining_balance)G + decryption_key * (Enc_sender(sender_balance).cr - (random)G - (random)G)
-        // <==> Enc_sender(sender_balance).cl + decryption_key * (random)G + decryption_key * (random)G
-        //       == (remaining_balance)G + decryption_key * Enc_sender(sender_balance).cr + Enc_sender(value).cl + Enc_sender(fee).cl
+        // Enc_sender(sender_balance).cl - Enc_sender(amount).cl - Enc_sender(fee).cl
+        //  == (remaining_balance)G + dec_key_sender * (Enc_sender(sender_balance).cr - (random)G - (random)G)
+        // <==> Enc_sender(sender_balance).cl + dec_key_sender * (random)G + dec_key_sender * (random)G
+        //       == (remaining_balance)G + dec_key_sender * Enc_sender(sender_balance).cr + Enc_sender(amount).cl + Enc_sender(fee).cl
         {
             let bal_gl = ecc::EdwardsPoint::witness(
                 cs.namespace(|| "balance left"),
@@ -241,31 +241,31 @@ impl<'a, E: JubjubEngine> Circuit<E> for Transfer<'a, E> {
                 params
             )?;
 
-            //  decryption_key * (random)G
-            let decryption_key_random = c_right.mul(
-                cs.namespace(|| format!("c_right mul by decryption_key")),
-                &decryption_key_v,
+            //  dec_key_sender * (random)G
+            let dec_key_sender_random = c_right.mul(
+                cs.namespace(|| format!("c_right mul by dec_key_sender")),
+                &dec_key_sender_bits,
                 params
                 )?;
 
-            // Enc_sender(sender_balance).cl + decryption_key * (random)G
-            let senderbalance_decryption_key_random = pointl.add(
-                cs.namespace(|| format!("pointl add decryption_key_pointl")),
-                &decryption_key_random,
+            // Enc_sender(sender_balance).cl + dec_key_sender * (random)G
+            let balance_dec_key_sender_random = pointl.add(
+                cs.namespace(|| format!("pointl add dec_key_sender_pointl")),
+                &dec_key_sender_random,
                 params
                 )?;
 
-            // Enc_sender(sender_balance).cl + decryption_key * (random)G + decryption_key * (random)G
-            let bi_left = senderbalance_decryption_key_random.add(
-                cs.namespace(|| format!("pointl readd decryption_key_pointl")),
-                &decryption_key_random,
+            // Enc_sender(sender_balance).cl + dec_key_sender * (random)G + dec_key_sender * (random)G
+            let bi_left = balance_dec_key_sender_random.add(
+                cs.namespace(|| format!("pointl readd dec_key_sender_pointl")),
+                &dec_key_sender_random,
                 params
                 )?;
 
-            // decryption_key * Enc_sender(sender_balance).cr
-            let decryption_key_pointr = pointr.mul(
-                cs.namespace(|| format!("c_right_sender mul by decryption_key")),
-                &decryption_key_v,
+            // dec_key_sender * Enc_sender(sender_balance).cr
+            let dec_key_sender_pointr = pointr.mul(
+                cs.namespace(|| format!("c_right_sender mul by dec_key_sender")),
+                &dec_key_sender_bits,
                 params
                 )?;
 
@@ -273,25 +273,25 @@ impl<'a, E: JubjubEngine> Circuit<E> for Transfer<'a, E> {
             let rem_bal_g = ecc::fixed_base_multiplication(
                 cs.namespace(|| format!("compute the remaining balance in the exponent")),
                 FixedGenerators::NoteCommitmentRandomness,
-                &rem_bal_bits,
+                &remaining_balance_bits,
                 params
                 )?;
 
-            // Enc_sender(value).cl + (remaining_balance)G
+            // Enc_sender(amount).cl + (remaining_balance)G
             let val_rem_bal = c_left_sender.add(
                 cs.namespace(|| format!("c_left_sender add rem_bal_g")),
                 &rem_bal_g,
                 params
                 )?;
 
-            // Enc_sender(value).cl + (remaining_balance)G + decryption_key * Enc_sender(sender_balance).cr
+            // Enc_sender(amount).cl + (remaining_balance)G + dec_key_sender * Enc_sender(sender_balance).cr
             let val_rem_bal_balr = val_rem_bal.add(
                 cs.namespace(|| format!("val_rem_bal add ")),
-                &decryption_key_pointr,
+                &dec_key_sender_pointr,
                 params
                 )?;
 
-            // Enc_sender(value).cl + (remaining_balance)G + decryption_key * Enc_sender(sender_balance).cr + Enc_sender(fee).cl
+            // Enc_sender(amount).cl + (remaining_balance)G + dec_key_sender * Enc_sender(sender_balance).cr + Enc_sender(fee).cl
             let bi_right = f_left_sender.add(
                 cs.namespace(|| format!("f_left_sender add")),
                 &val_rem_bal_balr,
@@ -372,15 +372,15 @@ impl<'a, E: JubjubEngine> Circuit<E> for Transfer<'a, E> {
 
 fn u32_into_boolean_vec_le<E, CS>(
     mut cs: CS,
-    value: Option<u32>
+    amount: Option<u32>
 ) -> Result<Vec<Boolean>, SynthesisError>
     where E: JubjubEngine, CS: ConstraintSystem<E>
 {
-    let values = match value {
-        Some(ref value) => {
+    let amounts = match amount {
+        Some(ref amount) => {
             let mut tmp = Vec::with_capacity(32);
             for i in 0..32 {
-                tmp.push(Some(*value >> i & 1 == 1));
+                tmp.push(Some(*amount >> i & 1 == 1));
             }
             tmp
         },
@@ -390,7 +390,7 @@ fn u32_into_boolean_vec_le<E, CS>(
         }
     };
 
-    let bits = values.into_iter()
+    let bits = amounts.into_iter()
             .enumerate()
             .map(|(i, v)| {
                 Ok(boolean::Boolean::from(boolean::AllocatedBit::alloc(
@@ -432,7 +432,7 @@ mod tests {
 
         let alpha: fs::Fs = rng.gen();
 
-        let value = 10 as u32;
+        let amount = 10 as u32;
         let remaining_balance = 16 as u32;
         let current_balance = 27 as u32;
         let fee = 1 as u32;
@@ -447,16 +447,16 @@ mod tests {
         let c_bal_left = ciphetext_balance.left.into_xy();
         let c_bal_right = ciphetext_balance.right.into_xy();
 
-        let ciphertext_value_sender = Ciphertext::encrypt(value, r_fs_v, &public_key_s, p_g, params);
-        let c_val_s_left = ciphertext_value_sender.left.into_xy();
-        let c_val_right = ciphertext_value_sender.right.into_xy();
+        let ciphertext_amount_sender = Ciphertext::encrypt(amount, r_fs_v, &public_key_s, p_g, params);
+        let c_val_s_left = ciphertext_amount_sender.left.into_xy();
+        let c_val_right = ciphertext_amount_sender.right.into_xy();
 
         let ciphertext_fee_sender = Ciphertext::encrypt(fee, r_fs_v, &public_key_s, p_g, params);
         let c_fee_s_left = ciphertext_fee_sender.left.into_xy();
 
         let public_key_r = EncryptionKey(params.generator(p_g).mul(decryption_key_r.0, params));
-        let ciphertext_value_recipient = Ciphertext::encrypt(value, r_fs_v, &public_key_r, p_g, params);
-        let c_val_r_left = ciphertext_value_recipient.left.into_xy();
+        let ciphertext_amount_recipient = Ciphertext::encrypt(amount, r_fs_v, &public_key_r, p_g, params);
+        let c_val_r_left = ciphertext_amount_recipient.left.into_xy();
 
         let rvk = proof_generation_key_s.into_rvk(alpha, params).0.into_xy();
 
@@ -464,13 +464,13 @@ mod tests {
 
         let instance = Transfer {
             params: params,
-            value: Some(value),
+            amount: Some(amount),
             remaining_balance: Some(remaining_balance),
             randomness: Some(&r_fs_v),
             alpha: Some(&alpha),
             proof_generation_key: Some(&proof_generation_key_s),
-            decryption_key: Some(&decryption_key_s.0),
-            pk_d_recipient: Some(address_recipient.0.clone()),
+            dec_key_sender: Some(&decryption_key_s),
+            enc_key_recipient: Some(address_recipient.clone()),
             encrypted_balance: Some(&ciphetext_balance),
             fee: Some(fee),
         };
@@ -483,10 +483,10 @@ mod tests {
 
         assert_eq!(cs.num_inputs(), 19);
         assert_eq!(cs.get_input(0, "ONE"), Fr::one());
-        assert_eq!(cs.get_input(1, "inputize pk_d_sender/x/input variable"), address_sender_xy.0);
-        assert_eq!(cs.get_input(2, "inputize pk_d_sender/y/input variable"), address_sender_xy.1);
-        assert_eq!(cs.get_input(3, "inputize pk_d_recipient/x/input variable"), address_recipient_xy.0);
-        assert_eq!(cs.get_input(4, "inputize pk_d_recipient/y/input variable"), address_recipient_xy.1);
+        assert_eq!(cs.get_input(1, "inputize enc_key_sender/x/input variable"), address_sender_xy.0);
+        assert_eq!(cs.get_input(2, "inputize enc_key_sender/y/input variable"), address_sender_xy.1);
+        assert_eq!(cs.get_input(3, "inputize enc_key_recipient/x/input variable"), address_recipient_xy.0);
+        assert_eq!(cs.get_input(4, "inputize enc_key_recipient/y/input variable"), address_recipient_xy.1);
         assert_eq!(cs.get_input(5, "c_left_sender/x/input variable"), c_val_s_left.0);
         assert_eq!(cs.get_input(6, "c_left_sender/y/input variable"), c_val_s_left.1);
         assert_eq!(cs.get_input(7, "c_left_recipient/x/input variable"), c_val_r_left.0);
