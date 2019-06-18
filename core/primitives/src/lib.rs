@@ -36,5 +36,5 @@ use lazy_static::lazy_static;
 use jubjub::curve::JubjubBls12;
 
 lazy_static! {
-    pub static ref JUBJUB: JubjubBls12 = { JubjubBls12::new() };
+    pub static ref PARAMS: JubjubBls12 = { JubjubBls12::new() };
 }

@@ -15,13 +15,10 @@ use keys::{ProofGenerationKey, EncryptionKey};
 use zjubjub::{curve::{JubjubBls12, FixedGenerators, fs}};
 use zpairing::{bls12_381::Bls12, Field};
 use zcrypto::elgamal;
+use zprimitives::PARAMS;
 use std::path::Path;
 use std::fs::File;
 use std::io::{BufReader, Read};
-
-lazy_static! {
-    static ref JUBJUB: JubjubBls12 = { JubjubBls12::new() };
-}
 
 // Note this is the URL for the telemetry server
 //const STAGING_TELEMETRY_URL: &str = "wss://telemetry.polkadot.io/submit/";
@@ -157,17 +154,17 @@ fn alice_init() -> (PkdAddress, Ciphertext) {
 
 	let p_g = FixedGenerators::Diversifier; // 1 same as NoteCommitmentRandomness;
 
-	let address = EncryptionKey::<Bls12>::from_seed(alice_seed, &JUBJUB)
+	let address = EncryptionKey::<Bls12>::from_seed(alice_seed, &PARAMS)
 		.expect("should be generated encryption key from seed.");
 
 	// The default balance is not encrypted with randomness.
-	let enc_alice_bal = elgamal::Ciphertext::encrypt(alice_value, fs::Fs::one(), &address, p_g, &JUBJUB);
+	let enc_alice_bal = elgamal::Ciphertext::encrypt(alice_value, fs::Fs::one(), &address, p_g, &PARAMS);
 
-	let decryption_key = ProofGenerationKey::<Bls12>::from_seed(alice_seed, &JUBJUB)
+	let decryption_key = ProofGenerationKey::<Bls12>::from_seed(alice_seed, &PARAMS)
 		.into_decryption_key()
 		.expect("should be converted to decryption key.");
 
-	let dec_alice_bal = enc_alice_bal.decrypt(&decryption_key, p_g, &JUBJUB).unwrap();
+	let dec_alice_bal = enc_alice_bal.decrypt(&decryption_key, p_g, &PARAMS).unwrap();
 	assert_eq!(dec_alice_bal, alice_value);
 
 	(PkdAddress::from_encryption_key(&address), Ciphertext::from_ciphertext(&enc_alice_bal))

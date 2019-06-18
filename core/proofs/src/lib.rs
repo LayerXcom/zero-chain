@@ -1,3 +1,8 @@
+#[macro_use]
+extern crate lazy_static;
+
+use scrypto::jubjub::JubjubBls12;
+use bellman::SynthesisError;
 pub mod circuit_transfer;
 pub mod circuit_mimc;
 pub mod prover;
@@ -5,7 +10,11 @@ pub mod circuit_test;
 pub mod keys;
 pub mod elgamal;
 
-use bellman::SynthesisError;
+
+
+lazy_static! {
+    pub static ref PARAMS: JubjubBls12 = { JubjubBls12::new() };
+}
 
 // TODO: This should probably be removed and we
 // should use existing helper methods on `Option`

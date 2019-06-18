@@ -43,7 +43,7 @@ pub const PRF_EXPAND_PERSONALIZATION: &'static [u8; 16] = b"zech_ExpandSeed_";
 pub const CRH_BDK_PERSONALIZATION: &'static [u8; 8] = b"zech_bdk";
 pub const KEY_DIVERSIFICATION_PERSONALIZATION: &'static [u8; 8] = b"zech_div";
 
-fn prf_expand(sk: &[u8], t: &[u8]) -> Blake2bResult {
+pub fn prf_expand(sk: &[u8], t: &[u8]) -> Blake2bResult {
     prf_expand_vec(sk, &[t])
 }
 
@@ -58,7 +58,7 @@ pub fn prf_expand_vec(sk: &[u8], ts: &[&[u8]]) -> Blake2bResult {
 
 /// Each account needs the spending key to send transactions.
 #[derive(Clone)]
-pub struct SpendingKey<E: JubjubEngine>(E::Fs);
+pub struct SpendingKey<E: JubjubEngine>(pub E::Fs);
 
 impl<E: JubjubEngine> Copy for SpendingKey<E> {}
 

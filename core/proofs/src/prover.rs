@@ -54,8 +54,8 @@ impl<E: JubjubEngine> TransferProof<E> {
     {
         let randomness = E::Fs::rand(rng);
 
-        let bdk = proof_generation_key.into_decryption_key()?;
-        let ek_sender = proof_generation_key.into_encryption_key(params)?;
+        let dec_key_sender = proof_generation_key.into_decryption_key()?;
+        let enc_key_sender = proof_generation_key.into_encryption_key(params)?;
 
         let rvk = PublicKey(proof_generation_key.0.clone().into())
             .randomize(
@@ -71,7 +71,7 @@ impl<E: JubjubEngine> TransferProof<E> {
             randomness: Some(&randomness),
             alpha: Some(&alpha),
             proof_generation_key: Some(&proof_generation_key),
-            dec_key_sender: Some(&bdk),
+            dec_key_sender: Some(&dec_key_sender),
             enc_key_recipient: Some(address_recipient.clone()),
             encrypted_balance: Some(&ciphertext_balance),
             fee: Some(fee)
@@ -85,7 +85,7 @@ impl<E: JubjubEngine> TransferProof<E> {
         let cipher_val_s = Ciphertext::encrypt(
             amount,
             randomness,
-            &ek_sender,
+            &enc_key_sender,
             FixedGenerators::NoteCommitmentRandomness,
             params
         );
@@ -101,13 +101,13 @@ impl<E: JubjubEngine> TransferProof<E> {
         let cipher_fee_s = Ciphertext::encrypt(
             fee,
             randomness,
-            &ek_sender,
+            &enc_key_sender,
             FixedGenerators::NoteCommitmentRandomness,
             params
         );
 
         {
-            let (x, y) = ek_sender.0.into_xy();
+            let (x, y) = enc_key_sender.0.into_xy();
             public_input[0] = x;
             public_input[1] = y;
         }
@@ -157,9 +157,9 @@ impl<E: JubjubEngine> TransferProof<E> {
         }
 
         let transfer_proof = TransferProof {
-            proof: proof,
-            rvk: rvk,
-            address_sender: ek_sender,
+            proof,
+            rvk,
+            address_sender: enc_key_sender,
             address_recipient: address_recipient,
             cipher_val_s: cipher_val_s,
             cipher_val_r: cipher_val_r,
@@ -209,13 +209,13 @@ mod tests {
     #[test]
     fn test_gen_proof() {
         let params = &JubjubBls12::new();
-        let mut rng = &mut XorShiftRng::from_seed([0x5dbe6259, 0x8d313d76, 0x3237db17, 0xe5bc0654]);
         let p_g = FixedGenerators::NoteCommitmentRandomness;
+        let mut rng = &mut XorShiftRng::from_seed([0x5dbe6259, 0x8d313d76, 0x3237db17, 0xe5bc0654]);
+        let alpha = fs::Fs::rand(rng);
 
         let amount = 10 as u32;
         let remaining_balance = 89 as u32;
         let balance = 100 as u32;
-        let alpha = fs::Fs::rand(rng);
         let fee = 1 as u32;
 
         let sender_seed: [u8; 32] = rng.gen();
@@ -225,10 +225,10 @@ mod tests {
 
         let pgk_sender = ProofGenerationKey::<Bls12>::from_seed(&sender_seed, params);
         let ek_recipient = EncryptionKey::<Bls12>::from_seed(&recipient_seed, params).unwrap();
-        let bdk = pgk_sender.into_decryption_key().unwrap();
+        let dec_key_sender = pgk_sender.into_decryption_key().unwrap();
 
         let r_fs = fs::Fs::rand(rng);
-        let public_key = EncryptionKey(params.generator(p_g).mul(bdk.0, params));
+        let public_key = EncryptionKey(params.generator(p_g).mul(dec_key_sender.0, params));
         let ciphertext_balance = Ciphertext::encrypt(balance, r_fs, &public_key, p_g, params);
 
         let (proving_key, prepared_vk) = get_pk_and_vk();

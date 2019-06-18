@@ -25,7 +25,6 @@ keys = { path = "core/keys"}
 bellman = { git = "https://github.com/LayerXcom/librustzcash", branch = "zero-chain" }
 pairing = { git = "https://github.com/LayerXcom/librustzcash", branch = "zero-chain" }
 rand = "0.4"
-lazy_static = "1.3.0"
 wasm-utils = {package = "zerochain-wasm-utils", path = "demo/wasm-utils"}
 hex = "0.3.2"
 clap = "~2.32"

@@ -2,8 +2,6 @@
 extern crate log;
 #[macro_use]
 extern crate clap;
-#[macro_use]
-extern crate lazy_static;
 
 use std::fs::File;
 use std::path::{Path, PathBuf};
@@ -14,6 +12,7 @@ use rand::OsRng;
 use proofs::{
     keys::{EncryptionKey, ProofGenerationKey},
     elgamal,
+    PARAMS,
     };
 use primitives::{hexdisplay::{HexDisplay, AsBytesRef}, blake2_256, crypto::{Ss58Codec, Derive, DeriveJunction}};
 use pairing::{bls12_381::Bls12, Field, PrimeField, PrimeFieldRepr};
@@ -25,7 +24,7 @@ use zjubjub::{
     };
 use bellman::groth16::{Parameters, PreparedVerifyingKey};
 use polkadot_rs::{Api, Url, hexstr_to_u64};
-use zprimitives::{Proof, Ciphertext as zCiphertext, PkdAddress, SigVerificationKey, RedjubjubSignature};
+use zprimitives::{PARAMS as ZPARAMS, Proof, Ciphertext as zCiphertext, PkdAddress, SigVerificationKey, RedjubjubSignature};
 use runtime_primitives::generic::Era;
 use parity_codec::{Compact, Encode};
 use zerochain_runtime::{UncheckedExtrinsic, Call, ConfTransferCall};
@@ -41,11 +40,6 @@ use setup::setup;
 use utils::*;
 use config::*;
 use transaction::Transaction;
-
-lazy_static! {
-    pub static ref PARAMS: JubjubBls12 = { JubjubBls12::new() };
-    pub static ref ZPARAMS: zJubjubBls12 = { zJubjubBls12::new() };
-}
 
 //
 // Global constants
