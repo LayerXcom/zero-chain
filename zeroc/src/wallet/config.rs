@@ -1,6 +1,6 @@
+use std::path::{Path, PathBuf};
 
 pub const WALLETS_DIRECTORY: &'static str = "wallets";
-
 
 /// Get the path to directory where all wallets are stored.
 pub fn get_wallets_dir<P: AsRef<Path>>(root_dir: P) -> PathBuf {

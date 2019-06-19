@@ -8,11 +8,15 @@ use proofs::keys::{EncryptionKey, SpendingKey, prf_expand_vec, prf_expand};
 use scrypto::jubjub::{JubjubEngine, fs::Fs, ToUniform};
 use pairing::{bls12_381::Bls12, Field};
 use byteorder::{ByteOrder, LittleEndian, ReadBytesExt, WriteBytesExt};
+use rand::{OsRng, Rng};
 use crate::PARAMS;
 use std::io::{self, Read, Write};
+use std::convert::TryFrom;
 
 mod constants;
+mod components;
 use constants::*;
+use components::*;
 
 /// A 32-byte chain code
 #[derive(Clone, Copy, Debug, PartialEq)]
@@ -46,7 +50,7 @@ impl EncKeyFingerPrint {
 /// It is intended for optimizing performance of key lookups,
 /// and must not be assumed to uniquely identify a particulaqr key.
 #[derive(Clone, Copy, Debug, PartialEq)]
-struct EncKeyTag([u8; TAG_KENGTH]);
+struct EncKeyTag([u8; TAG_LENGTH]);
 
 impl EncKeyTag {
     fn master() -> Self {
@@ -80,18 +84,23 @@ impl ChildIndex {
     }
 }
 
+
+
 pub trait Derivation: Sized {
-    /// Master key generation
+    /// Master key generation:
     /// - Calculate I = BLAKE2b-512("MASTER_PERSONALIZATION", seed)
     /// - Split I into two 32-bytes arrays, I_L and I_R.
     /// - Use I_L as the master spending and I_R as the master chain code.
     fn master(seed: &[u8]) -> Self;
 
-    /// Child key derivation
-    ///
+    /// Child key derivation:
+    /// the method for deriving a child extended key, given a parent extended key and an index `i`,
+    /// depends on the type of key being derived, and whether this is a hardened or non-hardened derivation.
+    /// If an index `i` >= 2^31, the child is a hardended key. If not, the child is a non-hardened key.
     fn derive_child(&self, i: ChildIndex) -> io::Result<Self>;
-    // fn read<R: Read>(mut reader: R) -> io::Result<Self>;
-    // fn write<W: Write>(&self, mut writer: W) -> io::Result<()>;
+
+    fn read<R: Read>(mut reader: R) -> io::Result<Self>;
+    fn write<W: Write>(&self, mut writer: W) -> io::Result<()>;
 }
 
 pub struct ExtendedSpendingKey {
@@ -157,6 +166,64 @@ impl Derivation for ExtendedSpendingKey {
             chain_code: ChainCode(right),
             spending_key: SpendingKey(fs),
         })
+    }
+
+    fn read<R: Read>(mut reader: R) -> io::Result<Self> {
+        let depth = reader.read_u8()?;
+        let mut tag = [0u8; 4];
+        reader.read_exact(&mut tag)?;
+
+        let i = reader.read_u32::<LittleEndian>()?;
+        let mut c = [0u8; 32];
+        reader.read_exact(&mut c)?;
+        let spending_key = SpendingKey::read(&mut reader)?;
+
+        Ok(ExtendedSpendingKey {
+            depth,
+            parent_enckey_tag: EncKeyTag(tag),
+            child_index: ChildIndex::from_index(i),
+            chain_code: ChainCode(c),
+            spending_key,
+        })
+    }
+
+    fn write<W: Write>(&self, mut writer: W) -> io::Result<()> {
+        writer.write_u8(self.depth)?;
+        writer.write_all(&self.parent_enckey_tag.0)?;
+        writer.write_u32::<LittleEndian>(self.child_index.to_index())?;
+        writer.write_all(&self.chain_code.0)?;
+        writer.write_all(&self.spending_key.into_bytes()?)?;
+
+        Ok(())
+    }
+}
+
+impl TryFrom<ExtendedSpendingKey> for ExtendedSpendingKeyBytes {
+    type Error = io::Error;
+
+    fn try_from(xsk: ExtendedSpendingKey) -> io::Result<ExtendedSpendingKeyBytes> {
+        let mut res = [0u8; EXTENDED_SPENDING_KEY_LENGATH];
+        xsk.write(&mut res[..])?;
+
+        Ok(ExtendedSpendingKeyBytes(res))
+    }
+}
+
+pub struct ExtendedSpendingKeyBytes(pub [u8; EXTENDED_SPENDING_KEY_LENGATH]);
+
+impl ExtendedSpendingKeyBytes {
+    pub fn encrypt(&self, password: &[u8]) -> Vec<u8> {
+        let rng = &mut OsRng::new().expect("should be able to construct RNG");
+
+        let mut salt: [u8; 32] = rng.gen();
+        let mut iv: [u8; 32] = rng.gen();
+
+
+        unimplemented!();
+    }
+
+    pub fn decrypt() -> Self {
+        unimplemented!();
     }
 }
 

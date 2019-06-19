@@ -5,53 +5,75 @@ use std::{
     path::{Path, PathBuf},
 };
 use self::error::Result;
+use crate::derive::{ChildIndex, EncryptionKeyBytes};
 
 mod commands;
 mod config;
+mod keyfile;
 mod error;
-
 
 #[derive(Clone, PartialEq, Eq, PartialOrd, Ord)]
 pub struct AccountName(String);
 
-pub struct Encrypted();
-
 /// Wallet object
 pub struct Wallet {
-    // pub name: WalletName,
-    pub encrypted_keys: HashMap<AccountName, Vec<u8>>,
-    pub root_dir: PathBuf,
-    pub current_index: ,
-    pub account_name_map: 
-    pub config: config::Config;
+    // pub root_dir: PathBuf,
+    pub enc_master_key: Vec<u8>,
+    pub account_name_map: HashMap<ChildIndex, (AccountName, Option<EncryptionKeyBytes>)>,
+    pub default_index: ChildIndex,
+    // pub config: config::Config;
 }
 
 impl Wallet {
-    pub fn new<P: AsRef<Path>>(
+    /// Create a new wallet. The master key is expected to have been properly encrypted.
+    /// When a new wallet is created, a new hardened derived account is also generated.
+    pub fn init<P: AsRef<Path>>(
         root_dir: P,
-        config: config::Config,
+        enc_master_key: Vec<u8>,
         account_name: AccountName,
-        encrypted_key: Vec<u8>,
-    ) -> Self {
-        Wallet {
-            encrypted_key: HashMap::new(),
-            root_dir: root_dir,
-            config: config,
-        }
+        enc_key_bytes: Option<EncryptionKeyBytes>,
+    ) -> Result<Self> {
+
+        unimplemented!();
+
+        // Wallet {
+        //     enc_master_key: HashMap::new(),
+        //     root_dir: root_dir,
+        //     config: config,
+        // }
     }
 
-    pub fn save(
+    pub fn create_account(&self) -> Result<()> {
+        unimplemented!();
+    }
+
+    pub fn change_default_account(&self) -> Result<()> {
+        unimplemented!();
+    }
+
+    pub fn list() -> Self {
+        unimplemented!();
+    }
+
+    pub fn destroy(self) -> Result<()> {
+        unimplemented!();
+    }
+
+    fn load<P: AsRef<Path>>(root_dir: P) -> Result<Self> {
+        unimplemented!();
+    }
+
+    fn save<P: AsRef<Path>>(
         &self,
+        root_dir: P,
         account_name: AccountName,
         encrypted_key: Vec<u8>
     ) -> Result<()>
     {
+        let wallet_file = fs::File::create(root_dir)?;
 
-    }
 
-    fn save_internal(&self) -> Result<()> {
-        let dir = config::get_a_wallet_dir(self.root_dir.clone(), &self.name.0);
-        fs::DirBuilder::new().recursive(true).create(dir.clone())?;
+
 
         // 1. save the configuration file
 
@@ -61,9 +83,5 @@ impl Wallet {
         // 3. (Optional) save the public key
 
         Ok(())
-    }
-
-    pub fn load() -> Self {
-
     }
 }

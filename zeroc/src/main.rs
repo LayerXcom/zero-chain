@@ -2,6 +2,8 @@
 extern crate log;
 #[macro_use]
 extern crate clap;
+#[macro_use]
+extern crate serde_derive;
 
 use std::fs::File;
 use std::path::{Path, PathBuf};
@@ -34,6 +36,7 @@ mod setup;
 mod utils;
 mod config;
 mod transaction;
+mod wallet;
 pub mod derive;
 pub mod term;
 use setup::setup;
