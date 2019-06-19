@@ -11,8 +11,8 @@ pub struct Bytes(
 #[derive(Debug, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub struct KeyFile {
-    /// Keyfile UUID
-    pub id: String,
+    /// Account name
+    pub name: String,
     /// Keyfile version
     pub version: u32,
     /// Keyfile crypto

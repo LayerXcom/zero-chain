@@ -16,75 +16,7 @@ use std::convert::TryFrom;
 mod constants;
 mod components;
 use constants::*;
-use components::*;
-
-/// A 32-byte chain code
-#[derive(Clone, Copy, Debug, PartialEq)]
-struct ChainCode([u8; CHAIN_CODE_LENGTH]);
-
-/// A encryption key fingerprint which is used to uniquely identify a particular EncryptionKey.
-struct EncKeyFingerPrint([u8; FINGER_PRINT_LENGTH]);
-
-impl<E: JubjubEngine> From<&EncryptionKey<E>> for EncKeyFingerPrint {
-    fn from(enc_key: &EncryptionKey<E>) -> Self {
-        let mut h = Blake2b::with_params(32, &[], &[], EKFP_PERSONALIZATION);
-        let enc_key_bytes = enc_key.into_bytes()
-            .expect("should be converted to bytes array.");
-        h.update(&enc_key_bytes[..]);
-
-        let mut enckey_fp = [0u8; 32];
-        enckey_fp.copy_from_slice(h.finalize().as_bytes());
-        EncKeyFingerPrint(enckey_fp)
-    }
-}
-
-impl EncKeyFingerPrint {
-    fn tag(&self) -> EncKeyTag {
-        let mut tag = [0u8; 4];
-        tag.copy_from_slice(&self.0[..4]);
-        EncKeyTag(tag)
-    }
-}
-
-/// A encryption key tag is the first 4 bytes of the corresponding Encryption key fingerprint.
-/// It is intended for optimizing performance of key lookups,
-/// and must not be assumed to uniquely identify a particulaqr key.
-#[derive(Clone, Copy, Debug, PartialEq)]
-struct EncKeyTag([u8; TAG_LENGTH]);
-
-impl EncKeyTag {
-    fn master() -> Self {
-        EncKeyTag([0u8; 4])
-    }
-}
-
-/// A child index for a derived key
-pub enum ChildIndex {
-    NonHardened(u32),
-    Hardened(u32),
-}
-
-impl ChildIndex {
-    pub fn from_index(i: u32) -> Self {
-        match i {
-            n if n >= (1 << 31) => ChildIndex::Hardened(n - ( 1 << 31)),
-            n => ChildIndex::NonHardened(n),
-        }
-    }
-
-    fn master() -> Self {
-        ChildIndex::from_index(0)
-    }
-
-    fn to_index(&self) -> u32 {
-        match self {
-            &ChildIndex::Hardened(i) => i + ( 1 << 31 ),
-            &ChildIndex::NonHardened(i) => i,
-        }
-    }
-}
-
-
+pub use components::*;
 
 pub trait Derivation: Sized {
     /// Master key generation:
@@ -159,9 +91,11 @@ impl Derivation for ExtendedSpendingKey {
         let mut fs = Fs::to_uniform(prf_expand(left, &[0x13]).as_bytes());
         fs.add_assign(&self.spending_key.0);
 
+        let tag = EncKeyFingerPrint::try_from(&enc_key)?.tag();
+
         Ok(ExtendedSpendingKey {
             depth: self.depth + 1,
-            parent_enckey_tag: EncKeyFingerPrint::from(&enc_key).tag(),
+            parent_enckey_tag: tag,
             child_index: i,
             chain_code: ChainCode(right),
             spending_key: SpendingKey(fs),
