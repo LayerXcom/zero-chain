@@ -132,7 +132,10 @@ fn testnet_genesis(initial_authorities: Vec<AuthorityId>, endowed_accounts: Vec<
 			key: root_key,
 		}),
 		conf_transfer: Some(ConfTransferConfig {
-			encrypted_balance: vec![alice_init()],
+			encrypted_balance: vec![alice_balance_init()],
+			pending_transfer: vec![alice_pending_transfer_init()],
+			last_epoch: vec![alice_epoch_init()],
+			epoch_length: 10,
 			transaction_base_fee: 1,
 			verifying_key: get_pvk(),
 			_genesis_phantom_data: Default::default(),
@@ -151,24 +154,40 @@ fn get_pvk() -> PreparedVk {
 	PreparedVk::from_slice(&buf_vk[..])
 }
 
-fn alice_init() -> (PkdAddress, Ciphertext) {
-	let alice_seed = b"Alice                           ";
+fn alice_balance_init() -> (PkdAddress, Ciphertext) {
+	let (alice_seed, enc_key) = get_alice_seed_ek();
 	let alice_value = 10_000 as u32;
-
 	let p_g = FixedGenerators::Diversifier; // 1 same as NoteCommitmentRandomness;
 
-	let address = EncryptionKey::<Bls12>::from_seed(alice_seed, &JUBJUB)
-		.expect("should be generated encryption key from seed.");
-
 	// The default balance is not encrypted with randomness.
-	let enc_alice_bal = elgamal::Ciphertext::encrypt(alice_value, fs::Fs::one(), &address, p_g, &JUBJUB);
+	let enc_alice_bal = elgamal::Ciphertext::encrypt(alice_value, fs::Fs::one(), &enc_key, p_g, &JUBJUB);
 
-	let decryption_key = ProofGenerationKey::<Bls12>::from_seed(alice_seed, &JUBJUB)
+	let dec_key = ProofGenerationKey::<Bls12>::from_seed(&alice_seed[..], &JUBJUB)
 		.into_decryption_key()
 		.expect("should be converted to decryption key.");
 
-	let dec_alice_bal = enc_alice_bal.decrypt(&decryption_key, p_g, &JUBJUB).unwrap();
+	let dec_alice_bal = enc_alice_bal.decrypt(&dec_key, p_g, &JUBJUB).unwrap();
 	assert_eq!(dec_alice_bal, alice_value);
 
-	(PkdAddress::from_encryption_key(&address), Ciphertext::from_ciphertext(&enc_alice_bal))
+	(PkdAddress::from_encryption_key(&enc_key), Ciphertext::from_ciphertext(&enc_alice_bal))
+}
+
+fn alice_pending_transfer_init() -> (PkdAddress, Ciphertext) {
+	let (_, enc_key) = get_alice_seed_ek();
+	let zero = elgamal::Ciphertext::zero();
+
+	(PkdAddress::from_encryption_key(&enc_key), Ciphertext::from_ciphertext(&zero))
+}
+
+fn alice_epoch_init() -> (PkdAddress, u64) {
+	let (_, enc_key) = get_alice_seed_ek();
+
+	(PkdAddress::from_encryption_key(&enc_key), 0)
+}
+
+fn get_alice_seed_ek() -> (Vec<u8>, EncryptionKey<Bls12>) {
+	let alice_seed = b"Alice                           ".to_vec();
+
+	(alice_seed.clone(), EncryptionKey::<Bls12>::from_seed(&alice_seed[..], &JUBJUB)
+		.expect("should be generated encryption key from seed."))
 }

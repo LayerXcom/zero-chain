@@ -28,6 +28,7 @@ pub trait Trait: system::Trait {
 }
 
 type FeeAmount = u32;
+type Epoch = u32;
 
 decl_module! {
 	pub struct Module<T: Trait> for enum Call where origin: T::Origin {
@@ -157,6 +158,12 @@ decl_storage! {
     trait Store for Module<T: Trait> as ConfTransfer {
         /// The encrypted balance for each account
         pub EncryptedBalance get(encrypted_balance) config() : map PkdAddress => Option<Ciphertext>;
+        /// The pending transfer
+        pub PendingTransfer get(pending_transfer) config() : map PkdAddress => Option<Ciphertext>;
+        /// The last epoch for rollover
+        pub LastEpoch get(last_epoch) config() : map PkdAddress => Option<T::BlockNumber>;
+        /// Global epoch length for rollover
+        pub EpochLength get(epoch_length) config() : Epoch;
         /// The fee to be paid for making a transaction; the base.
         pub TransactionBaseFee get(transaction_base_fee) config(): FeeAmount;
         /// The verification key of zk proofs (only readable)
@@ -292,30 +299,67 @@ mod tests {
 
     type ConfTransfer = Module<Test>;
 
-    fn alice_init() -> (PkdAddress, Ciphertext) {
-        let alice_seed = b"Alice                           ";
-        let alice_amount = 100 as u32;
+    // fn alice_balance_init() -> (PkdAddress, Ciphertext) {
+    //     let params = &JubjubBls12::new();
+    //     let (alice_seed, enc_key) = get_alice_seed_ek();
+    //     let alice_value = 10_000 as u32;
+    //     let p_g = FixedGenerators::Diversifier; // 1 same as NoteCommitmentRandomness;
 
+    //     // The default balance is not encrypted with randomness.
+    //     let enc_alice_bal = elgamal::Ciphertext::encrypt(alice_value, fs::Fs::one(), &enc_key, p_g, params);
+
+    //     let dec_key = ProofGenerationKey::<Bls12>::from_seed(&alice_seed[..], params)
+    //         .into_decryption_key()
+    //         .expect("should be converted to decryption key.");
+
+    //     let dec_alice_bal = enc_alice_bal.decrypt(&dec_key, p_g, params).unwrap();
+    //     assert_eq!(dec_alice_bal, alice_value);
+
+    //     (PkdAddress::from_encryption_key(&enc_key), Ciphertext::from_ciphertext(&enc_alice_bal))
+    // }
+
+    fn alice_balance_init() -> (PkdAddress, Ciphertext) {
+        let (alice_seed, enc_key) = get_alice_seed_ek();
+        let alice_amount = 100 as u32;
         let params = &JubjubBls12::new();
         let p_g = FixedGenerators::Diversifier; // 1 same as NoteCommitmentRandomness;
-
-        let encryption_key = EncryptionKey::<Bls12>::from_seed(alice_seed, params).unwrap();
 
         // The default balance is not encrypted with randomness.
         let enc_alice_bal = elgamal::Ciphertext::encrypt(
             alice_amount,
             fs::Fs::one(),
-            &encryption_key,
+            &enc_key,
             p_g,
             params
         );
 
-        let decryption_key = ProofGenerationKey::<Bls12>::from_seed(alice_seed, params).into_decryption_key().unwrap();
+        let decryption_key = ProofGenerationKey::<Bls12>::from_seed(&alice_seed[..], params).into_decryption_key().unwrap();
 
         let dec_alice_bal = enc_alice_bal.decrypt(&decryption_key, p_g, params).unwrap();
         assert_eq!(dec_alice_bal, alice_amount);
 
-        (PkdAddress::from_encryption_key(&encryption_key), Ciphertext::from_ciphertext(&enc_alice_bal))
+        (PkdAddress::from_encryption_key(&enc_key), Ciphertext::from_ciphertext(&enc_alice_bal))
+    }
+
+    fn alice_pending_transfer_init() -> (PkdAddress, Ciphertext) {
+        let (_, enc_key) = get_alice_seed_ek();
+        let zero = elgamal::Ciphertext::zero();
+
+        (PkdAddress::from_encryption_key(&enc_key), Ciphertext::from_ciphertext(&zero))
+    }
+
+    fn alice_epoch_init() -> (PkdAddress, u64) {
+        let (_, enc_key) = get_alice_seed_ek();
+
+        (PkdAddress::from_encryption_key(&enc_key), 0)
+    }
+
+    fn get_alice_seed_ek() -> (Vec<u8>, EncryptionKey<Bls12>) {
+        let params = &JubjubBls12::new();
+        let alice_seed = b"Alice                           ".to_vec();
+
+        (alice_seed.clone(), EncryptionKey::<Bls12>::from_seed(&alice_seed[..], params)
+            .expect("should be generated encryption key from seed."))
     }
 
     fn get_pvk() -> PreparedVk {
@@ -332,7 +376,10 @@ mod tests {
     fn new_test_ext() -> runtime_io::TestExternalities<Blake2Hasher> {
         let mut t = system::GenesisConfig::<Test>::default().build_storage().unwrap().0;
         t.extend(GenesisConfig::<Test>{
-            encrypted_balance: vec![alice_init()],
+            encrypted_balance: vec![alice_balance_init()],
+			pending_transfer: vec![alice_pending_transfer_init()],
+			last_epoch: vec![alice_epoch_init()],
+            epoch_length: 10,
             verifying_key: get_pvk(),
             transaction_base_fee: 1,
             _genesis_phantom_data: Default::default(),
@@ -345,13 +392,13 @@ mod tests {
     fn test_call_function() {
         with_externalities(&mut new_test_ext(), || {
             // Needed to be updated manually once snark paramters are pre-processed.
-            let proof: [u8; 192] = hex!("80820f58804a32f4ecc8a7469275cac8bc0a728fca43fea67317519745e607aeb5b4bd4366b62fb6c5e9cd3a83bd232a99932412198c014b509d2e88bf5f01075202eab7c02adbf8a7f10be3e46c7a8c48e0393d16d1379f6671978892d363350b2bf0665b201523b294dc20f2427b531c17f3f6a513cad8e31184a31effca26bae94f7e43c0e01e18b2cf55bfa66c21a6c065a94df6c9199db5f4e1a3414037b2a3538bf99ca2e797f24158dec752017facff03bd11f2ebe3c33308e4b40115");
+            let proof: [u8; 192] = hex!("a127994f62fefa882271cbe9fd1fffd16bcf3ebb3cd219c04be4333118f33115e4c70e8d199e43e956b8761e1e69bff48ff156d14e7d083a09e341da114b05a5c2eff9bd6aa9881c7ca282fbb554245d2e65360fa72f1de6b538b79a672cdf86072eeb911b1dadbfef2091629cf9ee76cf80ff7ec085258b102caa62f5a2a00b48dce27c91d59c2cdfa23b456c0f616ea1e9061b5e91ec080f1c3c66cf2e13ecca7b7e1530addd2977a123d6ebbea11e9f8c3b1989fc830a309254e663315dcb");
             let pkd_addr_alice: [u8; 32] = hex!("fd0c0c0183770c99559bf64df4fe23f77ced9b8b4d02826a282bcd125117dcc2");
             let pkd_addr_bob: [u8; 32] = hex!("45e66da531088b55dcb3b273ca825454d79d2d1d5c4fa2ba4a12c1fa1ccd6389");
-            let enc10_by_alice: [u8; 64] = hex!("e9ef0a4f4b07f7ae5bfab360e3daa312c2d288e21eb4b9ccc9946c7926efa50ea846bca1ff93a24c5bb8efbde8a42424ef343244b729eaa367df7bb7ac0c3fcf");
-            let enc10_by_bob: [u8; 64] = hex!("018ba6d82d18eaa6751306dcf188daa771bb0ce270cadb91a8b13846b85cc457a846bca1ff93a24c5bb8efbde8a42424ef343244b729eaa367df7bb7ac0c3fcf");
+            let enc10_by_alice: [u8; 64] = hex!("29f38e21e264fb8fa61edc76f79ca2889228d36e40b63f3697102010404ae1d0b8b965029e45bd78aabe14c66458dd03f138aa8b58490974f23aabb53d9bce99");
+            let enc10_by_bob: [u8; 64] = hex!("4c6bda3db6977c29a115fbc5aba03b9c37b767c09ffe6c622fcec42bbb732fc7b8b965029e45bd78aabe14c66458dd03f138aa8b58490974f23aabb53d9bce99");
             let rvk: [u8; 32] = hex!("f539db3c0075f6394ff8698c95ca47921669c77bb2b23b366f42a39b05a88c96");
-            let enc1_by_alice: [u8; 64] = hex!("dc98926ce4d481770442acd13814a923cc2024d31463fcc7ce0dd9aed6ae64afa846bca1ff93a24c5bb8efbde8a42424ef343244b729eaa367df7bb7ac0c3fcf");
+            let enc1_by_alice: [u8; 64] = hex!("ed19f1820c3f09da976f727e8531aa83a483d262e4abb1e9e67a1eba843b4034b8b965029e45bd78aabe14c66458dd03f138aa8b58490974f23aabb53d9bce99");
 
             assert_ok!(ConfTransfer::confidential_transfer(
                 Origin::signed(1),
@@ -370,13 +417,13 @@ mod tests {
     #[should_panic]
     fn test_call_with_worng_proof() {
         with_externalities(&mut new_test_ext(), || {
-            let proof: [u8; 192] = hex!("b7e763cbdc1d4b78e70534894d9dbef78ac259ab0cd602e65d31459dd03432c5e14dbef9484a9ab36d9db17ad531b50aa8d051dc885599fbefcd1992437ee3453ef66d5921b9082c5ac93ddf7370dac444050147a71849cc1d16d4208984335d1567bb676a30974e8ae228741adbf6ac50d3c35ee14e835762bc4868e6f22d7b69ccbbbc5cfc3fbe49968c1873a99ffcacb71b1139806166e5c491ff9addbcbabc9df058371ef989219ba20c6a718317b4586bbf1d429d4bf4dab47e130bd23f");
+            let proof: [u8; 192] = hex!("b127994f62fefa882271cbe9fd1fffd16bcf3ebb3cd219c04be4333118f33115e4c70e8d199e43e956b8761e1e69bff48ff156d14e7d083a09e341da114b05a5c2eff9bd6aa9881c7ca282fbb554245d2e65360fa72f1de6b538b79a672cdf86072eeb911b1dadbfef2091629cf9ee76cf80ff7ec085258b102caa62f5a2a00b48dce27c91d59c2cdfa23b456c0f616ea1e9061b5e91ec080f1c3c66cf2e13ecca7b7e1530addd2977a123d6ebbea11e9f8c3b1989fc830a309254e663315dcb");
             let pkd_addr_alice: [u8; 32] = hex!("fd0c0c0183770c99559bf64df4fe23f77ced9b8b4d02826a282bcd125117dcc2");
             let pkd_addr_bob: [u8; 32] = hex!("45e66da531088b55dcb3b273ca825454d79d2d1d5c4fa2ba4a12c1fa1ccd6389");
-            let enc10_by_alice: [u8; 64] = hex!("087d5aa97ed351a81cea9e7bb46c83bb4a889bc696f623e7812fc59509cc3a6c997173e746fe32c12a70584cdf9dce783cf3daf44c17d40142f2c460324355aa");
-            let enc10_by_bob: [u8; 64] = hex!("88c851325af572216ececdc2e120bfa972ed9e6b901ee45e31288abd84c3b6be997173e746fe32c12a70584cdf9dce783cf3daf44c17d40142f2c460324355aa");
+            let enc10_by_alice: [u8; 64] = hex!("29f38e21e264fb8fa61edc76f79ca2889228d36e40b63f3697102010404ae1d0b8b965029e45bd78aabe14c66458dd03f138aa8b58490974f23aabb53d9bce99");
+            let enc10_by_bob: [u8; 64] = hex!("4c6bda3db6977c29a115fbc5aba03b9c37b767c09ffe6c622fcec42bbb732fc7b8b965029e45bd78aabe14c66458dd03f138aa8b58490974f23aabb53d9bce99");
             let rvk: [u8; 32] = hex!("f539db3c0075f6394ff8698c95ca47921669c77bb2b23b366f42a39b05a88c96");
-            let enc1_by_alice: [u8; 64] = hex!("55a75030bd77f5b7914b55575c154f61a721e05df076546d815e877d71ac6dcc997173e746fe32c12a70584cdf9dce783cf3daf44c17d40142f2c460324355aa");
+            let enc1_by_alice: [u8; 64] = hex!("ed19f1820c3f09da976f727e8531aa83a483d262e4abb1e9e67a1eba843b4034b8b965029e45bd78aabe14c66458dd03f138aa8b58490974f23aabb53d9bce99");
 
             assert_ok!(ConfTransfer::confidential_transfer(
                 Origin::signed(1),
