@@ -5036,6 +5036,7 @@ dependencies = [
  "jubjub 0.1.0",
  "keys 0.1.0",
  "log 0.4.6 (registry+https://github.com/rust-lang/crates.io-index)",
+ "matches 0.1.8 (registry+https://github.com/rust-lang/crates.io-index)",
  "pairing 0.14.2 (git+https://github.com/LayerXcom/librustzcash?branch=zero-chain)",
  "parity-codec 3.5.1 (registry+https://github.com/rust-lang/crates.io-index)",
  "parity-crypto 0.4.0 (registry+https://github.com/rust-lang/crates.io-index)",

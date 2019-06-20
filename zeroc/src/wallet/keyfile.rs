@@ -31,6 +31,12 @@ impl From<[u8; 32]> for SerdeBytes {
     }
 }
 
+impl From<[u8; 16]> for SerdeBytes {
+    fn from(v: [u8; 16]) -> Self {
+        SerdeBytes(v.to_vec())
+    }
+}
+
 impl From<&[u8]> for SerdeBytes {
     fn from(v: &[u8]) -> Self {
         SerdeBytes(v.to_vec())
@@ -70,11 +76,10 @@ impl KeyCiphertext {
     ) -> Result<Self>
     {
         let rng = &mut OsRng::new().expect("should be able to construct RNG");
+        let salt: [u8; 32] = rng.gen();
+        let iv: [u8; 16] = rng.gen();
 
-        let mut salt: [u8; 32] = rng.gen();
-        let mut iv: [u8; 32] = rng.gen();
-
-        let (derived_right, derived_left) = crypto::derive_key_iterations(password, &salt, iters);
+        let (derived_left, derived_right) = crypto::derive_key_iterations(password, &salt, iters);
 
         let mut ciphertext: SmallVec<[u8; 32]> = SmallVec::from_vec(vec![0; plain.len()]);
 
@@ -92,7 +97,7 @@ impl KeyCiphertext {
     }
 
     pub fn decrypt(&self, password: &[u8]) -> Result<Vec<u8>> {
-        let (derived_left, derived_right) = crypto::derive_key_iterations(password, &self.salt.0, self.iters);
+        let (derived_left, derived_right) = crypto::derive_key_iterations(password, &self.salt.0[..], self.iters);
         let mac = crypto::derive_mac(&derived_right, &self.ciphertext.0).keccak256();
 
         if !crypto::is_equal(&mac, &self.mac.0) {
@@ -108,3 +113,32 @@ impl KeyCiphertext {
     }
 }
 
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn test_plain_with_correct_password() {
+        let plain = b"test";
+        let password = b"abcd";
+        let iters = 1024;
+
+        let ciphertext = KeyCiphertext::encrypt(plain, password, iters).unwrap();
+        let decrypted = ciphertext.decrypt(password).unwrap();
+
+        assert_eq!(decrypted, plain);
+    }
+
+    #[test]
+    fn test_plain_with_wrong_password() {
+        let plain = b"test";
+        let password_enc = b"abcd";
+        let password_dec = b"wxyz";
+        let iters = 1024;
+
+        let ciphertext = KeyCiphertext::encrypt(plain, password_enc, iters).unwrap();
+        let decrypted = ciphertext.decrypt(password_dec);
+
+        assert_matches!(decrypted, Err(WalletError::InvalidPassword));
+    }
+}

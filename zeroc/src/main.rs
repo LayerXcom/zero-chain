@@ -4,6 +4,9 @@ extern crate log;
 extern crate clap;
 #[macro_use]
 extern crate serde_derive;
+#[cfg(test)]
+#[macro_use]
+extern crate matches;
 
 use std::fs::File;
 use std::path::{Path, PathBuf};

@@ -134,6 +134,55 @@ impl Derivation for ExtendedSpendingKey {
     }
 }
 
+/// Extended spending key for HDKD
+pub struct ExtendedEncryptionKey {
+    depth: u8,
+    parent_enckey_tag: EncKeyTag,
+    child_index: ChildIndex,
+    chain_code: ChainCode,
+    pub enc_key: EncryptionKey<Bls12>,
+}
+
+impl Derivation for ExtendedEncryptionKey {
+    fn master(seed: &[u8]) -> Self {
+        unimplemented!();
+    }
+
+    fn derive_child(&self, i: ChildIndex) -> io::Result<Self> {
+        unimplemented!();
+    }
+
+    fn read<R: Read>(mut reader: R) -> io::Result<Self> {
+        let depth = reader.read_u8()?;
+        let mut tag = [0u8; 4];
+        reader.read_exact(&mut tag)?;
+
+        let i = reader.read_u32::<LittleEndian>()?;
+        let mut c = [0u8; 32];
+        reader.read_exact(&mut c)?;
+
+        let enc_key = EncryptionKey::read(&mut reader, &*PARAMS)?;
+
+        Ok(ExtendedEncryptionKey {
+            depth,
+            parent_enckey_tag: EncKeyTag(tag),
+            child_index: ChildIndex::from_index(i),
+            chain_code: ChainCode(c),
+            enc_key,
+        })
+    }
+
+    fn write<W: Write>(&self, mut writer: W) -> io::Result<()> {
+        writer.write_u8(self.depth)?;
+        writer.write_all(&self.parent_enckey_tag.0)?;
+        writer.write_u32::<LittleEndian>(self.child_index.to_index())?;
+        writer.write_all(&self.chain_code.0)?;
+        writer.write_all(&self.enc_key.into_bytes()?)?;
+
+        Ok(())
+    }
+}
+
 impl TryFrom<ExtendedSpendingKey> for SerdeBytes {
     type Error = io::Error;
 
@@ -179,9 +228,23 @@ impl Derive for EncryptionKeyBytes {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use rand::{SeedableRng, Rng, XorShiftRng, Rand};
 
     #[test]
-    fn test() {
+    fn derive_nonhardened_child() {
+        let rng = &mut XorShiftRng::from_seed([0x3dbe6259, 0x8d313d76, 0x3237db17, 0xe5bc0654]);
+        let seed: [u8; 32] = rng.gen();
+
+        let xsk_master = ExtendedSpendingKey::master(&seed);
+
+        let index_3 = ChildIndex::NonHardened(3);
+        let xsk_child = xsk_master.derive_child(index_3);
+
+
+    }
+
+    #[test]
+    fn derive_hardened_child() {
 
     }
 }
