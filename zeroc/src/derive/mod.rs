@@ -8,8 +8,8 @@ use proofs::keys::{EncryptionKey, SpendingKey, prf_expand_vec, prf_expand};
 use scrypto::jubjub::{JubjubEngine, fs::Fs, ToUniform};
 use pairing::{bls12_381::Bls12, Field};
 use byteorder::{ByteOrder, LittleEndian, ReadBytesExt, WriteBytesExt};
-use rand::{OsRng, Rng};
 use crate::PARAMS;
+use super::wallet::SerdeBytes;
 use std::io::{self, Read, Write};
 use std::convert::TryFrom;
 
@@ -32,9 +32,11 @@ pub trait Derivation: Sized {
     fn derive_child(&self, i: ChildIndex) -> io::Result<Self>;
 
     fn read<R: Read>(mut reader: R) -> io::Result<Self>;
+
     fn write<W: Write>(&self, mut writer: W) -> io::Result<()>;
 }
 
+/// Extended spending key for HDKD
 pub struct ExtendedSpendingKey {
     depth: u8,
     parent_enckey_tag: EncKeyTag,
@@ -132,36 +134,18 @@ impl Derivation for ExtendedSpendingKey {
     }
 }
 
-impl TryFrom<ExtendedSpendingKey> for ExtendedSpendingKeyBytes {
+impl TryFrom<ExtendedSpendingKey> for SerdeBytes {
     type Error = io::Error;
 
-    fn try_from(xsk: ExtendedSpendingKey) -> io::Result<ExtendedSpendingKeyBytes> {
-        let mut res = [0u8; EXTENDED_SPENDING_KEY_LENGATH];
+    fn try_from(xsk: ExtendedSpendingKey) -> io::Result<SerdeBytes> {
+        let mut res = vec![];
         xsk.write(&mut res[..])?;
 
-        Ok(ExtendedSpendingKeyBytes(res))
+        Ok(SerdeBytes(res))
     }
 }
 
-pub struct ExtendedSpendingKeyBytes(pub [u8; EXTENDED_SPENDING_KEY_LENGATH]);
-
-impl ExtendedSpendingKeyBytes {
-    pub fn encrypt(&self, password: &[u8]) -> Vec<u8> {
-        let rng = &mut OsRng::new().expect("should be able to construct RNG");
-
-        let mut salt: [u8; 32] = rng.gen();
-        let mut iv: [u8; 32] = rng.gen();
-
-
-        unimplemented!();
-    }
-
-    pub fn decrypt() -> Self {
-        unimplemented!();
-    }
-}
-
-
+/// Byte format of encryption key to implement SS58 trait.
 #[derive(PartialEq, Eq, PartialOrd, Ord, Clone, Encode, Decode, Default)]
 pub struct EncryptionKeyBytes(pub [u8; 32]);
 
@@ -189,5 +173,15 @@ impl Derive for EncryptionKeyBytes {
 	/// `None` if there are any hard junctions in there.
     fn derive<Iter: Iterator<Item=DeriveJunction>>(&self, path: Iter) -> Option<EncryptionKeyBytes> {
         unimplemented!();
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn test() {
+
     }
 }

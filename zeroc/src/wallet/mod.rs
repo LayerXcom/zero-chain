@@ -11,6 +11,7 @@ mod commands;
 mod config;
 mod keyfile;
 mod error;
+pub use keyfile::SerdeBytes;
 
 #[derive(Clone, PartialEq, Eq, PartialOrd, Ord)]
 pub struct AccountName(String);
@@ -71,9 +72,6 @@ impl Wallet {
     ) -> Result<()>
     {
         let wallet_file = fs::File::create(root_dir)?;
-
-
-
 
         // 1. save the configuration file
 

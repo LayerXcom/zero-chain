@@ -1,12 +1,41 @@
+use rand::{OsRng, Rng};
+use parity_crypto as crypto;
+use crypto::Keccak256;
+use smallvec::SmallVec;
 use std::num::NonZeroU32;
 use serde::{Deserialize, Serialize};
-use super::error::Result;
+use super::error::{WalletError, Result};
 
+/// Serializable and deserializable bytes
 #[derive(Deserialize, Serialize, PartialEq, Eq, Debug)]
-pub struct Bytes(
+pub struct SerdeBytes(
     #[serde(with = "serde_bytes")]
     pub Vec<u8>
 );
+
+impl From<Vec<u8>> for SerdeBytes {
+    fn from(v: Vec<u8>) -> Self {
+        SerdeBytes(v)
+    }
+}
+
+impl From<SmallVec<[u8; 32]>> for SerdeBytes {
+    fn from(v: SmallVec<[u8; 32]>) -> Self {
+        SerdeBytes(v.into_vec())
+    }
+}
+
+impl From<[u8; 32]> for SerdeBytes {
+    fn from(v: [u8; 32]) -> Self {
+        SerdeBytes(v.to_vec())
+    }
+}
+
+impl From<&[u8]> for SerdeBytes {
+    fn from(v: &[u8]) -> Self {
+        SerdeBytes(v.to_vec())
+    }
+}
 
 #[derive(Debug, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
@@ -15,40 +44,67 @@ pub struct KeyFile {
     pub name: String,
     /// Keyfile version
     pub version: u32,
-    /// Keyfile crypto
-    pub crypto: Crypto,
+    /// Encrypted private key
+    pub enc_key: KeyCiphertext,
     /// Optional address
-    pub address: Option<Bytes>,
+    pub address: Option<SerdeBytes>,
 }
-
 
 #[derive(Debug, PartialEq, Eq, Serialize, Deserialize)]
-pub struct Crypto {
-    pub ciphertext: Bytes,
+pub struct KeyCiphertext {
+    pub ciphertext: SerdeBytes,
+    /// Mac paramter
+    pub mac: SerdeBytes,
+    pub salt: SerdeBytes,
+    pub iv: SerdeBytes,
+    pub iters: u32,
 }
 
-impl Crypto {
+impl KeyCiphertext {
+    /// Encrypt plain bytes data
+    /// Currently using `parity-crypto`.
     pub fn encrypt(
         plain: &[u8],
         password: &[u8],
-        iterations: u32,
+        iters: u32,
     ) -> Result<Self>
     {
-        unimplemented!();
+        let rng = &mut OsRng::new().expect("should be able to construct RNG");
+
+        let mut salt: [u8; 32] = rng.gen();
+        let mut iv: [u8; 32] = rng.gen();
+
+        let (derived_right, derived_left) = crypto::derive_key_iterations(password, &salt, iters);
+
+        let mut ciphertext: SmallVec<[u8; 32]> = SmallVec::from_vec(vec![0; plain.len()]);
+
+        crypto::aes::encrypt_128_ctr(&derived_left, &iv, plain, &mut *ciphertext).map_err(crypto::Error::from)?;
+
+        let mac = crypto::derive_mac(&derived_right, &*ciphertext).keccak256();
+
+        Ok(KeyCiphertext {
+            ciphertext: ciphertext.into(),
+            mac: mac.into(),
+            salt: salt.into(),
+            iv: iv.into(),
+            iters,
+        })
     }
 
     pub fn decrypt(&self, password: &[u8]) -> Result<Vec<u8>> {
-        unimplemented!();
+        let (derived_left, derived_right) = crypto::derive_key_iterations(password, &self.salt.0, self.iters);
+        let mac = crypto::derive_mac(&derived_right, &self.ciphertext.0).keccak256();
+
+        if !crypto::is_equal(&mac, &self.mac.0) {
+            return Err(WalletError::InvalidPassword)
+        }
+
+        let mut plain: SmallVec<[u8; 32]> = SmallVec::from_vec(vec![0; self.ciphertext.0.len()]);
+
+        crypto::aes::decrypt_128_ctr(&derived_left, &self.iv.0, &self.ciphertext.0, &mut plain)
+            .map_err(crypto::Error::from)?;
+
+        Ok(plain.to_vec())
     }
 }
 
-
-
-fn kdf_iterations(
-    password: &[u8],
-    salt: &[u8],
-    iterations: NonZeroU32
-) -> (Vec<u8>, Vec<u8>)
-{
-    unimplemented!();
-}

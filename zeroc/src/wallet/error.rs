@@ -1,10 +1,12 @@
 use std::{error::Error, fmt, io, path::PathBuf};
+use parity_crypto as crypto;
 
 /// Defined wallet errors
 #[derive(Debug)]
 pub enum WalletError {
+    InvalidPassword,
     IoError(io::Error),
-
+    CryptoError(crypto::Error),
 }
 
 impl From<io::Error> for WalletError {
@@ -13,10 +15,18 @@ impl From<io::Error> for WalletError {
     }
 }
 
+impl From<crypto::Error> for WalletError {
+    fn from(e: crypto::Error) -> Self {
+        WalletError::CryptoError(e)
+    }
+}
+
 impl fmt::Display for WalletError {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         match *self {
-            WalletError::IoError(_) => write!(f, "I/O error occurred")
+            WalletError::InvalidPassword => write!(f, "Invalid password"),
+            WalletError::IoError(_) => write!(f, "I/O error occurred"),
+            WalletError::CryptoError(_) => write!(f, "crypto error occured"),
         }
     }
 }
