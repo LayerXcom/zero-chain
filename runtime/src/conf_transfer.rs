@@ -2,6 +2,7 @@
 use support::{decl_module, decl_storage, decl_event, StorageMap, dispatch::Result, ensure};
 use rstd::prelude::*;
 use bellman_verifier::verify_proof;
+use rstd::result;
 use pairing::{
     bls12_381::{
         Bls12,
@@ -28,7 +29,6 @@ pub trait Trait: system::Trait {
 }
 
 type FeeAmount = u32;
-type Epoch = u32;
 
 decl_module! {
 	pub struct Module<T: Trait> for enum Call where origin: T::Origin {
@@ -268,10 +268,11 @@ impl<T: Trait> Module<T> {
     /// To achieve this, we define a separate (internal) method for rolling over,
     /// and the first thing every other method does is to call this method.
     /// More details in Section 3.1: https://crypto.stanford.edu/~buenz/papers/zether.pdf
-    fn rollover(addr: &PkdAddress) -> Result {
+    fn rollover(addr: &PkdAddress) -> result::Result<elgamal::Ciphertext<Bls12>, &'static str> {
         let current_height = <system::Module<T>>::block_number();
         let current_epoch = current_height / Self::epoch_length();
 
+        // Get current pending transfer
         let pending_transfer = <PendingTransfer<T>>::get(addr);
 
         // Get balance with the type
@@ -312,7 +313,7 @@ impl<T: Trait> Module<T> {
             }
         }
 
-        Ok(())
+        Ok(typed_balance)
     }
 }
 
