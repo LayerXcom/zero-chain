@@ -158,14 +158,21 @@ decl_storage! {
     trait Store for Module<T: Trait> as ConfTransfer {
         /// The encrypted balance for each account
         pub EncryptedBalance get(encrypted_balance) config() : map PkdAddress => Option<Ciphertext>;
+
         /// The pending transfer
         pub PendingTransfer get(pending_transfer) config() : map PkdAddress => Option<Ciphertext>;
+
         /// The last epoch for rollover
-        pub LastEpoch get(last_epoch) config() : map PkdAddress => Option<T::BlockNumber>;
-        /// Global epoch length for rollover
-        pub EpochLength get(epoch_length) config() : Epoch;
+        pub LastRollOver get(last_rollover) config() : map PkdAddress => Option<T::BlockNumber>;
+
+        /// Global epoch length for rollover.
+        /// The longer epoch length is, the longer rollover time is.
+        /// This parameter should be fixed based on trade-off between UX and security in terms of front-running attacks.
+        pub EpochLength get(epoch_length) config() : T::BlockNumber;
+
         /// The fee to be paid for making a transaction; the base.
         pub TransactionBaseFee get(transaction_base_fee) config(): FeeAmount;
+
         /// The verification key of zk proofs (only readable)
         pub VerifyingKey get(verifying_key) config(): PreparedVk;
     }
@@ -181,8 +188,9 @@ decl_event! (
 );
 
 impl<T: Trait> Module<T> {
-    // Public immutables
-    // Validate zk proofs
+    // PUBLIC IMMUTABLES
+
+    /// Validate zk proofs
 	pub fn validate_proof (
         zkproof: &bellman_verifier::Proof<Bls12>,
         address_sender: &EncryptionKey<Bls12>,
@@ -251,6 +259,61 @@ impl<T: Trait> Module<T> {
             _ => {runtime_io::print("Invalid proof!!!!"); false},
         }
     }
+
+    // PRIVATE MUTABLES
+
+    /// Rolling over allows us to send transactions asynchronously and protect from front-running attacks.
+    /// We rollover an account in an epoch when the first message from this account is received;
+    /// so, one message rolls over only one account.
+    /// To achieve this, we define a separate (internal) method for rolling over,
+    /// and the first thing every other method does is to call this method.
+    /// More details in Section 3.1: https://crypto.stanford.edu/~buenz/papers/zether.pdf
+    fn rollover(addr: &PkdAddress) -> Result {
+        let current_height = <system::Module<T>>::block_number();
+        let current_epoch = current_height / Self::epoch_length();
+
+        let pending_transfer = <PendingTransfer<T>>::get(addr);
+
+        // Get balance with the type
+        let typed_balance = match Self::encrypted_balance(addr) {
+            Some(b) => match b.into_ciphertext() {
+                Some(c) => c,
+                None => return Err("Invalid ciphertext"),
+            },
+            None => return Err("Invalid balance"),
+        };
+
+        // Get balance with the type
+        let typed_pending_transfer = match pending_transfer.clone() {
+            Some(b) => match b.into_ciphertext() {
+                Some(c) => c,
+                None => return Err("Invalid ciphertext"),
+            },
+            None => return Err("Invalid balance"),
+        };
+
+        if let Some(e) = <LastRollOver<T>>::get(addr) {
+            // checks if the last roll over was in an older epoch
+            if e < current_epoch {
+                // transfer balance from pending_transfer to actual balance
+                <EncryptedBalance<T>>::mutate(addr, |balance| {
+                    let new_balance = balance.clone().map_or(
+                        pending_transfer,
+                        |_| Some(Ciphertext::from_ciphertext(&typed_balance.add_no_params(&typed_pending_transfer)))
+                    );
+                    *balance = new_balance
+                });
+
+                // Reset pending_transfer.
+                <PendingTransfer<T>>::remove(addr);
+
+                // Set last rollover to current epoch.
+                <LastRollOver<T>>::insert(addr, current_epoch);
+            }
+        }
+
+        Ok(())
+    }
 }
 
 #[cfg(feature = "std")]
@@ -298,25 +361,6 @@ mod tests {
     }
 
     type ConfTransfer = Module<Test>;
-
-    // fn alice_balance_init() -> (PkdAddress, Ciphertext) {
-    //     let params = &JubjubBls12::new();
-    //     let (alice_seed, enc_key) = get_alice_seed_ek();
-    //     let alice_value = 10_000 as u32;
-    //     let p_g = FixedGenerators::Diversifier; // 1 same as NoteCommitmentRandomness;
-
-    //     // The default balance is not encrypted with randomness.
-    //     let enc_alice_bal = elgamal::Ciphertext::encrypt(alice_value, fs::Fs::one(), &enc_key, p_g, params);
-
-    //     let dec_key = ProofGenerationKey::<Bls12>::from_seed(&alice_seed[..], params)
-    //         .into_decryption_key()
-    //         .expect("should be converted to decryption key.");
-
-    //     let dec_alice_bal = enc_alice_bal.decrypt(&dec_key, p_g, params).unwrap();
-    //     assert_eq!(dec_alice_bal, alice_value);
-
-    //     (PkdAddress::from_encryption_key(&enc_key), Ciphertext::from_ciphertext(&enc_alice_bal))
-    // }
 
     fn alice_balance_init() -> (PkdAddress, Ciphertext) {
         let (alice_seed, enc_key) = get_alice_seed_ek();
