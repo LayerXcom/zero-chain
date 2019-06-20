@@ -329,7 +329,7 @@ fn subcommand_tx(mut term: term::Term, root_dir: PathBuf, matches: &ArgMatches) 
 
             let recipient_account_id = EncryptionKey::<Bls12>::read(&mut &recipient_encryption_key[..], &PARAMS)
                 .expect("should be casted to EncryptionKey<Bls12> type.");
-            let encrypted_balance = elgamal::Ciphertext::read(&mut &encrypted_balance_vec[..], &PARAMS as &JubjubBls12)
+            let encrypted_balance = elgamal::Ciphertext::read(&mut &encrypted_balance_vec[..], &*PARAMS)
                 .expect("should be casted to Ciphertext type.");
 
             println!("Computing zk proof...");
@@ -378,11 +378,11 @@ fn subcommand_tx(mut term: term::Term, root_dir: PathBuf, matches: &ArgMatches) 
 
                 let sig = raw_payload.using_encoded(|payload| {
                     let msg = blake2_256(payload);
-                    let sig = sig_sk.sign(&msg[..], rng, p_g, &ZPARAMS as &zJubjubBls12);
+                    let sig = sig_sk.sign(&msg[..], rng, p_g, &*ZPARAMS);
 
                     let sig_vk = sig_vk.into_verification_key()
                         .expect("should be casted to redjubjub::PublicKey<Bls12> type.");
-                    assert!(sig_vk.verify(&msg, &sig, p_g, &ZPARAMS as &zJubjubBls12));
+                    assert!(sig_vk.verify(&msg, &sig, p_g, &*ZPARAMS));
 
                     sig
                 });
@@ -470,7 +470,7 @@ fn subcommand_tx(mut term: term::Term, root_dir: PathBuf, matches: &ArgMatches) 
 
             let ciphertext_balance_a = sub_matches.value_of("encrypted-balance").unwrap();
             let ciphertext_balance_v = hex::decode(ciphertext_balance_a).unwrap();
-            let ciphertext_balance = elgamal::Ciphertext::read(&mut &ciphertext_balance_v[..], &PARAMS as &JubjubBls12).unwrap();
+            let ciphertext_balance = elgamal::Ciphertext::read(&mut &ciphertext_balance_v[..], &*PARAMS).unwrap();
 
             let remaining_balance = balance - amount - fee;
 
@@ -510,15 +510,14 @@ fn subcommand_tx(mut term: term::Term, root_dir: PathBuf, matches: &ArgMatches) 
                 \nrsk(Alice): 0x{}
                 \nEncrypted fee by sender: 0x{}
                 ",
-                HexDisplay::from(&&tx.proof[..] as &AsBytesRef),
-                HexDisplay::from(&tx.address_sender as &AsBytesRef),
-                HexDisplay::from(&tx.address_recipient as &AsBytesRef),
-                HexDisplay::from(&tx.enc_amount_sender as &AsBytesRef),
-                HexDisplay::from(&tx.enc_amount_recipient as &AsBytesRef),
-                // HexDisplay::from(&tx.enc_bal_sender as &AsBytesRef),
-                HexDisplay::from(&tx.rvk as &AsBytesRef),
-                HexDisplay::from(&tx.rsk as &AsBytesRef),
-                HexDisplay::from(&tx.enc_fee as &AsBytesRef),
+                HexDisplay::from(&&tx.proof[..] as &dyn AsBytesRef),
+                HexDisplay::from(&tx.address_sender as &dyn AsBytesRef),
+                HexDisplay::from(&tx.address_recipient as &dyn AsBytesRef),
+                HexDisplay::from(&tx.enc_amount_sender as &dyn AsBytesRef),
+                HexDisplay::from(&tx.enc_amount_recipient as &dyn AsBytesRef),
+                HexDisplay::from(&tx.rvk as &dyn AsBytesRef),
+                HexDisplay::from(&tx.rsk as &dyn AsBytesRef),
+                HexDisplay::from(&tx.enc_fee as &dyn AsBytesRef),
             );
         },
         _ => {

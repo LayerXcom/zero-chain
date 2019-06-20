@@ -46,7 +46,7 @@ impl Transaction {
 		let spending_key = SpendingKey::from_seed(seed);
 		let proof_generation_key = ProofGenerationKey::from_spending_key(
 			&spending_key,
-			&PARAMS as &JubjubBls12
+			&*PARAMS
 		);
 
 		// Generate the zk proof

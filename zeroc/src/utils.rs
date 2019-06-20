@@ -107,7 +107,7 @@ pub fn get_balance_from_decryption_key(mut decryption_key: &[u8], api: Api) -> (
     let decryption_key_fs = zFs::from_repr(decryption_key_repr).unwrap();
     let decryption_key = keys::DecryptionKey(decryption_key_fs);
 
-    let encryption_key = zEncryptionKey::from_decryption_key(&decryption_key, &ZPARAMS as &zJubjubBls12);
+    let encryption_key = zEncryptionKey::from_decryption_key(&decryption_key, &*ZPARAMS);
     let account_id = PkdAddress::from_encryption_key(&encryption_key);
 
     let mut encrypted_balance_str = api.get_storage(
@@ -134,6 +134,6 @@ pub fn get_address(seed: &[u8]) -> std::io::Result<Vec<u8>> {
 
     let mut address_bytes = vec![];
     address.write(&mut address_bytes)?;
-    
+
     Ok(address_bytes)
 }
