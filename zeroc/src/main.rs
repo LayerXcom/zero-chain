@@ -15,9 +15,10 @@ use std::io::{BufWriter, Write, BufReader, Read};
 use clap::{Arg, App, SubCommand, AppSettings, ArgMatches};
 use rand::OsRng;
 use proofs::{
-    keys::{EncryptionKey, ProofGenerationKey},
+    EncryptionKey, ProofGenerationKey,
     elgamal,
-    transaction::Transaction,
+    Transaction,
+    setup,
     PARAMS,
     };
 use primitives::{hexdisplay::{HexDisplay, AsBytesRef}, blake2_256, crypto::{Ss58Codec, Derive, DeriveJunction}};
@@ -36,13 +37,11 @@ use parity_codec::{Compact, Encode};
 use zerochain_runtime::{UncheckedExtrinsic, Call, ConfTransferCall};
 use bip39::{Mnemonic, Language, MnemonicType};
 
-mod setup;
 mod utils;
 mod config;
 mod wallet;
 pub mod derive;
 pub mod term;
-use setup::setup;
 use utils::*;
 use config::*;
 

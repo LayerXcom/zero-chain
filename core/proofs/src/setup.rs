@@ -6,7 +6,7 @@ use bellman::groth16::{
     PreparedVerifyingKey,
 };
 use rand::OsRng;
-use proofs::circuit_transfer::Transfer;
+use crate::circuit_transfer::Transfer;
 use crate::PARAMS;
 
 pub fn setup() -> (Parameters<Bls12>, PreparedVerifyingKey<Bls12>) {

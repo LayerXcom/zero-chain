@@ -16,8 +16,6 @@ use bellman::{
 use scrypto::jubjub::{
     JubjubEngine,
     FixedGenerators,
-    PrimeOrder,
-    edwards
 };
 use crate::keys::{ProofGenerationKey, EncryptionKey, DecryptionKey};
 use scrypto::circuit::{
