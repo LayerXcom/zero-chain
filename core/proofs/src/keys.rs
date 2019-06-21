@@ -60,7 +60,6 @@ impl<E: JubjubEngine> SpendingKey<E> {
     pub fn into_rsk(
         &self,
         alpha: E::Fs,
-        params: &E::Params
     ) -> PrivateKey<E>
     {
         PrivateKey(self.0).randomize(alpha)

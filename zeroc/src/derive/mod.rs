@@ -187,7 +187,7 @@ impl Derivation for ExtendedProofGenerationKey {
 
         let fs = Fs::to_uniform(prf_expand(left, &[0x13]).as_bytes());
         let proof_gen_key =
-            ProofGenerationKey(ProofGenerationKey::from_spending_key(&SpendingKey(fs), &*PARAMS).0.add(&self.proof_gen_key.0, &*PARAMS));
+            ProofGenerationKey::from_spending_key(&SpendingKey(fs), &*PARAMS).add(&self.proof_gen_key, &*PARAMS);
 
         Ok(ExtendedProofGenerationKey {
             depth: self.depth + 1,
@@ -274,7 +274,7 @@ impl Derive for EncryptionKeyBytes {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use rand::{SeedableRng, Rng, XorShiftRng, Rand};
+    use rand::{SeedableRng, Rng, XorShiftRng};
 
     fn gen_master_key_pairs() -> (ExtendedSpendingKey, ExtendedProofGenerationKey) {
         let rng = &mut XorShiftRng::from_seed([0x3dbe6259, 0x8d313d76, 0x3237db17, 0xe5bc0654]);

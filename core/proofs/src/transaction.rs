@@ -65,7 +65,7 @@ impl Transaction {
 		).expect("Should not be faild to generate a proof.");
 
 		// Generate the re-randomized sign key
-		let rsk = spending_key.into_rsk(alpha, &PARAMS);
+		let rsk = spending_key.into_rsk(alpha);
 		let mut rsk_bytes = [0u8; 32];
 		rsk.write(&mut rsk_bytes[..]).map_err(|_| io::Error::InvalidData)?;
 
