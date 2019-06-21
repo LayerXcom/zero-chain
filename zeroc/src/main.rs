@@ -261,6 +261,19 @@ const TX_COMMAND: &'static str = "tx";
 fn subcommand_tx(mut term: term::Term, root_dir: PathBuf, matches: &ArgMatches) {
     let res = match matches.subcommand() {
         ("send", Some(sub_matches)) => {
+            let seed = hex::decode(sub_matches.value_of("sender-seed")
+                .expect("Seed parameter is required; qed"))
+                .expect("should be decoded to hex.");
+
+            let recipient_encryption_key = hex::decode(sub_matches.value_of("recipient-encryption-key")
+                .expect("Recipient's encryption key parameter is required; qed")
+                ).expect("should be decoded to hex.");
+
+            let amount_str = sub_matches.value_of("amount")
+                .expect("Amount parameter is required; qed");
+            let amount: u32 = amount_str.parse()
+                .expect("should be parsed to u32 number; qed");
+
             println!("Preparing paramters...");
 
             let url = match sub_matches.value_of("url") {
@@ -297,15 +310,6 @@ fn subcommand_tx(mut term: term::Term, root_dir: PathBuf, matches: &ArgMatches) 
             let prepared_vk = PreparedVerifyingKey::<Bls12>::read(&mut &buf_vk[..])
                 .expect("should ne casted to PreparedVerifyingKey<Bls12> type");
 
-            let seed = hex::decode(sub_matches.value_of("sender-seed")
-                .expect("Seed parameter is required; qed"))
-                .expect("should be decoded to hex.");
-
-            let amount_str = sub_matches.value_of("amount")
-                .expect("Amount parameter is required; qed");
-            let amount: u32 = amount_str.parse()
-                .expect("should be parsed to u32 number; qed");
-
             let fee_str = api.get_storage("ConfTransfer", "TransactionBaseFee", None)
                 .expect("should be fetched TransactionBaseFee from ConfTransfer module of Zerochain.");
             let fee = hexstr_to_u64(fee_str) as u32;
@@ -316,10 +320,6 @@ fn subcommand_tx(mut term: term::Term, root_dir: PathBuf, matches: &ArgMatches) 
             let mut decrypted_key = [0u8; 32];
             decryption_key.0.into_repr().write_le(&mut &mut decrypted_key[..])
                 .expect("should be casted as bytes-array.");
-
-            let recipient_encryption_key = hex::decode(sub_matches.value_of("recipient-encryption-key")
-                .expect("Recipient's encryption key parameter is required; qed")
-                ).expect("should be decoded to hex.");
 
             let (decrypted_balance, encrypted_balance_vec, _) = get_balance_from_decryption_key(&decrypted_key[..] ,api.clone());
             let remaining_balance = decrypted_balance - amount - fee;
