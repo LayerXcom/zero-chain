@@ -1,5 +1,4 @@
 //! Zerochain key components.
-//! (WARNING) Not yet completed review for cofactor checks.
 
 #![cfg_attr(not(feature = "std"), no_std)]
 #![cfg_attr(not(feature = "std"), feature(alloc))]
@@ -17,7 +16,6 @@ mod std {
     pub use crate::alloc::borrow;
 }
 
-use parity_codec::{Encode, Decode};
 use pairing::{
     PrimeField,
     PrimeFieldRepr,
@@ -31,6 +29,7 @@ use jubjub::{
             PrimeOrder,
             FixedGenerators,
             ToUniform,
+            Unknown,
         },
         redjubjub::PrivateKey,
 };
@@ -173,6 +172,7 @@ impl<E: JubjubEngine> ProofGenerationKey<E> {
         h.update(&preimage);
         let mut h = h.finalize().as_ref().to_vec();
 
+        // Drop the most significant five bits, so it can be interpreted as a scalar.
         h[31] &= 0b0000_0111;
         let mut e = <E::Fs as PrimeField>::Repr::default();
 
@@ -241,7 +241,7 @@ impl<E: JubjubEngine> EncryptionKey<E> {
     }
 
     pub fn read<R: io::Read>(reader: &mut R, params: &E::Params) -> io::Result<Self> {
-        let pk_d = edwards::Point::<E, _>::read(reader, params)?;
+        let pk_d = edwards::Point::<E, Unknown>::read(reader, params)?;
         let pk_d = pk_d.as_prime_order(params).ok_or(io::Error::NotInField)?;
 
         Ok(EncryptionKey(pk_d))

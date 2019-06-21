@@ -1,4 +1,13 @@
-use crate::PARAMS;
+use crate::{
+	PARAMS,
+	keys::{
+		EncryptionKey,
+		ProofGenerationKey,
+		SpendingKey,
+	},
+	prover::TransferProof,
+	elgamal,
+};
 use bellman::groth16::{Parameters, PreparedVerifyingKey};
 use pairing::bls12_381::Bls12;
 use zpairing::io;
@@ -6,15 +15,6 @@ use scrypto::{
 	jubjub::{JubjubBls12, fs},
 	redjubjub::PrivateKey,
 	};
-use proofs::{
-    self,
-	keys::{
-		EncryptionKey,
-		ProofGenerationKey,
-		SpendingKey,
-		},
-	prover::TransferProof,
-};
 use rand::Rng;
 
 /// Transaction components which is needed to create a signed `UncheckedExtrinsic`.
@@ -38,7 +38,7 @@ impl Transaction {
 		prepared_vk: &PreparedVerifyingKey<Bls12>,
 		address_recipient: &EncryptionKey<Bls12>,
 		seed: &[u8],
-        ciphertext_balance: proofs::elgamal::Ciphertext<Bls12>,
+        ciphertext_balance: elgamal::Ciphertext<Bls12>,
 		rng: &mut R,
 		fee: u32,
     ) -> Result<Self, io::Error>

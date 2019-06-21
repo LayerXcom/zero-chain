@@ -17,6 +17,7 @@ use rand::OsRng;
 use proofs::{
     keys::{EncryptionKey, ProofGenerationKey},
     elgamal,
+    transaction::Transaction,
     PARAMS,
     };
 use primitives::{hexdisplay::{HexDisplay, AsBytesRef}, blake2_256, crypto::{Ss58Codec, Derive, DeriveJunction}};
@@ -38,14 +39,12 @@ use bip39::{Mnemonic, Language, MnemonicType};
 mod setup;
 mod utils;
 mod config;
-mod transaction;
 mod wallet;
 pub mod derive;
 pub mod term;
 use setup::setup;
 use utils::*;
 use config::*;
-use transaction::Transaction;
 
 //
 // Global constants

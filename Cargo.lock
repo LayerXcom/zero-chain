@@ -5166,6 +5166,7 @@ dependencies = [
  "sapling-crypto 0.0.1 (git+https://github.com/LayerXcom/librustzcash?branch=zero-chain)",
  "substrate-primitives 1.0.0 (git+https://github.com/osuketh/substrate.git?branch=patch-zerochain)",
  "zerochain-crypto 0.1.0",
+ "zerochain-pairing 0.14.2",
 ]
 
 [[package]]

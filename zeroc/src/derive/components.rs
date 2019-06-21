@@ -48,6 +48,7 @@ impl EncKeyTag {
 }
 
 /// A child index for a derived key
+#[derive(Clone, Copy, Debug, PartialEq)]
 pub enum ChildIndex {
     NonHardened(u32),
     Hardened(u32),

@@ -9,6 +9,7 @@ pub mod prover;
 pub mod circuit_test;
 pub mod keys;
 pub mod elgamal;
+pub mod transaction;
 
 
 

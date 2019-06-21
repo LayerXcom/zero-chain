@@ -1,5 +1,4 @@
 //! (TODO) Alias module of `/core/keys` crate due to std and no_std compatibility.
-//! (WARNING) Not yet completed review for cofactor checks.
 
 use pairing::{
     PrimeField,
@@ -14,11 +13,11 @@ use scrypto::{
             PrimeOrder,
             FixedGenerators,
             ToUniform,
+            Unknown,
         },
         redjubjub::PrivateKey,
 };
 use std::io;
-use parity_codec::{Encode, Decode};
 use blake2_rfc::{
     blake2s::Blake2s,
     blake2b::{Blake2b, Blake2bResult},
@@ -158,13 +157,15 @@ impl<E: JubjubEngine> ProofGenerationKey<E> {
         h.update(&preimage);
         let mut h = h.finalize().as_ref().to_vec();
 
+        // Drop the most significant five bits, so it can be interpreted as a scalar.
         h[31] &= 0b0000_0111;
         let mut e = <E::Fs as PrimeField>::Repr::default();
 
         // Reads a little endian integer into this representation.
         e.read_le(&mut &h[..])?;
 
-        let fs = E::Fs::from_repr(e).map_err(|_| io::Error::new(io::ErrorKind::InvalidInput, "Not in field."))?;
+        let fs = E::Fs::from_repr(e)
+            .map_err(|_| io::Error::new(io::ErrorKind::InvalidInput, "Not in field."))?;
 
         Ok(DecryptionKey(fs))
     }
@@ -226,7 +227,7 @@ impl<E: JubjubEngine> EncryptionKey<E> {
     }
 
     pub fn read<R: io::Read>(reader: &mut R, params: &E::Params) -> io::Result<Self> {
-        let pk_d = edwards::Point::<E, _>::read(reader, params)?;
+        let pk_d = edwards::Point::<E, Unknown>::read(reader, params)?;
         let pk_d = pk_d
             .as_prime_order(params)
             .ok_or(io::Error::new(io::ErrorKind::InvalidInput, "Not in the prime order subgroup."))?;

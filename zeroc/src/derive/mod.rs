@@ -5,7 +5,7 @@ use parity_codec::{Encode, Decode};
 use primitives::crypto::{Ss58Codec, Derive, DeriveJunction};
 use blake2_rfc::blake2b::Blake2b;
 use proofs::keys::{EncryptionKey, SpendingKey, prf_expand_vec, prf_expand};
-use scrypto::jubjub::{JubjubEngine, fs::Fs, ToUniform};
+use scrypto::jubjub::{JubjubEngine, fs::Fs, ToUniform, JubjubParams, FixedGenerators};
 use pairing::{bls12_381::Bls12, Field};
 use byteorder::{ByteOrder, LittleEndian, ReadBytesExt, WriteBytesExt};
 use crate::PARAMS;
@@ -37,6 +37,7 @@ pub trait Derivation: Sized {
 }
 
 /// Extended spending key for HDKD
+#[derive(Clone)]
 pub struct ExtendedSpendingKey {
     depth: u8,
     parent_enckey_tag: EncKeyTag,
@@ -90,10 +91,10 @@ impl Derivation for ExtendedSpendingKey {
         let mut right = [0u8; 32];
         right.copy_from_slice(&hashed.as_bytes()[32..]);
 
+        let tag = EncKeyFingerPrint::try_from(&enc_key)?.tag();
+
         let mut fs = Fs::to_uniform(prf_expand(left, &[0x13]).as_bytes());
         fs.add_assign(&self.spending_key.0);
-
-        let tag = EncKeyFingerPrint::try_from(&enc_key)?.tag();
 
         Ok(ExtendedSpendingKey {
             depth: self.depth + 1,
@@ -134,7 +135,22 @@ impl Derivation for ExtendedSpendingKey {
     }
 }
 
+impl<'a> TryFrom<&'a ExtendedSpendingKey> for ExtendedEncryptionKey {
+    type Error = io::Error;
+
+    fn try_from(xsk: &ExtendedSpendingKey) -> io::Result<Self> {
+        Ok(ExtendedEncryptionKey {
+            depth: xsk.depth,
+            parent_enckey_tag: xsk.parent_enckey_tag,
+            child_index: xsk.child_index,
+            chain_code: xsk.chain_code,
+            enc_key: EncryptionKey::from_spending_key(&xsk.spending_key, &PARAMS)?,
+        })
+    }
+}
+
 /// Extended spending key for HDKD
+#[derive(Clone)]
 pub struct ExtendedEncryptionKey {
     depth: u8,
     parent_enckey_tag: EncKeyTag,
@@ -145,11 +161,46 @@ pub struct ExtendedEncryptionKey {
 
 impl Derivation for ExtendedEncryptionKey {
     fn master(seed: &[u8]) -> Self {
-        unimplemented!();
+        let xsk_master = ExtendedSpendingKey::master(seed);
+        ExtendedEncryptionKey::try_from(&xsk_master)
+            .expect("should be converted from extended spending key.")
     }
 
     fn derive_child(&self, i: ChildIndex) -> io::Result<Self> {
-        unimplemented!();
+        let hashed = match i {
+            ChildIndex::Hardened(_) => {
+                return Err(io::Error::new(io::ErrorKind::InvalidData,
+                    "Hardened key cannot be derived from `ExtendedEncryptionKey`."))
+            },
+            ChildIndex::NonHardened(i) => {
+                let mut i_le = [0u8; 4];
+                LittleEndian::write_u32(&mut i_le, i);
+                prf_expand_vec(
+                    &self.chain_code.0,
+                    &[&[0x12], &self.enc_key.into_bytes()?, &i_le],
+                )
+            },
+        };
+
+        let left = &hashed.as_bytes()[..32];
+        let mut right = [0u8; 32];
+        right.copy_from_slice(&hashed.as_bytes()[32..]);
+
+        let tag = EncKeyFingerPrint::try_from(&self.enc_key)?.tag();
+
+        let fs = Fs::to_uniform(prf_expand(left, &[0x13]).as_bytes());
+        let point = PARAMS
+            .generator(FixedGenerators::NoteCommitmentRandomness)
+            .mul(fs, &PARAMS)
+            .add(&self.enc_key.0, &PARAMS);
+
+        Ok(ExtendedEncryptionKey {
+            depth: self.depth + 1,
+            parent_enckey_tag: tag,
+            child_index: i,
+            chain_code: ChainCode(right),
+            enc_key: EncryptionKey(point),
+        })
     }
 
     fn read<R: Read>(mut reader: R) -> io::Result<Self> {
