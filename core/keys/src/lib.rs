@@ -1,5 +1,4 @@
 //! Zerochain key components.
-//! (WARNING) Not yet completed review for cofactor checks.
 
 #![cfg_attr(not(feature = "std"), no_std)]
 #![cfg_attr(not(feature = "std"), feature(alloc))]
@@ -17,7 +16,6 @@ mod std {
     pub use crate::alloc::borrow;
 }
 
-use parity_codec::{Encode, Decode};
 use pairing::{
     PrimeField,
     PrimeFieldRepr,
@@ -31,6 +29,7 @@ use jubjub::{
             PrimeOrder,
             FixedGenerators,
             ToUniform,
+            Unknown,
         },
         redjubjub::PrivateKey,
 };
@@ -43,7 +42,7 @@ pub const PRF_EXPAND_PERSONALIZATION: &'static [u8; 16] = b"zech_ExpandSeed_";
 pub const CRH_BDK_PERSONALIZATION: &'static [u8; 8] = b"zech_bdk";
 pub const KEY_DIVERSIFICATION_PERSONALIZATION: &'static [u8; 8] = b"zech_div";
 
-fn prf_expand(sk: &[u8], t: &[u8]) -> Blake2bResult {
+pub fn prf_expand(sk: &[u8], t: &[u8]) -> Blake2bResult {
     prf_expand_vec(sk, &[t])
 }
 
@@ -58,7 +57,7 @@ pub fn prf_expand_vec(sk: &[u8], ts: &[&[u8]]) -> Blake2bResult {
 
 /// Each account needs the spending key to send transactions.
 #[derive(Clone)]
-pub struct SpendingKey<E: JubjubEngine>(E::Fs);
+pub struct SpendingKey<E: JubjubEngine>(pub E::Fs);
 
 impl<E: JubjubEngine> Copy for SpendingKey<E> {}
 
@@ -173,6 +172,7 @@ impl<E: JubjubEngine> ProofGenerationKey<E> {
         h.update(&preimage);
         let mut h = h.finalize().as_ref().to_vec();
 
+        // Drop the most significant five bits, so it can be interpreted as a scalar.
         h[31] &= 0b0000_0111;
         let mut e = <E::Fs as PrimeField>::Repr::default();
 
@@ -195,6 +195,30 @@ impl<E: JubjubEngine> ProofGenerationKey<E> {
             .mul(self.into_decryption_key()?.0, params);
 
         Ok(EncryptionKey(pk_d))
+    }
+
+    pub fn add(&self, other: &Self, params: &E::Params) -> Self {
+        let point = self.0.add(&other.0, params);
+        ProofGenerationKey(point)
+    }
+
+    pub fn write<W: io::Write>(&self, mut writer: W) -> io::Result<()> {
+        self.0.write(&mut writer)?;
+        Ok(())
+    }
+
+    pub fn read<R: io::Read>(reader: &mut R, params: &E::Params) -> io::Result<Self> {
+        let point = edwards::Point::<E, Unknown>::read(reader, params)?;
+        let point = point.as_prime_order(params).ok_or(io::Error::NotInField)?;
+
+        Ok(ProofGenerationKey(point))
+    }
+
+    pub fn into_bytes(&self) -> io::Result<[u8; 32]> {
+        let mut res = [0u8; 32];
+        self.write(&mut res[..])?;
+
+        Ok(res)
     }
 }
 
@@ -241,7 +265,7 @@ impl<E: JubjubEngine> EncryptionKey<E> {
     }
 
     pub fn read<R: io::Read>(reader: &mut R, params: &E::Params) -> io::Result<Self> {
-        let pk_d = edwards::Point::<E, _>::read(reader, params)?;
+        let pk_d = edwards::Point::<E, Unknown>::read(reader, params)?;
         let pk_d = pk_d.as_prime_order(params).ok_or(io::Error::NotInField)?;
 
         Ok(EncryptionKey(pk_d))

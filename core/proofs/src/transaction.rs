@@ -1,20 +1,17 @@
-use crate::PARAMS;
-use bellman::groth16::{Parameters, PreparedVerifyingKey};
-use pairing::bls12_381::Bls12;
-use zpairing::io;
-use scrypto::{
-	jubjub::{JubjubBls12, fs},
-	redjubjub::PrivateKey,
-	};
-use proofs::{
-    self,
+use crate::{
+	PARAMS,
 	keys::{
 		EncryptionKey,
 		ProofGenerationKey,
 		SpendingKey,
-		},
+	},
 	prover::TransferProof,
+	elgamal,
 };
+use bellman::groth16::{Parameters, PreparedVerifyingKey};
+use pairing::bls12_381::Bls12;
+use zpairing::io;
+use scrypto::jubjub::fs;
 use rand::Rng;
 
 /// Transaction components which is needed to create a signed `UncheckedExtrinsic`.
@@ -38,7 +35,7 @@ impl Transaction {
 		prepared_vk: &PreparedVerifyingKey<Bls12>,
 		address_recipient: &EncryptionKey<Bls12>,
 		seed: &[u8],
-        ciphertext_balance: proofs::elgamal::Ciphertext<Bls12>,
+        ciphertext_balance: elgamal::Ciphertext<Bls12>,
 		rng: &mut R,
 		fee: u32,
     ) -> Result<Self, io::Error>
@@ -46,7 +43,7 @@ impl Transaction {
 		let spending_key = SpendingKey::from_seed(seed);
 		let proof_generation_key = ProofGenerationKey::from_spending_key(
 			&spending_key,
-			&PARAMS as &JubjubBls12
+			&*PARAMS
 		);
 
 		// Generate the zk proof
@@ -65,7 +62,7 @@ impl Transaction {
 		).expect("Should not be faild to generate a proof.");
 
 		// Generate the re-randomized sign key
-		let rsk = spending_key.into_rsk(alpha, &PARAMS);
+		let rsk = spending_key.into_rsk(alpha);
 		let mut rsk_bytes = [0u8; 32];
 		rsk.write(&mut rsk_bytes[..]).map_err(|_| io::Error::InvalidData)?;
 
