@@ -59,7 +59,6 @@ pub struct KeyFile {
 #[derive(Debug, PartialEq, Eq, Serialize, Deserialize)]
 pub struct KeyCiphertext {
     pub ciphertext: SerdeBytes,
-    /// Mac paramter
     pub mac: SerdeBytes,
     pub salt: SerdeBytes,
     pub iv: SerdeBytes,

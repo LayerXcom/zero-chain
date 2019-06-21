@@ -196,6 +196,30 @@ impl<E: JubjubEngine> ProofGenerationKey<E> {
 
         Ok(EncryptionKey(pk_d))
     }
+
+    pub fn add(&self, other: &Self, params: &E::Params) -> Self {
+        let point = self.0.add(&other.0, params);
+        ProofGenerationKey(point)
+    }
+
+    pub fn write<W: io::Write>(&self, mut writer: W) -> io::Result<()> {
+        self.0.write(&mut writer)?;
+        Ok(())
+    }
+
+    pub fn read<R: io::Read>(reader: &mut R, params: &E::Params) -> io::Result<Self> {
+        let point = edwards::Point::<E, Unknown>::read(reader, params)?;
+        let point = point.as_prime_order(params).ok_or(io::Error::NotInField)?;
+
+        Ok(ProofGenerationKey(point))
+    }
+
+    pub fn into_bytes(&self) -> io::Result<[u8; 32]> {
+        let mut res = [0u8; 32];
+        self.write(&mut res[..])?;
+
+        Ok(res)
+    }
 }
 
 /// Encryption key can be used for encrypting transferred amounts and balances

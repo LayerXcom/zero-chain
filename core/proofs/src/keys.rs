@@ -41,7 +41,7 @@ pub fn prf_expand_vec(sk: &[u8], ts: &[&[u8]]) -> Blake2bResult {
 }
 
 /// Each account needs the spending key to send transactions.
-#[derive(Clone)]
+#[derive(Clone, Debug, PartialEq)]
 pub struct SpendingKey<E: JubjubEngine>(pub E::Fs);
 
 impl<E: JubjubEngine> Copy for SpendingKey<E> {}
@@ -91,7 +91,7 @@ impl<E: JubjubEngine> SpendingKey<E> {
 /// (NOTE): To delegate proof generations,
 /// user needs to pass the decryption key, not proof generation key
 /// because of the current's statement in circuit.
-#[derive(Clone)]
+#[derive(Clone, PartialEq, Debug)]
 pub struct ProofGenerationKey<E: JubjubEngine> (
     pub edwards::Point<E, PrimeOrder>
 );
@@ -182,11 +182,37 @@ impl<E: JubjubEngine> ProofGenerationKey<E> {
 
         Ok(EncryptionKey(pk_d))
     }
+
+    pub fn add(&self, other: &Self, params: &E::Params) -> Self {
+        let point = self.0.add(&other.0, params);
+        ProofGenerationKey(point)
+    }
+
+    pub fn write<W: io::Write>(&self, mut writer: W) -> io::Result<()> {
+        self.0.write(&mut writer)?;
+        Ok(())
+    }
+
+    pub fn read<R: io::Read>(reader: &mut R, params: &E::Params) -> io::Result<Self> {
+        let point = edwards::Point::<E, Unknown>::read(reader, params)?;
+        let point = point
+            .as_prime_order(params)
+            .ok_or(io::Error::new(io::ErrorKind::InvalidInput, "Not in the prime order subgroup."))?;
+
+        Ok(ProofGenerationKey(point))
+    }
+
+    pub fn into_bytes(&self) -> io::Result<[u8; 32]> {
+        let mut res = [0u8; 32];
+        self.write(&mut res[..])?;
+
+        Ok(res)
+    }
 }
 
 /// Encryption key can be used for encrypting transferred amounts and balances
 /// and also alias of account id in Zerochain.
-#[derive(Clone, PartialEq)]
+#[derive(Clone, PartialEq, Debug)]
 pub struct EncryptionKey<E: JubjubEngine> (
     pub edwards::Point<E, PrimeOrder>
 );

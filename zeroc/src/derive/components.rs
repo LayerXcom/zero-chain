@@ -1,6 +1,6 @@
 use blake2_rfc::blake2b::Blake2b;
 use super::constants::*;
-use proofs::keys::EncryptionKey;
+use proofs::keys::ProofGenerationKey;
 use scrypto::jubjub::JubjubEngine;
 use std::convert::TryFrom;
 use std::io;
@@ -9,16 +9,16 @@ use std::io;
 #[derive(Clone, Copy, Debug, PartialEq)]
 pub(super) struct ChainCode(pub(super) [u8; CHAIN_CODE_LENGTH]);
 
-/// A encryption key fingerprint which is used to uniquely identify a particular EncryptionKey.
+/// A proof generation key fingerprint which is used to uniquely identify a particular ProofGenerationKey.
 pub(super) struct EncKeyFingerPrint([u8; FINGER_PRINT_LENGTH]);
 
-impl<E: JubjubEngine> TryFrom<&EncryptionKey<E>> for EncKeyFingerPrint {
+impl<E: JubjubEngine> TryFrom<&ProofGenerationKey<E>> for EncKeyFingerPrint {
     type Error = io::Error;
 
-    fn try_from(enc_key: &EncryptionKey<E>) -> io::Result<Self> {
+    fn try_from(proof_gen_key: &ProofGenerationKey<E>) -> io::Result<Self> {
         let mut h = Blake2b::with_params(32, &[], &[], EKFP_PERSONALIZATION);
-        let enc_key_bytes = enc_key.into_bytes()?;
-        h.update(&enc_key_bytes[..]);
+        let proof_gen_key_bytes = proof_gen_key.into_bytes()?;
+        h.update(&proof_gen_key_bytes[..]);
 
         let mut enckey_fp = [0u8; 32];
         enckey_fp.copy_from_slice(h.finalize().as_bytes());

@@ -4,36 +4,52 @@ use std::{
     io::{Read, Write},
     path::{Path, PathBuf},
 };
+use rand::Rng;
 use self::error::Result;
-use crate::derive::{ChildIndex, EncryptionKeyBytes};
+use crate::derive::{ChildIndex, EncryptionKeyBytes, ExtendedSpendingKey};
 
 mod commands;
 mod config;
 mod keyfile;
 mod error;
-pub use keyfile::SerdeBytes;
+mod disk;
+pub use keyfile::{SerdeBytes, KeyFile};
 
-#[derive(Clone, PartialEq, Eq, PartialOrd, Ord)]
-pub struct AccountName(String);
+/// Operations in a wallet directory
+pub trait WalletDirectory {
+    /// Insert a new keyfile to this wallet directory.
+    fn insert(&self, keyfile: &mut KeyFile) -> Result<()>;
+
+    /// Load all keyfiles in this wallet directory.
+    fn load_all(&self) -> Result<Vec<KeyFile>>;
+
+    /// Remove a keyfile from this wallet directory.
+    fn remove(&self, keyfile: &mut KeyFile) -> Result<()>;
+}
+
 
 /// Wallet object
 pub struct Wallet {
-    // pub root_dir: PathBuf,
-    pub enc_master_key: Vec<u8>,
-    pub account_name_map: HashMap<ChildIndex, (AccountName, Option<EncryptionKeyBytes>)>,
-    pub default_index: ChildIndex,
+    // pub enc_master_key: Vec<u8>,
+    // pub account_name_map: HashMap<ChildIndex, (AccountName, Option<EncryptionKeyBytes>)>,
+    // pub default_index: ChildIndex,
     // pub config: config::Config;
+    pub keyfile: KeyFile,
 }
 
 impl Wallet {
     /// Create a new wallet. The master key is expected to have been properly encrypted.
     /// When a new wallet is created, a new hardened derived account is also generated.
-    pub fn init<P: AsRef<Path>>(
+    pub fn init<P: AsRef<Path>, R: Rng>(
+        rng: &mut R,
         root_dir: P,
-        enc_master_key: Vec<u8>,
-        account_name: AccountName,
-        enc_key_bytes: Option<EncryptionKeyBytes>,
+        version: u32,
+        account_name: String,
     ) -> Result<Self> {
+        let seed: [u8; 32] = rng.gen();
+        // let extended_spending_key = ExtendedSpendingKey::master(&seed);
+
+
 
         unimplemented!();
 
@@ -67,7 +83,7 @@ impl Wallet {
     fn save<P: AsRef<Path>>(
         &self,
         root_dir: P,
-        account_name: AccountName,
+        account_name: String,
         encrypted_key: Vec<u8>
     ) -> Result<()>
     {
