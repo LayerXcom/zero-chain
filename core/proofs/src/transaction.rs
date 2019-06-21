@@ -11,10 +11,7 @@ use crate::{
 use bellman::groth16::{Parameters, PreparedVerifyingKey};
 use pairing::bls12_381::Bls12;
 use zpairing::io;
-use scrypto::{
-	jubjub::{JubjubBls12, fs},
-	redjubjub::PrivateKey,
-	};
+use scrypto::jubjub::fs;
 use rand::Rng;
 
 /// Transaction components which is needed to create a signed `UncheckedExtrinsic`.

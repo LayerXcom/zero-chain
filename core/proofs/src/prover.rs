@@ -19,7 +19,7 @@ use scrypto::{
         PublicKey,
     },
 };
-use crate::circuit_transfer::Transfer;
+use crate::circuit::Transfer;
 use crate::keys::{
     EncryptionKey,
     ProofGenerationKey,
@@ -176,8 +176,7 @@ mod tests {
     use super::*;
     use rand::{SeedableRng, XorShiftRng, Rng};
     use crate::keys::{ProofGenerationKey, EncryptionKey};
-    use scrypto::jubjub::{fs, ToUniform, JubjubParams, JubjubBls12};
-    use crate::elgamal::elgamal_extend;
+    use scrypto::jubjub::{fs, JubjubParams, JubjubBls12};
     use pairing::{PrimeField, bls12_381::Bls12};
     use std::path::Path;
     use std::fs::File;

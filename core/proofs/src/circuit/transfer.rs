@@ -406,9 +406,9 @@ mod tests {
     use super::*;
     use pairing::{bls12_381::{Bls12, Fr}, Field};
     use rand::{SeedableRng, Rng, XorShiftRng, Rand};
-    use crate::circuit_test::TestConstraintSystem;
-    use scrypto::jubjub::{JubjubBls12, fs, edwards, JubjubParams};
-    use crate::keys::{EncryptionKey, DecryptionKey};
+    use crate::circuit::TestConstraintSystem;
+    use scrypto::jubjub::{JubjubBls12, fs, JubjubParams};
+    use crate::keys::EncryptionKey;
 
     #[test]
     fn test_circuit_transfer() {

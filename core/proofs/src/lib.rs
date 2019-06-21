@@ -3,10 +3,8 @@ extern crate lazy_static;
 
 use scrypto::jubjub::JubjubBls12;
 use bellman::SynthesisError;
-pub mod circuit_transfer;
-pub mod circuit_mimc;
+pub mod circuit;
 pub mod prover;
-pub mod circuit_test;
 pub mod keys;
 pub mod elgamal;
 pub mod transaction;

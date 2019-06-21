@@ -271,7 +271,7 @@ impl<E: JubjubEngine> EncryptionKey<E> {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use rand::{Rng, SeedableRng, XorShiftRng, Rand};
+    use rand::{SeedableRng, XorShiftRng, Rand};
     use scrypto::jubjub::{JubjubBls12, fs};
     use pairing::bls12_381::Bls12;
 
