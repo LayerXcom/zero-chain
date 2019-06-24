@@ -10,6 +10,7 @@ use pairing::{
     },
     Field,
 };
+use runtime_primitives::traits::Zero;
 use jubjub::redjubjub::PublicKey;
 use zprimitives::{
     PkdAddress,
@@ -21,7 +22,6 @@ use zprimitives::{
 use keys::EncryptionKey;
 use zcrypto::elgamal;
 use runtime_io;
-
 
 pub trait Trait: system::Trait {
 	/// The overarching event type.
@@ -67,27 +67,15 @@ decl_module! {
                 &rvk,
                 &fee_sender,
             )
-            .map_err(|_| "Failt to convert into types.")?;
+            .map_err(|_| "Failed to convert into types.")?;
 
             // Rollover and get sender's balance
-            let typed_balance_sender = match Self::rollover(&address_sender) {
-                Ok(b) => b,
-                Err(_) => return Err("Invalid ciphertext of sender balance.")
-            };
+            let typed_balance_sender = Self::rollover(&address_sender)
+                .map_err(|_| "Invalid ciphertext of sender balance.")?;
 
             // Rollover and get recipient's balance
-            let typed_balance_recipient = match Self::rollover(&address_recipient) {
-                Ok(b) => b,
-                Err(_) => return Err("Invalid ciphertext of recipient balance.")
-            };
-
-            // let typed_bal_sender = match Self::encrypted_balance(address_sender) {
-            //     Some(b) => match b.into_ciphertext() {
-            //         Some(c) => c,
-            //         None => return Err("Invalid ciphertext of sender balance"),
-            //     },
-            //     None => return Err("Invalid sender balance"),
-            // };
+            let typed_balance_recipient = Self::rollover(&address_recipient)
+                .map_err(|_| "Invalid ciphertext of recipient balance.")?;
 
             // Verify the zk proof
             ensure!(
@@ -103,12 +91,6 @@ decl_module! {
                 ),
                 "Invalid zkproof"
             );
-
-            // Get balance_recipient with the option type
-            // let typed_bal_recipient = match Self::encrypted_balance(address_recipient) {
-            //     Some(b) => b.into_ciphertext(),
-            //     _ => None
-            // };
 
             let amount_plus_fee = typed.amount_sender.add_no_params(&typed.fee_sender);
 
@@ -127,13 +109,6 @@ decl_module! {
                 );
                 *pending_transfer = new_pending_transfer
             });
-            // <EncryptedBalance<T>>::mutate(address_recipient, |balance| {
-            //     let new_balance = balance.clone().map_or(
-            //         Some(Ciphertext::from_ciphertext(&typed_amount_recipient)),
-            //         |_| Some(Ciphertext::from_ciphertext(&typed_balance_recipient.add_no_params(&typed_amount_recipient)))
-            //     );
-            //     *balance = new_balance
-            // });
 
             // TODO: tempolaly removed address_sender and address_recipient because of mismatched types
             Self::deposit_event(
@@ -257,6 +232,7 @@ impl<T: Trait> Module<T> {
         }
     }
 
+    /// Convert provided parametrs into typed ones.
     fn into_types(
         zkproof: &Proof,
         address_sender: &PkdAddress,
@@ -268,46 +244,39 @@ impl<T: Trait> Module<T> {
     ) -> result::Result<TypedParams, &'static str>
     {
         // Get zkproofs with the type
-        let typed_zkproof = match zkproof.into_proof() {
-            Some(v) => v,
-            None => return Err("Invalid zkproof"),
-        };
+        let typed_zkproof = zkproof
+            .into_proof()
+            .ok_or("Invalid zkproof")?;
 
         // Get address_sender with the type
-        let typed_addr_sender = match address_sender.into_encryption_key() {
-            Some(v) => v,
-            None => return Err("Invalid address_sender"),
-        };
+        let typed_addr_sender = address_sender
+            .into_encryption_key()
+            .ok_or("Invalid address_sender")?;
 
         // Get address_recipient with the type
-        let typed_addr_recipient = match  address_recipient.into_encryption_key() {
-            Some(v) => v,
-            None => return Err("Invalid address_recipient"),
-        };
+        let typed_addr_recipient = address_recipient
+            .into_encryption_key()
+            .ok_or("Invalid address_recipient")?;
 
         // Get amount_sender with the type
-        let typed_amount_sender = match amount_sender.into_ciphertext() {
-            Some(v) => v,
-            None => return Err("Invalid amount_sender"),
-        };
+        let typed_amount_sender = amount_sender
+            .into_ciphertext()
+            .ok_or("Invalid amount_sender")?;
 
         // Get amount_recipient with the type
-        let typed_amount_recipient = match amount_recipient.into_ciphertext() {
-            Some(v) => v,
-            None => return Err("Invalid amount_recipient"),
-        };
+        let typed_amount_recipient = amount_recipient
+            .into_ciphertext()
+            .ok_or("Invalid amount_recipient")?;
 
         // Get fee_sender with the type
-        let typed_fee_sender = match fee_sender.into_ciphertext() {
-            Some(v) => v,
-            None => return Err("Invalid fee_sender"),
-        };
+        let typed_fee_sender = fee_sender
+            .into_ciphertext()
+            .ok_or("Invalid fee_sender")?;
 
         // Get rvk with the type
-        let typed_rvk = match rvk.into_verification_key() {
-            Some(v) => v,
-            None => return Err("Invalid rvk"),
-        };
+        let typed_rvk = rvk
+            .into_verification_key()
+            .ok_or("Invalid rvk")?;
 
         Ok(TypedParams {
             zkproof: typed_zkproof,
@@ -330,46 +299,52 @@ impl<T: Trait> Module<T> {
     /// More details in Section 3.1: https://crypto.stanford.edu/~buenz/papers/zether.pdf
     fn rollover(addr: &PkdAddress) -> result::Result<elgamal::Ciphertext<Bls12>, &'static str> {
         let current_height = <system::Module<T>>::block_number();
+
+        // Get current epoch based on current block height.
         let current_epoch = current_height / Self::epoch_length();
 
+        let last_rollover = match Self::last_rollover(addr) {
+            Some(l) => l,
+            None => T::BlockNumber::zero(),
+        };
+
         // Get current pending transfer
-        let pending_transfer = <PendingTransfer<T>>::get(addr);
+        let pending_transfer = Self::pending_transfer(addr);
 
         let zero = elgamal::Ciphertext::zero();
 
         // Get balance with the type
         let typed_balance = match Self::encrypted_balance(addr) {
-            Some(b) => b.into_ciphertext(),
-            _ => Some(zero.clone()),
-        }.unwrap();
+            Some(b) => b.into_ciphertext().ok_or("Invalid balance ciphertext")?,
+            None => zero.clone(),
+        };
 
         // Get balance with the type
         let typed_pending_transfer = match pending_transfer.clone() {
-            Some(b) => b.into_ciphertext(),
-            // If pending_transfer is `None`, just return zero value ciphertext
-            None => Some(zero),
-        }.unwrap();
+            Some(b) => b.into_ciphertext().ok_or("Invalid pending_transfer ciphertext")?,
+            // If pending_transfer is `None`, just return zero value ciphertext.
+            None => zero,
+        };
 
-        if let Some(e) = <LastRollOver<T>>::get(addr) {
-            // checks if the last roll over was in an older epoch
-            if e < current_epoch {
-                // transfer balance from pending_transfer to actual balance
-                <EncryptedBalance<T>>::mutate(addr, |balance| {
-                    let new_balance = balance.clone().map_or(
-                        pending_transfer,
-                        |_| Some(Ciphertext::from_ciphertext(&typed_balance.add_no_params(&typed_pending_transfer)))
-                    );
-                    *balance = new_balance
-                });
+        // checks if the last roll over was in an older epoch
+        if last_rollover < current_epoch {
+            // transfer balance from pending_transfer to actual balance
+            <EncryptedBalance<T>>::mutate(addr, |balance| {
+                let new_balance = balance.clone().map_or(
+                    pending_transfer,
+                    |_| Some(Ciphertext::from_ciphertext(&typed_balance.add_no_params(&typed_pending_transfer)))
+                );
+                *balance = new_balance
+            });
 
-                // Reset pending_transfer.
-                <PendingTransfer<T>>::remove(addr);
+            // Reset pending_transfer.
+            <PendingTransfer<T>>::remove(addr);
 
-                // Set last rollover to current epoch.
-                <LastRollOver<T>>::insert(addr, current_epoch);
-            }
+            // Set last rollover to current epoch.
+            <LastRollOver<T>>::insert(addr, current_epoch);
         }
 
+        // return actual typed balance.
         Ok(typed_balance)
     }
 }
