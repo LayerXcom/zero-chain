@@ -132,7 +132,7 @@ fn testnet_genesis(initial_authorities: Vec<AuthorityId>, endowed_accounts: Vec<
 			encrypted_balance: vec![alice_balance_init()],
 			pending_transfer: vec![alice_pending_transfer_init()],
 			last_rollover: vec![alice_epoch_init()],
-			epoch_length: 10,
+			epoch_length: 1,
 			transaction_base_fee: 1,
 			verifying_key: get_pvk(),
 		})

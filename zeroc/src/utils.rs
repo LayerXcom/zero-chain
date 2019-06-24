@@ -116,10 +116,14 @@ pub fn get_balance_from_decryption_key(mut decryption_key: &[u8], api: Api) -> (
         Some(account_id.encode())
         ).unwrap();
 
-    // TODO: remove unnecessary prefix
+    println!("enc_bal: {:?}", encrypted_balance_str);
+
+    // TODO: remove unnecessary prefix. If it returns `0x00`, it will be panic.
     for _ in 0..4 {
         encrypted_balance_str.remove(2);
     }
+
+    println!("enc_bal: {:?}", encrypted_balance_str);
 
     let encrypted_balance = hexstr_to_vec(encrypted_balance_str.clone());
     let ciphertext = zelgamal::Ciphertext::<zBls12>::read(&mut &encrypted_balance[..], &ZPARAMS).expect("Invalid data");

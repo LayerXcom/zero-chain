@@ -28,6 +28,16 @@ pub trait Trait: system::Trait {
 	type Event: From<Event<Self>> + Into<<Self as system::Trait>::Event>;
 }
 
+struct TypedParams {
+    zkproof: bellman_verifier::Proof<Bls12>,
+    address_sender: EncryptionKey<Bls12>,
+    address_recipient: EncryptionKey<Bls12>,
+    amount_sender: elgamal::Ciphertext<Bls12>,
+    amount_recipient: elgamal::Ciphertext<Bls12>,
+    rvk: PublicKey<Bls12>,
+    fee_sender: elgamal::Ciphertext<Bls12>,
+}
+
 type FeeAmount = u32;
 
 decl_module! {
@@ -35,15 +45,6 @@ decl_module! {
         // Initializing events
 		// this is needed only if you are using events in your module
 		fn deposit_event<T>() = default;
-
-        // fn into_types(
-        //     proof: Proof,
-        //     address_sender: PkdAddress,
-        //     address_recipient: PkdAddress,
-        //     amount_sender: Ciphertext,
-        //     amount_recipient: Ciphertext,
-        //     fee_sender: Ciphertext,
-        // )
 
 		pub fn confidential_transfer(
             _origin,
@@ -57,6 +58,17 @@ decl_module! {
         ) -> Result {
 			// let rvk = ensure_signed(origin)?;
 
+            let typed = Self::into_types(
+                &zkproof,
+                &address_sender,
+                &address_recipient,
+                &amount_sender,
+                &amount_recipient,
+                &rvk,
+                &fee_sender,
+            )
+            .map_err(|_| "Failt to convert into types.")?;
+
             // Rollover and get sender's balance
             let typed_balance_sender = match Self::rollover(&address_sender) {
                 Ok(b) => b,
@@ -69,49 +81,6 @@ decl_module! {
                 Err(_) => return Err("Invalid ciphertext of recipient balance.")
             };
 
-            // Get zkproofs with the type
-            let typed_zkproof = match zkproof.into_proof() {
-                Some(v) => v,
-                None => return Err("Invalid zkproof"),
-            };
-
-            // Get address_sender with the type
-            let typed_addr_sender = match address_sender.into_encryption_key() {
-                Some(v) => v,
-                None => return Err("Invalid address_sender"),
-            };
-
-            // Get address_recipient with the type
-            let typed_addr_recipient = match  address_recipient.into_encryption_key() {
-                Some(v) => v,
-                None => return Err("Invalid address_recipient"),
-            };
-
-            // Get amount_sender with the type
-            let typed_amount_sender = match amount_sender.into_ciphertext() {
-                Some(v) => v,
-                None => return Err("Invalid amount_sender"),
-            };
-
-            // Get amount_recipient with the type
-            let typed_amount_recipient = match amount_recipient.into_ciphertext() {
-                Some(v) => v,
-                None => return Err("Invalid amount_recipient"),
-            };
-
-            // Get fee_sender with the type
-            let typed_fee_sender = match fee_sender.into_ciphertext() {
-                Some(v) => v,
-                None => return Err("Invalid fee_sender"),
-            };
-
-            // Get rvk with the type
-            let typed_rvk = match rvk.into_verification_key() {
-                Some(v) => v,
-                None => return Err("Invalid rvk"),
-            };
-
-
             // let typed_bal_sender = match Self::encrypted_balance(address_sender) {
             //     Some(b) => match b.into_ciphertext() {
             //         Some(c) => c,
@@ -123,14 +92,14 @@ decl_module! {
             // Verify the zk proof
             ensure!(
                 Self::validate_proof(
-                    &typed_zkproof,
-                    &typed_addr_sender,
-                    &typed_addr_recipient,
-                    &typed_amount_sender,
-                    &typed_amount_recipient,
+                    &typed.zkproof,
+                    &typed.address_sender,
+                    &typed.address_recipient,
+                    &typed.amount_sender,
+                    &typed.amount_recipient,
                     &typed_balance_sender,
-                    &typed_rvk,
-                    &typed_fee_sender,
+                    &typed.rvk,
+                    &typed.fee_sender,
                 ),
                 "Invalid zkproof"
             );
@@ -141,7 +110,7 @@ decl_module! {
             //     _ => None
             // };
 
-            let amount_plus_fee = typed_amount_sender.add_no_params(&typed_fee_sender);
+            let amount_plus_fee = typed.amount_sender.add_no_params(&typed.fee_sender);
 
             // Update the sender's balance
             <EncryptedBalance<T>>::mutate(address_sender, |balance| {
@@ -153,8 +122,8 @@ decl_module! {
             // Update the recipient's pending transfer
             <PendingTransfer<T>>::mutate(address_recipient, |pending_transfer| {
                 let new_pending_transfer = pending_transfer.clone().map_or(
-                    Some(Ciphertext::from_ciphertext(&typed_amount_recipient)),
-                    |_| Some(Ciphertext::from_ciphertext(&typed_balance_recipient.add_no_params(&typed_amount_recipient)))
+                    Some(Ciphertext::from_ciphertext(&typed.amount_recipient)),
+                    |_| Some(Ciphertext::from_ciphertext(&typed_balance_recipient.add_no_params(&typed.amount_recipient)))
                 );
                 *pending_transfer = new_pending_transfer
             });
@@ -216,10 +185,10 @@ decl_event! (
 );
 
 impl<T: Trait> Module<T> {
-    // PUBLIC IMMUTABLES
+    // Private IMMUTABLES
 
     /// Validate zk proofs
-	pub fn validate_proof (
+	fn validate_proof (
         zkproof: &bellman_verifier::Proof<Bls12>,
         address_sender: &EncryptionKey<Bls12>,
         address_recipient: &EncryptionKey<Bls12>,
@@ -288,6 +257,69 @@ impl<T: Trait> Module<T> {
         }
     }
 
+    fn into_types(
+        zkproof: &Proof,
+        address_sender: &PkdAddress,
+        address_recipient: &PkdAddress,
+        amount_sender: &Ciphertext,
+        amount_recipient: &Ciphertext,
+        rvk: &SigVerificationKey,
+        fee_sender: &Ciphertext,
+    ) -> result::Result<TypedParams, &'static str>
+    {
+        // Get zkproofs with the type
+        let typed_zkproof = match zkproof.into_proof() {
+            Some(v) => v,
+            None => return Err("Invalid zkproof"),
+        };
+
+        // Get address_sender with the type
+        let typed_addr_sender = match address_sender.into_encryption_key() {
+            Some(v) => v,
+            None => return Err("Invalid address_sender"),
+        };
+
+        // Get address_recipient with the type
+        let typed_addr_recipient = match  address_recipient.into_encryption_key() {
+            Some(v) => v,
+            None => return Err("Invalid address_recipient"),
+        };
+
+        // Get amount_sender with the type
+        let typed_amount_sender = match amount_sender.into_ciphertext() {
+            Some(v) => v,
+            None => return Err("Invalid amount_sender"),
+        };
+
+        // Get amount_recipient with the type
+        let typed_amount_recipient = match amount_recipient.into_ciphertext() {
+            Some(v) => v,
+            None => return Err("Invalid amount_recipient"),
+        };
+
+        // Get fee_sender with the type
+        let typed_fee_sender = match fee_sender.into_ciphertext() {
+            Some(v) => v,
+            None => return Err("Invalid fee_sender"),
+        };
+
+        // Get rvk with the type
+        let typed_rvk = match rvk.into_verification_key() {
+            Some(v) => v,
+            None => return Err("Invalid rvk"),
+        };
+
+        Ok(TypedParams {
+            zkproof: typed_zkproof,
+            address_sender: typed_addr_sender,
+            address_recipient: typed_addr_recipient,
+            amount_sender: typed_amount_sender ,
+            amount_recipient: typed_amount_recipient,
+            rvk:typed_rvk,
+            fee_sender: typed_fee_sender,
+        })
+    }
+
     // PRIVATE MUTABLES
 
     /// Rolling over allows us to send transactions asynchronously and protect from front-running attacks.
@@ -314,6 +346,7 @@ impl<T: Trait> Module<T> {
         // Get balance with the type
         let typed_pending_transfer = match pending_transfer.clone() {
             Some(b) => b.into_ciphertext(),
+            // If pending_transfer is `None`, just return zero value ciphertext
             None => Some(zero),
         }.unwrap();
 
