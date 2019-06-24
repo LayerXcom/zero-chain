@@ -69,7 +69,8 @@ decl_module! {
             )
             .map_err(|_| "Failed to convert into types.")?;
 
-            // Rollover and get sender's balance
+            // Rollover and get sender's balance.
+            // This function causes a storage mutation, but it's needed before `verify_proof` function is called.
             let typed_balance_sender = Self::rollover(&address_sender)
                 .map_err(|_| "Invalid ciphertext of sender balance.")?;
 
@@ -88,7 +89,7 @@ decl_module! {
                     &typed_balance_sender,
                     &typed.rvk,
                     &typed.fee_sender,
-                ),
+                )?,
                 "Invalid zkproof"
             );
 
@@ -172,7 +173,7 @@ impl<T: Trait> Module<T> {
         balance_sender: &elgamal::Ciphertext<Bls12>,
         rvk: &PublicKey<Bls12>,
         fee_sender: &elgamal::Ciphertext<Bls12>
-    ) -> bool {
+    ) -> result::Result<bool, &'static str> {
         // Construct public input for circuit
         let mut public_input = [Fr::zero(); 18];
 
@@ -222,14 +223,12 @@ impl<T: Trait> Module<T> {
             public_input[17] = y;
         }
 
-        let pvk = Self::verifying_key().into_prepared_vk().unwrap();
+        let pvk = Self::verifying_key().into_prepared_vk()
+            .ok_or("Invalid verifying key.")?;
 
         // Verify the provided proof
-        match verify_proof(&pvk, &zkproof, &public_input[..]) {
-            // No error, and proof verification successful
-            Ok(is_true) => is_true,
-            Err(_) => {runtime_io::print("Invalid proof!!"); false},
-        }
+        verify_proof(&pvk, &zkproof, &public_input[..])
+            .map_err(|_| "Invalid proof.")
     }
 
     /// Convert provided parametrs into typed ones.
@@ -326,7 +325,8 @@ impl<T: Trait> Module<T> {
             None => zero,
         };
 
-        // checks if the last roll over was in an older epoch
+        // Checks if the last roll over was in an older epoch.
+        // If so, some storage changes are happend here.
         if last_rollover < current_epoch {
             // transfer balance from pending_transfer to actual balance
             <EncryptedBalance<T>>::mutate(addr, |balance| {
