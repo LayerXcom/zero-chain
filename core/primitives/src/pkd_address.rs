@@ -3,7 +3,7 @@ use serde::{Serialize, Serializer, Deserialize, Deserializer};
 use keys::EncryptionKey;
 use fixed_hash::construct_fixed_hash;
 use pairing::bls12_381::Bls12;
-use crate::JUBJUB;
+use crate::PARAMS;
 #[cfg(feature = "std")]
 use substrate_primitives::hexdisplay::AsBytesRef;
 
@@ -53,7 +53,7 @@ impl Decode for PkdAddress {
 
 impl PkdAddress {
     pub fn into_encryption_key(&self) -> Option<EncryptionKey<Bls12>> {
-        EncryptionKey::<Bls12>::read(&mut &self.0[..], &JUBJUB).ok()
+        EncryptionKey::<Bls12>::read(&mut &self.0[..], &PARAMS).ok()
     }
 
     pub fn from_encryption_key(address: &EncryptionKey<Bls12>) -> Self {
@@ -88,7 +88,7 @@ mod tests {
         let mut seed = [0u8; 32];
         rng.fill_bytes(&mut seed[..]);
 
-        let addr1 = EncryptionKey::from_seed(&seed[..], &JUBJUB as &JubjubBls12).unwrap();
+        let addr1 = EncryptionKey::from_seed(&seed[..], &PARAMS as &JubjubBls12).unwrap();
 
         let account_id = PkdAddress::from_encryption_key(&addr1);
         let addr2 = account_id.into_encryption_key().unwrap();

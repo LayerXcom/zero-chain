@@ -1,5 +1,4 @@
 //! (TODO) Alias module of `/core/keys` crate due to std and no_std compatibility.
-//! (WARNING) Not yet completed review for cofactor checks.
 
 use pairing::{
     PrimeField,
@@ -14,11 +13,11 @@ use scrypto::{
             PrimeOrder,
             FixedGenerators,
             ToUniform,
+            Unknown,
         },
         redjubjub::PrivateKey,
 };
 use std::io;
-use parity_codec::{Encode, Decode};
 use blake2_rfc::{
     blake2s::Blake2s,
     blake2b::{Blake2b, Blake2bResult},
@@ -28,7 +27,7 @@ pub const PRF_EXPAND_PERSONALIZATION: &'static [u8; 16] = b"zech_ExpandSeed_";
 pub const CRH_BDK_PERSONALIZATION: &'static [u8; 8] = b"zech_bdk";
 pub const KEY_DIVERSIFICATION_PERSONALIZATION: &'static [u8; 8] = b"zech_div";
 
-fn prf_expand(sk: &[u8], t: &[u8]) -> Blake2bResult {
+pub fn prf_expand(sk: &[u8], t: &[u8]) -> Blake2bResult {
     prf_expand_vec(sk, &[t])
 }
 
@@ -42,8 +41,8 @@ pub fn prf_expand_vec(sk: &[u8], ts: &[&[u8]]) -> Blake2bResult {
 }
 
 /// Each account needs the spending key to send transactions.
-#[derive(Clone)]
-pub struct SpendingKey<E: JubjubEngine>(E::Fs);
+#[derive(Clone, Debug, PartialEq)]
+pub struct SpendingKey<E: JubjubEngine>(pub E::Fs);
 
 impl<E: JubjubEngine> Copy for SpendingKey<E> {}
 
@@ -61,7 +60,6 @@ impl<E: JubjubEngine> SpendingKey<E> {
     pub fn into_rsk(
         &self,
         alpha: E::Fs,
-        params: &E::Params
     ) -> PrivateKey<E>
     {
         PrivateKey(self.0).randomize(alpha)
@@ -92,7 +90,7 @@ impl<E: JubjubEngine> SpendingKey<E> {
 /// (NOTE): To delegate proof generations,
 /// user needs to pass the decryption key, not proof generation key
 /// because of the current's statement in circuit.
-#[derive(Clone)]
+#[derive(Clone, PartialEq, Debug)]
 pub struct ProofGenerationKey<E: JubjubEngine> (
     pub edwards::Point<E, PrimeOrder>
 );
@@ -158,13 +156,15 @@ impl<E: JubjubEngine> ProofGenerationKey<E> {
         h.update(&preimage);
         let mut h = h.finalize().as_ref().to_vec();
 
+        // Drop the most significant five bits, so it can be interpreted as a scalar.
         h[31] &= 0b0000_0111;
         let mut e = <E::Fs as PrimeField>::Repr::default();
 
         // Reads a little endian integer into this representation.
         e.read_le(&mut &h[..])?;
 
-        let fs = E::Fs::from_repr(e).map_err(|_| io::Error::new(io::ErrorKind::InvalidInput, "Not in field."))?;
+        let fs = E::Fs::from_repr(e)
+            .map_err(|_| io::Error::new(io::ErrorKind::InvalidInput, "Not in field."))?;
 
         Ok(DecryptionKey(fs))
     }
@@ -181,11 +181,37 @@ impl<E: JubjubEngine> ProofGenerationKey<E> {
 
         Ok(EncryptionKey(pk_d))
     }
+
+    pub fn add(&self, other: &Self, params: &E::Params) -> Self {
+        let point = self.0.add(&other.0, params);
+        ProofGenerationKey(point)
+    }
+
+    pub fn write<W: io::Write>(&self, mut writer: W) -> io::Result<()> {
+        self.0.write(&mut writer)?;
+        Ok(())
+    }
+
+    pub fn read<R: io::Read>(reader: &mut R, params: &E::Params) -> io::Result<Self> {
+        let point = edwards::Point::<E, Unknown>::read(reader, params)?;
+        let point = point
+            .as_prime_order(params)
+            .ok_or(io::Error::new(io::ErrorKind::InvalidInput, "Not in the prime order subgroup."))?;
+
+        Ok(ProofGenerationKey(point))
+    }
+
+    pub fn into_bytes(&self) -> io::Result<[u8; 32]> {
+        let mut res = [0u8; 32];
+        self.write(&mut res[..])?;
+
+        Ok(res)
+    }
 }
 
 /// Encryption key can be used for encrypting transferred amounts and balances
 /// and also alias of account id in Zerochain.
-#[derive(Clone, PartialEq)]
+#[derive(Clone, PartialEq, Debug)]
 pub struct EncryptionKey<E: JubjubEngine> (
     pub edwards::Point<E, PrimeOrder>
 );
@@ -226,7 +252,7 @@ impl<E: JubjubEngine> EncryptionKey<E> {
     }
 
     pub fn read<R: io::Read>(reader: &mut R, params: &E::Params) -> io::Result<Self> {
-        let pk_d = edwards::Point::<E, _>::read(reader, params)?;
+        let pk_d = edwards::Point::<E, Unknown>::read(reader, params)?;
         let pk_d = pk_d
             .as_prime_order(params)
             .ok_or(io::Error::new(io::ErrorKind::InvalidInput, "Not in the prime order subgroup."))?;
@@ -245,7 +271,7 @@ impl<E: JubjubEngine> EncryptionKey<E> {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use rand::{Rng, SeedableRng, XorShiftRng, Rand};
+    use rand::{SeedableRng, XorShiftRng, Rand};
     use scrypto::jubjub::{JubjubBls12, fs};
     use pairing::bls12_381::Bls12;
 

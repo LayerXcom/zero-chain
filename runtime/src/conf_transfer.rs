@@ -252,11 +252,11 @@ impl<T: Trait> Module<T> {
 
         let pvk = Self::verifying_key().into_prepared_vk().unwrap();
 
-        // Verify the proof
+        // Verify the provided proof
         match verify_proof(&pvk, &zkproof, &public_input[..]) {
             // No error, and proof verification successful
-            Ok(true) => true,
-            _ => {runtime_io::print("Invalid proof!!!!"); false},
+            Ok(is_true) => is_true,
+            Err(_) => {runtime_io::print("Invalid proof!!"); false},
         }
     }
 

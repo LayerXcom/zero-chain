@@ -8,7 +8,7 @@ use runtime_primitives::traits::{Verify, Lazy};
 use fixed_hash::construct_fixed_hash;
 use crate::sig_vk::SigVerificationKey;
 use jubjub::curve::FixedGenerators;
-use crate::JUBJUB;
+use crate::PARAMS;
 #[cfg(feature = "std")]
 use substrate_primitives::bytes;
 
@@ -71,7 +71,7 @@ impl Verify for RedjubjubSignature {
         let p_g = FixedGenerators::Diversifier;
 
         match signer.into_verification_key() {
-            Some(vk) => return vk.verify(msg.get(), &sig, p_g, &JUBJUB),
+            Some(vk) => return vk.verify(msg.get(), &sig, p_g, &PARAMS),
             None => return false
         }
 

@@ -4,54 +4,90 @@ use std::{
     io::{Read, Write},
     path::{Path, PathBuf},
 };
+use rand::Rng;
 use self::error::Result;
+use crate::derive::{ChildIndex, EncryptionKeyBytes, ExtendedSpendingKey};
 
 mod commands;
 mod config;
+mod keyfile;
 mod error;
+mod disk;
+pub use keyfile::{SerdeBytes, KeyFile};
 
+/// Operations in a wallet directory
+pub trait WalletDirectory {
+    /// Insert a new keyfile to this wallet directory.
+    fn insert(&self, keyfile: &mut KeyFile) -> Result<()>;
 
-#[derive(Clone, PartialEq, Eq, PartialOrd, Ord)]
-pub struct AccountName(String);
+    /// Load all keyfiles in this wallet directory.
+    fn load_all(&self) -> Result<Vec<KeyFile>>;
 
-pub struct Encrypted();
+    /// Remove a keyfile from this wallet directory.
+    fn remove(&self, keyfile: &mut KeyFile) -> Result<()>;
+}
+
 
 /// Wallet object
 pub struct Wallet {
-    // pub name: WalletName,
-    pub encrypted_keys: HashMap<AccountName, Vec<u8>>,
-    pub root_dir: PathBuf,
-    pub current_index: ,
-    pub account_name_map: 
-    pub config: config::Config;
+    // pub enc_master_key: Vec<u8>,
+    // pub account_name_map: HashMap<ChildIndex, (AccountName, Option<EncryptionKeyBytes>)>,
+    // pub default_index: ChildIndex,
+    // pub config: config::Config;
+    pub keyfile: KeyFile,
 }
 
 impl Wallet {
-    pub fn new<P: AsRef<Path>>(
+    /// Create a new wallet. The master key is expected to have been properly encrypted.
+    /// When a new wallet is created, a new hardened derived account is also generated.
+    pub fn init<P: AsRef<Path>, R: Rng>(
+        rng: &mut R,
         root_dir: P,
-        config: config::Config,
-        account_name: AccountName,
-        encrypted_key: Vec<u8>,
-    ) -> Self {
-        Wallet {
-            encrypted_key: HashMap::new(),
-            root_dir: root_dir,
-            config: config,
-        }
+        version: u32,
+        account_name: String,
+    ) -> Result<Self> {
+        let seed: [u8; 32] = rng.gen();
+        // let extended_spending_key = ExtendedSpendingKey::master(&seed);
+
+
+
+        unimplemented!();
+
+        // Wallet {
+        //     enc_master_key: HashMap::new(),
+        //     root_dir: root_dir,
+        //     config: config,
+        // }
     }
 
-    pub fn save(
+    pub fn create_account(&self) -> Result<()> {
+        unimplemented!();
+    }
+
+    pub fn change_default_account(&self) -> Result<()> {
+        unimplemented!();
+    }
+
+    pub fn list() -> Self {
+        unimplemented!();
+    }
+
+    pub fn destroy(self) -> Result<()> {
+        unimplemented!();
+    }
+
+    fn load<P: AsRef<Path>>(root_dir: P) -> Result<Self> {
+        unimplemented!();
+    }
+
+    fn save<P: AsRef<Path>>(
         &self,
-        account_name: AccountName,
+        root_dir: P,
+        account_name: String,
         encrypted_key: Vec<u8>
     ) -> Result<()>
     {
-
-    }
-
-    fn save_internal(&self) -> Result<()> {
-        let dir = config::get_a_wallet_dir(self.root_dir.clone(), &self.name.0);
-        fs::DirBuilder::new().recursive(true).create(dir.clone())?;
+        let wallet_file = fs::File::create(root_dir)?;
 
         // 1. save the configuration file
 
@@ -61,9 +97,5 @@ impl Wallet {
         // 3. (Optional) save the public key
 
         Ok(())
-    }
-
-    pub fn load() -> Self {
-
     }
 }

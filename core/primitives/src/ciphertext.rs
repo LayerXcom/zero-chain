@@ -1,4 +1,4 @@
-use crate::JUBJUB;
+use crate::PARAMS;
 use zcrypto::elgamal;
 use pairing::bls12_381::Bls12;
 use jubjub::curve::JubjubBls12;
@@ -18,7 +18,7 @@ pub struct Ciphertext(Vec<u8>);
 
 impl Ciphertext {
     pub fn into_ciphertext(&self) -> Option<elgamal::Ciphertext<Bls12>> {
-        elgamal::Ciphertext::read(&mut &self.0[..], &JUBJUB as &JubjubBls12).ok()
+        elgamal::Ciphertext::read(&mut &self.0[..], &PARAMS as &JubjubBls12).ok()
     }
 
     pub fn from_ciphertext(ciphertext: &elgamal::Ciphertext<Bls12>) -> Self {

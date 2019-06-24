@@ -1,11 +1,22 @@
-pub mod circuit_transfer;
-pub mod circuit_mimc;
+#[macro_use]
+extern crate lazy_static;
+
+use scrypto::jubjub::JubjubBls12;
+use bellman::SynthesisError;
+pub mod circuit;
 pub mod prover;
-pub mod circuit_test;
 pub mod keys;
 pub mod elgamal;
+pub mod transaction;
+pub mod setup;
 
-use bellman::SynthesisError;
+pub use self::setup::setup;
+pub use self::transaction::Transaction;
+pub use self::keys::{EncryptionKey, ProofGenerationKey};
+
+lazy_static! {
+    pub static ref PARAMS: JubjubBls12 = { JubjubBls12::new() };
+}
 
 // TODO: This should probably be removed and we
 // should use existing helper methods on `Option`

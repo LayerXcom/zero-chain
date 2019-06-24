@@ -3,7 +3,7 @@ use serde::{Serialize, Serializer, Deserialize, Deserializer};
 use fixed_hash::construct_fixed_hash;
 use jubjub::curve::JubjubBls12;
 use jubjub::redjubjub;
-use crate::JUBJUB;
+use crate::PARAMS;
 use pairing::bls12_381::Bls12;
 
 #[cfg(feature = "std")]
@@ -54,7 +54,7 @@ impl Decode for SigVerificationKey {
 
 impl SigVerificationKey {
     pub fn into_verification_key(&self) -> Option<redjubjub::PublicKey<Bls12>> {
-        redjubjub::PublicKey::read(&mut &self.0[..], &JUBJUB as &JubjubBls12).ok()
+        redjubjub::PublicKey::read(&mut &self.0[..], &PARAMS as &JubjubBls12).ok()
     }
 
     pub fn from_verification_key(vk: &redjubjub::PublicKey<Bls12>) -> Self {

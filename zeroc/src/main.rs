@@ -3,7 +3,10 @@ extern crate log;
 #[macro_use]
 extern crate clap;
 #[macro_use]
-extern crate lazy_static;
+extern crate serde_derive;
+#[cfg(test)]
+#[macro_use]
+extern crate matches;
 
 use std::fs::File;
 use std::path::{Path, PathBuf};
@@ -12,8 +15,11 @@ use std::io::{BufWriter, Write, BufReader, Read};
 use clap::{Arg, App, SubCommand, AppSettings, ArgMatches};
 use rand::OsRng;
 use proofs::{
-    keys::{EncryptionKey, ProofGenerationKey},
+    EncryptionKey, ProofGenerationKey,
     elgamal,
+    Transaction,
+    setup,
+    PARAMS,
     };
 use primitives::{hexdisplay::{HexDisplay, AsBytesRef}, blake2_256, crypto::{Ss58Codec, Derive, DeriveJunction}};
 use pairing::{bls12_381::Bls12, Field, PrimeField, PrimeFieldRepr};
@@ -25,27 +31,19 @@ use zjubjub::{
     };
 use bellman::groth16::{Parameters, PreparedVerifyingKey};
 use polkadot_rs::{Api, Url, hexstr_to_u64};
-use zprimitives::{Proof, Ciphertext as zCiphertext, PkdAddress, SigVerificationKey, RedjubjubSignature};
+use zprimitives::{PARAMS as ZPARAMS, Proof, Ciphertext as zCiphertext, PkdAddress, SigVerificationKey, RedjubjubSignature};
 use runtime_primitives::generic::Era;
 use parity_codec::{Compact, Encode};
 use zerochain_runtime::{UncheckedExtrinsic, Call, ConfTransferCall};
 use bip39::{Mnemonic, Language, MnemonicType};
 
-mod setup;
 mod utils;
 mod config;
-mod transaction;
+mod wallet;
 pub mod derive;
 pub mod term;
-use setup::setup;
 use utils::*;
 use config::*;
-use transaction::Transaction;
-
-lazy_static! {
-    pub static ref PARAMS: JubjubBls12 = { JubjubBls12::new() };
-    pub static ref ZPARAMS: zJubjubBls12 = { zJubjubBls12::new() };
-}
 
 //
 // Global constants
@@ -263,6 +261,19 @@ const TX_COMMAND: &'static str = "tx";
 fn subcommand_tx(mut term: term::Term, root_dir: PathBuf, matches: &ArgMatches) {
     let res = match matches.subcommand() {
         ("send", Some(sub_matches)) => {
+            let seed = hex::decode(sub_matches.value_of("sender-seed")
+                .expect("Seed parameter is required; qed"))
+                .expect("should be decoded to hex.");
+
+            let recipient_encryption_key = hex::decode(sub_matches.value_of("recipient-encryption-key")
+                .expect("Recipient's encryption key parameter is required; qed")
+                ).expect("should be decoded to hex.");
+
+            let amount_str = sub_matches.value_of("amount")
+                .expect("Amount parameter is required; qed");
+            let amount: u32 = amount_str.parse()
+                .expect("should be parsed to u32 number; qed");
+
             println!("Preparing paramters...");
 
             let url = match sub_matches.value_of("url") {
@@ -299,15 +310,6 @@ fn subcommand_tx(mut term: term::Term, root_dir: PathBuf, matches: &ArgMatches) 
             let prepared_vk = PreparedVerifyingKey::<Bls12>::read(&mut &buf_vk[..])
                 .expect("should ne casted to PreparedVerifyingKey<Bls12> type");
 
-            let seed = hex::decode(sub_matches.value_of("sender-seed")
-                .expect("Seed parameter is required; qed"))
-                .expect("should be decoded to hex.");
-
-            let amount_str = sub_matches.value_of("amount")
-                .expect("Amount parameter is required; qed");
-            let amount: u32 = amount_str.parse()
-                .expect("should be parsed to u32 number; qed");
-
             let fee_str = api.get_storage("ConfTransfer", "TransactionBaseFee", None)
                 .expect("should be fetched TransactionBaseFee from ConfTransfer module of Zerochain.");
             let fee = hexstr_to_u64(fee_str) as u32;
@@ -319,17 +321,13 @@ fn subcommand_tx(mut term: term::Term, root_dir: PathBuf, matches: &ArgMatches) 
             decryption_key.0.into_repr().write_le(&mut &mut decrypted_key[..])
                 .expect("should be casted as bytes-array.");
 
-            let recipient_encryption_key = hex::decode(sub_matches.value_of("recipient-encryption-key")
-                .expect("Recipient's encryption key parameter is required; qed")
-                ).expect("should be decoded to hex.");
-
             let (decrypted_balance, encrypted_balance_vec, _) = get_balance_from_decryption_key(&decrypted_key[..] ,api.clone());
             let remaining_balance = decrypted_balance - amount - fee;
             assert!(decrypted_balance >= amount + fee, "Not enough balance you have");
 
             let recipient_account_id = EncryptionKey::<Bls12>::read(&mut &recipient_encryption_key[..], &PARAMS)
                 .expect("should be casted to EncryptionKey<Bls12> type.");
-            let encrypted_balance = elgamal::Ciphertext::read(&mut &encrypted_balance_vec[..], &PARAMS as &JubjubBls12)
+            let encrypted_balance = elgamal::Ciphertext::read(&mut &encrypted_balance_vec[..], &*PARAMS)
                 .expect("should be casted to Ciphertext type.");
 
             println!("Computing zk proof...");
@@ -378,11 +376,11 @@ fn subcommand_tx(mut term: term::Term, root_dir: PathBuf, matches: &ArgMatches) 
 
                 let sig = raw_payload.using_encoded(|payload| {
                     let msg = blake2_256(payload);
-                    let sig = sig_sk.sign(&msg[..], rng, p_g, &ZPARAMS as &zJubjubBls12);
+                    let sig = sig_sk.sign(&msg[..], rng, p_g, &*ZPARAMS);
 
                     let sig_vk = sig_vk.into_verification_key()
                         .expect("should be casted to redjubjub::PublicKey<Bls12> type.");
-                    assert!(sig_vk.verify(&msg, &sig, p_g, &ZPARAMS as &zJubjubBls12));
+                    assert!(sig_vk.verify(&msg, &sig, p_g, &*ZPARAMS));
 
                     sig
                 });
@@ -470,7 +468,7 @@ fn subcommand_tx(mut term: term::Term, root_dir: PathBuf, matches: &ArgMatches) 
 
             let ciphertext_balance_a = sub_matches.value_of("encrypted-balance").unwrap();
             let ciphertext_balance_v = hex::decode(ciphertext_balance_a).unwrap();
-            let ciphertext_balance = elgamal::Ciphertext::read(&mut &ciphertext_balance_v[..], &PARAMS as &JubjubBls12).unwrap();
+            let ciphertext_balance = elgamal::Ciphertext::read(&mut &ciphertext_balance_v[..], &*PARAMS).unwrap();
 
             let remaining_balance = balance - amount - fee;
 
@@ -510,15 +508,14 @@ fn subcommand_tx(mut term: term::Term, root_dir: PathBuf, matches: &ArgMatches) 
                 \nrsk(Alice): 0x{}
                 \nEncrypted fee by sender: 0x{}
                 ",
-                HexDisplay::from(&&tx.proof[..] as &AsBytesRef),
-                HexDisplay::from(&tx.address_sender as &AsBytesRef),
-                HexDisplay::from(&tx.address_recipient as &AsBytesRef),
-                HexDisplay::from(&tx.enc_amount_sender as &AsBytesRef),
-                HexDisplay::from(&tx.enc_amount_recipient as &AsBytesRef),
-                // HexDisplay::from(&tx.enc_bal_sender as &AsBytesRef),
-                HexDisplay::from(&tx.rvk as &AsBytesRef),
-                HexDisplay::from(&tx.rsk as &AsBytesRef),
-                HexDisplay::from(&tx.enc_fee as &AsBytesRef),
+                HexDisplay::from(&&tx.proof[..] as &dyn AsBytesRef),
+                HexDisplay::from(&tx.address_sender as &dyn AsBytesRef),
+                HexDisplay::from(&tx.address_recipient as &dyn AsBytesRef),
+                HexDisplay::from(&tx.enc_amount_sender as &dyn AsBytesRef),
+                HexDisplay::from(&tx.enc_amount_recipient as &dyn AsBytesRef),
+                HexDisplay::from(&tx.rvk as &dyn AsBytesRef),
+                HexDisplay::from(&tx.rsk as &dyn AsBytesRef),
+                HexDisplay::from(&tx.enc_fee as &dyn AsBytesRef),
             );
         },
         _ => {
