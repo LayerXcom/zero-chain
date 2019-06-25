@@ -7,7 +7,7 @@ use smallvec::SmallVec;
 use std::num::NonZeroU32;
 use std::convert::{TryInto, TryFrom};
 use serde::{Deserialize, Serialize};
-use super::error::{WalletError, Result};
+use super::error::{KeystoreError, Result};
 use crate::derive::{ExtendedSpendingKey, Derivation};
 
 /// Serializable and deserializable bytes
@@ -136,7 +136,7 @@ impl KeyCiphertext {
         let mac = crypto::derive_mac(&derived_right, &self.ciphertext.0).keccak256();
 
         if !crypto::is_equal(&mac, &self.mac.0) {
-            return Err(WalletError::InvalidPassword)
+            return Err(KeystoreError::InvalidPassword)
         }
 
         let mut plain: SmallVec<[u8; 32]> = SmallVec::from_vec(vec![0; self.ciphertext.0.len()]);
@@ -183,6 +183,6 @@ mod tests {
         let ciphertext = KeyCiphertext::encrypt(&xsk_master, password_enc, iters, rng).unwrap();
         let decrypted = ciphertext.decrypt(password_dec);
 
-        assert_matches!(decrypted, Err(WalletError::InvalidPassword));
+        assert_matches!(decrypted, Err(KeystoreError::InvalidPassword));
     }
 }

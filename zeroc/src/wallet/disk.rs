@@ -1,12 +1,12 @@
 //! Implementation of file disk operations to store keyfiles.
 
-use super::Directory;
+use super::DirOperations;
 use super::keyfile::KeyFile;
-use super::error::{Result, WalletError};
+use super::error::{Result, KeystoreError};
 use std::path::{PathBuf, Path};
 use std::fs;
 use std::io::Write;
-use libc;
+use std::collections::HashMap;
 use rand::Rng;
 use chrono::Utc;
 use serde_json;
@@ -16,7 +16,7 @@ pub struct KeystoreDirectory{
     path: PathBuf,
 }
 
-impl Directory for KeystoreDirectory{
+impl DirOperations for KeystoreDirectory{
     fn insert<R: Rng>(&self, keyfile: &mut KeyFile, rng: &mut R) -> Result<()> {
         let filename = get_unique_filename(&self.path, rng)?;
         let keyfile_path = self.path.join(filename.as_str());
@@ -52,6 +52,10 @@ impl KeystoreDirectory {
             path: path.as_ref().to_path_buf(),
         }
     }
+
+    fn get_all_keyfile(&self) -> Result<HashMap<PathBuf, KeyFile>> {
+        unimplemented!();
+    }
 }
 
 #[cfg(unix)]
@@ -61,10 +65,7 @@ pub fn create_new_file(path: &Path) -> Result<fs::File> {
     let file = fs::OpenOptions::new()
         .write(true)
         .create_new(true)
-        .mode((
-            libc::S_IWUSR | // 00200 Owner read permission
-            libc::S_IRUSR ) // 00400 Owner write permission
-        as u32)
+        .mode(0o660) // Owner's read & write permission
         .open(path)?;
 
     Ok(file)
@@ -95,7 +96,7 @@ pub fn get_unique_filename<R: Rng>(
 
         while path.exists() {
             if retries >= MAX_RETRIES {
-                return Err(WalletError::OverRetries);
+                return Err(KeystoreError::OverRetries);
             }
 
             let suffix: String = rng.gen_ascii_chars().take(4).collect();

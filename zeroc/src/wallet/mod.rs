@@ -15,15 +15,15 @@ mod error;
 mod disk;
 pub use keyfile::{SerdeBytes, KeyFile};
 
-/// Operations in a wallet directory
-pub trait Directory {
-    /// Insert a new keyfile to this wallet directory.
+/// Operations in a keystore directory
+pub trait DirOperations {
+    /// Insert a new keyfile to this keystore directory.
     fn insert<R: Rng>(&self, keyfile: &mut KeyFile, rng: &mut R) -> Result<()>;
 
-    /// Load all keyfiles in this wallet directory.
+    /// Load all keyfiles in this keystore directory.
     fn load_all(&self) -> Result<Vec<KeyFile>>;
 
-    /// Remove a keyfile from this wallet directory.
+    /// Remove a keyfile from this keystore directory.
     fn remove(&self, keyfile: &mut KeyFile) -> Result<()>;
 }
 
