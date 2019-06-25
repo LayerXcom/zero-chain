@@ -61,7 +61,10 @@ pub fn create_new_file(path: &Path) -> Result<fs::File> {
     let file = fs::OpenOptions::new()
         .write(true)
         .create_new(true)
-        .mode((libc::S_IWUSR | libc::S_IRUSR) as u32)
+        .mode((
+            libc::S_IWUSR | // 00200 Owner read permission
+            libc::S_IRUSR ) // 00400 Owner write permission
+        as u32)
         .open(path)?;
 
     Ok(file)
@@ -117,7 +120,6 @@ mod tests {
         let rng = &mut XorShiftRng::from_seed([0x3dbe6259, 0x8d313d76, 0x3237db17, 0xe5bc0654]);
         let mut dir = env::temp_dir();
         dir.push("create_new_keyfile");
-        println!("dir: {:?}", dir);
 
         let seed: [u8; 32] = rng.gen();
         let xsk_master = ExtendedSpendingKey::master(&seed);
