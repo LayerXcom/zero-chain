@@ -55,7 +55,7 @@ pub struct KeyFile {
 
     /// Unique Keyfile name which is used for filename.
     /// If this keyfile is not stored yet, no name exits.
-    pub keyfile_name: Option<String>,
+    pub file_name: Option<String>,
 
     /// User defined account name
     pub account_name: String,
@@ -82,7 +82,7 @@ impl KeyFile {
         let enc_key = KeyCiphertext::encrypt(xsk, password, iters, rng)?;
 
         Ok(KeyFile {
-            keyfile_name: None,
+            file_name: None,
             account_name,
             version,
             enc_key,

@@ -1,10 +1,11 @@
-//! Implementation of disk operations to store keyfiles.
+//! Implementation of file disk operations to store keyfiles.
 
 use super::Directory;
 use super::keyfile::KeyFile;
 use super::error::{Result, WalletError};
 use std::path::{PathBuf, Path};
 use std::fs;
+use std::io::Write;
 use libc;
 use rand::Rng;
 use chrono::Utc;
@@ -20,10 +21,13 @@ impl Directory for KeystoreDirectory{
         let filename = get_unique_filename(&self.path, rng)?;
         let keyfile_path = self.path.join(filename.as_str());
 
-        keyfile.keyfile_name = Some(filename);
+        keyfile.file_name = Some(filename);
 
         let mut file = create_new_file(&keyfile_path)?;
-        serde_json::to_writer(file, keyfile)?;
+        serde_json::to_writer(&mut file, keyfile)?;
+
+        file.flush()?;
+        file.sync_all()?;
 
         Ok(())
     }
@@ -38,16 +42,17 @@ impl Directory for KeystoreDirectory{
 }
 
 impl KeystoreDirectory {
-    pub fn new<P: AsRef<Path>>(path: P) -> Self {
+    pub fn create<P: AsRef<Path>>(path: P) -> Result<Self> {
+        fs::create_dir_all(path.as_ref())?;
+        Ok(Self::from_path(path))
+    }
+
+    pub fn from_path<P: AsRef<Path>>(path: P) -> Self {
         KeystoreDirectory {
             path: path.as_ref().to_path_buf(),
         }
     }
 }
-
-// fn get_keyfile_name(keyfile: &KeyFile) -> String {
-//     keyfile.name
-// }
 
 #[cfg(unix)]
 pub fn create_new_file(path: &Path) -> Result<fs::File> {
@@ -78,7 +83,7 @@ pub fn get_unique_filename<R: Rng>(
     rng: &mut R
 ) -> Result<String>
 {
-    let mut filename = Utc::now().format("Y-%m-%dT%H-%M-%S").to_string();
+    let mut filename = Utc::now().format("%Y-%m-%dT%H-%M-%S").to_string();
     let mut path = directory_path.join(filename.as_str());
 
     if path.exists() {
@@ -98,4 +103,36 @@ pub fn get_unique_filename<R: Rng>(
     }
 
     Ok(filename)
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use std::env;
+    use rand::{XorShiftRng, SeedableRng};
+    use crate::derive::{ExtendedSpendingKey, Derivation};
+
+    #[test]
+    fn create_new_keyfile() {
+        let rng = &mut XorShiftRng::from_seed([0x3dbe6259, 0x8d313d76, 0x3237db17, 0xe5bc0654]);
+        let mut dir = env::temp_dir();
+        dir.push("create_new_keyfile");
+        println!("dir: {:?}", dir);
+
+        let seed: [u8; 32] = rng.gen();
+        let xsk_master = ExtendedSpendingKey::master(&seed);
+        let iters = 1024;
+        let password = b"abcd";
+        let version = 1;
+
+        let directory = KeystoreDirectory::create(dir.clone()).unwrap();
+        let mut keyfile = KeyFile::new("Test".to_string(), version, password, iters, &xsk_master, rng).unwrap();
+
+        let res = directory.insert(&mut keyfile, rng);
+
+        assert!(res.is_ok(), "Should save keyfile succesfuly.");
+        assert!(keyfile.file_name.is_some(), "Filename has been assigned.");
+
+        let _ = fs::remove_dir_all(dir);
+    }
 }
