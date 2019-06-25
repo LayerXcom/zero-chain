@@ -152,6 +152,8 @@ impl<E: JubjubEngine> TransferProof<E> {
             public_input[17] = y;
         }
 
+        // This verification is just an error handling, not validate if it returns `true`,
+        // because public input of encrypted balance needs to be updated on-chain.
         if let Err(_) = verify_proof(prepared_vk, &proof, &public_input[..]) {
             return Err(SynthesisError::MalformedVerifyingKey)
         }

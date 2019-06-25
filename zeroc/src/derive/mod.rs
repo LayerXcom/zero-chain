@@ -229,6 +229,17 @@ impl Derivation for ExtendedProofGenerationKey {
     }
 }
 
+impl TryFrom<&ExtendedSpendingKey> for Vec<u8> {
+    type Error = io::Error;
+
+    fn try_from(xsk: &ExtendedSpendingKey) -> io::Result<Vec<u8>> {
+        let mut res = vec![];
+        xsk.write(&mut res[..])?;
+
+        Ok(res)
+    }
+}
+
 impl TryFrom<ExtendedSpendingKey> for SerdeBytes {
     type Error = io::Error;
 

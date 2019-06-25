@@ -18,7 +18,7 @@ pub use keyfile::{SerdeBytes, KeyFile};
 /// Operations in a wallet directory
 pub trait WalletDirectory {
     /// Insert a new keyfile to this wallet directory.
-    fn insert(&self, keyfile: &mut KeyFile) -> Result<()>;
+    fn insert<R: Rng>(&self, keyfile: &mut KeyFile, rng: &mut R) -> Result<()>;
 
     /// Load all keyfiles in this wallet directory.
     fn load_all(&self) -> Result<Vec<KeyFile>>;

@@ -3,8 +3,10 @@ use parity_crypto as crypto;
 use crypto::Keccak256;
 use smallvec::SmallVec;
 use std::num::NonZeroU32;
+use std::convert::{TryInto, TryFrom};
 use serde::{Deserialize, Serialize};
 use super::error::{WalletError, Result};
+use crate::derive::{ExtendedSpendingKey, Derivation};
 
 /// Serializable and deserializable bytes
 #[derive(Deserialize, Serialize, PartialEq, Eq, Debug)]
@@ -46,14 +48,43 @@ impl From<&[u8]> for SerdeBytes {
 #[derive(Debug, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub struct KeyFile {
-    /// Account name
-    pub name: String,
+    // /// Keyfile ID
+    // pub id: [u8; 16],
+
+    /// Unique Keyfile name which is used for filename
+    pub keyfile_name: String,
+
+    /// User defined account name
+    pub account_name: String,
+
     /// Keyfile version
     pub version: u32,
+
     /// Encrypted private key
     pub enc_key: KeyCiphertext,
-    /// Optional address
-    pub address: Option<SerdeBytes>,
+
+    // /// Optional address
+    // pub address: Option<SerdeBytes>,
+}
+
+impl KeyFile {
+    pub fn new(
+        keyfile_name: String,
+        account_name: String,
+        version: u32,
+        password: &[u8],
+        iters: u32,
+        xsk: &ExtendedSpendingKey
+    ) -> Result<Self> {
+        let enc_key = KeyCiphertext::encrypt(xsk, password, iters)?;
+
+        Ok(KeyFile {
+            keyfile_name,
+            account_name,
+            version,
+            enc_key,
+        })
+    }
 }
 
 #[derive(Debug, PartialEq, Eq, Serialize, Deserialize)]
@@ -69,7 +100,7 @@ impl KeyCiphertext {
     /// Encrypt plain bytes data
     /// Currently using `parity-crypto`.
     pub fn encrypt(
-        plain: &[u8],
+        xsk: &ExtendedSpendingKey,
         password: &[u8],
         iters: u32,
     ) -> Result<Self>
@@ -80,9 +111,11 @@ impl KeyCiphertext {
 
         let (derived_left, derived_right) = crypto::derive_key_iterations(password, &salt, iters);
 
-        let mut ciphertext: SmallVec<[u8; 32]> = SmallVec::from_vec(vec![0; plain.len()]);
+        let xsk_bytes: Vec<u8> = xsk.try_into()?;
 
-        crypto::aes::encrypt_128_ctr(&derived_left, &iv, plain, &mut *ciphertext).map_err(crypto::Error::from)?;
+        let mut ciphertext: SmallVec<[u8; 32]> = SmallVec::from_vec(vec![0; xsk_bytes.len()]);
+
+        crypto::aes::encrypt_128_ctr(&derived_left, &iv, &xsk_bytes[..], &mut *ciphertext).map_err(crypto::Error::from)?;
 
         let mac = crypto::derive_mac(&derived_right, &*ciphertext).keccak256();
 
@@ -95,7 +128,7 @@ impl KeyCiphertext {
         })
     }
 
-    pub fn decrypt(&self, password: &[u8]) -> Result<Vec<u8>> {
+    pub fn decrypt(&self, password: &[u8]) -> Result<ExtendedSpendingKey> {
         let (derived_left, derived_right) = crypto::derive_key_iterations(password, &self.salt.0[..], self.iters);
         let mac = crypto::derive_mac(&derived_right, &self.ciphertext.0).keccak256();
 
@@ -108,7 +141,9 @@ impl KeyCiphertext {
         crypto::aes::decrypt_128_ctr(&derived_left, &self.iv.0, &self.ciphertext.0, &mut plain)
             .map_err(crypto::Error::from)?;
 
-        Ok(plain.to_vec())
+        let xsk = ExtendedSpendingKey::read(&mut &plain.to_vec()[..])?;
+        
+        Ok(xsk)
     }
 }
 

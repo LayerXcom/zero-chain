@@ -5,6 +5,7 @@ use parity_crypto as crypto;
 #[derive(Debug)]
 pub enum WalletError {
     InvalidPassword,
+    OverRetries,
     IoError(io::Error),
     CryptoError(crypto::Error),
 }
@@ -25,6 +26,7 @@ impl fmt::Display for WalletError {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         match *self {
             WalletError::InvalidPassword => write!(f, "Invalid password"),
+            WalletError::OverRetries => write!(f, "Exceeded maximum retries when deduplicating filename."),
             WalletError::IoError(_) => write!(f, "I/O error occurred"),
             WalletError::CryptoError(_) => write!(f, "crypto error occured"),
         }
