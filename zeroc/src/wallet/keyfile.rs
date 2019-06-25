@@ -1,3 +1,5 @@
+//! Keyfile operations such as encryption/decryotion, sign.
+
 use rand::{OsRng, Rng};
 use parity_crypto as crypto;
 use crypto::Keccak256;
@@ -51,8 +53,9 @@ pub struct KeyFile {
     // /// Keyfile ID
     // pub id: [u8; 16],
 
-    /// Unique Keyfile name which is used for filename
-    pub keyfile_name: String,
+    /// Unique Keyfile name which is used for filename.
+    /// If this keyfile is not stored yet, no name exits.
+    pub keyfile_name: Option<String>,
 
     /// User defined account name
     pub account_name: String,
@@ -68,18 +71,18 @@ pub struct KeyFile {
 }
 
 impl KeyFile {
-    pub fn new(
-        keyfile_name: String,
+    pub fn new<R: Rng>(
         account_name: String,
         version: u32,
         password: &[u8],
         iters: u32,
-        xsk: &ExtendedSpendingKey
+        xsk: &ExtendedSpendingKey,
+        rng: &mut R,
     ) -> Result<Self> {
-        let enc_key = KeyCiphertext::encrypt(xsk, password, iters)?;
+        let enc_key = KeyCiphertext::encrypt(xsk, password, iters, rng)?;
 
         Ok(KeyFile {
-            keyfile_name,
+            keyfile_name: None,
             account_name,
             version,
             enc_key,
@@ -99,13 +102,13 @@ pub struct KeyCiphertext {
 impl KeyCiphertext {
     /// Encrypt plain bytes data
     /// Currently using `parity-crypto`.
-    pub fn encrypt(
+    pub fn encrypt<R: Rng>(
         xsk: &ExtendedSpendingKey,
         password: &[u8],
         iters: u32,
+        rng: &mut R,
     ) -> Result<Self>
     {
-        let rng = &mut OsRng::new().expect("should be able to construct RNG");
         let salt: [u8; 32] = rng.gen();
         let iv: [u8; 16] = rng.gen();
 
@@ -142,7 +145,7 @@ impl KeyCiphertext {
             .map_err(crypto::Error::from)?;
 
         let xsk = ExtendedSpendingKey::read(&mut &plain.to_vec()[..])?;
-        
+
         Ok(xsk)
     }
 }
@@ -150,27 +153,34 @@ impl KeyCiphertext {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use rand::{XorShiftRng, SeedableRng};
 
     #[test]
     fn test_plain_with_correct_password() {
-        let plain = b"test";
+        let rng = &mut XorShiftRng::from_seed([0x3dbe6259, 0x8d313d76, 0x3237db17, 0xe5bc0654]);
+        let seed: [u8; 32] = rng.gen();
+        let xsk_master = ExtendedSpendingKey::master(&seed);
+
         let password = b"abcd";
         let iters = 1024;
 
-        let ciphertext = KeyCiphertext::encrypt(plain, password, iters).unwrap();
+        let ciphertext = KeyCiphertext::encrypt(&xsk_master, password, iters, rng).unwrap();
         let decrypted = ciphertext.decrypt(password).unwrap();
 
-        assert_eq!(decrypted, plain);
+        assert_eq!(decrypted, xsk_master);
     }
 
     #[test]
     fn test_plain_with_wrong_password() {
-        let plain = b"test";
+        let rng = &mut XorShiftRng::from_seed([0x3dbe6259, 0x8d313d76, 0x3237db17, 0xe5bc0654]);
+        let seed: [u8; 32] = rng.gen();
+        let xsk_master = ExtendedSpendingKey::master(&seed);
+
         let password_enc = b"abcd";
         let password_dec = b"wxyz";
         let iters = 1024;
 
-        let ciphertext = KeyCiphertext::encrypt(plain, password_enc, iters).unwrap();
+        let ciphertext = KeyCiphertext::encrypt(&xsk_master, password_enc, iters, rng).unwrap();
         let decrypted = ciphertext.decrypt(password_dec);
 
         assert_matches!(decrypted, Err(WalletError::InvalidPassword));

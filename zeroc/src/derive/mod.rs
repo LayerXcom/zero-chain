@@ -234,7 +234,7 @@ impl TryFrom<&ExtendedSpendingKey> for Vec<u8> {
 
     fn try_from(xsk: &ExtendedSpendingKey) -> io::Result<Vec<u8>> {
         let mut res = vec![];
-        xsk.write(&mut res[..])?;
+        xsk.write(&mut res)?;
 
         Ok(res)
     }
@@ -245,7 +245,7 @@ impl TryFrom<ExtendedSpendingKey> for SerdeBytes {
 
     fn try_from(xsk: ExtendedSpendingKey) -> io::Result<SerdeBytes> {
         let mut res = vec![];
-        xsk.write(&mut res[..])?;
+        xsk.write(&mut res)?;
 
         Ok(SerdeBytes(res))
     }

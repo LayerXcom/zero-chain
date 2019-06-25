@@ -1,5 +1,6 @@
 use std::{error::Error, fmt, io, path::PathBuf};
 use parity_crypto as crypto;
+use serde_json;
 
 /// Defined wallet errors
 #[derive(Debug)]
@@ -8,6 +9,7 @@ pub enum WalletError {
     OverRetries,
     IoError(io::Error),
     CryptoError(crypto::Error),
+    SerdeError(serde_json::Error),
 }
 
 impl From<io::Error> for WalletError {
@@ -22,6 +24,12 @@ impl From<crypto::Error> for WalletError {
     }
 }
 
+impl From<serde_json::Error> for WalletError {
+    fn from(e: serde_json::Error) -> Self {
+        WalletError::SerdeError(e)
+    }
+}
+
 impl fmt::Display for WalletError {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         match *self {
@@ -29,6 +37,7 @@ impl fmt::Display for WalletError {
             WalletError::OverRetries => write!(f, "Exceeded maximum retries when deduplicating filename."),
             WalletError::IoError(_) => write!(f, "I/O error occurred"),
             WalletError::CryptoError(_) => write!(f, "crypto error occured"),
+            WalletError::SerdeError(_) => write!(f, "Serialization or deserialization error occured"),
         }
     }
 }

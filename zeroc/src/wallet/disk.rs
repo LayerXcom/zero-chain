@@ -1,17 +1,29 @@
-use super::WalletDirectory;
+//! Implementation of disk operations to store keyfiles.
+
+use super::Directory;
 use super::keyfile::KeyFile;
 use super::error::{Result, WalletError};
 use std::path::{PathBuf, Path};
+use std::fs;
+use libc;
 use rand::Rng;
 use chrono::Utc;
+use serde_json;
 
-pub struct DiskDirectory<P: AsRef<Path>>{
-    path: P,
+/// Directory's path of keystore which is included bunch of keyfiles.
+pub struct KeystoreDirectory{
+    path: PathBuf,
 }
 
-impl<P: AsRef<Path>> WalletDirectory for DiskDirectory<P>{
+impl Directory for KeystoreDirectory{
     fn insert<R: Rng>(&self, keyfile: &mut KeyFile, rng: &mut R) -> Result<()> {
-        let filename = get_unique_filename(&self.path.as_ref(), rng)?;
+        let filename = get_unique_filename(&self.path, rng)?;
+        let keyfile_path = self.path.join(filename.as_str());
+
+        keyfile.keyfile_name = Some(filename);
+
+        let mut file = create_new_file(&keyfile_path)?;
+        serde_json::to_writer(file, keyfile)?;
 
         Ok(())
     }
@@ -25,26 +37,40 @@ impl<P: AsRef<Path>> WalletDirectory for DiskDirectory<P>{
     }
 }
 
-impl<P: AsRef<Path>> DiskDirectory<P> {
-    pub fn new(path: P) -> Self {
-        DiskDirectory {
-            path,
+impl KeystoreDirectory {
+    pub fn new<P: AsRef<Path>>(path: P) -> Self {
+        KeystoreDirectory {
+            path: path.as_ref().to_path_buf(),
         }
     }
-
-    // pub fn insert_with_filename<R: Rng>(&self, keyfile: &mut KeyFile, rng: &mut R) -> Result<()> {
-    //     let filename = get_unique_filename(&self.path, rng)?;
-
-    //     let keyfile_path = sel
-
-    //     // let keyfile_path = self.path.join(filename.as_str()):
-    //     unimplemented!();
-    // }
 }
 
 // fn get_keyfile_name(keyfile: &KeyFile) -> String {
 //     keyfile.name
 // }
+
+#[cfg(unix)]
+pub fn create_new_file(path: &Path) -> Result<fs::File> {
+    use std::os::unix::fs::OpenOptionsExt;
+
+    let file = fs::OpenOptions::new()
+        .write(true)
+        .create_new(true)
+        .mode((libc::S_IWUSR | libc::S_IRUSR) as u32)
+        .open(path)?;
+
+    Ok(file)
+}
+
+#[cfg(not(unix))]
+pub fn create_new_file(path: &Path) -> Result<fs::File> {
+    let file = fs::OpenOptions::new()
+        .write(true)
+        .create_new(true)
+        .open(path)?;
+
+    Ok(file)
+}
 
 /// Get a unique filename by appending random suffix.
 pub fn get_unique_filename<R: Rng>(

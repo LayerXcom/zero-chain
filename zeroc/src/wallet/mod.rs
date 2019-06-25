@@ -16,7 +16,7 @@ mod disk;
 pub use keyfile::{SerdeBytes, KeyFile};
 
 /// Operations in a wallet directory
-pub trait WalletDirectory {
+pub trait Directory {
     /// Insert a new keyfile to this wallet directory.
     fn insert<R: Rng>(&self, keyfile: &mut KeyFile, rng: &mut R) -> Result<()>;
 
