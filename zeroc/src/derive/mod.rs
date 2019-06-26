@@ -147,6 +147,12 @@ impl<'a> From<&'a ExtendedSpendingKey> for ExtendedProofGenerationKey {
     }
 }
 
+impl From<ExtendedSpendingKey> for String {
+    fn from(xsk: ExtendedSpendingKey) -> Self {
+
+    }
+}
+
 /// Extended spending key for HDKD
 #[derive(Clone, Debug, PartialEq)]
 pub struct ExtendedProofGenerationKey {

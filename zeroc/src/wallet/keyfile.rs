@@ -60,6 +60,9 @@ pub struct KeyFile {
     /// User defined account name
     pub account_name: String,
 
+    /// SS58 format address
+    pub ss58_address: String,
+
     /// Keyfile version
     pub version: u32,
 
@@ -84,6 +87,7 @@ impl KeyFile {
         Ok(KeyFile {
             file_name: None,
             account_name,
+            ss58_address:,
             version,
             enc_key,
         })

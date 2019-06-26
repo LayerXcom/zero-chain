@@ -5,7 +5,7 @@ use super::keyfile::KeyFile;
 use super::error::{Result, KeystoreError};
 use std::path::{PathBuf, Path};
 use std::fs;
-use std::io::Write;
+use std::io::{Write, BufReader};
 use std::collections::HashMap;
 use rand::Rng;
 use chrono::Utc;
@@ -33,10 +33,18 @@ impl DirOperations for KeystoreDirectory{
     }
 
     fn load_all(&self) -> Result<Vec<KeyFile>> {
-        unimplemented!();
+        Ok(self.get_all_keyfiles()?
+            .into_iter()
+            .map(|(_, keyfile)| keyfile)
+            .collect()
+        )
     }
 
     fn remove(&self, keyfile: &mut KeyFile) -> Result<()> {
+        let removed_file = self.get_all_keyfiles()?
+            .into_iter()
+            .find(|(_, keyfile)| keyfile.)
+
         unimplemented!();
     }
 }
@@ -53,8 +61,21 @@ impl KeystoreDirectory {
         }
     }
 
-    fn get_all_keyfile(&self) -> Result<HashMap<PathBuf, KeyFile>> {
-        unimplemented!();
+    fn get_all_keyfiles(&self) -> Result<HashMap<PathBuf, KeyFile>> {
+        Ok(fs::read_dir(&self.path)?
+            .flat_map(|entry| {
+                let path = entry?.path();
+                fs::File::open(path.clone())
+                    .map(|file| {
+                        let reader = BufReader::new(file);
+                        let keyfile = serde_json::from_reader(reader)
+                            .expect("Should deserialize from json file.");
+
+                        (path, keyfile)
+                    })
+            })
+            .collect()
+        )
     }
 }
 
