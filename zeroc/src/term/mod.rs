@@ -32,8 +32,6 @@ impl Term {
         }
     }
 
-
-
     pub fn error(&mut self, msg: &str) -> io::Result<()> {
         write!(&mut self.term, "{}", self.style.error.apply_to(msg))
     }

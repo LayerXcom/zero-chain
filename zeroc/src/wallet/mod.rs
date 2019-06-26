@@ -5,7 +5,7 @@ use std::{
     path::{Path, PathBuf},
 };
 use rand::Rng;
-use self::error::Result;
+use self::error::{Result, KeystoreError};
 use crate::derive::{ChildIndex, ExtendedSpendingKey};
 
 mod commands;
@@ -16,7 +16,7 @@ mod disk;
 pub use keyfile::{SerdeBytes, KeyFile};
 
 /// Operations in a keystore directory
-pub trait DirOperations {
+pub trait DirOperations { 
     /// Insert a new keyfile to this keystore directory.
     fn insert<R: Rng>(&self, keyfile: &mut KeyFile, rng: &mut R) -> Result<()>;
 

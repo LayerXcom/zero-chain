@@ -8,6 +8,7 @@ use std::convert;
 pub enum KeystoreError {
     InvalidPassword,
     InvalidKeyfile,
+    InvalidPath,
     OverRetries,
     IoError(io::Error),
     CryptoError(crypto::Error),
@@ -45,6 +46,7 @@ impl fmt::Display for KeystoreError {
             KeystoreError::InvalidPassword => write!(f, "Invalid password"),
             KeystoreError::InvalidKeyfile => write!(f, "Invalid keyfile"),
             KeystoreError::OverRetries => write!(f, "Exceeded maximum retries when deduplicating filename."),
+            KeystoreError::InvalidPath => write!(f, "Invalid path"),
             KeystoreError::IoError(_) => write!(f, "I/O error occurred"),
             KeystoreError::CryptoError(_) => write!(f, "crypto error occured"),
             KeystoreError::SerdeError(_) => write!(f, "Serialization or deserialization error occured"),

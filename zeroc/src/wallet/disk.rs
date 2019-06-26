@@ -12,10 +12,22 @@ use rand::Rng;
 use chrono::Utc;
 use serde_json;
 
+/// Root directory of wallet
+#[derive(Clone, Debug, PartialEq, Eq)]
+pub struct WalletDirectory(PathBuf);
+
+impl WalletDirectory {
+    pub fn create<P: AsRef<Path>>(path: P) -> Result<Self> {
+        fs::create_dir_all(path.as_ref())?;
+        Ok(WalletDirectory(path.as_ref().to_path_buf()))
+    }
+}
+
 /// Directory's path of keystore which is included bunch of keyfiles.
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub struct KeystoreDirectory{
     path: PathBuf,
+    parent_path: WalletDirectory,
 }
 
 impl DirOperations for KeystoreDirectory{
@@ -55,14 +67,21 @@ impl DirOperations for KeystoreDirectory{
 }
 
 impl KeystoreDirectory {
-    pub fn create<P: AsRef<Path>>(path: P) -> Result<Self> {
+    pub fn create<P: AsRef<Path>>(path: P, parent_path: WalletDirectory) -> Result<Self> {
         fs::create_dir_all(path.as_ref())?;
-        Ok(Self::from_path(path))
+        let dir = Self::from_path(path, parent_path).ok_or(KeystoreError::InvalidPath)?;
+
+        Ok(dir)
     }
 
-    pub fn from_path<P: AsRef<Path>>(path: P) -> Self {
-        KeystoreDirectory {
-            path: path.as_ref().to_path_buf(),
+    fn from_path<P: AsRef<Path>>(path: P, parent_path: WalletDirectory) -> Option<Self> {
+        if path.as_ref().to_path_buf().exists() {
+            Some(KeystoreDirectory {
+                path: path.as_ref().to_path_buf(),
+                parent_path,
+            })
+        } else {
+            None
         }
     }
 
