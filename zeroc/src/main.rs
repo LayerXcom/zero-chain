@@ -42,6 +42,7 @@ mod config;
 mod wallet;
 pub mod derive;
 pub mod term;
+pub mod ss58;
 use utils::*;
 use config::*;
 

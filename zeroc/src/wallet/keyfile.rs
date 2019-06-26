@@ -9,6 +9,7 @@ use std::convert::{TryInto, TryFrom};
 use serde::{Deserialize, Serialize};
 use super::error::{KeystoreError, Result};
 use crate::derive::{ExtendedSpendingKey, Derivation};
+use crate::ss58;
 
 /// Serializable and deserializable bytes
 #[derive(Deserialize, Serialize, PartialEq, Eq, Debug)]
@@ -83,11 +84,12 @@ impl KeyFile {
         rng: &mut R,
     ) -> Result<Self> {
         let enc_key = KeyCiphertext::encrypt(xsk, password, iters, rng)?;
+        let ss58_address = xsk.try_into()?;
 
         Ok(KeyFile {
             file_name: None,
             account_name,
-            ss58_address:,
+            ss58_address,
             version,
             enc_key,
         })

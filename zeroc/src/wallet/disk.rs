@@ -3,6 +3,7 @@
 use super::DirOperations;
 use super::keyfile::KeyFile;
 use super::error::{Result, KeystoreError};
+use crate::ss58;
 use std::path::{PathBuf, Path};
 use std::fs;
 use std::io::{Write, BufReader};
@@ -41,9 +42,9 @@ impl DirOperations for KeystoreDirectory{
     }
 
     fn remove(&self, keyfile: &mut KeyFile) -> Result<()> {
-        let removed_file = self.get_all_keyfiles()?
-            .into_iter()
-            .find(|(_, keyfile)| keyfile.)
+        // let removed_file = self.get_all_keyfiles()?
+        //     .into_iter()
+        //     .find(|(_, keyfile)| keyfile.)
 
         unimplemented!();
     }

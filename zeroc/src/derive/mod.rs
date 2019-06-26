@@ -1,8 +1,6 @@
 // //! Implementation of "Hierarchical Deterministic Key Derivation" for Zerochain key components.
 // //! It is respected to ZIP32 specification defined here https://github.com/zcash/zips/blob/master/zip-0032.rst.
 
-use parity_codec::{Encode, Decode};
-use primitives::crypto::{Ss58Codec, Derive, DeriveJunction};
 use blake2_rfc::blake2b::Blake2b;
 use proofs::keys::{ProofGenerationKey, SpendingKey, prf_expand_vec, prf_expand};
 use scrypto::jubjub::{JubjubEngine, fs::Fs, ToUniform};
@@ -147,12 +145,6 @@ impl<'a> From<&'a ExtendedSpendingKey> for ExtendedProofGenerationKey {
     }
 }
 
-impl From<ExtendedSpendingKey> for String {
-    fn from(xsk: ExtendedSpendingKey) -> Self {
-
-    }
-}
-
 /// Extended spending key for HDKD
 #[derive(Clone, Debug, PartialEq)]
 pub struct ExtendedProofGenerationKey {
@@ -254,37 +246,6 @@ impl TryFrom<ExtendedSpendingKey> for SerdeBytes {
         xsk.write(&mut res)?;
 
         Ok(SerdeBytes(res))
-    }
-}
-
-/// Byte format of encryption key to implement SS58 trait.
-#[derive(PartialEq, Eq, PartialOrd, Ord, Clone, Encode, Decode, Default)]
-pub struct EncryptionKeyBytes(pub [u8; 32]);
-
-impl AsRef<EncryptionKeyBytes> for EncryptionKeyBytes {
-    fn as_ref(&self) -> &EncryptionKeyBytes {
-        &self
-    }
-}
-
-impl AsRef<[u8]> for EncryptionKeyBytes {
-    fn as_ref(&self) -> &[u8] {
-        &self.0[..]
-    }
-}
-
-impl AsMut<[u8]> for EncryptionKeyBytes {
-    fn as_mut(&mut self) -> &mut [u8] {
-        &mut self.0[..]
-    }
-}
-
-impl Derive for EncryptionKeyBytes {
-    /// Derive a child key from a series of given junctions.
-	///
-	/// `None` if there are any hard junctions in there.
-    fn derive<Iter: Iterator<Item=DeriveJunction>>(&self, path: Iter) -> Option<EncryptionKeyBytes> {
-        unimplemented!();
     }
 }
 

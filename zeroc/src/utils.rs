@@ -1,5 +1,5 @@
 use crate::{ZPARAMS, PARAMS};
-use crate::derive::EncryptionKeyBytes;
+use crate::ss58::EncryptionKeyBytes;
 use keys;
 use primitives::{hexdisplay::{HexDisplay, AsBytesRef}, crypto::{Ss58Codec, Derive, DeriveJunction}};
 use zpairing::{bls12_381::Bls12 as zBls12, PrimeField as zPrimeField, PrimeFieldRepr as zPrimeFieldRepr, io};

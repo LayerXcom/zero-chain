@@ -6,7 +6,7 @@ use std::{
 };
 use rand::Rng;
 use self::error::Result;
-use crate::derive::{ChildIndex, EncryptionKeyBytes, ExtendedSpendingKey};
+use crate::derive::{ChildIndex, ExtendedSpendingKey};
 
 mod commands;
 mod config;
