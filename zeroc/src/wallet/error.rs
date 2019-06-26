@@ -7,6 +7,7 @@ use std::convert;
 #[derive(Debug)]
 pub enum KeystoreError {
     InvalidPassword,
+    InvalidKeyfile,
     OverRetries,
     IoError(io::Error),
     CryptoError(crypto::Error),
@@ -42,6 +43,7 @@ impl fmt::Display for KeystoreError {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         match *self {
             KeystoreError::InvalidPassword => write!(f, "Invalid password"),
+            KeystoreError::InvalidKeyfile => write!(f, "Invalid keyfile"),
             KeystoreError::OverRetries => write!(f, "Exceeded maximum retries when deduplicating filename."),
             KeystoreError::IoError(_) => write!(f, "I/O error occurred"),
             KeystoreError::CryptoError(_) => write!(f, "crypto error occured"),

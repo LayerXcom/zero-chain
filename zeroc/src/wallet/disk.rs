@@ -13,6 +13,7 @@ use chrono::Utc;
 use serde_json;
 
 /// Directory's path of keystore which is included bunch of keyfiles.
+#[derive(Clone, Debug, PartialEq, Eq)]
 pub struct KeystoreDirectory{
     path: PathBuf,
 }
@@ -42,11 +43,14 @@ impl DirOperations for KeystoreDirectory{
     }
 
     fn remove(&self, keyfile: &mut KeyFile) -> Result<()> {
-        // let removed_file = self.get_all_keyfiles()?
-        //     .into_iter()
-        //     .find(|(_, keyfile)| keyfile.)
+        let removed_file = self.get_all_keyfiles()?
+            .into_iter()
+            .find(|(_, file)| file.ss58_address == keyfile.ss58_address);
 
-        unimplemented!();
+        match removed_file {
+            None => Err(KeystoreError::InvalidKeyfile),
+            Some((path, _)) => fs::remove_file(path).map_err(From::from)
+        }
     }
 }
 
@@ -139,7 +143,7 @@ mod tests {
     use crate::derive::{ExtendedSpendingKey, Derivation};
 
     #[test]
-    fn create_new_keyfile() {
+    fn test_manage_keyfile() {
         let rng = &mut XorShiftRng::from_seed([0x3dbe6259, 0x8d313d76, 0x3237db17, 0xe5bc0654]);
         let mut dir = env::temp_dir();
         dir.push("create_new_keyfile");
@@ -153,11 +157,22 @@ mod tests {
         let directory = KeystoreDirectory::create(dir.clone()).unwrap();
         let mut keyfile = KeyFile::new("Test".to_string(), version, password, iters, &xsk_master, rng).unwrap();
 
-        let res = directory.insert(&mut keyfile, rng);
+        // create
+        let res_create = directory.insert(&mut keyfile, rng);
 
-        assert!(res.is_ok(), "Should save keyfile succesfuly.");
+        assert!(res_create.is_ok(), "Should save keyfile successfully.");
         assert!(keyfile.file_name.is_some(), "Filename has been assigned.");
 
-        let _ = fs::remove_dir_all(dir);
+        // load
+        let keyfile_loaded = &mut directory.load_all().unwrap()[0];
+
+        assert_eq!(*keyfile_loaded, keyfile);
+
+        // remove
+        let res_remove = directory.remove(keyfile_loaded);
+
+        assert!(res_remove.is_ok(), "Should remove keyfile successfully");
+        dir.push(keyfile.file_name.unwrap());
+        assert!(!dir.exists(), "Should be removed keyfile.")
     }
 }

@@ -51,9 +51,6 @@ impl From<&[u8]> for SerdeBytes {
 #[derive(Debug, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub struct KeyFile {
-    // /// Keyfile ID
-    // pub id: [u8; 16],
-
     /// Unique Keyfile name which is used for filename.
     /// If this keyfile is not stored yet, no name exits.
     pub file_name: Option<String>,
@@ -69,9 +66,6 @@ pub struct KeyFile {
 
     /// Encrypted private key
     pub enc_key: KeyCiphertext,
-
-    // /// Optional address
-    // pub address: Option<SerdeBytes>,
 }
 
 impl KeyFile {
