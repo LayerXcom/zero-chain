@@ -8,7 +8,7 @@ use std::num::NonZeroU32;
 use std::convert::{TryInto, TryFrom};
 use serde::{Deserialize, Serialize};
 use super::error::{KeystoreError, Result};
-use crate::derive::{ExtendedSpendingKey, Derivation};
+use crate::derive::{ExtendedSpendingKey, Derivation, ChildIndex};
 use crate::ss58;
 
 /// Serializable and deserializable bytes
@@ -65,7 +65,7 @@ pub struct KeyFile {
     pub version: u32,
 
     /// Encrypted private key
-    pub enc_key: KeyCiphertext,
+    pub encrypted_key: KeyCiphertext,
 }
 
 impl KeyFile {
@@ -77,7 +77,7 @@ impl KeyFile {
         xsk: &ExtendedSpendingKey,
         rng: &mut R,
     ) -> Result<Self> {
-        let enc_key = KeyCiphertext::encrypt(xsk, password, iters, rng)?;
+        let encrypted_key = KeyCiphertext::encrypt(xsk, password, iters, rng)?;
         let ss58_address = xsk.try_into()?;
 
         Ok(KeyFile {
@@ -85,7 +85,7 @@ impl KeyFile {
             account_name: account_name.to_string(),
             ss58_address,
             version,
-            enc_key,
+            encrypted_key,
         })
     }
 
@@ -99,7 +99,7 @@ impl KeyFile {
         let seed: [u8; 32] = rng.gen();
         let xsk_master = ExtendedSpendingKey::master(&seed);
 
-        let enc_key = KeyCiphertext::encrypt(&xsk_master, password, iters, rng)?;
+        let encrypted_key = KeyCiphertext::encrypt(&xsk_master, password, iters, rng)?;
         let ss58_master_addr = (&xsk_master).try_into()?;
 
         Ok(KeyFile {
@@ -107,8 +107,15 @@ impl KeyFile {
             account_name: account_name.to_string(),
             ss58_address: ss58_master_addr,
             version,
-            enc_key,
+            encrypted_key,
         })
+    }
+
+    pub fn get_child_xsk(&self, password: &[u8], index: ChildIndex) -> Result<ExtendedSpendingKey> {
+        let xsk = self.encrypted_key.decrypt(password)?;
+        let xsk_child = xsk.derive_child(index)?;
+
+        Ok(xsk_child)
     }
 }
 

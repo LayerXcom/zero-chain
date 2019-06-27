@@ -1,5 +1,6 @@
 use std::path::PathBuf;
 use crate::term::Term;
+use crate::derive::ChildIndex;
 use super::{WalletDirectory, KeystoreDirectory, DirOperations};
 use super::keyfile::{KeyFile, IndexFile};
 use super::error::Result;
@@ -34,39 +35,52 @@ pub fn new_wallet<R: Rng>(
     let mut keyfile_master = KeyFile::create_master(MASTER_KEYFILE, VERSION, &password[..], ITERS, rng)?;
 
     // 6. store master keyfile
-    keystore_dir.insert(&mut keyfile_master, rng)?;
+    keystore_dir.insert_master(&mut keyfile_master)?;
 
-    // 7. store new indexfile
+    // 7. create a genesis keyfile
+    let child_index = ChildIndex::from_index(0);
+    let mut keyfile = get_new_keyfile(term, rng, &password[..], &keystore_dir, child_index)?;
+
+    // 8. store a genesis keyfile
+    keystore_dir.insert(&mut keyfile, rng)?;
+
+    // 9. store new indexfile
     new_indexfile(&wallet_dir)?;
-
-
-
 
     Ok(())
 }
 
-fn new_keyfile<R: Rng>(
+// pub fn new_keyfile<R: Rng>(
+//     term: &mut Term,
+//     rng: &mut R,
+//     root_dir: PathBuf,
+//     child_index: ChildIndex,
+// ) -> Result<()> {
+//     // enter password
+//     term.info("Enter the wallet password.\n")?;
+//     let password = term.passowrd("wallet password")?;
+
+//     let keyfile = get_new_keyfile(term, rng, &password[..], keystore_dir: &KeystoreDirectory, child_index: ChildIndex)
+// }
+
+fn get_new_keyfile<R: Rng>(
     term: &mut Term,
-    root_dir: PathBuf,
     rng: &mut R,
+    password: &[u8],
     keystore_dir: &KeystoreDirectory,
-) -> Result<()> {
-
-    // enter password
-    term.info("Enter the wallet password.\n")?;
-    let password = term.passowrd("wallet password")?;
-
+    child_index: ChildIndex,
+) -> Result<KeyFile> {
     // enter new account name
     term.info("Enter a new account name.\n")?;
     let account_name = term.account_name("new account name")?;
 
     let master_keyfile = keystore_dir.load_master()?;
-    
+    let xsk_child = master_keyfile.get_child_xsk(&password[..], child_index)?;
 
     // create new keyfile
-    // let mut keyfile = KeyFile::new(account_name.as_str(), VERSION, &password[..], ITERS, xsk: &ExtendedSpendingKey, rng)?;
+    let keyfile = KeyFile::new(account_name.as_str(), VERSION, password, ITERS, &xsk_child, rng)?;
 
-    Ok(())
+    Ok(keyfile)
 }
 
 /// Create a new index file in wallet directory.

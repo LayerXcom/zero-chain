@@ -49,23 +49,17 @@ impl WalletDirectory {
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub struct KeystoreDirectory{
     path: PathBuf,
-    parent_path: WalletDirectory,
+    wallet_path: WalletDirectory,
 }
 
 impl DirOperations for KeystoreDirectory{
     fn insert<R: Rng>(&self, keyfile: &mut KeyFile, rng: &mut R) -> Result<()> {
         let filename = get_unique_filename(&self.path, rng)?;
-        let keyfile_path = self.path.join(filename.as_str());
+        self.save_keyfile(filename, keyfile)
+    }
 
-        keyfile.file_name = Some(filename);
-
-        let mut file = create_new_file(&keyfile_path)?;
-        serde_json::to_writer(&mut file, keyfile)?;
-
-        file.flush()?;
-        file.sync_all()?;
-
-        Ok(())
+    fn insert_master(&self, keyfile: &mut KeyFile) -> Result<()> {
+        self.save_keyfile(MASTER_KEYFILE.to_string(), keyfile)
     }
 
     fn load_master(&self) -> Result<KeyFile> {
@@ -93,24 +87,38 @@ impl DirOperations for KeystoreDirectory{
 }
 
 impl KeystoreDirectory {
-    pub fn create<P: AsRef<Path>>(path: P, parent_path: &WalletDirectory) -> Result<Self> {
+    pub fn create<P: AsRef<Path>>(path: P, wallet_path: &WalletDirectory) -> Result<Self> {
         fs::create_dir_all(path.as_ref())?;
-        let dir = Self::from_path(path, parent_path).ok_or(KeystoreError::InvalidPath)?;
+        let dir = Self::from_path(path, wallet_path).ok_or(KeystoreError::InvalidPath)?;
 
         Ok(dir)
     }
 
-    fn from_path<P: AsRef<Path>>(path: P, parent_path: &WalletDirectory) -> Option<Self> {
+    fn from_path<P: AsRef<Path>>(path: P, wallet_path: &WalletDirectory) -> Option<Self> {
         if path.as_ref().to_path_buf().exists() {
-            let parent_path = parent_path.clone();
+            let wallet_path = wallet_path.clone();
 
             Some(KeystoreDirectory {
                 path: path.as_ref().to_path_buf(),
-                parent_path,
+                wallet_path,
             })
         } else {
             None
         }
+    }
+
+    fn save_keyfile(&self, filename: String, keyfile: &mut KeyFile) -> Result<()> {
+        let keyfile_path = self.path.join(filename.as_str());
+
+        keyfile.file_name = Some(filename);
+
+        let mut file = create_new_file(&keyfile_path)?;
+        serde_json::to_writer(&mut file, keyfile)?;
+
+        file.flush()?;
+        file.sync_all()?;
+
+        Ok(())
     }
 
     // fn get_keyfile(&self, path: PathBuf) -> Result<KeyFile> {
