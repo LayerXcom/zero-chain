@@ -1,5 +1,5 @@
-
 use console;
+use dialoguer;
 use std::{
     error::Error,
     io::{self, Write},
@@ -30,6 +30,33 @@ impl Term {
             style,
             term,
         }
+    }
+
+    pub fn new_password(
+        &mut self,
+        prompt: &str,
+        confirmation: &str,
+        mismatch_err: &str
+    ) -> io::Result<String> {
+        dialoguer::PasswordInput::new()
+            .with_prompt(prompt)
+            .with_confirmation(confirmation, mismatch_err)
+            .interact()
+    }
+
+    pub fn simply(&mut self, msg: &str) -> io::Result<()> {
+        write!(self, "{}", msg)
+    }
+
+    pub fn success(&mut self, msg: &str) -> io::Result<()> {
+        write!(&mut self.term, "{}", self.style.success.apply_to(msg))
+    }
+
+    pub fn info(&mut self, msg: &str) -> io::Result<()> {
+        write!(&mut self.term, "{}", self.style.info.apply_to(msg))
+    }
+    pub fn warn(&mut self, msg: &str) -> io::Result<()> {
+        write!(&mut self.term, "{}", self.style.warning.apply_to(msg))
     }
 
     pub fn error(&mut self, msg: &str) -> io::Result<()> {

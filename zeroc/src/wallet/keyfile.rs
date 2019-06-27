@@ -70,7 +70,7 @@ pub struct KeyFile {
 
 impl KeyFile {
     pub fn new<R: Rng>(
-        account_name: String,
+        account_name: &str,
         version: u32,
         password: &[u8],
         iters: u32,
@@ -82,8 +82,30 @@ impl KeyFile {
 
         Ok(KeyFile {
             file_name: None,
-            account_name,
+            account_name: account_name.to_string(),
             ss58_address,
+            version,
+            enc_key,
+        })
+    }
+
+    pub fn create_master<R: Rng>(
+        account_name: &str,
+        version: u32,
+        password: &[u8],
+        iters: u32,
+        rng: &mut R,
+    ) -> Result<Self> {
+        let seed: [u8; 32] = rng.gen();
+        let xsk_master = ExtendedSpendingKey::master(&seed);
+
+        let enc_key = KeyCiphertext::encrypt(&xsk_master, password, iters, rng)?;
+        let ss58_master_addr = (&xsk_master).try_into()?;
+
+        Ok(KeyFile {
+            file_name: None,
+            account_name: account_name.to_string(),
+            ss58_address: ss58_master_addr,
             version,
             enc_key,
         })

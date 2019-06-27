@@ -14,7 +14,7 @@ use serde_json;
 
 /// Root directory of wallet
 #[derive(Clone, Debug, PartialEq, Eq)]
-pub struct WalletDirectory(PathBuf);
+pub struct WalletDirectory(pub PathBuf);
 
 impl WalletDirectory {
     pub fn create<P: AsRef<Path>>(path: P) -> Result<Self> {

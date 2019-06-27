@@ -1,10 +1,11 @@
 use dirs;
 use clap::{Arg, App, SubCommand, AppSettings, ArgMatches};
 use super::term;
-use std::path::PathBuf;
+use std::path::{PathBuf, Path};
 
 const APPLICATION_DIRECTORY_NAME: &'static str = "zeroc";
 const APPLICATION_ENVIRONMENT_ROOT_DIR: &'static str = "ZEROC_ROOT_DIR";
+const KEYSTORE_DIR: &'static str = "keystore";
 
 // root directory configuration
 
@@ -28,6 +29,10 @@ pub(crate) fn global_rootdir_match<'a>(default: &'a PathBuf, matches: &ArgMatche
         Some(dir) => PathBuf::from(dir),
         None => PathBuf::from(default),
     }
+}
+
+pub fn get_default_keystore_dir<P: AsRef<Path>>(root_dir: P) -> PathBuf {
+    root_dir.as_ref().join(KEYSTORE_DIR)
 }
 
 // quiet configuration

@@ -38,6 +38,7 @@ serde_bytes = "0.11"
 parity-crypto = "0.4"
 smallvec = "0.6"
 chrono = "0.4"
+dialoguer = "0.4"
 
 [dependencies.blake2-rfc]
 git = "https://github.com/gtank/blake2-rfc"
