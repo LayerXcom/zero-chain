@@ -68,6 +68,10 @@ impl DirOperations for KeystoreDirectory{
         Ok(())
     }
 
+    fn load_master(&self) -> Result<KeyFile> {
+        self.get_master_keyfile()
+    }
+
     fn load_all(&self) -> Result<Vec<KeyFile>> {
         Ok(self.get_all_keyfiles()?
             .into_iter()
@@ -107,6 +111,20 @@ impl KeystoreDirectory {
         } else {
             None
         }
+    }
+
+    // fn get_keyfile(&self, path: PathBuf) -> Result<KeyFile> {
+    //     Ok(fs::read_dir(path: P))
+    // }
+
+    fn get_master_keyfile(&self) -> Result<KeyFile> {
+        let path_master = self.path.join(MASTER_KEYFILE);
+        let file = fs::File::open(path_master)?;
+
+        let reader = BufReader::new(file);
+        let master_keyfile = serde_json::from_reader(reader)?;
+
+        Ok(master_keyfile)
     }
 
     fn get_all_keyfiles(&self) -> Result<HashMap<PathBuf, KeyFile>> {

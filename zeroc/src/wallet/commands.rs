@@ -36,10 +36,41 @@ pub fn new_wallet<R: Rng>(
     // 6. store master keyfile
     keystore_dir.insert(&mut keyfile_master, rng)?;
 
+    // 7. store new indexfile
+    new_indexfile(&wallet_dir)?;
+
+
+
+
     Ok(())
 }
 
-fn init_indexfile(wallet_dir: &WalletDirectory) -> Result<()> {
+fn new_keyfile<R: Rng>(
+    term: &mut Term,
+    root_dir: PathBuf,
+    rng: &mut R,
+    keystore_dir: &KeystoreDirectory,
+) -> Result<()> {
+
+    // enter password
+    term.info("Enter the wallet password.\n")?;
+    let password = term.passowrd("wallet password")?;
+
+    // enter new account name
+    term.info("Enter a new account name.\n")?;
+    let account_name = term.account_name("new account name")?;
+
+    let master_keyfile = keystore_dir.load_master()?;
+    
+
+    // create new keyfile
+    // let mut keyfile = KeyFile::new(account_name.as_str(), VERSION, &password[..], ITERS, xsk: &ExtendedSpendingKey, rng)?;
+
+    Ok(())
+}
+
+/// Create a new index file in wallet directory.
+fn new_indexfile(wallet_dir: &WalletDirectory) -> Result<()> {
     let mut indexfile: IndexFile = Default::default();
     wallet_dir.insert_indexfile(&mut indexfile)?;
 

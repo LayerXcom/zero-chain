@@ -188,6 +188,14 @@ impl IndexFile {
             max_index: self.max_index,
         }
     }
+
+    pub fn next_index(&self) -> Self {
+        let next_index = self.max_index + 1;
+        IndexFile {
+            default_index: next_index,
+            max_index: next_index,
+        }
+    }
 }
 
 #[cfg(test)]

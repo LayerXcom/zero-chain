@@ -45,6 +45,25 @@ impl Term {
             .map(|e| e.into_bytes())
     }
 
+    pub fn passowrd(
+        &mut self,
+        prompt: &str,
+    ) -> io::Result<Vec<u8>> {
+        dialoguer::PasswordInput::new()
+            .with_prompt(prompt)
+            .interact()
+            .map(|e| e.into_bytes())
+    }
+
+    pub fn account_name(
+        &mut self,
+        prompt: &str,
+    ) -> io::Result<String> {
+        dialoguer::Input::new()
+            .with_prompt(prompt)
+            .interact()
+    }
+
     pub fn simply(&mut self, msg: &str) -> io::Result<()> {
         write!(self, "{}", msg)
     }
