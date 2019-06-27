@@ -179,9 +179,10 @@ const WALLET_COMMAND: &'static str = "wallet";
 fn subcommand_wallet(mut term: term::Term, root_dir: PathBuf, matches: &ArgMatches) {
     let res = match matches.subcommand() {
         ("init", Some(_)) => {
+            let lang = Language::English;
             // create a new randomly generated mnemonic phrase
-            let mnemonic = Mnemonic::new(MnemonicType::Words12, Language::English);
-            PrintKeys::print_from_phrase(mnemonic.phrase(), None);
+            let mnemonic = Mnemonic::new(MnemonicType::Words12, lang);
+            PrintKeys::print_from_phrase(mnemonic.phrase(), None, lang);
         },
         ("wallet-test", Some(_)) => {
             println!("Initialize key components...");

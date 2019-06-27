@@ -1,14 +1,16 @@
 use std::path::PathBuf;
 use crate::term::Term;
 use crate::config::get_default_keystore_dir;
-use super::error::Result;
-use super::disk::{WalletDirectory, KeystoreDirectory};
+use super::{WalletDirectory, KeystoreDirectory, Result, KeyFile, DirOperations};
+use super::config::{MASTER_KEYFILE, VERSION, ITERS, KEYSTORE_DIRECTORY};
 use bip39::{Mnemonic, Language, MnemonicType};
+use rand::Rng;
 
 /// Create a new wallet
-pub fn new(
+pub fn new_wallet<R: Rng>(
     term: &mut Term,
     root_dir: PathBuf,
+    rng: &mut R,
 ) -> Result<()> {
 
     // 1. configure wallet directory
@@ -24,9 +26,15 @@ pub fn new(
 
     // 4. generate the mnemonics
     let mnemonic = Mnemonic::new(MnemonicType::Words12, Language::English);
+    let phrase = mnemonic.into_phrase();
+    term.info("Please, note carefully the following mnemonic words. They will be needed to recover your wallet.\n")?;
+    term.simply(&format!("{}\n", phrase))?;
 
-    // 2.
+    // 5. create master keyfile
+    let mut keyfile_master = KeyFile::create_master(MASTER_KEYFILE, VERSION, &password[..], ITERS, rng)?;
 
+    // 6. store master keyfile
+    keystore_dir.insert(&mut keyfile_master, rng)?;
 
-    unimplemented!();
+    Ok(())
 }

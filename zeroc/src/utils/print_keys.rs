@@ -37,17 +37,8 @@ impl PrintKeys {
         gen_from_seed(seed, None).unwrap()
     }
 
-    pub fn print_from_phrase(phrase: &str, password: Option<&str>) {
-        let seed = mini_secret_from_entropy(
-            Mnemonic::from_phrase(phrase, Language::English)
-                .unwrap_or_else(|_|
-                    panic!("Phrase is not a valid BIP-39 phrase: \n {}", phrase)
-                ).entropy(),
-            password.unwrap_or("")
-        )
-        .expect("32 bytes can always build a key; qed")
-        .to_bytes();
-
+    pub fn print_from_phrase(phrase: &str, password: Option<&str>, lang: Language) {
+        let seed = phrase_to_seed(phrase, password, lang);
         let print_keys = gen_from_seed(seed, Some(phrase)).unwrap();
 
         println!("Phrase `{}` is account:\n Seed: 0x{}\n Decryption key: 0x{}\n Encryption key (hex): 0x{}\n Address (SS58): {}",
@@ -58,6 +49,18 @@ impl PrintKeys {
             print_keys.ss58_encryption_key,
         );
     }
+}
+
+pub fn phrase_to_seed(phrase: &str, password: Option<&str>, lang: Language) -> [u8; 32] {
+    mini_secret_from_entropy(
+        Mnemonic::from_phrase(phrase, lang)
+            .unwrap_or_else(|_|
+                panic!("Phrase is not a valid BIP-39 phrase: \n {}", phrase)
+            ).entropy(),
+        password.unwrap_or("")
+    )
+    .expect("32 bytes can always build a key; qed")
+    .to_bytes()
 }
 
 fn gen_from_seed(seed: [u8; 32], phrase: Option<&str>) -> io::Result<PrintKeys> {

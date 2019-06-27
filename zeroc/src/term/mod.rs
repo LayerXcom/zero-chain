@@ -37,11 +37,12 @@ impl Term {
         prompt: &str,
         confirmation: &str,
         mismatch_err: &str
-    ) -> io::Result<String> {
+    ) -> io::Result<Vec<u8>> {
         dialoguer::PasswordInput::new()
             .with_prompt(prompt)
             .with_confirmation(confirmation, mismatch_err)
             .interact()
+            .map(|e| e.into_bytes())
     }
 
     pub fn simply(&mut self, msg: &str) -> io::Result<()> {
@@ -82,5 +83,15 @@ impl Term {
         }
 
         ::std::process::exit(1)
+    }
+}
+
+impl io::Write for Term {
+    fn write(&mut self, buf: &[u8]) -> io::Result<usize> {
+        io::Write::write(&mut self.term, buf)
+    }
+
+    fn flush(&mut self) -> io::Result<()> {
+        io::Write::flush(&mut self.term)
     }
 }
