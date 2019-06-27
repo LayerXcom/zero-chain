@@ -172,6 +172,24 @@ impl KeyCiphertext {
     }
 }
 
+#[derive(Debug, PartialEq, Eq, Serialize, Deserialize, Default)]
+pub struct IndexFile {
+    /// Default account index
+    pub default_index: u32,
+
+    /// Maximum account index
+    pub max_index: u32,
+}
+
+impl IndexFile {
+    pub fn set_default_index(&self, new_default_index: u32) -> Self {
+        IndexFile {
+            default_index: new_default_index,
+            max_index: self.max_index,
+        }
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;

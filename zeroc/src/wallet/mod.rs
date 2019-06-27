@@ -13,8 +13,8 @@ mod keyfile;
 mod error;
 mod disk;
 pub use self::keyfile::{SerdeBytes, KeyFile};
+pub use self::error::{Result, KeystoreError};
 pub use self::disk::{KeystoreDirectory, WalletDirectory};
-use self::error::{Result, KeystoreError};
 
 /// Operations in a keystore directory
 pub trait DirOperations {

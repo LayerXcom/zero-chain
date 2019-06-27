@@ -1,8 +1,9 @@
 //! Implementation of file disk operations to store keyfiles.
 
 use super::DirOperations;
-use super::keyfile::KeyFile;
+use super::keyfile::{KeyFile, IndexFile};
 use super::error::{Result, KeystoreError};
+use super::config::*;
 use crate::ss58;
 use std::path::{PathBuf, Path};
 use std::fs;
@@ -20,6 +21,27 @@ impl WalletDirectory {
     pub fn create<P: AsRef<Path>>(path: P) -> Result<Self> {
         fs::create_dir_all(path.as_ref())?;
         Ok(WalletDirectory(path.as_ref().to_path_buf()))
+    }
+
+    pub fn insert_indexfile(&self, indexfile: &mut IndexFile) -> Result<()> {
+        let indexfile_path = self.get_default_indexfile_path();
+        let mut file = create_new_file(&indexfile_path)?;
+        serde_json::to_writer(&mut file, indexfile)?;
+
+        file.flush()?;
+        file.sync_all()?;
+
+        Ok(())
+    }
+
+    /// Get the path to directory where all wallets are stored.
+    pub fn get_default_keystore_dir(&self) -> PathBuf {
+        self.0.as_path().join(KEYSTORE_DIR)
+    }
+
+    /// Get the index file path.
+    pub fn get_default_indexfile_path(&self) -> PathBuf {
+        self.0.as_path().join(INDEXFILE)
     }
 }
 
@@ -67,15 +89,17 @@ impl DirOperations for KeystoreDirectory{
 }
 
 impl KeystoreDirectory {
-    pub fn create<P: AsRef<Path>>(path: P, parent_path: WalletDirectory) -> Result<Self> {
+    pub fn create<P: AsRef<Path>>(path: P, parent_path: &WalletDirectory) -> Result<Self> {
         fs::create_dir_all(path.as_ref())?;
         let dir = Self::from_path(path, parent_path).ok_or(KeystoreError::InvalidPath)?;
 
         Ok(dir)
     }
 
-    fn from_path<P: AsRef<Path>>(path: P, parent_path: WalletDirectory) -> Option<Self> {
+    fn from_path<P: AsRef<Path>>(path: P, parent_path: &WalletDirectory) -> Option<Self> {
         if path.as_ref().to_path_buf().exists() {
+            let parent_path = parent_path.clone();
+
             Some(KeystoreDirectory {
                 path: path.as_ref().to_path_buf(),
                 parent_path,

@@ -1,8 +1,9 @@
 use std::path::PathBuf;
 use crate::term::Term;
-use crate::config::get_default_keystore_dir;
-use super::{WalletDirectory, KeystoreDirectory, Result, KeyFile, DirOperations};
-use super::config::{MASTER_KEYFILE, VERSION, ITERS, KEYSTORE_DIRECTORY};
+use super::{WalletDirectory, KeystoreDirectory, DirOperations};
+use super::keyfile::{KeyFile, IndexFile};
+use super::error::Result;
+use super::config::*;
 use bip39::{Mnemonic, Language, MnemonicType};
 use rand::Rng;
 
@@ -12,13 +13,12 @@ pub fn new_wallet<R: Rng>(
     root_dir: PathBuf,
     rng: &mut R,
 ) -> Result<()> {
-
     // 1. configure wallet directory
     let wallet_dir = WalletDirectory::create(&root_dir)?;
 
     // 2. configure ketstore directory
-    let keystore_dir_path = get_default_keystore_dir(&wallet_dir.0);
-    let keystore_dir = KeystoreDirectory::create(keystore_dir_path, wallet_dir)?;
+    let keystore_dir_path = wallet_dir.get_default_keystore_dir();
+    let keystore_dir = KeystoreDirectory::create(keystore_dir_path, &wallet_dir)?;
 
     // 3. configure user-defined passoword
     term.info("Set a wallet password. This is for local usage only, allows you to protect your cached private key and prevent from creating non desired transactions.\n")?;
@@ -35,6 +35,13 @@ pub fn new_wallet<R: Rng>(
 
     // 6. store master keyfile
     keystore_dir.insert(&mut keyfile_master, rng)?;
+
+    Ok(())
+}
+
+fn init_indexfile(wallet_dir: &WalletDirectory) -> Result<()> {
+    let mut indexfile: IndexFile = Default::default();
+    wallet_dir.insert_indexfile(&mut indexfile)?;
 
     Ok(())
 }

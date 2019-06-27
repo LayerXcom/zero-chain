@@ -5,10 +5,8 @@ use std::path::{PathBuf, Path};
 
 const APPLICATION_DIRECTORY_NAME: &'static str = "zeroc";
 const APPLICATION_ENVIRONMENT_ROOT_DIR: &'static str = "ZEROC_ROOT_DIR";
-const KEYSTORE_DIR: &'static str = "keystore";
 
-// root directory configuration
-
+/// root directory configuration
 pub(crate) fn get_default_root_dir() -> PathBuf {
     match dirs::data_local_dir() {
         Some(dir) => dir.join(APPLICATION_DIRECTORY_NAME),
@@ -29,10 +27,6 @@ pub(crate) fn global_rootdir_match<'a>(default: &'a PathBuf, matches: &ArgMatche
         Some(dir) => PathBuf::from(dir),
         None => PathBuf::from(default),
     }
-}
-
-pub fn get_default_keystore_dir<P: AsRef<Path>>(root_dir: P) -> PathBuf {
-    root_dir.as_ref().join(KEYSTORE_DIR)
 }
 
 // quiet configuration
