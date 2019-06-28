@@ -23,9 +23,10 @@ impl WalletDirectory {
         Ok(WalletDirectory(path.as_ref().to_path_buf()))
     }
 
-    // pub fn insert_master(&self, keyfile: &mut KeyFile) -> Result<()> {
-    //     self.save_keyfile(MASTER_KEYFILE.to_string(), keyfile)
-    // }
+    pub fn insert_master(&self, keyfile: &mut KeyFile) -> Result<()> {
+        let keyfile_path = self.0.join(MASTER_KEYFILE);
+        save_keyfile(MASTER_KEYFILE.to_string(), &keyfile_path, keyfile)
+    }
 
     pub fn insert_indexfile(&self, indexfile: &mut IndexFile) -> Result<()> {
         let indexfile_path = self.get_default_indexfile_path();
@@ -55,21 +56,15 @@ impl WalletDirectory {
 
 /// Directory's path of keystore which is included bunch of keyfiles.
 #[derive(Clone, Debug, PartialEq, Eq)]
-pub struct KeystoreDirectory{
-    path: PathBuf,
-    wallet_path: WalletDirectory,
-}
+pub struct KeystoreDirectory(pub PathBuf);
 
 impl DirOperations for KeystoreDirectory{
     fn insert<R: Rng>(&self, keyfile: &mut KeyFile, rng: &mut R) -> Result<()> {
-        let filename = get_unique_filename(&self.path, rng)?;
-        self.save_keyfile(filename, keyfile)
+        let filename = get_unique_filename(&self.0, rng)?;
+        let keyfile_path = self.0.join(filename.as_str());
+        save_keyfile(filename, &keyfile_path, keyfile)
     }
 
-    fn insert_master(&self, keyfile: &mut KeyFile) -> Result<()> {
-        self.save_keyfile(MASTER_KEYFILE.to_string(), keyfile)
-    }
-    
     fn load_master(&self) -> Result<KeyFile> {
         self.get_master_keyfile()
     }
@@ -95,38 +90,21 @@ impl DirOperations for KeystoreDirectory{
 }
 
 impl KeystoreDirectory {
-    pub fn create<P: AsRef<Path>>(path: P, wallet_path: &WalletDirectory) -> Result<Self> {
+    pub fn create<P: AsRef<Path>>(path: P) -> Result<Self> {
         fs::create_dir_all(path.as_ref())?;
-        let dir = Self::from_path(path, wallet_path).ok_or(KeystoreError::InvalidPath)?;
+        let dir = Self::from_path(path).ok_or(KeystoreError::InvalidPath)?;
 
         Ok(dir)
     }
 
-    fn from_path<P: AsRef<Path>>(path: P, wallet_path: &WalletDirectory) -> Option<Self> {
+    fn from_path<P: AsRef<Path>>(path: P) -> Option<Self> {
         if path.as_ref().to_path_buf().exists() {
-            let wallet_path = wallet_path.clone();
-
-            Some(KeystoreDirectory {
-                path: path.as_ref().to_path_buf(),
-                wallet_path,
-            })
+            Some(
+                KeystoreDirectory(path.as_ref().to_path_buf())
+            )
         } else {
             None
         }
-    }
-
-    fn save_keyfile(&self, filename: String, keyfile: &mut KeyFile) -> Result<()> {
-        let keyfile_path = self.path.join(filename.as_str());
-
-        keyfile.file_name = Some(filename);
-
-        let mut file = create_new_file(&keyfile_path)?;
-        serde_json::to_writer(&mut file, keyfile)?;
-
-        file.flush()?;
-        file.sync_all()?;
-
-        Ok(())
     }
 
     // fn get_keyfile(&self, path: PathBuf) -> Result<KeyFile> {
@@ -134,7 +112,7 @@ impl KeystoreDirectory {
     // }
 
     fn get_master_keyfile(&self) -> Result<KeyFile> {
-        let path_master = self.path.join(MASTER_KEYFILE);
+        let path_master = self.0.join(MASTER_KEYFILE);
         let file = fs::File::open(path_master)?;
 
         let reader = BufReader::new(file);
@@ -144,7 +122,7 @@ impl KeystoreDirectory {
     }
 
     fn get_all_keyfiles(&self) -> Result<HashMap<PathBuf, KeyFile>> {
-        Ok(fs::read_dir(&self.path)?
+        Ok(fs::read_dir(&self.0)?
             .flat_map(|entry| {
                 let path = entry?.path();
                 fs::File::open(path.clone())
@@ -159,6 +137,18 @@ impl KeystoreDirectory {
             .collect()
         )
     }
+}
+
+fn save_keyfile(filename: String, keyfile_path: &PathBuf, keyfile: &mut KeyFile) -> Result<()> {
+    keyfile.file_name = Some(filename);
+
+    let mut file = create_new_file(keyfile_path)?;
+    serde_json::to_writer(&mut file, keyfile)?;
+
+    file.flush()?;
+    file.sync_all()?;
+
+    Ok(())
 }
 
 #[cfg(unix)]

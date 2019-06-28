@@ -14,14 +14,12 @@ pub fn new_wallet<R: Rng>(
     root_dir: PathBuf,
     rng: &mut R,
 ) -> Result<()> {
-    // TODO: Validate if master.json exists.
-
     // 1. configure wallet directory
     let wallet_dir = WalletDirectory::create(&root_dir)?;
 
     // 2. configure ketstore directory
     let keystore_dir_path = wallet_dir.get_default_keystore_dir();
-    let keystore_dir = KeystoreDirectory::create(keystore_dir_path, &wallet_dir)?;
+    let keystore_dir = KeystoreDirectory::create(keystore_dir_path)?;
 
     // 3. configure user-defined passoword
     term.info("Set a wallet password. This is for local usage only, allows you to protect your cached private key and prevent from creating non desired transactions.\n")?;
@@ -37,7 +35,7 @@ pub fn new_wallet<R: Rng>(
     let mut keyfile_master = KeyFile::create_master(MASTER_ACCOUNTNAME, VERSION, &password[..], ITERS, rng)?;
 
     // 6. store master keyfile
-    keystore_dir.insert_master(&mut keyfile_master)?;
+    wallet_dir.insert_master(&mut keyfile_master)?;
 
     // 7. create a genesis keyfile
     let child_index = ChildIndex::from_index(0);
@@ -63,7 +61,7 @@ pub fn show_list(
 ) -> Result<()> {
     let wallet_dir = WalletDirectory::create(&root_dir)?;
     let keystore_dir_path = wallet_dir.get_default_keystore_dir();
-    let keystore_dir = KeystoreDirectory::create(keystore_dir_path, &wallet_dir)?;
+    let keystore_dir = KeystoreDirectory::create(keystore_dir_path)?;
 
     let keyfiles = keystore_dir.load_all()?;
 

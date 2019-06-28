@@ -24,8 +24,6 @@ pub trait DirOperations {
     // /// Load a keyfile
     // fn load(&self, path: PathBuf) -> Result<KeyFile>;
 
-    fn insert_master(&self, keyfile: &mut KeyFile) -> Result<()>;
-
     fn load_master(&self) -> Result<KeyFile>;
 
     /// Load all keyfiles in this keystore directory.
