@@ -13,7 +13,7 @@ use std::path::{Path, PathBuf};
 use std::string::String;
 use std::io::{BufWriter, Write, BufReader, Read};
 use clap::{Arg, App, SubCommand, AppSettings, ArgMatches};
-use rand::OsRng;
+use rand::{OsRng, Rng};
 use proofs::{
     EncryptionKey, ProofGenerationKey,
     elgamal,
@@ -45,6 +45,7 @@ pub mod term;
 pub mod ss58;
 use utils::*;
 use config::*;
+use wallet::commands::*;
 
 //
 // Global constants
@@ -75,16 +76,20 @@ fn main() {
         .subcommand(snark_commands_definition())
         .subcommand(wallet_commands_definition())
         .subcommand(tx_commands_definition())
+        .subcommand(debug_commands_definition())
         .get_matches();
 
     let mut term = term::Term::new(config_terminal(&matches));
 
     let root_dir = global_rootdir_match(&default_root_dir, &matches);
 
+    let rng = &mut OsRng::new().expect("should be able to construct RNG");
+
     match matches.subcommand() {
         (SNARK_COMMAND, Some(matches)) => subcommand_snark(term, root_dir, matches),
-        (WALLET_COMMAND, Some(matches)) => subcommand_wallet(term, root_dir, matches),
+        (WALLET_COMMAND, Some(matches)) => subcommand_wallet(term, root_dir, matches, rng),
         (TX_COMMAND, Some(matches)) => subcommand_tx(term, root_dir, matches),
+        (DEBUG_COMMAND, Some(matches)) => subcommand_debug(term, root_dir, matches),
         _ => {
             term.error(matches.usage()).unwrap();
             ::std::process::exit(1);
@@ -176,13 +181,11 @@ fn snark_commands_definition<'a, 'b>() -> App<'a, 'b> {
 
 const WALLET_COMMAND: &'static str = "wallet";
 
-fn subcommand_wallet(mut term: term::Term, root_dir: PathBuf, matches: &ArgMatches) {
+fn subcommand_wallet<R: Rng>(mut term: term::Term, root_dir: PathBuf, matches: &ArgMatches, rng: &mut R) {
     let res = match matches.subcommand() {
         ("init", Some(_)) => {
-            let lang = Language::English;
-            // create a new randomly generated mnemonic phrase
-            let mnemonic = Mnemonic::new(MnemonicType::Words12, lang);
-            PrintKeys::print_from_phrase(mnemonic.phrase(), None, lang);
+            // Create new wallet
+            new_wallet(&mut term, root_dir, rng);
         },
         ("wallet-test", Some(_)) => {
             println!("Initialize key components...");
@@ -408,6 +411,88 @@ fn subcommand_tx(mut term: term::Term, root_dir: PathBuf, matches: &ArgMatches) 
             println!("Decrypted balance: {}", decrypted_balance);
             println!("Encrypted balance: {}", encrypted_balance_str);
         },
+        _ => {
+            term.error(matches.usage()).unwrap();
+            ::std::process::exit(1)
+        }
+    };
+
+    // res.unwrap_or_else(|e| term.fail_with(e))
+
+}
+
+fn tx_commands_definition<'a, 'b>() -> App<'a, 'b> {
+    SubCommand::with_name(TX_COMMAND)
+        .about("transaction operations")
+        .subcommand(SubCommand::with_name("send")
+            .about("Submit extrinsic to the substrate nodes")
+            .arg(Arg::with_name("amount")
+                .short("a")
+                .long("amount")
+                .help("The coin amount for the confidential transfer. (default: 10)")
+                .takes_value(true)
+                .required(false)
+                .default_value(DEFAULT_AMOUNT)
+            )
+            .arg(Arg::with_name("sender-seed")
+                .short("s")
+                .long("sender-seed")
+                .help("Sender's seed. (default: Alice)")
+                .takes_value(true)
+                .required(false)
+                .default_value(ALICESEED)
+            )
+            .arg(Arg::with_name("recipient-encryption-key")
+                .short("to")
+                .long("recipient-encryption-key")
+                .help("Recipient's encryption key. (default: Bob)")
+                .takes_value(true)
+                .required(false)
+                .default_value(BOBACCOUNTID)
+            )
+            // .arg(Arg::with_name("fee")
+            //     .short("f")
+            //     .long("fee")
+            //     .help("The fee for the confidential transfer.")
+            //     .takes_value(true)
+            //     .required(false)
+            //     .default_value(DEFAULT_FEE)
+            // )
+            .arg(Arg::with_name("url")
+                .short("u")
+                .long("url")
+                .help("Endpoint to connect zerochain nodes")
+                .takes_value(true)
+                .required(false)
+            )
+        )
+        .subcommand(SubCommand::with_name("balance")
+            .about("Get current balance stored in ConfTransfer module")
+            .arg(Arg::with_name("decryption-key")
+                .short("d")
+                .long("decryption-key")
+                .help("Your decription key")
+                .takes_value(true)
+                .required(true)
+                .default_value(ALICEDECRYPTIONKEY)
+            )
+        )
+}
+
+//
+// Debug Sub Commands
+//
+
+const DEBUG_COMMAND: &'static str = "debug";
+
+fn subcommand_debug(mut term: term::Term, root_dir: PathBuf, matches: &ArgMatches) {
+    let res = match matches.subcommand() {
+        ("key-init", Some(sub_matches)) => {
+            let lang = Language::English;
+            // create a new randomly generated mnemonic phrase
+            let mnemonic = Mnemonic::new(MnemonicType::Words12, lang);
+            PrintKeys::print_from_phrase(mnemonic.phrase(), None, lang);
+        },
         ("print-tx", Some(sub_matches)) => {
             println!("Generate transaction...");
 
@@ -525,66 +610,13 @@ fn subcommand_tx(mut term: term::Term, root_dir: PathBuf, matches: &ArgMatches) 
             ::std::process::exit(1)
         }
     };
-
-    // res.unwrap_or_else(|e| term.fail_with(e))
-
 }
 
-fn tx_commands_definition<'a, 'b>() -> App<'a, 'b> {
-    SubCommand::with_name(TX_COMMAND)
-        .about("transaction operations")
-        .subcommand(SubCommand::with_name("send")
-            .about("Submit extrinsic to the substrate nodes")
-            .arg(Arg::with_name("amount")
-                .short("a")
-                .long("amount")
-                .help("The coin amount for the confidential transfer. (default: 10)")
-                .takes_value(true)
-                .required(false)
-                .default_value(DEFAULT_AMOUNT)
-            )
-            .arg(Arg::with_name("sender-seed")
-                .short("s")
-                .long("sender-seed")
-                .help("Sender's seed. (default: Alice)")
-                .takes_value(true)
-                .required(false)
-                .default_value(ALICESEED)
-            )
-            .arg(Arg::with_name("recipient-encryption-key")
-                .short("to")
-                .long("recipient-encryption-key")
-                .help("Recipient's encryption key. (default: Bob)")
-                .takes_value(true)
-                .required(false)
-                .default_value(BOBACCOUNTID)
-            )
-            // .arg(Arg::with_name("fee")
-            //     .short("f")
-            //     .long("fee")
-            //     .help("The fee for the confidential transfer.")
-            //     .takes_value(true)
-            //     .required(false)
-            //     .default_value(DEFAULT_FEE)
-            // )
-            .arg(Arg::with_name("url")
-                .short("u")
-                .long("url")
-                .help("Endpoint to connect zerochain nodes")
-                .takes_value(true)
-                .required(false)
-            )
-        )
-        .subcommand(SubCommand::with_name("balance")
-            .about("Get current balance stored in ConfTransfer module")
-            .arg(Arg::with_name("decryption-key")
-                .short("d")
-                .long("decryption-key")
-                .help("Your decription key")
-                .takes_value(true)
-                .required(true)
-                .default_value(ALICEDECRYPTIONKEY)
-            )
+fn debug_commands_definition<'a, 'b>() -> App<'a, 'b> {
+    SubCommand::with_name(DEBUG_COMMAND)
+        .about("debug operations")
+        .subcommand(SubCommand::with_name("key-init")
+            .about("Print a keypair")
         )
         .subcommand(SubCommand::with_name("print-tx")
             .about("Show transaction components for sending it from a browser")

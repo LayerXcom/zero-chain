@@ -7,7 +7,7 @@ use std::{
 use rand::Rng;
 use crate::derive::{ChildIndex, ExtendedSpendingKey};
 
-mod commands;
+pub mod commands;
 mod config;
 mod keyfile;
 mod error;

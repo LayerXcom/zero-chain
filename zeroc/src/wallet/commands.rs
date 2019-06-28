@@ -32,7 +32,7 @@ pub fn new_wallet<R: Rng>(
     term.simply(&format!("{}\n", phrase))?;
 
     // 5. create master keyfile
-    let mut keyfile_master = KeyFile::create_master(MASTER_KEYFILE, VERSION, &password[..], ITERS, rng)?;
+    let mut keyfile_master = KeyFile::create_master(MASTER_ACCOUNTNAME, VERSION, &password[..], ITERS, rng)?;
 
     // 6. store master keyfile
     keystore_dir.insert_master(&mut keyfile_master)?;
@@ -46,6 +46,29 @@ pub fn new_wallet<R: Rng>(
 
     // 9. store new indexfile
     new_indexfile(&wallet_dir)?;
+
+    term.success(&format!(
+        "wallet and a new account successfully created.\n
+        {}: {}\n
+    ", keyfile.account_name, keyfile.ss58_address))?;
+
+    Ok(())
+}
+
+pub fn show_list(
+    term: &mut Term,
+    root_dir: PathBuf,
+) -> Result<()> {
+    let wallet_dir = WalletDirectory::create(&root_dir)?;
+    let keystore_dir_path = wallet_dir.get_default_keystore_dir();
+    let keystore_dir = KeystoreDirectory::create(keystore_dir_path, &wallet_dir)?;
+
+    let keyfiles = keystore_dir.load_all()?;
+
+    for keyfile in keyfiles {
+        let (name, address) = (keyfile.account_name, keyfile.ss58_address);
+        term.simply(&format!("{}: {}", name, address))?;
+    }
 
     Ok(())
 }
