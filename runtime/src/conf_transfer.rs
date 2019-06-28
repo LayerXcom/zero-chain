@@ -2,6 +2,7 @@
 use support::{decl_module, decl_storage, decl_event, StorageMap, dispatch::Result, ensure};
 use rstd::prelude::*;
 use bellman_verifier::verify_proof;
+use rstd::result;
 use pairing::{
     bls12_381::{
         Bls12,
@@ -9,6 +10,7 @@ use pairing::{
     },
     Field,
 };
+use runtime_primitives::traits::Zero;
 use jubjub::redjubjub::PublicKey;
 use zprimitives::{
     PkdAddress,
@@ -21,10 +23,19 @@ use keys::EncryptionKey;
 use zcrypto::elgamal;
 use runtime_io;
 
-
 pub trait Trait: system::Trait {
 	/// The overarching event type.
 	type Event: From<Event<Self>> + Into<<Self as system::Trait>::Event>;
+}
+
+struct TypedParams {
+    zkproof: bellman_verifier::Proof<Bls12>,
+    address_sender: EncryptionKey<Bls12>,
+    address_recipient: EncryptionKey<Bls12>,
+    amount_sender: elgamal::Ciphertext<Bls12>,
+    amount_recipient: elgamal::Ciphertext<Bls12>,
+    rvk: PublicKey<Bls12>,
+    fee_sender: elgamal::Ciphertext<Bls12>,
 }
 
 type FeeAmount = u32;
@@ -47,94 +58,57 @@ decl_module! {
         ) -> Result {
 			// let rvk = ensure_signed(origin)?;
 
-            // Get zkproofs with the type
-            let typed_zkproof = match zkproof.into_proof() {
-                Some(v) => v,
-                None => return Err("Invalid zkproof"),
-            };
+            let typed = Self::into_types(
+                &zkproof,
+                &address_sender,
+                &address_recipient,
+                &amount_sender,
+                &amount_recipient,
+                &rvk,
+                &fee_sender,
+            )
+            .map_err(|_| "Failed to convert into types.")?;
 
-            // Get address_sender with the type
-            let typed_addr_sender = match address_sender.into_encryption_key() {
-                Some(v) => v,
-                None => return Err("Invalid address_sender"),
-            };
+            // Rollover and get sender's balance.
+            // This function causes a storage mutation, but it's needed before `verify_proof` function is called.
+            let typed_balance_sender = Self::rollover(&address_sender)
+                .map_err(|_| "Invalid ciphertext of sender balance.")?;
 
-            // Get address_recipient with the type
-            let typed_addr_recipient = match  address_recipient.into_encryption_key() {
-                Some(v) => v,
-                None => return Err("Invalid address_recipient"),
-            };
-
-            // Get amount_sender with the type
-            let typed_amount_sender = match amount_sender.into_ciphertext() {
-                Some(v) => v,
-                None => return Err("Invalid amount_sender"),
-            };
-
-            // Get amount_recipient with the type
-            let typed_amount_recipient = match amount_recipient.into_ciphertext() {
-                Some(v) => v,
-                None => return Err("Invalid amount_recipient"),
-            };
-
-            // Get fee_sender with the type
-            let typed_fee_sender = match fee_sender.into_ciphertext() {
-                Some(v) => v,
-                None => return Err("Invalid fee_sender"),
-            };
-
-            // Get rvk with the type
-            let typed_rvk = match rvk.into_verification_key() {
-                Some(v) => v,
-                None => return Err("Invalid rvk"),
-            };
-
-            // Get balance_sender with the type
-            let typed_bal_sender = match Self::encrypted_balance(address_sender) {
-                Some(b) => match b.into_ciphertext() {
-                    Some(c) => c,
-                    None => return Err("Invalid ciphertext of sender balance"),
-                },
-                None => return Err("Invalid sender balance"),
-            };
+            // Rollover and get recipient's balance
+            let typed_balance_recipient = Self::rollover(&address_recipient)
+                .map_err(|_| "Invalid ciphertext of recipient balance.")?;
 
             // Verify the zk proof
             ensure!(
                 Self::validate_proof(
-                    &typed_zkproof,
-                    &typed_addr_sender,
-                    &typed_addr_recipient,
-                    &typed_amount_sender,
-                    &typed_amount_recipient,
-                    &typed_bal_sender,
-                    &typed_rvk,
-                    &typed_fee_sender,
-                ),
+                    &typed.zkproof,
+                    &typed.address_sender,
+                    &typed.address_recipient,
+                    &typed.amount_sender,
+                    &typed.amount_recipient,
+                    &typed_balance_sender,
+                    &typed.rvk,
+                    &typed.fee_sender,
+                )?,
                 "Invalid zkproof"
             );
 
-            // Get balance_recipient with the option type
-            let typed_bal_recipient = match Self::encrypted_balance(address_recipient) {
-                Some(b) => b.into_ciphertext(),
-                _ => None
-            };
-
-            let amount_plus_fee = typed_amount_sender.add_no_params(&typed_fee_sender);
+            let amount_plus_fee = typed.amount_sender.add_no_params(&typed.fee_sender);
 
             // Update the sender's balance
             <EncryptedBalance<T>>::mutate(address_sender, |balance| {
                 let new_balance = balance.clone().map(
-                    |_| Ciphertext::from_ciphertext(&typed_bal_sender.sub_no_params(&amount_plus_fee)));
+                    |_| Ciphertext::from_ciphertext(&typed_balance_sender.sub_no_params(&amount_plus_fee)));
                 *balance = new_balance
             });
 
-            // Update the recipient's balance
-            <EncryptedBalance<T>>::mutate(address_recipient, |balance| {
-                let new_balance = balance.clone().map_or(
-                    Some(Ciphertext::from_ciphertext(&typed_amount_recipient)),
-                    |_| Some(Ciphertext::from_ciphertext(&typed_bal_recipient.unwrap().add_no_params(&typed_amount_recipient)))
+            // Update the recipient's pending transfer
+            <PendingTransfer<T>>::mutate(address_recipient, |pending_transfer| {
+                let new_pending_transfer = pending_transfer.clone().map_or(
+                    Some(Ciphertext::from_ciphertext(&typed.amount_recipient)),
+                    |_| Some(Ciphertext::from_ciphertext(&typed_balance_recipient.add_no_params(&typed.amount_recipient)))
                 );
-                *balance = new_balance
+                *pending_transfer = new_pending_transfer
             });
 
             // TODO: tempolaly removed address_sender and address_recipient because of mismatched types
@@ -143,7 +117,7 @@ decl_module! {
                     zkproof,
                     amount_sender,
                     amount_recipient,
-                    Ciphertext::from_ciphertext(&typed_bal_sender),
+                    Ciphertext::from_ciphertext(&typed_balance_sender),
                     rvk
                 )
             );
@@ -157,8 +131,21 @@ decl_storage! {
     trait Store for Module<T: Trait> as ConfTransfer {
         /// The encrypted balance for each account
         pub EncryptedBalance get(encrypted_balance) config() : map PkdAddress => Option<Ciphertext>;
+
+        /// The pending transfer
+        pub PendingTransfer get(pending_transfer) : map PkdAddress => Option<Ciphertext>;
+
+        /// The last epoch for rollover
+        pub LastRollOver get(last_rollover) config() : map PkdAddress => Option<T::BlockNumber>;
+
+        /// Global epoch length for rollover.
+        /// The longer epoch length is, the longer rollover time is.
+        /// This parameter should be fixed based on trade-off between UX and security in terms of front-running attacks.
+        pub EpochLength get(epoch_length) config() : T::BlockNumber;
+
         /// The fee to be paid for making a transaction; the base.
         pub TransactionBaseFee get(transaction_base_fee) config(): FeeAmount;
+
         /// The verification key of zk proofs (only readable)
         pub VerifyingKey get(verifying_key) config(): PreparedVk;
     }
@@ -174,9 +161,10 @@ decl_event! (
 );
 
 impl<T: Trait> Module<T> {
-    // Public immutables
-    // Validate zk proofs
-	pub fn validate_proof (
+    // Private IMMUTABLES
+
+    /// Validate zk proofs
+	fn validate_proof (
         zkproof: &bellman_verifier::Proof<Bls12>,
         address_sender: &EncryptionKey<Bls12>,
         address_recipient: &EncryptionKey<Bls12>,
@@ -185,7 +173,7 @@ impl<T: Trait> Module<T> {
         balance_sender: &elgamal::Ciphertext<Bls12>,
         rvk: &PublicKey<Bls12>,
         fee_sender: &elgamal::Ciphertext<Bls12>
-    ) -> bool {
+    ) -> result::Result<bool, &'static str> {
         // Construct public input for circuit
         let mut public_input = [Fr::zero(); 18];
 
@@ -235,14 +223,129 @@ impl<T: Trait> Module<T> {
             public_input[17] = y;
         }
 
-        let pvk = Self::verifying_key().into_prepared_vk().unwrap();
+        let pvk = Self::verifying_key().into_prepared_vk()
+            .ok_or("Invalid verifying key.")?;
 
         // Verify the provided proof
-        match verify_proof(&pvk, &zkproof, &public_input[..]) {
-            // No error, and proof verification successful
-            Ok(is_true) => is_true,
-            Err(_) => {runtime_io::print("Invalid proof!!"); false},
+        verify_proof(&pvk, &zkproof, &public_input[..])
+            .map_err(|_| "Invalid proof.")
+    }
+
+    /// Convert provided parametrs into typed ones.
+    fn into_types(
+        zkproof: &Proof,
+        address_sender: &PkdAddress,
+        address_recipient: &PkdAddress,
+        amount_sender: &Ciphertext,
+        amount_recipient: &Ciphertext,
+        rvk: &SigVerificationKey,
+        fee_sender: &Ciphertext,
+    ) -> result::Result<TypedParams, &'static str>
+    {
+        // Get zkproofs with the type
+        let typed_zkproof = zkproof
+            .into_proof()
+            .ok_or("Invalid zkproof")?;
+
+        // Get address_sender with the type
+        let typed_addr_sender = address_sender
+            .into_encryption_key()
+            .ok_or("Invalid address_sender")?;
+
+        // Get address_recipient with the type
+        let typed_addr_recipient = address_recipient
+            .into_encryption_key()
+            .ok_or("Invalid address_recipient")?;
+
+        // Get amount_sender with the type
+        let typed_amount_sender = amount_sender
+            .into_ciphertext()
+            .ok_or("Invalid amount_sender")?;
+
+        // Get amount_recipient with the type
+        let typed_amount_recipient = amount_recipient
+            .into_ciphertext()
+            .ok_or("Invalid amount_recipient")?;
+
+        // Get fee_sender with the type
+        let typed_fee_sender = fee_sender
+            .into_ciphertext()
+            .ok_or("Invalid fee_sender")?;
+
+        // Get rvk with the type
+        let typed_rvk = rvk
+            .into_verification_key()
+            .ok_or("Invalid rvk")?;
+
+        Ok(TypedParams {
+            zkproof: typed_zkproof,
+            address_sender: typed_addr_sender,
+            address_recipient: typed_addr_recipient,
+            amount_sender: typed_amount_sender ,
+            amount_recipient: typed_amount_recipient,
+            rvk:typed_rvk,
+            fee_sender: typed_fee_sender,
+        })
+    }
+
+    // PRIVATE MUTABLES
+
+    /// Rolling over allows us to send transactions asynchronously and protect from front-running attacks.
+    /// We rollover an account in an epoch when the first message from this account is received;
+    /// so, one message rolls over only one account.
+    /// To achieve this, we define a separate (internal) method for rolling over,
+    /// and the first thing every other method does is to call this method.
+    /// More details in Section 3.1: https://crypto.stanford.edu/~buenz/papers/zether.pdf
+    fn rollover(addr: &PkdAddress) -> result::Result<elgamal::Ciphertext<Bls12>, &'static str> {
+        let current_height = <system::Module<T>>::block_number();
+
+        // Get current epoch based on current block height.
+        let current_epoch = current_height / Self::epoch_length();
+
+        let last_rollover = match Self::last_rollover(addr) {
+            Some(l) => l,
+            None => T::BlockNumber::zero(),
+        };
+
+        // Get current pending transfer
+        let pending_transfer = Self::pending_transfer(addr);
+
+        let zero = elgamal::Ciphertext::zero();
+
+        // Get balance with the type
+        let typed_balance = match Self::encrypted_balance(addr) {
+            Some(b) => b.into_ciphertext().ok_or("Invalid balance ciphertext")?,
+            None => zero.clone(),
+        };
+
+        // Get balance with the type
+        let typed_pending_transfer = match pending_transfer.clone() {
+            Some(b) => b.into_ciphertext().ok_or("Invalid pending_transfer ciphertext")?,
+            // If pending_transfer is `None`, just return zero value ciphertext.
+            None => zero,
+        };
+
+        // Checks if the last roll over was in an older epoch.
+        // If so, some storage changes are happend here.
+        if last_rollover < current_epoch {
+            // transfer balance from pending_transfer to actual balance
+            <EncryptedBalance<T>>::mutate(addr, |balance| {
+                let new_balance = balance.clone().map_or(
+                    pending_transfer,
+                    |_| Some(Ciphertext::from_ciphertext(&typed_balance.add_no_params(&typed_pending_transfer)))
+                );
+                *balance = new_balance
+            });
+
+            // Reset pending_transfer.
+            <PendingTransfer<T>>::remove(addr);
+
+            // Set last rollover to current epoch.
+            <LastRollOver<T>>::insert(addr, current_epoch);
         }
+
+        // return actual typed balance.
+        Ok(typed_balance)
     }
 }
 
@@ -292,30 +395,41 @@ mod tests {
 
     type ConfTransfer = Module<Test>;
 
-    fn alice_init() -> (PkdAddress, Ciphertext) {
-        let alice_seed = b"Alice                           ";
+    fn alice_balance_init() -> (PkdAddress, Ciphertext) {
+        let (alice_seed, enc_key) = get_alice_seed_ek();
         let alice_amount = 100 as u32;
-
         let params = &JubjubBls12::new();
         let p_g = FixedGenerators::Diversifier; // 1 same as NoteCommitmentRandomness;
-
-        let encryption_key = EncryptionKey::<Bls12>::from_seed(alice_seed, params).unwrap();
 
         // The default balance is not encrypted with randomness.
         let enc_alice_bal = elgamal::Ciphertext::encrypt(
             alice_amount,
             fs::Fs::one(),
-            &encryption_key,
+            &enc_key,
             p_g,
             params
         );
 
-        let decryption_key = ProofGenerationKey::<Bls12>::from_seed(alice_seed, params).into_decryption_key().unwrap();
+        let decryption_key = ProofGenerationKey::<Bls12>::from_seed(&alice_seed[..], params).into_decryption_key().unwrap();
 
         let dec_alice_bal = enc_alice_bal.decrypt(&decryption_key, p_g, params).unwrap();
         assert_eq!(dec_alice_bal, alice_amount);
 
-        (PkdAddress::from_encryption_key(&encryption_key), Ciphertext::from_ciphertext(&enc_alice_bal))
+        (PkdAddress::from_encryption_key(&enc_key), Ciphertext::from_ciphertext(&enc_alice_bal))
+    }
+
+    fn alice_epoch_init() -> (PkdAddress, u64) {
+        let (_, enc_key) = get_alice_seed_ek();
+
+        (PkdAddress::from_encryption_key(&enc_key), 0)
+    }
+
+    fn get_alice_seed_ek() -> (Vec<u8>, EncryptionKey<Bls12>) {
+        let params = &JubjubBls12::new();
+        let alice_seed = b"Alice                           ".to_vec();
+
+        (alice_seed.clone(), EncryptionKey::<Bls12>::from_seed(&alice_seed[..], params)
+            .expect("should be generated encryption key from seed."))
     }
 
     fn get_pvk() -> PreparedVk {
@@ -332,10 +446,11 @@ mod tests {
     fn new_test_ext() -> runtime_io::TestExternalities<Blake2Hasher> {
         let mut t = system::GenesisConfig::<Test>::default().build_storage().unwrap().0;
         t.extend(GenesisConfig::<Test>{
-            encrypted_balance: vec![alice_init()],
-            verifying_key: get_pvk(),
+            encrypted_balance: vec![alice_balance_init()],
+			last_rollover: vec![alice_epoch_init()],
+            epoch_length: 10,
             transaction_base_fee: 1,
-            _genesis_phantom_data: Default::default(),
+            verifying_key: get_pvk(),
         }.build_storage().unwrap().0);
 
         t.into()
@@ -345,13 +460,13 @@ mod tests {
     fn test_call_function() {
         with_externalities(&mut new_test_ext(), || {
             // Needed to be updated manually once snark paramters are pre-processed.
-            let proof: [u8; 192] = hex!("80820f58804a32f4ecc8a7469275cac8bc0a728fca43fea67317519745e607aeb5b4bd4366b62fb6c5e9cd3a83bd232a99932412198c014b509d2e88bf5f01075202eab7c02adbf8a7f10be3e46c7a8c48e0393d16d1379f6671978892d363350b2bf0665b201523b294dc20f2427b531c17f3f6a513cad8e31184a31effca26bae94f7e43c0e01e18b2cf55bfa66c21a6c065a94df6c9199db5f4e1a3414037b2a3538bf99ca2e797f24158dec752017facff03bd11f2ebe3c33308e4b40115");
+            let proof: [u8; 192] = hex!("a127994f62fefa882271cbe9fd1fffd16bcf3ebb3cd219c04be4333118f33115e4c70e8d199e43e956b8761e1e69bff48ff156d14e7d083a09e341da114b05a5c2eff9bd6aa9881c7ca282fbb554245d2e65360fa72f1de6b538b79a672cdf86072eeb911b1dadbfef2091629cf9ee76cf80ff7ec085258b102caa62f5a2a00b48dce27c91d59c2cdfa23b456c0f616ea1e9061b5e91ec080f1c3c66cf2e13ecca7b7e1530addd2977a123d6ebbea11e9f8c3b1989fc830a309254e663315dcb");
             let pkd_addr_alice: [u8; 32] = hex!("fd0c0c0183770c99559bf64df4fe23f77ced9b8b4d02826a282bcd125117dcc2");
             let pkd_addr_bob: [u8; 32] = hex!("45e66da531088b55dcb3b273ca825454d79d2d1d5c4fa2ba4a12c1fa1ccd6389");
-            let enc10_by_alice: [u8; 64] = hex!("e9ef0a4f4b07f7ae5bfab360e3daa312c2d288e21eb4b9ccc9946c7926efa50ea846bca1ff93a24c5bb8efbde8a42424ef343244b729eaa367df7bb7ac0c3fcf");
-            let enc10_by_bob: [u8; 64] = hex!("018ba6d82d18eaa6751306dcf188daa771bb0ce270cadb91a8b13846b85cc457a846bca1ff93a24c5bb8efbde8a42424ef343244b729eaa367df7bb7ac0c3fcf");
+            let enc10_by_alice: [u8; 64] = hex!("29f38e21e264fb8fa61edc76f79ca2889228d36e40b63f3697102010404ae1d0b8b965029e45bd78aabe14c66458dd03f138aa8b58490974f23aabb53d9bce99");
+            let enc10_by_bob: [u8; 64] = hex!("4c6bda3db6977c29a115fbc5aba03b9c37b767c09ffe6c622fcec42bbb732fc7b8b965029e45bd78aabe14c66458dd03f138aa8b58490974f23aabb53d9bce99");
             let rvk: [u8; 32] = hex!("f539db3c0075f6394ff8698c95ca47921669c77bb2b23b366f42a39b05a88c96");
-            let enc1_by_alice: [u8; 64] = hex!("dc98926ce4d481770442acd13814a923cc2024d31463fcc7ce0dd9aed6ae64afa846bca1ff93a24c5bb8efbde8a42424ef343244b729eaa367df7bb7ac0c3fcf");
+            let enc1_by_alice: [u8; 64] = hex!("ed19f1820c3f09da976f727e8531aa83a483d262e4abb1e9e67a1eba843b4034b8b965029e45bd78aabe14c66458dd03f138aa8b58490974f23aabb53d9bce99");
 
             assert_ok!(ConfTransfer::confidential_transfer(
                 Origin::signed(1),
@@ -370,13 +485,13 @@ mod tests {
     #[should_panic]
     fn test_call_with_worng_proof() {
         with_externalities(&mut new_test_ext(), || {
-            let proof: [u8; 192] = hex!("b7e763cbdc1d4b78e70534894d9dbef78ac259ab0cd602e65d31459dd03432c5e14dbef9484a9ab36d9db17ad531b50aa8d051dc885599fbefcd1992437ee3453ef66d5921b9082c5ac93ddf7370dac444050147a71849cc1d16d4208984335d1567bb676a30974e8ae228741adbf6ac50d3c35ee14e835762bc4868e6f22d7b69ccbbbc5cfc3fbe49968c1873a99ffcacb71b1139806166e5c491ff9addbcbabc9df058371ef989219ba20c6a718317b4586bbf1d429d4bf4dab47e130bd23f");
+            let proof: [u8; 192] = hex!("b127994f62fefa882271cbe9fd1fffd16bcf3ebb3cd219c04be4333118f33115e4c70e8d199e43e956b8761e1e69bff48ff156d14e7d083a09e341da114b05a5c2eff9bd6aa9881c7ca282fbb554245d2e65360fa72f1de6b538b79a672cdf86072eeb911b1dadbfef2091629cf9ee76cf80ff7ec085258b102caa62f5a2a00b48dce27c91d59c2cdfa23b456c0f616ea1e9061b5e91ec080f1c3c66cf2e13ecca7b7e1530addd2977a123d6ebbea11e9f8c3b1989fc830a309254e663315dcb");
             let pkd_addr_alice: [u8; 32] = hex!("fd0c0c0183770c99559bf64df4fe23f77ced9b8b4d02826a282bcd125117dcc2");
             let pkd_addr_bob: [u8; 32] = hex!("45e66da531088b55dcb3b273ca825454d79d2d1d5c4fa2ba4a12c1fa1ccd6389");
-            let enc10_by_alice: [u8; 64] = hex!("087d5aa97ed351a81cea9e7bb46c83bb4a889bc696f623e7812fc59509cc3a6c997173e746fe32c12a70584cdf9dce783cf3daf44c17d40142f2c460324355aa");
-            let enc10_by_bob: [u8; 64] = hex!("88c851325af572216ececdc2e120bfa972ed9e6b901ee45e31288abd84c3b6be997173e746fe32c12a70584cdf9dce783cf3daf44c17d40142f2c460324355aa");
+            let enc10_by_alice: [u8; 64] = hex!("29f38e21e264fb8fa61edc76f79ca2889228d36e40b63f3697102010404ae1d0b8b965029e45bd78aabe14c66458dd03f138aa8b58490974f23aabb53d9bce99");
+            let enc10_by_bob: [u8; 64] = hex!("4c6bda3db6977c29a115fbc5aba03b9c37b767c09ffe6c622fcec42bbb732fc7b8b965029e45bd78aabe14c66458dd03f138aa8b58490974f23aabb53d9bce99");
             let rvk: [u8; 32] = hex!("f539db3c0075f6394ff8698c95ca47921669c77bb2b23b366f42a39b05a88c96");
-            let enc1_by_alice: [u8; 64] = hex!("55a75030bd77f5b7914b55575c154f61a721e05df076546d815e877d71ac6dcc997173e746fe32c12a70584cdf9dce783cf3daf44c17d40142f2c460324355aa");
+            let enc1_by_alice: [u8; 64] = hex!("ed19f1820c3f09da976f727e8531aa83a483d262e4abb1e9e67a1eba843b4034b8b965029e45bd78aabe14c66458dd03f138aa8b58490974f23aabb53d9bce99");
 
             assert_ok!(ConfTransfer::confidential_transfer(
                 Origin::signed(1),
@@ -390,6 +505,4 @@ mod tests {
             ));
         })
     }
-
-
 }

@@ -101,36 +101,85 @@ pub fn seed_to_array(seed: &str) -> [u8; 32] {
     array
 }
 
-/// Get encrypted and decrypted balance for the decryption key
-pub fn get_balance_from_decryption_key(mut decryption_key: &[u8], api: Api) -> (u32, Vec<u8>, String) {
-    let p_g = zFixedGenerators::Diversifier; // 1
+pub struct BalanceQuery {
+    pub decrypted_balance: u32,
+    pub encrypted_balance: Vec<u8>,
+    pub pending_transfer: Vec<u8>,
+    pub encrypted_balance_str: String,
+    pub pending_transfer_str: String,
+}
 
-    let mut decryption_key_repr = zFs::default().into_repr();
-    decryption_key_repr.read_le(&mut decryption_key).unwrap();
-    let decryption_key_fs = zFs::from_repr(decryption_key_repr).unwrap();
-    let decryption_key = keys::DecryptionKey(decryption_key_fs);
+// Temporary code.
+impl BalanceQuery {
+    /// Get encrypted and decrypted balance for the decryption key
+    pub fn get_balance_from_decryption_key(mut decryption_key: &[u8], api: Api) -> Self {
+        let p_g = zFixedGenerators::Diversifier; // 1
 
-    let encryption_key = zEncryptionKey::from_decryption_key(&decryption_key, &*ZPARAMS);
-    let account_id = PkdAddress::from_encryption_key(&encryption_key);
+        let mut decryption_key_repr = zFs::default().into_repr();
+        decryption_key_repr.read_le(&mut decryption_key).unwrap();
+        let decryption_key_fs = zFs::from_repr(decryption_key_repr).unwrap();
+        let decryption_key = keys::DecryptionKey(decryption_key_fs);
 
-    let mut encrypted_balance_str = api.get_storage(
-        "ConfTransfer",
-        "EncryptedBalance",
-        Some(account_id.encode())
+        let encryption_key = zEncryptionKey::from_decryption_key(&decryption_key, &*ZPARAMS);
+        let account_id = PkdAddress::from_encryption_key(&encryption_key);
+
+        let mut encrypted_balance_str = api.get_storage(
+            "ConfTransfer",
+            "EncryptedBalance",
+            Some(account_id.encode())
+            ).unwrap();
+
+        let mut pending_transfer_str = api.get_storage(
+            "ConfTransfer",
+            "PendingTransfer",
+            Some(account_id.encode())
         ).unwrap();
 
-    // TODO: remove unnecessary prefix
-    for _ in 0..4 {
-        encrypted_balance_str.remove(2);
+        let mut encrypted_balance;
+        let mut decrypted_balance;
+        let mut pending_transfer;
+        let mut p_decrypted_balance;
+
+        // TODO: redundant code
+        if encrypted_balance_str.as_str() != "0x00" {
+            // TODO: remove unnecessary prefix. If it returns `0x00`, it will be panic.
+            for _ in 0..4 {
+                encrypted_balance_str.remove(2);
+            }
+
+            encrypted_balance = hexstr_to_vec(encrypted_balance_str.clone());
+            let ciphertext = zelgamal::Ciphertext::<zBls12>::read(&mut &encrypted_balance[..], &ZPARAMS).expect("Invalid data");
+            decrypted_balance = ciphertext.decrypt(&decryption_key, p_g, &ZPARAMS).unwrap();
+        } else {
+            encrypted_balance = vec![0u8];
+            decrypted_balance = 0;
+        }
+
+        if pending_transfer_str.as_str() != "0x00" {
+            // TODO: remove unnecessary prefix. If it returns `0x00`, it will be panic.
+            for _ in 0..4 {
+                pending_transfer_str.remove(2);
+            }
+
+            pending_transfer = hexstr_to_vec(pending_transfer_str.clone());
+            let p_ciphertext = zelgamal::Ciphertext::<zBls12>::read(&mut &pending_transfer[..], &ZPARAMS).expect("Invalid data");
+            p_decrypted_balance = p_ciphertext.decrypt(&decryption_key, p_g, &ZPARAMS).unwrap();
+        } else {
+            pending_transfer = vec![0u8];
+            p_decrypted_balance = 0;
+        }
+
+        BalanceQuery {
+            decrypted_balance: decrypted_balance + p_decrypted_balance,
+            encrypted_balance,
+            pending_transfer,
+            encrypted_balance_str,
+            pending_transfer_str,
+        }
     }
-
-    let encrypted_balance = hexstr_to_vec(encrypted_balance_str.clone());
-    let ciphertext = zelgamal::Ciphertext::<zBls12>::read(&mut &encrypted_balance[..], &ZPARAMS).expect("Invalid data");
-
-    let decrypted_balance = ciphertext.decrypt(&decryption_key, p_g, &ZPARAMS).unwrap();
-
-    (decrypted_balance, encrypted_balance, encrypted_balance_str)
 }
+
+
 
 pub fn get_address(seed: &[u8]) -> std::io::Result<Vec<u8>> {
     let address = EncryptionKey::<Bls12>::from_seed(seed, &PARAMS)?;
