@@ -130,7 +130,6 @@ fn testnet_genesis(initial_authorities: Vec<AuthorityId>, endowed_accounts: Vec<
 		}),
 		conf_transfer: Some(ConfTransferConfig {
 			encrypted_balance: vec![alice_balance_init()],
-			// pending_transfer: vec![alice_pending_transfer_init()],
 			last_rollover: vec![alice_epoch_init()],
 			epoch_length: 1,
 			transaction_base_fee: 1,
@@ -170,13 +169,6 @@ fn alice_balance_init() -> (PkdAddress, Ciphertext) {
 
 	(PkdAddress::from_encryption_key(&enc_key), Ciphertext::from_ciphertext(&enc_alice_bal))
 }
-
-// fn alice_pending_transfer_init() -> (PkdAddress, Ciphertext) {
-// 	let (_, enc_key) = get_alice_seed_ek();
-// 	let zero = elgamal::Ciphertext::zero();
-
-// 	(PkdAddress::from_encryption_key(&enc_key), Ciphertext::from_ciphertext(&zero))
-// }
 
 fn alice_epoch_init() -> (PkdAddress, u64) {
 	let (_, enc_key) = get_alice_seed_ek();

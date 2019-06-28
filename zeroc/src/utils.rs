@@ -106,6 +106,7 @@ pub struct BalanceQuery {
     pub pending_transfer_str: String,
 }
 
+// Temporary code.
 impl BalanceQuery {
     /// Get encrypted and decrypted balance for the decryption key
     pub fn get_balance_from_decryption_key(mut decryption_key: &[u8], api: Api) -> Self {

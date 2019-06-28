@@ -101,7 +101,7 @@ Address (SS58): 5H8gW16RYqv9pqCVPv8GrxMm3byTiCfe16aA16uXwENsbytA
 
 - Send transaction for confidential payment
 ```
-zeroc tx send -a <AMOUNT> -s <Sender's SEED> -to <Recipient's PUBLIC KEY>
+zeroc tx send -a <AMOUNT> -s <Sender's SEED> -t <Recipient's PUBLIC KEY>
 ```
 
 In the case, Alice sends 10 coins to Bob...
