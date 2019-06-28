@@ -133,7 +133,7 @@ decl_storage! {
         pub EncryptedBalance get(encrypted_balance) config() : map PkdAddress => Option<Ciphertext>;
 
         /// The pending transfer
-        pub PendingTransfer get(pending_transfer) config() : map PkdAddress => Option<Ciphertext>;
+        pub PendingTransfer get(pending_transfer) : map PkdAddress => Option<Ciphertext>;
 
         /// The last epoch for rollover
         pub LastRollOver get(last_rollover) config() : map PkdAddress => Option<T::BlockNumber>;
@@ -418,12 +418,12 @@ mod tests {
         (PkdAddress::from_encryption_key(&enc_key), Ciphertext::from_ciphertext(&enc_alice_bal))
     }
 
-    fn alice_pending_transfer_init() -> (PkdAddress, Ciphertext) {
-        let (_, enc_key) = get_alice_seed_ek();
-        let zero = elgamal::Ciphertext::zero();
+    // fn alice_pending_transfer_init() -> (PkdAddress, Ciphertext) {
+    //     let (_, enc_key) = get_alice_seed_ek();
+    //     let zero = elgamal::Ciphertext::zero();
 
-        (PkdAddress::from_encryption_key(&enc_key), Ciphertext::from_ciphertext(&zero))
-    }
+    //     (PkdAddress::from_encryption_key(&enc_key), Ciphertext::from_ciphertext(&zero))
+    // }
 
     fn alice_epoch_init() -> (PkdAddress, u64) {
         let (_, enc_key) = get_alice_seed_ek();
@@ -454,7 +454,7 @@ mod tests {
         let mut t = system::GenesisConfig::<Test>::default().build_storage().unwrap().0;
         t.extend(GenesisConfig::<Test>{
             encrypted_balance: vec![alice_balance_init()],
-			pending_transfer: vec![alice_pending_transfer_init()],
+			// pending_transfer: vec![alice_pending_transfer_init()],
 			last_rollover: vec![alice_epoch_init()],
             epoch_length: 10,
             transaction_base_fee: 1,

@@ -321,13 +321,13 @@ fn subcommand_tx(mut term: term::Term, root_dir: PathBuf, matches: &ArgMatches) 
             decryption_key.0.into_repr().write_le(&mut &mut decrypted_key[..])
                 .expect("should be casted as bytes-array.");
 
-            let (decrypted_balance, encrypted_balance_vec, _) = get_balance_from_decryption_key(&decrypted_key[..] ,api.clone());
-            let remaining_balance = decrypted_balance - amount - fee;
-            assert!(decrypted_balance >= amount + fee, "Not enough balance you have");
+            let balance_query = BalanceQuery::get_balance_from_decryption_key(&decrypted_key[..] ,api.clone());
+            let remaining_balance = balance_query.decrypted_balance - amount - fee;
+            assert!(balance_query.decrypted_balance >= amount + fee, "Not enough balance you have");
 
             let recipient_account_id = EncryptionKey::<Bls12>::read(&mut &recipient_encryption_key[..], &PARAMS)
                 .expect("should be casted to EncryptionKey<Bls12> type.");
-            let encrypted_balance = elgamal::Ciphertext::read(&mut &encrypted_balance_vec[..], &*PARAMS)
+            let encrypted_balance = elgamal::Ciphertext::read(&mut &balance_query.encrypted_balance[..], &*PARAMS)
                 .expect("should be casted to Ciphertext type.");
 
             println!("Computing zk proof...");
@@ -401,10 +401,11 @@ fn subcommand_tx(mut term: term::Term, root_dir: PathBuf, matches: &ArgMatches) 
                 .expect("Decryption key parameter is required; qed"))
                 .expect("should be decoded to hex.");
 
-            let (decrypted_balance, _, encrypted_balance_str) = get_balance_from_decryption_key(&decryption_key_vec[..], api);
+            let balance_query = BalanceQuery::get_balance_from_decryption_key(&decryption_key_vec[..], api);
 
-            println!("Decrypted balance: {}", decrypted_balance);
-            println!("Encrypted balance: {}", encrypted_balance_str);
+            println!("Decrypted balance: {}", balance_query.decrypted_balance);
+            println!("Encrypted balance: {}", balance_query.encrypted_balance_str);
+            println!("Encrypted pending transfer: {}", balance_query.pending_transfer_str);
         },
         ("print-tx", Some(sub_matches)) => {
             println!("Generate transaction...");
