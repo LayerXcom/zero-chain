@@ -23,6 +23,10 @@ impl WalletDirectory {
         Ok(WalletDirectory(path.as_ref().to_path_buf()))
     }
 
+    // pub fn insert_master(&self, keyfile: &mut KeyFile) -> Result<()> {
+    //     self.save_keyfile(MASTER_KEYFILE.to_string(), keyfile)
+    // }
+
     pub fn insert_indexfile(&self, indexfile: &mut IndexFile) -> Result<()> {
         let indexfile_path = self.get_default_indexfile_path();
         let mut file = create_new_file(&indexfile_path)?;
@@ -32,6 +36,10 @@ impl WalletDirectory {
         file.sync_all()?;
 
         Ok(())
+    }
+
+    pub fn get_default_masterfile_path(&self) -> PathBuf {
+        self.0.as_path().join(MASTER_KEYFILE)
     }
 
     /// Get the path to directory where all wallets are stored.
@@ -61,7 +69,7 @@ impl DirOperations for KeystoreDirectory{
     fn insert_master(&self, keyfile: &mut KeyFile) -> Result<()> {
         self.save_keyfile(MASTER_KEYFILE.to_string(), keyfile)
     }
-
+    
     fn load_master(&self) -> Result<KeyFile> {
         self.get_master_keyfile()
     }

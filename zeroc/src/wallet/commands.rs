@@ -14,6 +14,8 @@ pub fn new_wallet<R: Rng>(
     root_dir: PathBuf,
     rng: &mut R,
 ) -> Result<()> {
+    // TODO: Validate if master.json exists.
+
     // 1. configure wallet directory
     let wallet_dir = WalletDirectory::create(&root_dir)?;
 
@@ -29,7 +31,7 @@ pub fn new_wallet<R: Rng>(
     let mnemonic = Mnemonic::new(MnemonicType::Words12, Language::English);
     let phrase = mnemonic.into_phrase();
     term.info("Please, note carefully the following mnemonic words. They will be needed to recover your wallet.\n")?;
-    term.simply(&format!("{}\n", phrase))?;
+    term.error(&format!("{}\n", phrase))?;
 
     // 5. create master keyfile
     let mut keyfile_master = KeyFile::create_master(MASTER_ACCOUNTNAME, VERSION, &password[..], ITERS, rng)?;
