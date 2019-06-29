@@ -24,8 +24,6 @@ pub trait DirOperations {
     // /// Load a keyfile
     // fn load(&self, path: PathBuf) -> Result<KeyFile>;
 
-    fn load_master(&self) -> Result<KeyFile>;
-
     /// Load all keyfiles in this keystore directory.
     fn load_all(&self) -> Result<Vec<KeyFile>>;
 

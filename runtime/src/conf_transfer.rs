@@ -129,13 +129,13 @@ decl_module! {
 
 decl_storage! {
     trait Store for Module<T: Trait> as ConfTransfer {
-        /// The encrypted balance for each account
+        /// An encrypted balance for each account
         pub EncryptedBalance get(encrypted_balance) config() : map PkdAddress => Option<Ciphertext>;
 
-        /// The pending transfer
+        /// A pending transfer
         pub PendingTransfer get(pending_transfer) : map PkdAddress => Option<Ciphertext>;
 
-        /// The last epoch for rollover
+        /// A last epoch for rollover
         pub LastRollOver get(last_rollover) config() : map PkdAddress => Option<T::BlockNumber>;
 
         /// Global epoch length for rollover.
@@ -143,10 +143,10 @@ decl_storage! {
         /// This parameter should be fixed based on trade-off between UX and security in terms of front-running attacks.
         pub EpochLength get(epoch_length) config() : T::BlockNumber;
 
-        /// The fee to be paid for making a transaction; the base.
+        /// A fee to be paid for making a transaction; the base.
         pub TransactionBaseFee get(transaction_base_fee) config(): FeeAmount;
 
-        /// The verification key of zk proofs (only readable)
+        /// A verification key of zk proofs (only readable)
         pub VerifyingKey get(verifying_key) config(): PreparedVk;
     }
 }

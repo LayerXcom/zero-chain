@@ -24,8 +24,13 @@ impl WalletDirectory {
     }
 
     pub fn insert_master(&self, keyfile: &mut KeyFile) -> Result<()> {
-        let keyfile_path = self.0.join(MASTER_KEYFILE);
-        save_keyfile(MASTER_KEYFILE.to_string(), &keyfile_path, keyfile)
+        let keyfile_path = self.get_default_masterfile_path();
+        save_keyfile(MASTER_ACCOUNTNAME.to_string(), &keyfile_path, keyfile)
+    }
+
+    pub fn load_master(&self) -> Result<KeyFile> {
+        let path_master = self.get_default_masterfile_path();
+        load_keyfile(&path_master)
     }
 
     pub fn insert_indexfile(&self, indexfile: &mut IndexFile) -> Result<()> {
@@ -39,6 +44,12 @@ impl WalletDirectory {
         Ok(())
     }
 
+    pub fn load_indexfile(&self) -> Result<IndexFile> {
+        let path_indexfile = self.get_default_indexfile_path();
+        load_indexfile(&path_indexfile)
+    }
+
+    /// Get the path to master keyfile
     pub fn get_default_masterfile_path(&self) -> PathBuf {
         self.0.as_path().join(MASTER_KEYFILE)
     }
@@ -63,10 +74,6 @@ impl DirOperations for KeystoreDirectory{
         let filename = get_unique_filename(&self.0, rng)?;
         let keyfile_path = self.0.join(filename.as_str());
         save_keyfile(filename, &keyfile_path, keyfile)
-    }
-
-    fn load_master(&self) -> Result<KeyFile> {
-        self.get_master_keyfile()
     }
 
     fn load_all(&self) -> Result<Vec<KeyFile>> {
@@ -111,16 +118,6 @@ impl KeystoreDirectory {
     //     Ok(fs::read_dir(path: P))
     // }
 
-    fn get_master_keyfile(&self) -> Result<KeyFile> {
-        let path_master = self.0.join(MASTER_KEYFILE);
-        let file = fs::File::open(path_master)?;
-
-        let reader = BufReader::new(file);
-        let master_keyfile = serde_json::from_reader(reader)?;
-
-        Ok(master_keyfile)
-    }
-
     fn get_all_keyfiles(&self) -> Result<HashMap<PathBuf, KeyFile>> {
         Ok(fs::read_dir(&self.0)?
             .flat_map(|entry| {
@@ -149,6 +146,25 @@ fn save_keyfile(filename: String, keyfile_path: &PathBuf, keyfile: &mut KeyFile)
     file.sync_all()?;
 
     Ok(())
+}
+
+// TODO: make it abstract
+fn load_keyfile(keyfile_path: &PathBuf) -> Result<KeyFile> {
+    let file = fs::File::open(keyfile_path)?;
+
+    let reader = BufReader::new(file);
+    let keyfile = serde_json::from_reader(reader)?;
+
+    Ok(keyfile)
+}
+
+fn load_indexfile(indexfile_path: &PathBuf) -> Result<IndexFile> {
+    let file = fs::File::open(indexfile_path)?;
+
+    let reader = BufReader::new(file);
+    let indexfile = serde_json::from_reader(reader)?;
+
+    Ok(indexfile)
 }
 
 #[cfg(unix)]

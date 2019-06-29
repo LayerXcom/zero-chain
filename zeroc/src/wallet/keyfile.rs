@@ -12,7 +12,7 @@ use crate::derive::{ExtendedSpendingKey, Derivation, ChildIndex};
 use crate::ss58;
 
 /// Serializable and deserializable bytes
-#[derive(Deserialize, Serialize, PartialEq, Eq, Debug)]
+#[derive(Deserialize, Serialize, PartialEq, Eq, Debug, Clone)]
 pub struct SerdeBytes(
     #[serde(with = "serde_bytes")]
     pub Vec<u8>
@@ -48,7 +48,7 @@ impl From<&[u8]> for SerdeBytes {
     }
 }
 
-#[derive(Debug, PartialEq, Eq, Serialize, Deserialize)]
+#[derive(Debug, PartialEq, Eq, Serialize, Deserialize, Clone)]
 #[serde(rename_all = "camelCase")]
 pub struct KeyFile {
     /// Unique Keyfile name which is used for filename.
@@ -119,7 +119,7 @@ impl KeyFile {
     }
 }
 
-#[derive(Debug, PartialEq, Eq, Serialize, Deserialize)]
+#[derive(Debug, PartialEq, Eq, Serialize, Deserialize, Clone)]
 pub struct KeyCiphertext {
     pub ciphertext: SerdeBytes,
     pub mac: SerdeBytes,
