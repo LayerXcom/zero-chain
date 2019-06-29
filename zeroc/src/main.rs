@@ -193,6 +193,10 @@ fn subcommand_wallet<R: Rng>(mut term: term::Term, root_dir: PathBuf, matches: &
             show_list(&mut term, root_dir)
                 .expect("Invalid operations of listing accounts.");
         },
+        ("add-account", Some(_)) => {
+            new_keyfile(&mut term, root_dir, rng)
+                .expect("Invalid operations of creating new account.");
+        },
         ("wallet-test", Some(_)) => {
             println!("Initialize key components...");
             println!("Accounts of alice and bob are fixed");
@@ -254,6 +258,9 @@ fn wallet_commands_definition<'a, 'b>() -> App<'a, 'b> {
         )
         .subcommand(SubCommand::with_name("list")
             .about("Show accounts list.")
+        )
+        .subcommand(SubCommand::with_name("add-account")
+            .about("Add a new account")
         )
         .subcommand(SubCommand::with_name("inspect")
             .about("Gets a encryption key and a SS58 address from the provided Secret URI")

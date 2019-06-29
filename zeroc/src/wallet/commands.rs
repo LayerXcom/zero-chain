@@ -33,7 +33,7 @@ pub fn new_wallet<R: Rng>(
     // 5. store master keyfile
     wallet_dir.insert_master(&mut keyfile_master)?;
 
-    // 6. create index keyfile
+    // 6. create a genesis keyfile
     let child_index = ChildIndex::from_index(0);
     let mut keyfile = get_new_keyfile(term, rng, &password[..], &wallet_dir, child_index)?;
 
@@ -75,9 +75,8 @@ pub fn show_list(
 
 pub fn new_keyfile<R: Rng>(
     term: &mut Term,
-    rng: &mut R,
     root_dir: PathBuf,
-    child_index: ChildIndex,
+    rng: &mut R,
 ) -> Result<()> {
     let (wallet_dir, keystore_dir) = wallet_keystore_dirs(&root_dir)?;
 
@@ -86,8 +85,12 @@ pub fn new_keyfile<R: Rng>(
     let password = term.passowrd("wallet password")?;
 
     // save a new keyfile
+    let child_index = ChildIndex::from_index(get_incremented_default_index(&wallet_dir)?);
     let mut keyfile = get_new_keyfile(term, rng, &password[..], &wallet_dir, child_index)?;
     keystore_dir.insert(&mut keyfile, rng)?;
+
+    // set index to new account
+    increment_indexfile(&wallet_dir)?;
 
     term.success(&format!(
         "a new account successfully created.\n
@@ -130,6 +133,11 @@ fn increment_indexfile(wallet_dir: &WalletDirectory) -> Result<()> {
     let indexfile = wallet_dir.load_indexfile()?;
     let mut incremented_indexfile = indexfile.next_index();
     wallet_dir.update_indexfile(&mut incremented_indexfile)
+}
+
+fn get_incremented_default_index(wallet_dir: &WalletDirectory) -> Result<u32> {
+    let indexfile = wallet_dir.load_indexfile()?;
+    Ok(indexfile.max_index + 1)
 }
 
 fn wallet_keystore_dirs(root_dir: &PathBuf) -> Result<(WalletDirectory, KeystoreDirectory)> {
