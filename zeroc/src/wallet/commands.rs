@@ -3,7 +3,7 @@ use crate::term::Term;
 use crate::derive::ChildIndex;
 use super::{WalletDirectory, KeystoreDirectory, DirOperations};
 use super::keyfile::{KeyFile, IndexFile};
-use super::error::Result;
+use super::error::{Result, KeystoreError};
 use super::config::*;
 use bip39::{Mnemonic, Language, MnemonicType};
 use rand::Rng;
@@ -45,7 +45,7 @@ pub fn new_wallet<R: Rng>(
 
     term.success(&format!(
         "wallet and a new account successfully created.\n
-        {}: {}\n",
+        {}: {}\n\n",
         keyfile.account_name,
         keyfile.ss58_address
     ))?;
@@ -57,17 +57,23 @@ pub fn show_list(
     term: &mut Term,
     root_dir: PathBuf,
 ) -> Result<()> {
-    let (_, keystore_dir) = wallet_keystore_dirs(&root_dir)?;
+    let (wallet_dir, keystore_dir) = wallet_keystore_dirs(&root_dir)?;
 
     let keyfiles = keystore_dir.load_all()?;
-
-    for keyfile in keyfiles.clone() {
-        let (name, address) = (keyfile.account_name, keyfile.ss58_address);
-        term.success(&format!("{}: {}\n", name, address))?;
-    }
-
     if keyfiles.len() == 0 {
         term.warn("Not found accounts\n")?;
+        return Ok(());
+    }
+
+    let default_index = get_default_index(&wallet_dir)? as usize;
+
+    for (i, keyfile) in keyfiles.iter().enumerate() {
+        let (name, address) = (&*keyfile.account_name, &*keyfile.ss58_address);
+        if i == default_index {
+            term.success(&format!("* {}: {}\n", name, address))?;
+        } else {
+            term.success(&format!("{}: {}\n", name, address))?;
+        }
     }
 
     Ok(())
@@ -85,7 +91,8 @@ pub fn new_keyfile<R: Rng>(
     let password = term.passowrd("wallet password")?;
 
     // save a new keyfile
-    let child_index = ChildIndex::from_index(get_incremented_default_index(&wallet_dir)?);
+    let incremented_index = get_default_index(&wallet_dir)? + 1;
+    let child_index = ChildIndex::from_index(incremented_index);
     let mut keyfile = get_new_keyfile(term, rng, &password[..], &wallet_dir, child_index)?;
     keystore_dir.insert(&mut keyfile, rng)?;
 
@@ -94,7 +101,7 @@ pub fn new_keyfile<R: Rng>(
 
     term.success(&format!(
         "a new account successfully created.\n
-        {}: {}\n",
+        {}: {}\n\n",
         keyfile.account_name,
         keyfile.ss58_address
     ))?;
@@ -109,15 +116,22 @@ fn get_new_keyfile<R: Rng>(
     wallet_dir: &WalletDirectory,
     child_index: ChildIndex,
 ) -> Result<KeyFile> {
+    let master_keyfile = wallet_dir.load_master()?;
+    let xsk_child = master_keyfile.get_child_xsk(&password[..], child_index)?;
+
     // enter new account name
     term.info("Enter a new account name.\n")?;
     let account_name = term.account_name("new account name")?;
 
-    let master_keyfile = wallet_dir.load_master()?;
-    let xsk_child = master_keyfile.get_child_xsk(&password[..], child_index)?;
-
     // create new keyfile
-    let keyfile = KeyFile::new(account_name.as_str(), VERSION, password, ITERS, &xsk_child, rng)?;
+    let keyfile = KeyFile::new(
+        account_name.as_str(),
+        VERSION,
+        password,
+        ITERS,
+        &xsk_child,
+        rng
+    )?;
 
     Ok(keyfile)
 }
@@ -135,9 +149,9 @@ fn increment_indexfile(wallet_dir: &WalletDirectory) -> Result<()> {
     wallet_dir.update_indexfile(&mut incremented_indexfile)
 }
 
-fn get_incremented_default_index(wallet_dir: &WalletDirectory) -> Result<u32> {
+fn get_default_index(wallet_dir: &WalletDirectory) -> Result<u32> {
     let indexfile = wallet_dir.load_indexfile()?;
-    Ok(indexfile.max_index + 1)
+    Ok(indexfile.max_index)
 }
 
 fn wallet_keystore_dirs(root_dir: &PathBuf) -> Result<(WalletDirectory, KeystoreDirectory)> {

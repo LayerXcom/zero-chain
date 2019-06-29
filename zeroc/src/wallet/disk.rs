@@ -8,7 +8,7 @@ use crate::ss58;
 use std::path::{PathBuf, Path};
 use std::fs;
 use std::io::{Write, BufReader};
-use std::collections::HashMap;
+use std::collections::BTreeMap;
 use rand::Rng;
 use chrono::Utc;
 use serde_json;
@@ -25,7 +25,7 @@ impl WalletDirectory {
 
     pub fn insert_master(&self, keyfile: &mut KeyFile) -> Result<()> {
         let keyfile_path = self.get_default_masterfile_path();
-        save_keyfile(MASTER_ACCOUNTNAME.to_string(), &keyfile_path, keyfile)
+        save_keyfile(MASTER_KEYFILE.to_string(), &keyfile_path, keyfile)
     }
 
     pub fn load_master(&self) -> Result<KeyFile> {
@@ -129,7 +129,7 @@ impl KeystoreDirectory {
     //     Ok(fs::read_dir(path: P))
     // }
 
-    fn get_all_keyfiles(&self) -> Result<HashMap<PathBuf, KeyFile>> {
+    fn get_all_keyfiles(&self) -> Result<BTreeMap<PathBuf, KeyFile>> {
         Ok(fs::read_dir(&self.0)?
             .flat_map(|entry| {
                 let path = entry?.path();
