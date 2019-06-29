@@ -266,7 +266,7 @@ mod tests {
         let version = 1;
 
         let directory = KeystoreDirectory::create(dir.clone()).unwrap();
-        let mut keyfile = KeyFile::new("Test".to_string(), version, password, iters, &xsk_master, rng).unwrap();
+        let mut keyfile = KeyFile::new("Test", version, password, iters, &xsk_master, rng).unwrap();
 
         // create
         let res_create = directory.insert(&mut keyfile, rng);
