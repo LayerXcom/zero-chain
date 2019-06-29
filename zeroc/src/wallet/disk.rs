@@ -44,6 +44,17 @@ impl WalletDirectory {
         Ok(())
     }
 
+    pub fn update_indexfile(&self, indexfile: &mut IndexFile) -> Result<()> {
+        let indexfile_path = self.get_default_indexfile_path();
+        let mut file = replace_file(&indexfile_path)?;
+        serde_json::to_writer(&mut file, indexfile)?;
+
+        file.flush()?;
+        file.sync_all()?;
+
+        Ok(())
+    }
+
     pub fn load_indexfile(&self) -> Result<IndexFile> {
         let path_indexfile = self.get_default_indexfile_path();
         load_indexfile(&path_indexfile)
@@ -188,6 +199,23 @@ pub fn create_new_file(path: &Path) -> Result<fs::File> {
         .open(path)?;
 
     Ok(file)
+}
+
+#[cfg(unix)]
+pub fn replace_file(path: &Path) -> Result<fs::File> {
+    use std::os::unix::fs::PermissionsExt;
+
+    let file = fs::File::create(path)?;
+    let mut permissions = file.metadata()?.permissions();
+    permissions.set_mode(0o660);
+    file.set_permissions(permissions)?;
+
+    Ok(file)
+}
+
+#[cfg(not(unix))]
+pub fn replace_file(path: &Path) -> Result<fs::File> {
+    fs::File::create(file_path)
 }
 
 /// Get a unique filename by appending random suffix.

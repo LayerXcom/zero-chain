@@ -122,15 +122,15 @@ fn get_new_keyfile<R: Rng>(
 /// Create a new index file in wallet directory.
 fn new_indexfile(wallet_dir: &WalletDirectory) -> Result<()> {
     let mut indexfile: IndexFile = Default::default();
-    wallet_dir.insert_indexfile(&mut indexfile)?;
-
-    Ok(())
+    wallet_dir.insert_indexfile(&mut indexfile)
 }
 
-// /// Increment max index in indexfile and set default the new one.
-// fn increment_indexfile(wallet_dir: &WalletDirectory) -> Result<()> {
-//     let mut indexfile =
-// }
+/// Increment max index in indexfile and set default the new one.
+fn increment_indexfile(wallet_dir: &WalletDirectory) -> Result<()> {
+    let indexfile = wallet_dir.load_indexfile()?;
+    let mut incremented_indexfile = indexfile.next_index();
+    wallet_dir.update_indexfile(&mut incremented_indexfile)
+}
 
 fn wallet_keystore_dirs(root_dir: &PathBuf) -> Result<(WalletDirectory, KeystoreDirectory)> {
     // configure wallet directory
