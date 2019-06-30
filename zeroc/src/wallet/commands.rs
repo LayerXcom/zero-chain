@@ -109,6 +109,13 @@ pub fn new_keyfile<R: Rng>(
     Ok(())
 }
 
+// pub fn change_default_index(
+//     term: &mut Term,
+//     root_dir: PathBuf
+// ) -> Result<()> {
+
+// }
+
 fn get_new_keyfile<R: Rng>(
     term: &mut Term,
     rng: &mut R,
@@ -149,12 +156,12 @@ fn increment_indexfile(wallet_dir: &WalletDirectory) -> Result<()> {
     wallet_dir.update_indexfile(&mut incremented_indexfile)
 }
 
-fn get_default_index(wallet_dir: &WalletDirectory) -> Result<u32> {
+pub fn get_default_index(wallet_dir: &WalletDirectory) -> Result<u32> {
     let indexfile = wallet_dir.load_indexfile()?;
     Ok(indexfile.max_index)
 }
 
-fn wallet_keystore_dirs(root_dir: &PathBuf) -> Result<(WalletDirectory, KeystoreDirectory)> {
+pub fn wallet_keystore_dirs(root_dir: &PathBuf) -> Result<(WalletDirectory, KeystoreDirectory)> {
     // configure wallet directory
     let wallet_dir = WalletDirectory::create(&root_dir)?;
 

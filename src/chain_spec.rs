@@ -75,6 +75,7 @@ impl Alternative {
 				|| testnet_genesis(vec![
 					authority_key("Alice"),
 					authority_key("Bob"),
+					authority_key("Charlie")
 				], vec![
 					SigVerificationKey::from_slice(b"Alice                           ")
 					// account_key("Bob"),
