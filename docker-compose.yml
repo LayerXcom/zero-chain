@@ -30,9 +30,26 @@ services:
       testing_net:
         ipv4_address: 172.28.1.2
 
+  node_charlie:
+    container_name: charlie
+    image: osuketh/zerochain:latest
+    ports:
+      - "30336:30333"
+      - "9936:9933"
+      - "9946:9944"
+    volumes:
+      - "zerochain-data-charlie:/data"
+    links:
+      - "node_alice:alice"
+    command: zerochain --base-path /data/charlie --chain=local --key //Charlie --port 30333 --validator --name CharliesNode --bootnodes /ip4/172.28.1.1/tcp/30333/p2p/QmQZ8TjTqeDj3ciwr93EJ95hxfDsb9pEYDizUAbWpigtQN
+    networks:
+      testing_net:
+        ipv4_address: 172.28.1.3
+
 volumes:
   zerochain-data-alice:
   zerochain-data-bob:
+  zerochain-data-charlie:
 
 networks:
   testing_net:
