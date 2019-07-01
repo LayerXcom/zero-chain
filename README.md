@@ -79,6 +79,17 @@ Generating a proving key and verifying key of zk-SNARKs, which are used for conf
 zeroc snark setup
 ```
 
+#### Run Zerochain nodes
+
+```
+./target/release/zerochain --dev
+```
+
+If you want to clear your old chain's history:
+```
+./target/release/zerochain purge-chain --dev
+```
+
 #### Interacting with Zerochain
 
 - Generate key pairs
