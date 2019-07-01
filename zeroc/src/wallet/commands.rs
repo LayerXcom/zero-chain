@@ -111,6 +111,14 @@ pub fn new_keyfile<R: Rng>(
     Ok(())
 }
 
+pub fn recover(
+    term: &mut Term,
+    root_dir: PathBuf
+) -> Result<()> {
+
+    Ok(())
+}
+
 // pub fn change_default_index(
 //     term: &mut Term,
 //     root_dir: PathBuf

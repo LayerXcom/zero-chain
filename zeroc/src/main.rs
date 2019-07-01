@@ -195,6 +195,10 @@ fn subcommand_wallet<R: Rng>(mut term: term::Term, root_dir: PathBuf, matches: &
         ("change-account", Some(_)) => {
 
         },
+        ("recovery", Some(_)) => {
+            recover(&mut term, root_dir)
+                .expect("Invalid mnemonic to recover keystore.")
+        },
         ("wallet-test", Some(_)) => {
             println!("Initialize key components...");
             println!("Accounts of alice and bob are fixed");
@@ -269,6 +273,9 @@ fn wallet_commands_definition<'a, 'b>() -> App<'a, 'b> {
                 .takes_value(true)
                 .required(true)
             )
+        )
+        .subcommand(SubCommand::with_name("recovery")
+            .about("Recover keystore from mnemonic.")
         )
         .subcommand(SubCommand::with_name("inspect")
             .about("Gets a encryption key and a SS58 address from the provided Secret URI")
