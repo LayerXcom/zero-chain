@@ -1,11 +1,30 @@
 use std::path::{PathBuf, Path};
 use std::io::{BufReader, Read};
 use std::fs::File;
+use rand::Rng;
+use proofs::{SpendingKey, Transaction};
+use pairing::bls12_381::Bls12;
 use crate::term::Term;
 use crate::wallet::{WalletDirectory, KeystoreDirectory, Result, DirOperations};
 use crate::wallet::commands::{wallet_keystore_dirs, get_default_index, get_default_keyfile_name};
 
-pub fn send_conf_transfer(term: &mut Term, root_dir: PathBuf) -> Result<()> {
+use zjubjub::{
+    curve::{JubjubBls12 as zJubjubBls12, fs::Fs as zFs, FixedGenerators as zFixedGenerators},
+    redjubjub::PrivateKey as zPrivateKey
+    };
+use zpairing::{bls12_381::Bls12 as zBls12, PrimeField as zPrimeField, PrimeFieldRepr as zPrimeFieldRepr};
+use zprimitives::{PARAMS as ZPARAMS, Proof, Ciphertext as zCiphertext, PkdAddress, SigVerificationKey, RedjubjubSignature};
+use zerochain_runtime::{UncheckedExtrinsic, Call, ConfTransferCall};
+use runtime_primitives::generic::Era;
+use parity_codec::{Compact, Encode};
+use primitives::{hexdisplay::{HexDisplay, AsBytesRef}, blake2_256, crypto::{Ss58Codec, Derive, DeriveJunction}};
+use polkadot_rs::{Api, Url, hexstr_to_u64};
+
+pub fn spending_key_from_keystore(
+    term: &mut Term,
+    root_dir: PathBuf
+) -> Result<SpendingKey<Bls12>>
+{
     let (wallet_dir, keystore_dir) = wallet_keystore_dirs(&root_dir)?;
 
     // enter password
@@ -15,9 +34,9 @@ pub fn send_conf_transfer(term: &mut Term, root_dir: PathBuf) -> Result<()> {
     let default_keyfile_name = get_default_keyfile_name(&wallet_dir)?;
     let keyfile = keystore_dir.load(&default_keyfile_name)?;
 
-    Ok(())
+    let sk = keyfile.get_current_spending_key(&password[..])?;
 
-
+    Ok(sk)
 }
 
 pub fn read_zk_params_with_path(path: &str) -> Vec<u8> {
@@ -33,3 +52,47 @@ pub fn read_zk_params_with_path(path: &str) -> Vec<u8> {
     params_buf
 }
 
+pub fn submit_tx<R: Rng>(tx: &Transaction, api: &Api, rng: &mut R) {
+    let p_g = zFixedGenerators::Diversifier; // 1
+
+    let mut rsk_repr = zFs::default().into_repr();
+    rsk_repr.read_le(&mut &tx.rsk[..])
+        .expect("should be casted to Fs's repr type.");
+    let rsk = zFs::from_repr(rsk_repr)
+        .expect("should be casted to Fs type from repr type.");
+
+    let sig_sk = zPrivateKey::<zBls12>(rsk);
+    let sig_vk = SigVerificationKey::from_slice(&tx.rvk[..]);
+
+    let calls = Call::ConfTransfer(ConfTransferCall::confidential_transfer(
+        Proof::from_slice(&tx.proof[..]),
+        PkdAddress::from_slice(&tx.address_sender[..]),
+        PkdAddress::from_slice(&tx.address_recipient[..]),
+        zCiphertext::from_slice(&tx.enc_amount_sender[..]),
+        zCiphertext::from_slice(&tx.enc_amount_recipient[..]),
+        sig_vk,
+        zCiphertext::from_slice(&tx.enc_fee[..]),
+    ));
+
+    let era = Era::Immortal;
+    let index = api.get_nonce(&sig_vk).expect("Nonce must be got.");
+    let checkpoint = api.get_genesis_blockhash()
+        .expect("should be fetched the genesis block hash from zerochain node.");
+    let raw_payload = (Compact(index), calls, era, checkpoint);
+
+    let sig = raw_payload.using_encoded(|payload| {
+        let msg = blake2_256(payload);
+        let sig = sig_sk.sign(&msg[..], rng, p_g, &*ZPARAMS);
+
+        let sig_vk = sig_vk.into_verification_key()
+            .expect("should be casted to redjubjub::PublicKey<Bls12> type.");
+        assert!(sig_vk.verify(&msg, &sig, p_g, &*ZPARAMS));
+
+        sig
+    });
+
+    let sig_repr = RedjubjubSignature::from_signature(&sig);
+    let uxt = UncheckedExtrinsic::new_signed(index, raw_payload.1, sig_vk.into(), sig_repr, era);
+    let _tx_hash = api.submit_extrinsic(&uxt)
+        .expect("Faild to submit a extrinsic to zerochain node.");
+}

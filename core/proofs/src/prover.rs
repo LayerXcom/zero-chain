@@ -44,7 +44,7 @@ impl<E: JubjubEngine> TransferProof<E> {
         alpha: E::Fs,
         proving_key: &Parameters<E>,
         prepared_vk: &PreparedVerifyingKey<E>,
-        proof_generation_key: ProofGenerationKey<E>,
+        proof_generation_key: &ProofGenerationKey<E>,
         address_recipient: EncryptionKey<E>,
         ciphertext_balance: Ciphertext<E>,
         rng: &mut R,

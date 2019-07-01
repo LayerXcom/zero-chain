@@ -15,7 +15,7 @@ use std::io::{BufWriter, Write, BufReader, Read};
 use clap::{Arg, App, SubCommand, AppSettings, ArgMatches};
 use rand::{OsRng, Rng};
 use proofs::{
-    EncryptionKey, ProofGenerationKey,
+    EncryptionKey, ProofGenerationKey, SpendingKey,
     elgamal,
     Transaction,
     setup,
@@ -91,7 +91,7 @@ fn main() {
     match matches.subcommand() {
         (SNARK_COMMAND, Some(matches)) => subcommand_snark(term, root_dir, matches),
         (WALLET_COMMAND, Some(matches)) => subcommand_wallet(term, root_dir, matches, rng),
-        (TX_COMMAND, Some(matches)) => subcommand_tx(term, root_dir, matches),
+        (TX_COMMAND, Some(matches)) => subcommand_tx(term, root_dir, matches, rng),
         (DEBUG_COMMAND, Some(matches)) => subcommand_debug(term, root_dir, matches),
         _ => {
             term.error(matches.usage()).unwrap();
@@ -315,10 +315,10 @@ fn tx_arg_url_match<'a>(matches: &ArgMatches<'a>) -> Url {
     }
 }
 
-fn subcommand_tx(mut term: term::Term, root_dir: PathBuf, matches: &ArgMatches) {
+fn subcommand_tx<R: Rng>(mut term: term::Term, root_dir: PathBuf, matches: &ArgMatches, rng: &mut R) {
     let res = match matches.subcommand() {
         ("send", Some(sub_matches)) => {
-            let seed = tx_arg_seed_match(&sub_matches);
+            // let seed = tx_arg_seed_match(&sub_matches);
             let recipient_enc_key = tx_arg_recipient_address_match(&sub_matches);
             let amount = tx_arg_amount_match(&sub_matches);
             let url = tx_arg_url_match(&sub_matches);
@@ -326,8 +326,6 @@ fn subcommand_tx(mut term: term::Term, root_dir: PathBuf, matches: &ArgMatches) 
             println!("Preparing paramters...");
 
             let api = Api::init(url);
-
-            let rng = &mut OsRng::new().expect("should be able to construct RNG");
             // let alpha = fs::Fs::rand(rng);
             let alpha = fs::Fs::zero(); // TODO
 
@@ -343,14 +341,18 @@ fn subcommand_tx(mut term: term::Term, root_dir: PathBuf, matches: &ArgMatches) 
                 .expect("should be fetched TransactionBaseFee from ConfTransfer module of Zerochain.");
             let fee = hexstr_to_u64(fee_str) as u32;
 
-            let decryption_key = ProofGenerationKey::<Bls12>::from_seed(&seed[..], &PARAMS).into_decryption_key()
+            let spending_key = spending_key_from_keystore(&mut term, root_dir)
+                .expect("should load from keystore.");
+
+            let decryption_key = ProofGenerationKey::<Bls12>::from_spending_key(&spending_key, &PARAMS)
+                .into_decryption_key()
                 .expect("should be generated decryption key from seed.");
 
             let mut decrypted_key = [0u8; 32];
             decryption_key.0.into_repr().write_le(&mut &mut decrypted_key[..])
                 .expect("should be casted as bytes-array.");
 
-            let balance_query = BalanceQuery::get_balance_from_decryption_key(&decrypted_key[..] ,api.clone());
+            let balance_query = BalanceQuery::get_balance_from_decryption_key(&decrypted_key[..], api.clone());
             let remaining_balance = balance_query.decrypted_balance - amount - fee;
             assert!(balance_query.decrypted_balance >= amount + fee, "Not enough balance you have");
 
@@ -361,66 +363,24 @@ fn subcommand_tx(mut term: term::Term, root_dir: PathBuf, matches: &ArgMatches) 
 
             println!("Computing zk proof...");
             let tx = Transaction::gen_tx(
-                            amount,
-                            remaining_balance,
-                            alpha,
-                            &proving_key,
-                            &prepared_vk,
-                            &recipient_account_id,
-                            &seed[..],
-                            encrypted_balance,
-                            rng,
-                            fee
-                    ).expect("fails to generate the tx");
+                amount,
+                remaining_balance,
+                alpha,
+                &proving_key,
+                &prepared_vk,
+                &recipient_account_id,
+                &spending_key,
+                encrypted_balance,
+                rng,
+                fee
+                )
+            .expect("fails to generate the tx");
 
-            {
-                println!("Start submitting a transaction to Zerochain...");
+            println!("Start submitting a transaction to Zerochain...");
 
-                let p_g = zFixedGenerators::Diversifier; // 1
+            submit_tx(&tx, &api, rng);
 
-                let mut rsk_repr = zFs::default().into_repr();
-                rsk_repr.read_le(&mut &tx.rsk[..])
-                    .expect("should be casted to Fs's repr type.");
-                let rsk = zFs::from_repr(rsk_repr)
-                    .expect("should be casted to Fs type from repr type.");
-
-                let sig_sk = zPrivateKey::<zBls12>(rsk);
-                let sig_vk = SigVerificationKey::from_slice(&tx.rvk[..]);
-
-                let calls = Call::ConfTransfer(ConfTransferCall::confidential_transfer(
-                    Proof::from_slice(&tx.proof[..]),
-                    PkdAddress::from_slice(&tx.address_sender[..]),
-                    PkdAddress::from_slice(&tx.address_recipient[..]),
-                    zCiphertext::from_slice(&tx.enc_amount_sender[..]),
-                    zCiphertext::from_slice(&tx.enc_amount_recipient[..]),
-                    sig_vk,
-                    zCiphertext::from_slice(&tx.enc_fee[..]),
-                ));
-
-                let era = Era::Immortal;
-                let index = api.get_nonce(&sig_vk).expect("Nonce must be got.");
-                let checkpoint = api.get_genesis_blockhash()
-                    .expect("should be fetched the genesis block hash from zerochain node.");
-                let raw_payload = (Compact(index), calls, era, checkpoint);
-
-                let sig = raw_payload.using_encoded(|payload| {
-                    let msg = blake2_256(payload);
-                    let sig = sig_sk.sign(&msg[..], rng, p_g, &*ZPARAMS);
-
-                    let sig_vk = sig_vk.into_verification_key()
-                        .expect("should be casted to redjubjub::PublicKey<Bls12> type.");
-                    assert!(sig_vk.verify(&msg, &sig, p_g, &*ZPARAMS));
-
-                    sig
-                });
-
-                let sig_repr = RedjubjubSignature::from_signature(&sig);
-                let uxt = UncheckedExtrinsic::new_signed(index, raw_payload.1, sig_vk.into(), sig_repr, era);
-                let _tx_hash = api.submit_extrinsic(&uxt)
-                    .expect("Faild to submit a extrinsic to zerochain node.");
-
-                println!("Remaining balance is {}", remaining_balance);
-            }
+            println!("Remaining balance is {}", remaining_balance);
 
         },
         ("balance", Some(sub_matches)) => {
@@ -459,15 +419,6 @@ fn tx_commands_definition<'a, 'b>() -> App<'a, 'b> {
                 .help("The coin amount for the confidential transfer. (default: 10)")
                 .takes_value(true)
                 .required(false)
-                .default_value(DEFAULT_AMOUNT)
-            )
-            .arg(Arg::with_name("sender-seed")
-                .short("s")
-                .long("sender-seed")
-                .help("Sender's seed. (default: Alice)")
-                .takes_value(true)
-                .required(false)
-                .default_value(ALICESEED)
             )
             .arg(Arg::with_name("recipient-address")
                 .short("to")
@@ -584,7 +535,7 @@ fn subcommand_debug(mut term: term::Term, root_dir: PathBuf, matches: &ArgMatche
                             &proving_key,
                             &prepared_vk,
                             &address_recipient,
-                            &sender_seed[..],
+                            &SpendingKey::<Bls12>::from_seed(&sender_seed[..]),
                             ciphertext_balance,
                             rng,
                             fee

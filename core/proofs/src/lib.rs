@@ -12,7 +12,7 @@ pub mod setup;
 
 pub use self::setup::setup;
 pub use self::transaction::Transaction;
-pub use self::keys::{EncryptionKey, ProofGenerationKey};
+pub use self::keys::{EncryptionKey, ProofGenerationKey, SpendingKey};
 
 lazy_static! {
     pub static ref PARAMS: JubjubBls12 = { JubjubBls12::new() };

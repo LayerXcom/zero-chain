@@ -4,6 +4,8 @@ use rand::{OsRng, Rng};
 use parity_crypto as crypto;
 use crypto::Keccak256;
 use smallvec::SmallVec;
+use proofs::keys::SpendingKey;
+use pairing::bls12_381::Bls12;
 use std::num::NonZeroU32;
 use std::convert::{TryInto, TryFrom};
 use std::collections::HashMap;
@@ -117,6 +119,11 @@ impl KeyFile {
         let xsk_child = xsk.derive_child(index)?;
 
         Ok(xsk_child)
+    }
+
+    pub fn get_current_spending_key(&self, password: &[u8]) -> Result<SpendingKey<Bls12>> {
+        let xsk = self.encrypted_key.decrypt(password)?;
+        Ok(xsk.spending_key)
     }
 }
 
