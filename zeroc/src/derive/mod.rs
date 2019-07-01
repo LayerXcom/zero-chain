@@ -6,7 +6,7 @@ use proofs::keys::{ProofGenerationKey, SpendingKey, prf_expand_vec, prf_expand};
 use scrypto::jubjub::{JubjubEngine, fs::Fs, ToUniform};
 use pairing::{bls12_381::Bls12, Field};
 use byteorder::{ByteOrder, LittleEndian, ReadBytesExt, WriteBytesExt};
-use crate::PARAMS;
+use proofs::PARAMS;
 use super::wallet::SerdeBytes;
 use std::io::{self, Read, Write};
 use std::convert::TryFrom;

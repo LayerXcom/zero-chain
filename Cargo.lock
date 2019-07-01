@@ -5109,6 +5109,7 @@ dependencies = [
  "tokio 0.1.21 (registry+https://github.com/rust-lang/crates.io-index)",
  "trie-root 0.11.0 (registry+https://github.com/rust-lang/crates.io-index)",
  "vergen 3.0.4 (registry+https://github.com/rust-lang/crates.io-index)",
+ "zeroc 0.1.0",
  "zerochain-crypto 0.1.0",
  "zerochain-pairing 0.14.2",
  "zerochain-primitives 0.1.0",

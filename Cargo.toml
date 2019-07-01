@@ -30,6 +30,7 @@ hex = "0.3.2"
 clap = "~2.32"
 polkadot-rs = { git = "https://github.com/LayerXcom/polkadot.rs" }
 zjubjub = { package = "jubjub", path = "core/jubjub"}
+zeroc = { path = "zeroc" }
 
 [dependencies.basic-authorship]
 git = 'https://github.com/osuketh/substrate.git'

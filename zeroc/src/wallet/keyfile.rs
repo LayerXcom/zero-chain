@@ -195,8 +195,7 @@ pub struct IndexFile {
     /// Maximum account index
     pub max_index: u32,
 
-    // /// Mapping index to keyfile name
-    // pub map_keyfile_name: HashMap<u32, String>,
+    /// Default keyfile name
     pub default_keyfile_name: String,
 }
 

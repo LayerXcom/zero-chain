@@ -1,4 +1,4 @@
-use primitives::{ed25519, sr25519, Pair};
+use primitives::{ed25519, sr25519, Pair, crypto::Ss58Codec};
 use zerochain_runtime::{
 	AccountId, GenesisConfig, ConsensusConfig, TimestampConfig, BalancesConfig,
 	SudoConfig, IndicesConfig, ConfTransferConfig
@@ -19,6 +19,7 @@ use zprimitives::PARAMS;
 use std::path::Path;
 use std::fs::File;
 use std::io::{BufReader, Read};
+use zeroc::ss58::EncryptionKeyBytes;
 
 // Note this is the URL for the telemetry server
 //const STAGING_TELEMETRY_URL: &str = "wss://telemetry.polkadot.io/submit/";
@@ -151,35 +152,26 @@ fn get_pvk() -> PreparedVk {
 }
 
 fn alice_balance_init() -> (PkdAddress, Ciphertext) {
-	let (alice_seed, enc_key) = get_alice_seed_ek();
+	let enc_key = get_alice_enc_key();
 	let alice_value = 10_000 as u32;
 	let p_g = FixedGenerators::Diversifier; // 1 same as NoteCommitmentRandomness;
 
-	let address = EncryptionKey::<Bls12>::from_seed(&alice_seed[..], &PARAMS)
-		.expect("should be generated encryption key from seed.");
-
 	// The default balance is not encrypted with randomness.
-	let enc_alice_bal = elgamal::Ciphertext::encrypt(alice_value, fs::Fs::one(), &address, p_g, &PARAMS);
-
-	let decryption_key = ProofGenerationKey::<Bls12>::from_seed(&alice_seed[..], &PARAMS)
-		.into_decryption_key()
-		.expect("should be converted to decryption key.");
-
-	let dec_alice_bal = enc_alice_bal.decrypt(&decryption_key, p_g, &PARAMS).unwrap();
-	assert_eq!(dec_alice_bal, alice_value);
+	let enc_alice_bal = elgamal::Ciphertext::encrypt(alice_value, fs::Fs::one(), &enc_key, p_g, &PARAMS);
 
 	(PkdAddress::from_encryption_key(&enc_key), Ciphertext::from_ciphertext(&enc_alice_bal))
 }
 
 fn alice_epoch_init() -> (PkdAddress, u64) {
-	let (_, enc_key) = get_alice_seed_ek();
+	let enc_key = get_alice_enc_key();
 
 	(PkdAddress::from_encryption_key(&enc_key), 0)
 }
 
-fn get_alice_seed_ek() -> (Vec<u8>, EncryptionKey<Bls12>) {
-	let alice_seed = b"Alice                           ".to_vec();
+fn get_alice_enc_key() -> EncryptionKey<Bls12> {
+	let ss58_address = "5FJBWVp6Bb8wrGV5GmWwD1NhBNfNuUz5HvKTfpLcvR4qrpfP";
+	let mut enc_key_bytes = EncryptionKeyBytes::from_ss58check(ss58_address).unwrap();
 
-	(alice_seed.clone(), EncryptionKey::<Bls12>::from_seed(&alice_seed[..], &PARAMS)
-		.expect("should be generated encryption key from seed."))
+	let enc_key = EncryptionKey::read(&mut &enc_key_bytes.0[..], &*PARAMS).unwrap();
+	enc_key
 }
