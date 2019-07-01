@@ -43,6 +43,7 @@ mod wallet;
 pub mod derive;
 pub mod term;
 pub mod ss58;
+use self::ss58::EncryptionKeyBytes;
 use utils::*;
 use config::*;
 use wallet::commands::*;
@@ -279,16 +280,28 @@ fn wallet_commands_definition<'a, 'b>() -> App<'a, 'b> {
 
 const TX_COMMAND: &'static str = "tx";
 
+fn tx_arg_seed_match<'a>(matches: &ArgMatches<'a>) -> Vec<u8> {
+    hex::decode(matches.value_of("sender-seed")
+        .expect("Seed parameter is required; qed"))
+        .expect("should be decoded to hex.")
+}
+
+fn tx_arg_recipient_address_match<'a>(matches: &ArgMatches<'a>) -> [u8; 32] {
+    let recipient_address = matches.value_of("recipient-address")
+        .expect("Recipient's address is required; qed");
+
+    let recipient_enc_key = EncryptionKeyBytes::from_ss58check(recipient_address)
+        .expect("The string should be a properly encoded SS58Check address.");
+
+    recipient_enc_key.0
+}
+
 fn subcommand_tx(mut term: term::Term, root_dir: PathBuf, matches: &ArgMatches) {
     let res = match matches.subcommand() {
         ("send", Some(sub_matches)) => {
-            let seed = hex::decode(sub_matches.value_of("sender-seed")
-                .expect("Seed parameter is required; qed"))
-                .expect("should be decoded to hex.");
+            let seed = tx_arg_seed_match(&sub_matches);
 
-            let recipient_encryption_key = hex::decode(sub_matches.value_of("recipient-encryption-key")
-                .expect("Recipient's encryption key parameter is required; qed")
-                ).expect("should be decoded to hex.");
+            let recipient_enc_key = tx_arg_recipient_address_match(&sub_matches);
 
             let amount_str = sub_matches.value_of("amount")
                 .expect("Amount parameter is required; qed");
@@ -346,7 +359,7 @@ fn subcommand_tx(mut term: term::Term, root_dir: PathBuf, matches: &ArgMatches) 
             let remaining_balance = balance_query.decrypted_balance - amount - fee;
             assert!(balance_query.decrypted_balance >= amount + fee, "Not enough balance you have");
 
-            let recipient_account_id = EncryptionKey::<Bls12>::read(&mut &recipient_encryption_key[..], &PARAMS)
+            let recipient_account_id = EncryptionKey::<Bls12>::read(&mut &recipient_enc_key[..], &PARAMS)
                 .expect("should be casted to EncryptionKey<Bls12> type.");
             let encrypted_balance = elgamal::Ciphertext::read(&mut &balance_query.encrypted_balance[..], &*PARAMS)
                 .expect("should be casted to Ciphertext type.");
@@ -417,6 +430,8 @@ fn subcommand_tx(mut term: term::Term, root_dir: PathBuf, matches: &ArgMatches) 
         },
         ("balance", Some(sub_matches)) => {
             println!("Getting encrypted balance from zerochain");
+            // let url = Url::Custom("ws://0.0.0.0:9944".to_string());
+            // let api = Api::init(url);
             let api = Api::init(Url::Local);
             let decryption_key_vec = hex::decode(sub_matches.value_of("decryption-key")
                 .expect("Decryption key parameter is required; qed"))
@@ -459,22 +474,13 @@ fn tx_commands_definition<'a, 'b>() -> App<'a, 'b> {
                 .required(false)
                 .default_value(ALICESEED)
             )
-            .arg(Arg::with_name("recipient-encryption-key")
+            .arg(Arg::with_name("recipient-address")
                 .short("to")
-                .long("recipient-encryption-key")
-                .help("Recipient's encryption key. (default: Bob)")
+                .long("recipient-address")
+                .help("Recipient's SS58-encoded address")
                 .takes_value(true)
                 .required(false)
-                .default_value(BOBACCOUNTID)
             )
-            // .arg(Arg::with_name("fee")
-            //     .short("f")
-            //     .long("fee")
-            //     .help("The fee for the confidential transfer.")
-            //     .takes_value(true)
-            //     .required(false)
-            //     .default_value(DEFAULT_FEE)
-            // )
             .arg(Arg::with_name("url")
                 .short("u")
                 .long("url")

@@ -9,7 +9,7 @@ services:
       - "9944:9944"
     volumes:
       - "zerochain-data-alice:/data"
-    command: zerochain --base-path /data/alice --chain=local --key //Alice --port 30333 --validator --name AlicesNode --node-key 0000000000000000000000000000000000000000000000000000000000000001
+    command: zerochain --base-path /data/alice --chain=local --key //Alice --port 30333 --validator --name AlicesNode --node-key 0000000000000000000000000000000000000000000000000000000000000001 --ws-external --rpc-external
     networks:
       testing_net:
         ipv4_address: 172.28.1.1
@@ -25,7 +25,7 @@ services:
       - "zerochain-data-bob:/data"
     links:
       - "node_alice:alice"
-    command: zerochain --base-path /data/bob --chain=local --key //Bob --port 30333 --validator --name BobsNode --bootnodes /ip4/172.28.1.1/tcp/30333/p2p/QmQZ8TjTqeDj3ciwr93EJ95hxfDsb9pEYDizUAbWpigtQN
+    command: zerochain --base-path /data/bob --chain=local --key //Bob --port 30333 --validator --name BobsNode --bootnodes /ip4/172.28.1.1/tcp/30333/p2p/QmQZ8TjTqeDj3ciwr93EJ95hxfDsb9pEYDizUAbWpigtQN --ws-external --rpc-external
     networks:
       testing_net:
         ipv4_address: 172.28.1.2
@@ -41,7 +41,7 @@ services:
       - "zerochain-data-charlie:/data"
     links:
       - "node_alice:alice"
-    command: zerochain --base-path /data/charlie --chain=local --key //Charlie --port 30333 --validator --name CharliesNode --bootnodes /ip4/172.28.1.1/tcp/30333/p2p/QmQZ8TjTqeDj3ciwr93EJ95hxfDsb9pEYDizUAbWpigtQN
+    command: zerochain --base-path /data/charlie --chain=local --key //Charlie --port 30333 --validator --name CharliesNode --bootnodes /ip4/172.28.1.1/tcp/30333/p2p/QmQZ8TjTqeDj3ciwr93EJ95hxfDsb9pEYDizUAbWpigtQN --ws-external --rpc-external
     networks:
       testing_net:
         ipv4_address: 172.28.1.3
