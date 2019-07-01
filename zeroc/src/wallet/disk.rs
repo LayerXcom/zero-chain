@@ -95,6 +95,10 @@ impl DirOperations for KeystoreDirectory{
         )
     }
 
+    fn load(&self, keyfile_name: &str) -> Result<KeyFile> {
+        Ok(self.get_keyfile(keyfile_name)?)
+    }
+
     fn remove(&self, keyfile: &mut KeyFile) -> Result<()> {
         let removed_file = self.get_all_keyfiles()?
             .into_iter()
@@ -125,9 +129,14 @@ impl KeystoreDirectory {
         }
     }
 
-    // fn get_keyfile(&self, path: PathBuf) -> Result<KeyFile> {
-    //     Ok(fs::read_dir(path: P))
-    // }
+    fn get_keyfile(&self, keyfile_name: &str) -> Result<KeyFile> {
+        let path = self.0.join(keyfile_name);
+        let file = fs::File::open(path)?;
+        let reader = BufReader::new(file);
+        let keyfile = serde_json::from_reader(reader)?;
+
+        Ok(keyfile)
+    }
 
     fn get_all_keyfiles(&self) -> Result<BTreeMap<PathBuf, KeyFile>> {
         Ok(fs::read_dir(&self.0)?

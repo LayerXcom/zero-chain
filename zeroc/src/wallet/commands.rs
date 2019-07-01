@@ -91,13 +91,15 @@ pub fn new_keyfile<R: Rng>(
     let password = term.passowrd("wallet password")?;
 
     // save a new keyfile
-    let incremented_index = get_default_index(&wallet_dir)? + 1;
+    let incremented_index = get_max_index(&wallet_dir)? + 1;
     let child_index = ChildIndex::from_index(incremented_index);
     let mut keyfile = get_new_keyfile(term, rng, &password[..], &wallet_dir, child_index)?;
     keystore_dir.insert(&mut keyfile, rng)?;
 
+    let filename = keyfile.file_name.ok_or(KeystoreError::InvalidKeyfile)?;
+
     // set index to new account
-    increment_indexfile(&wallet_dir)?;
+    increment_indexfile(&wallet_dir, filename.as_str())?;
 
     term.success(&format!(
         "a new account successfully created.\n
@@ -150,15 +152,25 @@ fn new_indexfile(wallet_dir: &WalletDirectory) -> Result<()> {
 }
 
 /// Increment max index in indexfile and set default the new one.
-fn increment_indexfile(wallet_dir: &WalletDirectory) -> Result<()> {
+fn increment_indexfile(wallet_dir: &WalletDirectory, filename: &str) -> Result<()> {
     let indexfile = wallet_dir.load_indexfile()?;
-    let mut incremented_indexfile = indexfile.next_index();
+    let mut incremented_indexfile = indexfile.next_index(filename);
     wallet_dir.update_indexfile(&mut incremented_indexfile)
+}
+
+pub fn get_max_index(wallet_dir: &WalletDirectory) -> Result<u32> {
+    let indexfile = wallet_dir.load_indexfile()?;
+    Ok(indexfile.max_index)
 }
 
 pub fn get_default_index(wallet_dir: &WalletDirectory) -> Result<u32> {
     let indexfile = wallet_dir.load_indexfile()?;
-    Ok(indexfile.max_index)
+    Ok(indexfile.default_index)
+}
+
+pub fn get_default_keyfile_name(wallet_dir: &WalletDirectory) -> Result<String> {
+    let indexfile = wallet_dir.load_indexfile()?;
+    Ok(indexfile.default_keyfile_name)
 }
 
 pub fn wallet_keystore_dirs(root_dir: &PathBuf) -> Result<(WalletDirectory, KeystoreDirectory)> {

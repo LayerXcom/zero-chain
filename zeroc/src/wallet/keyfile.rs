@@ -6,6 +6,7 @@ use crypto::Keccak256;
 use smallvec::SmallVec;
 use std::num::NonZeroU32;
 use std::convert::{TryInto, TryFrom};
+use std::collections::HashMap;
 use serde::{Deserialize, Serialize};
 use super::error::{KeystoreError, Result};
 use crate::derive::{ExtendedSpendingKey, Derivation, ChildIndex};
@@ -186,21 +187,33 @@ pub struct IndexFile {
 
     /// Maximum account index
     pub max_index: u32,
+
+    // /// Mapping index to keyfile name
+    // pub map_keyfile_name: HashMap<u32, String>,
+    pub default_keyfile_name: String,
 }
 
 impl IndexFile {
-    pub fn set_default_index(&self, new_default_index: u32) -> Self {
+    pub fn set_default_index(
+        &self,
+        new_default_index: u32,
+        new_default_keyfile_name: &str
+    ) -> Self
+    {
         IndexFile {
             default_index: new_default_index,
             max_index: self.max_index,
+            default_keyfile_name: new_default_keyfile_name.to_string(),
         }
     }
 
-    pub fn next_index(&self) -> Self {
+    pub fn next_index(&self, keyfile_name: &str) -> Self {
         let next_index = self.max_index + 1;
+
         IndexFile {
             default_index: next_index,
             max_index: next_index,
+            default_keyfile_name: keyfile_name.to_string(),
         }
     }
 }

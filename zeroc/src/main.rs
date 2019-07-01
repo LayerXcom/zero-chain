@@ -40,6 +40,7 @@ use bip39::{Mnemonic, Language, MnemonicType};
 mod utils;
 mod config;
 mod wallet;
+mod transaction;
 pub mod derive;
 pub mod term;
 pub mod ss58;
@@ -47,6 +48,7 @@ use self::ss58::EncryptionKeyBytes;
 use utils::*;
 use config::*;
 use wallet::commands::*;
+use transaction::commands::*;
 
 //
 // Global constants
@@ -296,48 +298,41 @@ fn tx_arg_recipient_address_match<'a>(matches: &ArgMatches<'a>) -> [u8; 32] {
     recipient_enc_key.0
 }
 
+fn tx_arg_amount_match<'a>(matches: &ArgMatches<'a>) -> u32 {
+    let amount_str = matches.value_of("amount")
+        .expect("Amount parameter is required; qed");
+
+    let amount: u32 = amount_str.parse()
+        .expect("should be parsed to u32 number; qed");
+
+    amount
+}
+
+fn tx_arg_url_match<'a>(matches: &ArgMatches<'a>) -> Url {
+    match matches.value_of("url") {
+        Some(u) => Url::Custom(u.to_string()),
+        None => Url::Local,
+    }
+}
+
 fn subcommand_tx(mut term: term::Term, root_dir: PathBuf, matches: &ArgMatches) {
     let res = match matches.subcommand() {
         ("send", Some(sub_matches)) => {
             let seed = tx_arg_seed_match(&sub_matches);
-
             let recipient_enc_key = tx_arg_recipient_address_match(&sub_matches);
-
-            let amount_str = sub_matches.value_of("amount")
-                .expect("Amount parameter is required; qed");
-            let amount: u32 = amount_str.parse()
-                .expect("should be parsed to u32 number; qed");
+            let amount = tx_arg_amount_match(&sub_matches);
+            let url = tx_arg_url_match(&sub_matches);
 
             println!("Preparing paramters...");
 
-            let url = match sub_matches.value_of("url") {
-                Some(u) => Url::Custom(u.to_string()),
-                None => Url::Local,
-            };
             let api = Api::init(url);
 
             let rng = &mut OsRng::new().expect("should be able to construct RNG");
             // let alpha = fs::Fs::rand(rng);
             let alpha = fs::Fs::zero(); // TODO
 
-            let pk_path = Path::new(PROVING_KEY_PATH);
-            let vk_path = Path::new(VERIFICATION_KEY_PATH);
-
-            let pk_file = File::open(&pk_path)
-                .map_err(|why| format!("couldn't open {}: {}", pk_path.display(), why)).unwrap();
-            let vk_file = File::open(&vk_path)
-                .map_err(|why| format!("couldn't open {}: {}", vk_path.display(), why)).unwrap();
-
-            let mut reader_pk = BufReader::new(pk_file);
-            let mut reader_vk = BufReader::new(vk_file);
-
-            let mut buf_pk = vec![];
-            reader_pk.read_to_end(&mut buf_pk)
-                .map_err(|why| format!("couldn't read {}: {}", pk_path.display(), why)).unwrap();
-
-            let mut buf_vk = vec![];
-            reader_vk.read_to_end(&mut buf_vk)
-                .map_err(|why| format!("couldn't read {}: {}", vk_path.display(), why)).unwrap();
+            let buf_pk = read_zk_params_with_path(PROVING_KEY_PATH);
+            let buf_vk = read_zk_params_with_path(VERIFICATION_KEY_PATH);
 
             let proving_key = Parameters::<Bls12>::read(&mut &buf_pk[..], true)
                 .expect("should be casted to Parameters<Bls12> type.");

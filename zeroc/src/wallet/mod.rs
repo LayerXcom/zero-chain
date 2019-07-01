@@ -21,8 +21,8 @@ pub trait DirOperations {
     /// Insert a new keyfile to this keystore directory.
     fn insert<R: Rng>(&self, keyfile: &mut KeyFile, rng: &mut R) -> Result<()>;
 
-    // /// Load a keyfile
-    // fn load(&self, path: PathBuf) -> Result<KeyFile>;
+    /// Load a keyfile
+    fn load(&self, keyfile_name: &str) -> Result<KeyFile>;
 
     /// Load all keyfiles in this keystore directory.
     fn load_all(&self) -> Result<Vec<KeyFile>>;
