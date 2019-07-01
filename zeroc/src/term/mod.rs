@@ -89,7 +89,7 @@ impl Term {
     {
         let mut error: &Error = &e;
         let formated = format!("{}", e);
-        writeln!(&mut self.term, "{}", self.style.error.apply_to(formated));
+        writeln!(&mut self.term, "{}", self.style.error.apply_to(formated)).unwrap();
 
         while let Some(err) = error.source() {
             error = err;
@@ -98,7 +98,7 @@ impl Term {
                 &mut self.term,
                 "  |-> {}",
                 self.style.warning.apply_to(formated)
-            );
+            ).unwrap();
         }
 
         ::std::process::exit(1)

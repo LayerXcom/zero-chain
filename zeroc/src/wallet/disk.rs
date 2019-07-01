@@ -4,7 +4,6 @@ use super::DirOperations;
 use super::keyfile::{KeyFile, IndexFile};
 use super::error::{Result, KeystoreError};
 use super::config::*;
-use crate::ss58;
 use std::path::{PathBuf, Path};
 use std::fs;
 use std::io::{Write, BufReader};

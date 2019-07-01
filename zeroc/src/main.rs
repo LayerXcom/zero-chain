@@ -10,7 +10,6 @@ extern crate matches;
 
 use std::fs::File;
 use std::path::{Path, PathBuf};
-use std::string::String;
 use std::io::{BufWriter, Write, BufReader, Read};
 use clap::{Arg, App, SubCommand, AppSettings, ArgMatches};
 use rand::{OsRng, Rng};
@@ -21,20 +20,13 @@ use proofs::{
     setup,
     PARAMS,
     };
-use primitives::{hexdisplay::{HexDisplay, AsBytesRef}, blake2_256, crypto::{Ss58Codec, Derive, DeriveJunction}};
+use primitives::{hexdisplay::{HexDisplay, AsBytesRef}, crypto::Ss58Codec};
 use pairing::{bls12_381::Bls12, Field, PrimeField, PrimeFieldRepr};
-use zpairing::{bls12_381::Bls12 as zBls12, PrimeField as zPrimeField, PrimeFieldRepr as zPrimeFieldRepr};
-use scrypto::jubjub::{JubjubBls12, fs, FixedGenerators};
-use zjubjub::{
-    curve::{JubjubBls12 as zJubjubBls12, fs::Fs as zFs, FixedGenerators as zFixedGenerators},
-    redjubjub::PrivateKey as zPrivateKey
-    };
+use scrypto::jubjub::fs;
+
 use bellman::groth16::{Parameters, PreparedVerifyingKey};
 use polkadot_rs::{Api, Url, hexstr_to_u64};
-use zprimitives::{PARAMS as ZPARAMS, Proof, Ciphertext as zCiphertext, PkdAddress, SigVerificationKey, RedjubjubSignature};
-use runtime_primitives::generic::Era;
-use parity_codec::{Compact, Encode};
-use zerochain_runtime::{UncheckedExtrinsic, Call, ConfTransferCall};
+use zprimitives::PARAMS as ZPARAMS;
 use bip39::{Mnemonic, Language, MnemonicType};
 
 mod utils;
@@ -60,7 +52,7 @@ const DEFAULT_AMOUNT: &str = "10";
 const DEFAULT_BALANCE: &str = "100";
 const ALICESEED: &str = "416c696365202020202020202020202020202020202020202020202020202020";
 const BOBSEED: &str = "426f622020202020202020202020202020202020202020202020202020202020";
-const BOBACCOUNTID: &str = "45e66da531088b55dcb3b273ca825454d79d2d1d5c4fa2ba4a12c1fa1ccd6389";
+// const BOBACCOUNTID: &str = "45e66da531088b55dcb3b273ca825454d79d2d1d5c4fa2ba4a12c1fa1ccd6389";
 const ALICEDECRYPTIONKEY: &str = "b0451b0bfab2830a75216779e010e0bfd2e6d0b4e4b1270dfcdfd0d538509e02";
 const DEFAULT_ENCRYPTED_BALANCE: &str = "6f4962da776a391c3b03f3e14e8156d2545f39a3ebbed675ea28859252cb006fac776c796563fcd44cc49cfaea8bb796952c266e47779d94574c10ad01754b11";
 
@@ -200,6 +192,9 @@ fn subcommand_wallet<R: Rng>(mut term: term::Term, root_dir: PathBuf, matches: &
             new_keyfile(&mut term, root_dir, rng)
                 .expect("Invalid operations of creating new account.");
         },
+        ("change-account", Some(_)) => {
+
+        },
         ("wallet-test", Some(_)) => {
             println!("Initialize key components...");
             println!("Accounts of alice and bob are fixed");
@@ -264,6 +259,16 @@ fn wallet_commands_definition<'a, 'b>() -> App<'a, 'b> {
         )
         .subcommand(SubCommand::with_name("add-account")
             .about("Add a new account")
+        )
+        .subcommand(SubCommand::with_name("change-account")
+            .about("Change default account")
+            .arg(Arg::with_name("account_name")
+                .short("n")
+                .long("name")
+                .help("A new account name that you have in your keystore.")
+                .takes_value(true)
+                .required(true)
+            )
         )
         .subcommand(SubCommand::with_name("inspect")
             .about("Gets a encryption key and a SS58 address from the provided Secret URI")

@@ -3,7 +3,7 @@
 
 use blake2_rfc::blake2b::Blake2b;
 use proofs::keys::{ProofGenerationKey, SpendingKey, prf_expand_vec, prf_expand};
-use scrypto::jubjub::{JubjubEngine, fs::Fs, ToUniform};
+use scrypto::jubjub::{fs::Fs, ToUniform};
 use pairing::{bls12_381::Bls12, Field};
 use byteorder::{ByteOrder, LittleEndian, ReadBytesExt, WriteBytesExt};
 use proofs::PARAMS;

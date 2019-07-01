@@ -1,11 +1,11 @@
 use crate::{ZPARAMS, PARAMS};
 use crate::ss58::EncryptionKeyBytes;
 use keys;
-use primitives::{hexdisplay::{HexDisplay, AsBytesRef}, crypto::{Ss58Codec, Derive, DeriveJunction}};
+use primitives::crypto::Ss58Codec;
 use zpairing::{bls12_381::Bls12 as zBls12, PrimeField as zPrimeField, PrimeFieldRepr as zPrimeFieldRepr, io};
 use pairing::bls12_381::Bls12;
 use zjubjub::{
-    curve::{JubjubBls12 as zJubjubBls12, fs::Fs as zFs, FixedGenerators as zFixedGenerators}
+    curve::{fs::Fs as zFs, FixedGenerators as zFixedGenerators}
 };
 use proofs::keys::EncryptionKey;
 use keys::EncryptionKey as zEncryptionKey;
@@ -15,7 +15,7 @@ use polkadot_rs::{Api, hexstr_to_vec};
 use parity_codec::Encode;
 use rand::{OsRng, Rng};
 use hex;
-use bip39::{Mnemonic, Language, MnemonicType};
+use bip39::{Mnemonic, Language};
 use substrate_bip39::mini_secret_from_entropy;
 
 pub struct PrintKeys {
@@ -135,10 +135,10 @@ impl BalanceQuery {
             Some(account_id.encode())
         ).unwrap();
 
-        let mut encrypted_balance;
-        let mut decrypted_balance;
-        let mut pending_transfer;
-        let mut p_decrypted_balance;
+        let encrypted_balance;
+        let decrypted_balance;
+        let pending_transfer;
+        let p_decrypted_balance;
 
         // TODO: redundant code
         if encrypted_balance_str.as_str() != "0x00" {

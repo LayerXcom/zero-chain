@@ -1,18 +1,15 @@
 //! Keyfile operations such as encryption/decryotion, sign.
 
-use rand::{OsRng, Rng};
+use rand::Rng;
 use parity_crypto as crypto;
 use crypto::Keccak256;
 use smallvec::SmallVec;
 use proofs::keys::SpendingKey;
 use pairing::bls12_381::Bls12;
 use std::num::NonZeroU32;
-use std::convert::{TryInto, TryFrom};
-use std::collections::HashMap;
-use serde::{Deserialize, Serialize};
+use std::convert::TryInto;
 use super::error::{KeystoreError, Result};
 use crate::derive::{ExtendedSpendingKey, Derivation, ChildIndex};
-use crate::ss58;
 
 /// Serializable and deserializable bytes
 #[derive(Deserialize, Serialize, PartialEq, Eq, Debug, Clone)]

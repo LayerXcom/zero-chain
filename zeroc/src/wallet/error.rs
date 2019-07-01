@@ -1,4 +1,4 @@
-use std::{error::Error, fmt, io, path::PathBuf};
+use std::{error::Error, fmt, io};
 use parity_crypto as crypto;
 use serde_json;
 use std::convert;

@@ -31,7 +31,7 @@ impl Derive for EncryptionKeyBytes {
     /// Derive a child key from a series of given junctions.
 	///
 	/// `None` if there are any hard junctions in there.
-    fn derive<Iter: Iterator<Item=DeriveJunction>>(&self, path: Iter) -> Option<EncryptionKeyBytes> {
+    fn derive<Iter: Iterator<Item=DeriveJunction>>(&self, _path: Iter) -> Option<EncryptionKeyBytes> {
         unimplemented!();
     }
 }
