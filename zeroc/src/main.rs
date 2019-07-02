@@ -192,8 +192,12 @@ fn subcommand_wallet<R: Rng>(mut term: term::Term, root_dir: PathBuf, matches: &
             new_keyfile(&mut term, root_dir, rng)
                 .expect("Invalid operations of creating new account.");
         },
-        ("change-account", Some(_)) => {
+        ("change-account", Some(sub_matches)) => {
+            let account_name = sub_matches.value_of("account-name")
+                .expect("Account name is required; qed");
 
+            change_default_account(root_dir, account_name)
+                .expect("Change default account failed.");
         },
         ("recovery", Some(_)) => {
             recover(&mut term, root_dir, rng)
@@ -251,10 +255,6 @@ fn subcommand_wallet<R: Rng>(mut term: term::Term, root_dir: PathBuf, matches: &
                 hex::encode(&print_keys_charlie.encryption_key[..]),
             );
         },
-        ("inspect", Some(sub_matches)) => {
-            let uri = sub_matches.value_of("uri")
-                .expect("URI parameter is required; qed");
-        },
         _ => {
             term.error(matches.usage()).unwrap();
             ::std::process::exit(1)
@@ -281,7 +281,7 @@ fn wallet_commands_definition<'a, 'b>() -> App<'a, 'b> {
         )
         .subcommand(SubCommand::with_name("change-account")
             .about("Change default account")
-            .arg(Arg::with_name("account_name")
+            .arg(Arg::with_name("account-name")
                 .short("n")
                 .long("name")
                 .help("A new account name that you have in your keystore.")
@@ -294,15 +294,6 @@ fn wallet_commands_definition<'a, 'b>() -> App<'a, 'b> {
         )
         .subcommand(SubCommand::with_name("balance")
             .about("Get current balance stored in ConfTransfer module")
-        )
-        .subcommand(SubCommand::with_name("inspect")
-            .about("Gets a encryption key and a SS58 address from the provided Secret URI")
-            .arg(Arg::with_name("uri")
-                .short("u")
-                .long("uri")
-                .help("A Key URI to be inspected like a secret seed, SS58 or public URI.")
-                .required(true)
-            )
         )
 }
 

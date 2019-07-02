@@ -8,6 +8,7 @@ use proofs::{SpendingKey, ProofGenerationKey, DecryptionKey, PARAMS};
 use pairing::bls12_381::Bls12;
 use std::num::NonZeroU32;
 use std::convert::TryInto;
+use std::collections::HashMap;
 use super::error::{KeystoreError, Result};
 use crate::derive::{ExtendedSpendingKey, Derivation, ChildIndex};
 
@@ -192,7 +193,7 @@ impl KeyCiphertext {
     }
 }
 
-#[derive(Debug, PartialEq, Eq, Serialize, Deserialize, Default)]
+#[derive(Debug, PartialEq, Eq, Serialize, Deserialize, Default, Clone)]
 pub struct IndexFile {
     /// Default account index
     pub default_index: u32,
@@ -202,29 +203,38 @@ pub struct IndexFile {
 
     /// Default keyfile name
     pub default_keyfile_name: String,
+
+    /// Mapping account_name to keyfile_name
+    pub map_account_keyfile: HashMap<String, (String, u32)>,
 }
 
 impl IndexFile {
     pub fn set_default_index(
-        &self,
-        new_default_index: u32,
-        new_default_keyfile_name: &str
+        mut self,
+        new_index: u32,
+        new_keyfile_name: &str,
+        new_account_name: &str,
     ) -> Self
     {
+        self.map_account_keyfile.extend(Some((new_account_name.to_string(), (new_keyfile_name.to_string(), new_index))));
+
         IndexFile {
-            default_index: new_default_index,
+            default_index: new_index,
             max_index: self.max_index,
-            default_keyfile_name: new_default_keyfile_name.to_string(),
+            default_keyfile_name: new_keyfile_name.to_string(),
+            map_account_keyfile: self.map_account_keyfile,
         }
     }
 
-    pub fn next_index(&self, keyfile_name: &str) -> Self {
+    pub fn next_index(mut self, keyfile_name: &str, account_name: &str) -> Self {
         let next_index = self.max_index + 1;
+        self.map_account_keyfile.extend(Some((account_name.to_string(), (keyfile_name.to_string(), next_index))));
 
         IndexFile {
             default_index: next_index,
             max_index: next_index,
             default_keyfile_name: keyfile_name.to_string(),
+            map_account_keyfile: self.map_account_keyfile,
         }
     }
 }

@@ -1,4 +1,5 @@
 use std::path::PathBuf;
+use std::collections::HashMap;
 use crate::term::Term;
 use crate::derive::ChildIndex;
 use crate::utils::mnemonics::*;
@@ -46,7 +47,8 @@ pub fn new_wallet<R: Rng>(
     keystore_dir.insert(&mut keyfile, rng)?;
 
     // 8. store new indexfile
-    new_indexfile(&wallet_dir)?;
+    let file_name = keyfile.file_name.expect("Filename should be set.");
+    new_indexfile(&wallet_dir, &file_name, &keyfile.account_name)?;
 
     term.success(&format!(
         "wallet and a new account successfully created.\n
@@ -104,7 +106,7 @@ pub fn new_keyfile<R: Rng>(
     let filename = keyfile.file_name.ok_or(KeystoreError::InvalidKeyfile)?;
 
     // set index to new account
-    increment_indexfile(&wallet_dir, filename.as_str())?;
+    increment_indexfile(&wallet_dir, filename.as_str(), keyfile.account_name.as_str())?;
 
     term.success(&format!(
         "a new account successfully created.\n
@@ -147,7 +149,15 @@ pub fn recover<R: Rng>(
     keystore_dir.insert(&mut keyfile, rng)?;
 
     // 8. store new indexfile
-    new_indexfile(&wallet_dir)?;
+    let file_name = keyfile.file_name.expect("Filename should be set.");
+    new_indexfile(&wallet_dir, &file_name, &keyfile.account_name)?;
+
+    term.success(&format!(
+        "Re-generated your wallet from the provided mnemonic successfully.\n
+        {}: {}\n\n",
+        keyfile.account_name,
+        keyfile.ss58_address
+    ))?;
 
     Ok(())
 }
@@ -156,7 +166,6 @@ pub fn load_dec_key(
     term: &mut Term,
     root_dir: PathBuf,
 ) -> Result<DecryptionKey<Bls12>> {
-    // 1. configure wallet directory
     let (wallet_dir, keystore_dir) = wallet_keystore_dirs(&root_dir)?;
     let default_keyfile_name = get_default_keyfile_name(&wallet_dir)?;
     let keyfile = keystore_dir.load(default_keyfile_name.as_str())?;
@@ -170,12 +179,24 @@ pub fn load_dec_key(
     Ok(dec_key)
 }
 
-// pub fn change_default_index(
-//     term: &mut Term,
-//     root_dir: PathBuf
-// ) -> Result<()> {
+pub fn change_default_account(
+    root_dir: PathBuf,
+    account_name: &str,
+) -> Result<()> {
+    let (wallet_dir, _) = wallet_keystore_dirs(&root_dir)?;
 
-// }
+    let index_file = wallet_dir.load_indexfile()?;
+    let index_file_u = index_file.clone();
+    let (keyfile_name, index) = index_file
+        .map_account_keyfile
+        .get(account_name)
+        .ok_or(KeystoreError::InvalidKeyfile)?;
+
+    let mut updated_index_file = index_file_u.set_default_index(*index, keyfile_name.as_str(), account_name);
+    wallet_dir.update_indexfile(&mut updated_index_file)?;
+
+    Ok(())
+}
 
 fn get_new_keyfile<R: Rng>(
     term: &mut Term,
@@ -205,15 +226,23 @@ fn get_new_keyfile<R: Rng>(
 }
 
 /// Create a new index file in wallet directory.
-fn new_indexfile(wallet_dir: &WalletDirectory) -> Result<()> {
-    let mut indexfile: IndexFile = Default::default();
+fn new_indexfile(wallet_dir: &WalletDirectory, keyfile_name: &str, account_name: &str) -> Result<()> {
+    let mut map_account_keyfile = HashMap::new();
+    map_account_keyfile.insert(account_name.to_string(), (keyfile_name.to_string(), 0));
+
+    let mut indexfile = IndexFile {
+        default_index: 0,
+        max_index: 0,
+        default_keyfile_name: keyfile_name.to_string(),
+        map_account_keyfile,
+    };
     wallet_dir.insert_indexfile(&mut indexfile)
 }
 
 /// Increment max index in indexfile and set default the new one.
-fn increment_indexfile(wallet_dir: &WalletDirectory, filename: &str) -> Result<()> {
+fn increment_indexfile(wallet_dir: &WalletDirectory, filename: &str, account_name: &str) -> Result<()> {
     let indexfile = wallet_dir.load_indexfile()?;
-    let mut incremented_indexfile = indexfile.next_index(filename);
+    let mut incremented_indexfile = indexfile.next_index(filename, account_name);
     wallet_dir.update_indexfile(&mut incremented_indexfile)
 }
 
