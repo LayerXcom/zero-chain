@@ -5,9 +5,7 @@ use keys;
 use primitives::crypto::Ss58Codec;
 use zpairing::{bls12_381::Bls12 as zBls12, PrimeField as zPrimeField, PrimeFieldRepr as zPrimeFieldRepr, io};
 use pairing::bls12_381::Bls12;
-use zjubjub::{
-    curve::{fs::Fs as zFs, FixedGenerators as zFixedGenerators}
-};
+use zjubjub::curve::FixedGenerators as zFixedGenerators;
 use proofs::{EncryptionKey, DecryptionKey};
 use keys::EncryptionKey as zEncryptionKey;
 use zprimitives::PkdAddress;
@@ -136,9 +134,8 @@ impl BalanceQuery {
             Some(account_id.encode())
         ).unwrap();
 
-        let encrypted_balance;
+
         let decrypted_balance;
-        let pending_transfer;
         let p_decrypted_balance;
         let mut ciphertext = None;
         let mut p_ciphertext = None;
@@ -150,11 +147,10 @@ impl BalanceQuery {
                 encrypted_balance_str.remove(2);
             }
 
-            encrypted_balance = hexstr_to_vec(encrypted_balance_str.clone());
+            let encrypted_balance = hexstr_to_vec(encrypted_balance_str.clone());
             ciphertext = Some(zelgamal::Ciphertext::<zBls12>::read(&mut &encrypted_balance[..], &ZPARAMS).expect("Invalid data"));
             decrypted_balance = ciphertext.clone().unwrap().decrypt(&no_std(&dec_key), p_g, &ZPARAMS).unwrap();
         } else {
-            encrypted_balance = vec![0u8];
             decrypted_balance = 0;
         }
 
@@ -164,11 +160,10 @@ impl BalanceQuery {
                 pending_transfer_str.remove(2);
             }
 
-            pending_transfer = hexstr_to_vec(pending_transfer_str.clone());
+            let pending_transfer = hexstr_to_vec(pending_transfer_str.clone());
             p_ciphertext = Some(zelgamal::Ciphertext::<zBls12>::read(&mut &pending_transfer[..], &ZPARAMS).expect("Invalid data"));
             p_decrypted_balance = p_ciphertext.clone().unwrap().decrypt(&no_std(&dec_key), p_g, &ZPARAMS).unwrap();
         } else {
-            pending_transfer = vec![0u8];
             p_decrypted_balance = 0;
         }
 

@@ -87,7 +87,7 @@ impl Term {
     where
         E: Error,
     {
-        let mut error: &Error = &e;
+        let mut error: &dyn Error = &e;
         let formated = format!("{}", e);
         writeln!(&mut self.term, "{}", self.style.error.apply_to(formated)).unwrap();
 

@@ -29,9 +29,9 @@ pub trait Derivation: Sized {
     /// If an index `i` >= 2^31, the child is a hardended key. If not, the child is a non-hardened key.
     fn derive_child(&self, i: ChildIndex) -> io::Result<Self>;
 
-    fn read<R: Read>(mut reader: R) -> io::Result<Self>;
+    fn read<R: Read>(reader: R) -> io::Result<Self>;
 
-    fn write<W: Write>(&self, mut writer: W) -> io::Result<()>;
+    fn write<W: Write>(&self, writer: W) -> io::Result<()>;
 }
 
 /// Extended spending key for HDKD

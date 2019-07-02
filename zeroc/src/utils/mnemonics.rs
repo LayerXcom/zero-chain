@@ -1,6 +1,6 @@
 use dialoguer::{Confirmation, Input};
 use console::style;
-use bip39::{Mnemonic, Language, MnemonicType, Seed};
+use bip39::{Mnemonic, Language, MnemonicType};
 
 pub fn input_mnemonic_phrase(mnemonic_type: MnemonicType, lang: Language) -> Mnemonic {
 

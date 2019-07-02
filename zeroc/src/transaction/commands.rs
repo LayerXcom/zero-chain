@@ -53,7 +53,7 @@ pub fn send_tx_with_arg<R: Rng>(
         .expect("should be fetched TransactionBaseFee from ConfTransfer module of Zerochain.");
     let fee = hexstr_to_u64(fee_str) as u32;
 
-    let spending_key = spending_key_from_keystore(term, root_dir, &password[..])
+    let spending_key = spending_key_from_keystore(root_dir, &password[..])
         .expect("should load from keystore.");
 
     let dec_key = ProofGenerationKey::<Bls12>::from_spending_key(&spending_key, &PARAMS)
@@ -93,7 +93,6 @@ pub fn send_tx_with_arg<R: Rng>(
 }
 
 pub fn spending_key_from_keystore(
-    term: &mut Term,
     root_dir: PathBuf,
     password: &[u8],
 ) -> Result<SpendingKey<Bls12>>
@@ -154,6 +153,7 @@ pub fn submit_tx<R: Rng>(tx: &Transaction, api: &Api, rng: &mut R) {
     let index = api.get_nonce(&sig_vk).expect("Nonce must be got.");
     let checkpoint = api.get_genesis_blockhash()
         .expect("should be fetched the genesis block hash from zerochain node.");
+
     let raw_payload = (Compact(index), calls, era, checkpoint);
 
     let sig = raw_payload.using_encoded(|payload| {

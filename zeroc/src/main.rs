@@ -21,7 +21,7 @@ use proofs::{
     PARAMS,
     };
 use primitives::{hexdisplay::{HexDisplay, AsBytesRef}, crypto::Ss58Codec};
-use pairing::{bls12_381::Bls12, Field, PrimeField, PrimeFieldRepr};
+use pairing::{bls12_381::Bls12, Field};
 use scrypto::jubjub::fs;
 
 use bellman::groth16::{Parameters, PreparedVerifyingKey};
@@ -36,24 +36,11 @@ pub mod derive;
 pub mod term;
 pub mod ss58;
 use self::ss58::EncryptionKeyBytes;
-use utils::*;
-use config::*;
-use wallet::commands::*;
-use transaction::commands::*;
+use self::utils::*;
+use self::config::*;
+use self::wallet::commands::*;
+use self::transaction::*;
 
-//
-// Global constants
-//
-
-const VERIFICATION_KEY_PATH: &str = "zeroc/verification.params";
-const PROVING_KEY_PATH: &str = "zeroc/proving.params";
-const DEFAULT_AMOUNT: &str = "10";
-const DEFAULT_BALANCE: &str = "100";
-const ALICESEED: &str = "416c696365202020202020202020202020202020202020202020202020202020";
-const BOBSEED: &str = "426f622020202020202020202020202020202020202020202020202020202020";
-const BOBACCOUNTID: &str = "45e66da531088b55dcb3b273ca825454d79d2d1d5c4fa2ba4a12c1fa1ccd6389";
-const ALICEDECRYPTIONKEY: &str = "b0451b0bfab2830a75216779e010e0bfd2e6d0b4e4b1270dfcdfd0d538509e02";
-const DEFAULT_ENCRYPTED_BALANCE: &str = "6f4962da776a391c3b03f3e14e8156d2545f39a3ebbed675ea28859252cb006fac776c796563fcd44cc49cfaea8bb796952c266e47779d94574c10ad01754b11";
 
 fn main() {
     let default_root_dir = get_default_root_dir();
@@ -74,16 +61,14 @@ fn main() {
         .get_matches();
 
     let mut term = term::Term::new(config_terminal(&matches));
-
     let root_dir = global_rootdir_match(&default_root_dir, &matches);
-
     let rng = &mut OsRng::new().expect("should be able to construct RNG");
 
     match matches.subcommand() {
-        (SNARK_COMMAND, Some(matches)) => subcommand_snark(term, root_dir, matches),
+        (SNARK_COMMAND, Some(matches)) => subcommand_snark(term, matches),
         (WALLET_COMMAND, Some(matches)) => subcommand_wallet(term, root_dir, matches, rng),
         (TX_COMMAND, Some(matches)) => subcommand_tx(term, root_dir, matches, rng),
-        (DEBUG_COMMAND, Some(matches)) => subcommand_debug(term, root_dir, matches, rng),
+        (DEBUG_COMMAND, Some(matches)) => subcommand_debug(term, matches, rng),
         _ => {
             term.error(matches.usage()).unwrap();
             ::std::process::exit(1);
@@ -97,8 +82,8 @@ fn main() {
 
 const SNARK_COMMAND: &'static str = "snark";
 
-fn subcommand_snark(mut term: term::Term, root_dir: PathBuf, matches: &ArgMatches) {
-    let res = match matches.subcommand() {
+fn subcommand_snark(mut term: term::Term, matches: &ArgMatches) {
+    match matches.subcommand() {
         ("setup", Some(matches)) => {
             println!("Performing setup...");
 
@@ -139,8 +124,6 @@ fn subcommand_snark(mut term: term::Term, root_dir: PathBuf, matches: &ArgMatche
             ::std::process::exit(1)
         }
     };
-
-    // res.unwrap_or_else(|e| term.fail_with(e))
 }
 
 fn snark_commands_definition<'a, 'b>() -> App<'a, 'b> {
@@ -176,7 +159,7 @@ fn snark_commands_definition<'a, 'b>() -> App<'a, 'b> {
 const WALLET_COMMAND: &'static str = "wallet";
 
 fn subcommand_wallet<R: Rng>(mut term: term::Term, root_dir: PathBuf, matches: &ArgMatches, rng: &mut R) {
-    let res = match matches.subcommand() {
+    match matches.subcommand() {
         ("init", Some(_)) => {
             // Create new wallet
             new_wallet(&mut term, root_dir, rng)
@@ -259,8 +242,6 @@ fn subcommand_wallet<R: Rng>(mut term: term::Term, root_dir: PathBuf, matches: &
             ::std::process::exit(1)
         }
     };
-
-    // res.unwrap_or_else(|e| term.fail_with(e))
 }
 
 fn wallet_commands_definition<'a, 'b>() -> App<'a, 'b> {
@@ -345,7 +326,6 @@ fn subcommand_tx<R: Rng>(mut term: term::Term, root_dir: PathBuf, matches: &ArgM
     };
 
     res.unwrap_or_else(|e| term.fail_with(e))
-
 }
 
 fn tx_commands_definition<'a, 'b>() -> App<'a, 'b> {
@@ -389,8 +369,8 @@ fn debug_arg_seed_match<'a>(matches: &ArgMatches<'a>) -> Vec<u8> {
         .expect("should be decoded to hex.")
 }
 
-fn subcommand_debug<R: Rng>(mut term: term::Term, root_dir: PathBuf, matches: &ArgMatches, rng: &mut R) {
-    let res = match matches.subcommand() {
+fn subcommand_debug<R: Rng>(mut term: term::Term, matches: &ArgMatches, rng: &mut R) {
+    match matches.subcommand() {
         ("key-init", Some(_)) => {
             let lang = Language::English;
             // create a new randomly generated mnemonic phrase
