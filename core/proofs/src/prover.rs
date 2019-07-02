@@ -240,7 +240,7 @@ mod tests {
             alpha,
             &proving_key,
             &prepared_vk,
-            proof_generation_key,
+            &proof_generation_key,
             ek_recipient,
             ciphertext_balance,
             &mut rng,

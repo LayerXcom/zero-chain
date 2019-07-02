@@ -26,7 +26,6 @@ use scrypto::jubjub::fs;
 
 use bellman::groth16::{Parameters, PreparedVerifyingKey};
 use polkadot_rs::{Api, Url, hexstr_to_u64};
-use zprimitives::PARAMS as ZPARAMS;
 use bip39::{Mnemonic, Language, MnemonicType};
 
 mod utils;
@@ -203,7 +202,7 @@ fn subcommand_wallet<R: Rng>(mut term: term::Term, root_dir: PathBuf, matches: &
             recover(&mut term, root_dir, rng)
                 .expect("Invalid mnemonic to recover keystore.")
         },
-        ("balance", Some(sub_matches)) => {
+        ("balance", Some(_)) => {
             println!("Getting encrypted balance from zerochain");
             // let url = Url::Custom("ws://0.0.0.0:9944".to_string());
             // let api = Api::init(url);
@@ -337,63 +336,7 @@ fn subcommand_tx<R: Rng>(mut term: term::Term, root_dir: PathBuf, matches: &ArgM
             let amount = tx_arg_amount_match(&sub_matches);
             let url = tx_arg_url_match(&sub_matches);
 
-            // user can enter password first.
-            let password = prompt_password(&mut term).expect("Invalid password");
-
-            println!("Preparing paramters...");
-
-            let api = Api::init(url);
-            // let alpha = fs::Fs::rand(rng);
-            let alpha = fs::Fs::zero(); // TODO
-
-            let buf_pk = read_zk_params_with_path(PROVING_KEY_PATH);
-            let buf_vk = read_zk_params_with_path(VERIFICATION_KEY_PATH);
-
-            let proving_key = Parameters::<Bls12>::read(&mut &buf_pk[..], true)
-                .expect("should be casted to Parameters<Bls12> type.");
-            let prepared_vk = PreparedVerifyingKey::<Bls12>::read(&mut &buf_vk[..])
-                .expect("should ne casted to PreparedVerifyingKey<Bls12> type");
-
-            let fee_str = api.get_storage("ConfTransfer", "TransactionBaseFee", None)
-                .expect("should be fetched TransactionBaseFee from ConfTransfer module of Zerochain.");
-            let fee = hexstr_to_u64(fee_str) as u32;
-
-            let spending_key = spending_key_from_keystore(&mut term, root_dir, &password[..])
-                .expect("should load from keystore.");
-
-            let dec_key = ProofGenerationKey::<Bls12>::from_spending_key(&spending_key, &PARAMS)
-                .into_decryption_key()
-                .expect("should be generated decryption key from seed.");
-
-            let balance_query = BalanceQuery::get_balance_from_decryption_key(&dec_key, api.clone());
-            let remaining_balance = balance_query.decrypted_balance - amount - fee;
-            assert!(balance_query.decrypted_balance >= amount + fee, "Not enough balance you have");
-
-            let recipient_account_id = EncryptionKey::<Bls12>::read(&mut &recipient_enc_key[..], &PARAMS)
-                .expect("should be casted to EncryptionKey<Bls12> type.");
-
-            let encrypted_balance = elgamal::Ciphertext::read(&mut &balance_query.encrypted_balance[..], &*PARAMS)
-                .expect("should be casted to Ciphertext type.");
-
-            println!("Computing zk proof...");
-            let tx = Transaction::gen_tx(
-                amount,
-                remaining_balance,
-                alpha,
-                &proving_key,
-                &prepared_vk,
-                &recipient_account_id,
-                &spending_key,
-                encrypted_balance,
-                rng,
-                fee
-                )
-            .expect("fails to generate the tx");
-
-            println!("Start submitting a transaction to Zerochain...");
-            submit_tx(&tx, &api, rng);
-            println!("Remaining balance is {}", remaining_balance);
-
+            send_tx_with_arg(&mut term, root_dir, &recipient_enc_key[..], amount, url, rng)
         },
         _ => {
             term.error(matches.usage()).unwrap();
@@ -401,7 +344,7 @@ fn subcommand_tx<R: Rng>(mut term: term::Term, root_dir: PathBuf, matches: &ArgM
         }
     };
 
-    // res.unwrap_or_else(|e| term.fail_with(e))
+    res.unwrap_or_else(|e| term.fail_with(e))
 
 }
 
@@ -448,7 +391,7 @@ fn debug_arg_seed_match<'a>(matches: &ArgMatches<'a>) -> Vec<u8> {
 
 fn subcommand_debug<R: Rng>(mut term: term::Term, root_dir: PathBuf, matches: &ArgMatches, rng: &mut R) {
     let res = match matches.subcommand() {
-        ("key-init", Some(sub_matches)) => {
+        ("key-init", Some(_)) => {
             let lang = Language::English;
             // create a new randomly generated mnemonic phrase
             let mnemonic = Mnemonic::new(MnemonicType::Words12, lang);

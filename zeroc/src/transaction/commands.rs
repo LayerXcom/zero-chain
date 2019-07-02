@@ -2,14 +2,16 @@ use std::path::{PathBuf, Path};
 use std::io::{BufReader, Read};
 use std::fs::File;
 use rand::Rng;
-use proofs::{SpendingKey, Transaction};
-use pairing::bls12_381::Bls12;
+use proofs::{SpendingKey, Transaction, ProofGenerationKey, EncryptionKey, PARAMS, elgamal};
+use pairing::{bls12_381::Bls12, Field};
+use super::constants::*;
 use crate::term::Term;
-use crate::wallet::{WalletDirectory, KeystoreDirectory, Result, DirOperations};
-use crate::wallet::commands::{wallet_keystore_dirs, get_default_index, get_default_keyfile_name};
+use crate::wallet::{Result, DirOperations};
+use crate::wallet::commands::{wallet_keystore_dirs, get_default_keyfile_name};
+use crate::utils::print_keys::BalanceQuery; // TODO
 
 use zjubjub::{
-    curve::{JubjubBls12 as zJubjubBls12, fs::Fs as zFs, FixedGenerators as zFixedGenerators},
+    curve::{fs::Fs as zFs, FixedGenerators as zFixedGenerators},
     redjubjub::PrivateKey as zPrivateKey
     };
 use zpairing::{bls12_381::Bls12 as zBls12, PrimeField as zPrimeField, PrimeFieldRepr as zPrimeFieldRepr};
@@ -17,8 +19,78 @@ use zprimitives::{PARAMS as ZPARAMS, Proof, Ciphertext as zCiphertext, PkdAddres
 use zerochain_runtime::{UncheckedExtrinsic, Call, ConfTransferCall};
 use runtime_primitives::generic::Era;
 use parity_codec::{Compact, Encode};
-use primitives::{hexdisplay::{HexDisplay, AsBytesRef}, blake2_256, crypto::{Ss58Codec, Derive, DeriveJunction}};
+use primitives::blake2_256;
 use polkadot_rs::{Api, Url, hexstr_to_u64};
+use scrypto::jubjub::fs;
+use bellman::groth16::{Parameters, PreparedVerifyingKey};
+
+pub fn send_tx_with_arg<R: Rng>(
+    term: &mut Term,
+    root_dir: PathBuf,
+    recipient_enc_key: &[u8],
+    amount: u32,
+    url: Url,
+    rng: &mut R,
+) -> Result<()> {
+    // user can enter password first.
+    let password = prompt_password(term).expect("Invalid password");
+
+    println!("Preparing paramters...");
+
+    let api = Api::init(url);
+    // let alpha = fs::Fs::rand(rng);
+    let alpha = fs::Fs::zero(); // TODO
+
+    let buf_pk = read_zk_params_with_path(PROVING_KEY_PATH);
+    let buf_vk = read_zk_params_with_path(VERIFICATION_KEY_PATH);
+
+    let proving_key = Parameters::<Bls12>::read(&mut &buf_pk[..], true)
+        .expect("should be casted to Parameters<Bls12> type.");
+    let prepared_vk = PreparedVerifyingKey::<Bls12>::read(&mut &buf_vk[..])
+        .expect("should ne casted to PreparedVerifyingKey<Bls12> type");
+
+    let fee_str = api.get_storage("ConfTransfer", "TransactionBaseFee", None)
+        .expect("should be fetched TransactionBaseFee from ConfTransfer module of Zerochain.");
+    let fee = hexstr_to_u64(fee_str) as u32;
+
+    let spending_key = spending_key_from_keystore(term, root_dir, &password[..])
+        .expect("should load from keystore.");
+
+    let dec_key = ProofGenerationKey::<Bls12>::from_spending_key(&spending_key, &PARAMS)
+        .into_decryption_key()
+        .expect("should be generated decryption key from seed.");
+
+    let balance_query = BalanceQuery::get_balance_from_decryption_key(&dec_key, api.clone());
+    let remaining_balance = balance_query.decrypted_balance - amount - fee;
+    assert!(balance_query.decrypted_balance >= amount + fee, "Not enough balance you have");
+
+    let recipient_account_id = EncryptionKey::<Bls12>::read(&mut &recipient_enc_key[..], &PARAMS)
+        .expect("should be casted to EncryptionKey<Bls12> type.");
+
+    let encrypted_balance = elgamal::Ciphertext::read(&mut &balance_query.encrypted_balance[..], &*PARAMS)
+        .expect("should be casted to Ciphertext type.");
+
+    println!("Computing zk proof...");
+    let tx = Transaction::gen_tx(
+        amount,
+        remaining_balance,
+        alpha,
+        &proving_key,
+        &prepared_vk,
+        &recipient_account_id,
+        &spending_key,
+        encrypted_balance,
+        rng,
+        fee
+        )
+    .expect("fails to generate the tx");
+
+    println!("Start submitting a transaction to Zerochain...");
+    submit_tx(&tx, &api, rng);
+    println!("Remaining balance is {}", remaining_balance);
+
+    Ok(())
+}
 
 pub fn spending_key_from_keystore(
     term: &mut Term,
