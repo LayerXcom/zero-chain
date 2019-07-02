@@ -95,9 +95,9 @@ impl KeyFile {
         password: &[u8],
         iters: u32,
         rng: &mut R,
+        seed: &[u8],
     ) -> Result<Self> {
-        let seed: [u8; 32] = rng.gen();
-        let xsk_master = ExtendedSpendingKey::master(&seed);
+        let xsk_master = ExtendedSpendingKey::master(seed);
 
         let encrypted_key = KeyCiphertext::encrypt(&xsk_master, password, iters, rng)?;
         let ss58_master_addr = (&xsk_master).try_into()?;

@@ -1,11 +1,12 @@
 use std::path::PathBuf;
 use crate::term::Term;
 use crate::derive::ChildIndex;
+use crate::utils::mnemonics::*;
 use super::{WalletDirectory, KeystoreDirectory, DirOperations};
 use super::keyfile::{KeyFile, IndexFile};
 use super::error::{Result, KeystoreError};
 use super::config::*;
-use bip39::{Mnemonic, Language, MnemonicType};
+use bip39::{Mnemonic, Language, MnemonicType, Seed};
 use rand::Rng;
 
 /// Create a new wallet
@@ -23,12 +24,14 @@ pub fn new_wallet<R: Rng>(
 
     // 3. generate the mnemonics
     let mnemonic = Mnemonic::new(MnemonicType::Words12, Language::English);
-    let phrase = mnemonic.into_phrase();
+    let phrase = mnemonic.phrase();
     term.info("Please, note carefully the following mnemonic words. They will be needed to recover your wallet.\n")?;
     term.error(&format!("{}\n", phrase))?;
 
     // 4. create master keyfile
-    let mut keyfile_master = KeyFile::create_master(MASTER_ACCOUNTNAME, VERSION, &password[..], ITERS, rng)?;
+    let master_seed = Seed::new(&mnemonic, "");
+    let master_seed_bytes: &[u8] = master_seed.as_bytes();
+    let mut keyfile_master = KeyFile::create_master(MASTER_ACCOUNTNAME, VERSION, &password[..], ITERS, rng, master_seed_bytes)?;
 
     // 5. store master keyfile
     wallet_dir.insert_master(&mut keyfile_master)?;
@@ -115,6 +118,20 @@ pub fn recover(
     term: &mut Term,
     root_dir: PathBuf
 ) -> Result<()> {
+    // 1. configure wallet directory
+    let (wallet_dir, keystore_dir) = wallet_keystore_dirs(&root_dir)?;
+
+    // 2. Re-set a new passoword
+    term.info("Re-set a new wallet password. This is for local usage only, allows you to protect your cached private key and prevent from creating non desired transactions.\n")?;
+    let password = term.new_password("wallet password", "confirm wallet password", "password mismatch")?;
+
+    let mnemonic_type = MnemonicType::Words12;
+    let lang = Language::English;
+
+    let phrase_str = input_mnemonic_phrase(mnemonic_type, lang);
+
+    term.info("Please, note carefully the following mnemonic words. They will be needed to recover your wallet.\n")?;
+
 
     Ok(())
 }

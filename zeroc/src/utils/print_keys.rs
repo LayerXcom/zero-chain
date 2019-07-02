@@ -1,4 +1,5 @@
-use crate::{ZPARAMS, PARAMS};
+use proofs::PARAMS;
+use zprimitives::PARAMS as ZPARAMS;
 use crate::ss58::EncryptionKeyBytes;
 use keys;
 use primitives::crypto::Ss58Codec;

@@ -196,6 +196,7 @@ fn subcommand_wallet<R: Rng>(mut term: term::Term, root_dir: PathBuf, matches: &
 
         },
         ("recovery", Some(_)) => {
+            
             recover(&mut term, root_dir)
                 .expect("Invalid mnemonic to recover keystore.")
         },
