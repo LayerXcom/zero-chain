@@ -4,7 +4,7 @@ use rand::Rng;
 use parity_crypto as crypto;
 use crypto::Keccak256;
 use smallvec::SmallVec;
-use proofs::keys::SpendingKey;
+use proofs::{SpendingKey, ProofGenerationKey, DecryptionKey, PARAMS};
 use pairing::bls12_381::Bls12;
 use std::num::NonZeroU32;
 use std::convert::TryInto;
@@ -121,6 +121,11 @@ impl KeyFile {
     pub fn get_current_spending_key(&self, password: &[u8]) -> Result<SpendingKey<Bls12>> {
         let xsk = self.encrypted_key.decrypt(password)?;
         Ok(xsk.spending_key)
+    }
+
+    pub fn get_dec_key(&self, password: &[u8]) -> Result<> {
+        let xsk = self.encrypted_key.decrypt(password)?;
+        let dec_key = ProofGenerationKey::<Bls12>::from_spending_key(&xsk.spending_key, &*PARAMS).into_decryption_key()?;
     }
 }
 

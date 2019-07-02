@@ -169,9 +169,11 @@ fn alice_epoch_init() -> (PkdAddress, u64) {
 }
 
 fn get_alice_enc_key() -> EncryptionKey<Bls12> {
-	let ss58_address = "5FJBWVp6Bb8wrGV5GmWwD1NhBNfNuUz5HvKTfpLcvR4qrpfP";
-	let enc_key_bytes = EncryptionKeyBytes::from_ss58check(ss58_address).unwrap();
-
-	let enc_key = EncryptionKey::read(&mut &enc_key_bytes.0[..], &*PARAMS).unwrap();
+	// let ss58_address = "5FJBWVp6Bb8wrGV5GmWwD1NhBNfNuUz5HvKTfpLcvR4qrpfP";
+	// let enc_key_bytes = EncryptionKeyBytes::from_ss58check(ss58_address).unwrap();
+	// let enc_key = EncryptionKey::read(&mut &enc_key_bytes.0[..], &*PARAMS).unwrap();
+	let alice_seed = b"Alice                           ".to_vec();
+	let enc_key = EncryptionKey::<Bls12>::from_seed(&&alice_seed, &*PARAMS)
+		.expect("should be generated encryption key from seed.");
 	enc_key
 }

@@ -114,24 +114,56 @@ pub fn new_keyfile<R: Rng>(
     Ok(())
 }
 
-pub fn recover(
+pub fn recover<R: Rng>(
     term: &mut Term,
-    root_dir: PathBuf
+    root_dir: PathBuf,
+    rng: &mut R,
 ) -> Result<()> {
     // 1. configure wallet directory
     let (wallet_dir, keystore_dir) = wallet_keystore_dirs(&root_dir)?;
 
-    // 2. Re-set a new passoword
+    // 2. Enter mnemonic
+    let mnemonic = input_mnemonic_phrase(MnemonicType::Words12, Language::English);
+
+    // 3. Re-set a new passoword
     term.info("Re-set a new wallet password. This is for local usage only, allows you to protect your cached private key and prevent from creating non desired transactions.\n")?;
     let password = term.new_password("wallet password", "confirm wallet password", "password mismatch")?;
 
-    let mnemonic_type = MnemonicType::Words12;
-    let lang = Language::English;
+    // 4. create master keyfile
+    let master_seed = Seed::new(&mnemonic, "");
+    let master_seed_bytes: &[u8] = master_seed.as_bytes();
+    let mut keyfile_master = KeyFile::create_master(MASTER_ACCOUNTNAME, VERSION, &password[..], ITERS, rng, master_seed_bytes)?;
 
-    let phrase_str = input_mnemonic_phrase(mnemonic_type, lang);
+    // 5. store master keyfile
+    wallet_dir.insert_master(&mut keyfile_master)?;
 
-    term.info("Please, note carefully the following mnemonic words. They will be needed to recover your wallet.\n")?;
+    // 6. create a genesis keyfile
+    let child_index = ChildIndex::from_index(0);
+    let mut keyfile = get_new_keyfile(term, rng, &password[..], &wallet_dir, child_index)?;
 
+    // 7. store a genesis keyfile
+    keystore_dir.insert(&mut keyfile, rng)?;
+
+    // 8. store new indexfile
+    new_indexfile(&wallet_dir)?;
+
+    Ok(())
+}
+
+pub fn load_dec_key(
+    term: &mut Term,
+    root_dir: PathBuf,
+) -> Result<()> {
+    // 1. configure wallet directory
+    let (wallet_dir, keystore_dir) = wallet_keystore_dirs(&root_dir)?;
+    let default_keyfile_name = get_default_keyfile_name(&wallet_dir)?;
+    let keyfile = keystore_dir.load(default_keyfile_name.as_str())?;
+
+    // enter password
+    term.info("Enter the wallet password.\n")?;
+    let password = term.passowrd("wallet password")?;
+
+    let xsk = keyfile.get_dec_key(&password[..])?;
 
     Ok(())
 }
