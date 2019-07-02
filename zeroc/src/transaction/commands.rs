@@ -22,21 +22,25 @@ use polkadot_rs::{Api, Url, hexstr_to_u64};
 
 pub fn spending_key_from_keystore(
     term: &mut Term,
-    root_dir: PathBuf
+    root_dir: PathBuf,
+    password: &[u8],
 ) -> Result<SpendingKey<Bls12>>
 {
     let (wallet_dir, keystore_dir) = wallet_keystore_dirs(&root_dir)?;
 
-    // enter password
-    term.info("Enter the wallet passowrd.\n")?;
-    let password = term.passowrd("wallet password")?;
-
     let default_keyfile_name = get_default_keyfile_name(&wallet_dir)?;
     let keyfile = keystore_dir.load(&default_keyfile_name)?;
 
-    let sk = keyfile.get_current_spending_key(&password[..])?;
+    let sk = keyfile.get_current_spending_key(password)?;
 
     Ok(sk)
+}
+
+pub fn prompt_password(term: &mut Term) -> Result<Vec<u8>> {
+    // enter password
+    term.info("Enter the wallet passowrd.\n")?;
+    let password = term.passowrd("wallet password")?;
+    Ok(password)
 }
 
 pub fn read_zk_params_with_path(path: &str) -> Vec<u8> {

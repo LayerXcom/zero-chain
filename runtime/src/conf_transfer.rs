@@ -322,7 +322,7 @@ impl<T: Trait> Module<T> {
         let typed_pending_transfer = match pending_transfer.clone() {
             Some(b) => b.into_ciphertext().ok_or("Invalid pending_transfer ciphertext")?,
             // If pending_transfer is `None`, just return zero value ciphertext.
-            None => zero,
+            None => zero.clone(),
         };
 
         // Checks if the last roll over was in an older epoch.
@@ -344,8 +344,13 @@ impl<T: Trait> Module<T> {
             <LastRollOver<T>>::insert(addr, current_epoch);
         }
 
+        let res_balance = match Self::encrypted_balance(addr) {
+            Some(b) => b.into_ciphertext().ok_or("Invalid balance ciphertext")?,
+            None => zero.clone(),
+        };
+
         // return actual typed balance.
-        Ok(typed_balance)
+        Ok(res_balance)
     }
 }
 

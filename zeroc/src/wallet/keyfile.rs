@@ -123,9 +123,12 @@ impl KeyFile {
         Ok(xsk.spending_key)
     }
 
-    pub fn get_dec_key(&self, password: &[u8]) -> Result<> {
+    pub fn get_dec_key(&self, password: &[u8]) -> Result<DecryptionKey<Bls12>> {
         let xsk = self.encrypted_key.decrypt(password)?;
-        let dec_key = ProofGenerationKey::<Bls12>::from_spending_key(&xsk.spending_key, &*PARAMS).into_decryption_key()?;
+        let dec_key = ProofGenerationKey::<Bls12>::from_spending_key(&xsk.spending_key, &*PARAMS)
+            .into_decryption_key()?;
+
+        Ok(dec_key)
     }
 }
 

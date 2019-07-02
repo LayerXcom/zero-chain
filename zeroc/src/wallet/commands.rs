@@ -8,6 +8,8 @@ use super::error::{Result, KeystoreError};
 use super::config::*;
 use bip39::{Mnemonic, Language, MnemonicType, Seed};
 use rand::Rng;
+use proofs::DecryptionKey;
+use pairing::bls12_381::Bls12;
 
 /// Create a new wallet
 pub fn new_wallet<R: Rng>(
@@ -153,7 +155,7 @@ pub fn recover<R: Rng>(
 pub fn load_dec_key(
     term: &mut Term,
     root_dir: PathBuf,
-) -> Result<()> {
+) -> Result<DecryptionKey<Bls12>> {
     // 1. configure wallet directory
     let (wallet_dir, keystore_dir) = wallet_keystore_dirs(&root_dir)?;
     let default_keyfile_name = get_default_keyfile_name(&wallet_dir)?;
@@ -163,9 +165,9 @@ pub fn load_dec_key(
     term.info("Enter the wallet password.\n")?;
     let password = term.passowrd("wallet password")?;
 
-    let xsk = keyfile.get_dec_key(&password[..])?;
+    let dec_key = keyfile.get_dec_key(&password[..])?;
 
-    Ok(())
+    Ok(dec_key)
 }
 
 // pub fn change_default_index(

@@ -123,6 +123,22 @@ pub struct DecryptionKey<E: JubjubEngine>(pub E::Fs);
 
 impl<E: JubjubEngine> Copy for DecryptionKey<E> {}
 
+impl<E: JubjubEngine> DecryptionKey<E> {
+    pub fn read<R: io::Read>(mut reader: R) -> io::Result<Self> {
+        let mut dec_key_repr = <E::Fs as PrimeField>::Repr::default();
+        dec_key_repr.read_le(&mut reader)?;
+
+        let dec_key_fs = E::Fs::from_repr(dec_key_repr)
+            .map_err(|_| io::Error::NotInField)?;
+        Ok(DecryptionKey(dec_key_fs))
+    }
+
+    pub fn write<W: io::Write>(&self, mut writer: W) -> io::Result<()> {
+        self.0.into_repr().write_le(&mut writer)?;
+        Ok(())
+    }
+}
+
 impl<E: JubjubEngine> ProofGenerationKey<E> {
     /// Generate a proof generation key from a seed
     pub fn from_seed(

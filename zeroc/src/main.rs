@@ -14,7 +14,7 @@ use std::io::{BufWriter, Write, BufReader, Read};
 use clap::{Arg, App, SubCommand, AppSettings, ArgMatches};
 use rand::{OsRng, Rng};
 use proofs::{
-    EncryptionKey, ProofGenerationKey, SpendingKey,
+    EncryptionKey, ProofGenerationKey, SpendingKey, DecryptionKey,
     elgamal,
     Transaction,
     setup,
@@ -208,11 +208,7 @@ fn subcommand_wallet<R: Rng>(mut term: term::Term, root_dir: PathBuf, matches: &
             let dec_key_vec = load_dec_key(&mut term, root_dir)
                 .expect("loading decrption key failed.");
 
-            let decryption_key_vec = hex::decode(sub_matches.value_of("decryption-key")
-                .expect("Decryption key parameter is required; qed"))
-                .expect("should be decoded to hex.");
-
-            let balance_query = BalanceQuery::get_balance_from_decryption_key(&decryption_key_vec[..], api);
+            let balance_query = BalanceQuery::get_balance_from_decryption_key(&dec_key_vec, api);
 
             println!("Decrypted balance: {}", balance_query.decrypted_balance);
             println!("Encrypted balance: {}", balance_query.encrypted_balance_str);
@@ -346,10 +342,12 @@ fn tx_arg_url_match<'a>(matches: &ArgMatches<'a>) -> Url {
 fn subcommand_tx<R: Rng>(mut term: term::Term, root_dir: PathBuf, matches: &ArgMatches, rng: &mut R) {
     let res = match matches.subcommand() {
         ("send", Some(sub_matches)) => {
-            // let seed = tx_arg_seed_match(&sub_matches);
             let recipient_enc_key = tx_arg_recipient_address_match(&sub_matches);
             let amount = tx_arg_amount_match(&sub_matches);
             let url = tx_arg_url_match(&sub_matches);
+
+            // user can enter password first.
+            let password = prompt_password(&mut term).expect("Invalid password");
 
             println!("Preparing paramters...");
 
@@ -369,23 +367,20 @@ fn subcommand_tx<R: Rng>(mut term: term::Term, root_dir: PathBuf, matches: &ArgM
                 .expect("should be fetched TransactionBaseFee from ConfTransfer module of Zerochain.");
             let fee = hexstr_to_u64(fee_str) as u32;
 
-            let spending_key = spending_key_from_keystore(&mut term, root_dir)
+            let spending_key = spending_key_from_keystore(&mut term, root_dir, &password[..])
                 .expect("should load from keystore.");
 
-            let decryption_key = ProofGenerationKey::<Bls12>::from_spending_key(&spending_key, &PARAMS)
+            let dec_key = ProofGenerationKey::<Bls12>::from_spending_key(&spending_key, &PARAMS)
                 .into_decryption_key()
                 .expect("should be generated decryption key from seed.");
 
-            let mut decrypted_key = [0u8; 32];
-            decryption_key.0.into_repr().write_le(&mut &mut decrypted_key[..])
-                .expect("should be casted as bytes-array.");
-
-            let balance_query = BalanceQuery::get_balance_from_decryption_key(&decrypted_key[..], api.clone());
+            let balance_query = BalanceQuery::get_balance_from_decryption_key(&dec_key, api.clone());
             let remaining_balance = balance_query.decrypted_balance - amount - fee;
             assert!(balance_query.decrypted_balance >= amount + fee, "Not enough balance you have");
 
             let recipient_account_id = EncryptionKey::<Bls12>::read(&mut &recipient_enc_key[..], &PARAMS)
                 .expect("should be casted to EncryptionKey<Bls12> type.");
+
             let encrypted_balance = elgamal::Ciphertext::read(&mut &balance_query.encrypted_balance[..], &*PARAMS)
                 .expect("should be casted to Ciphertext type.");
 
@@ -405,9 +400,7 @@ fn subcommand_tx<R: Rng>(mut term: term::Term, root_dir: PathBuf, matches: &ArgM
             .expect("fails to generate the tx");
 
             println!("Start submitting a transaction to Zerochain...");
-
             submit_tx(&tx, &api, rng);
-
             println!("Remaining balance is {}", remaining_balance);
 
         },
@@ -496,15 +489,11 @@ fn subcommand_debug<R: Rng>(mut term: term::Term, root_dir: PathBuf, matches: &A
 
             let spending_key = SpendingKey::from_seed(&seed[..]);
 
-            let decryption_key = ProofGenerationKey::<Bls12>::from_spending_key(&spending_key, &PARAMS)
+            let dec_key = ProofGenerationKey::<Bls12>::from_spending_key(&spending_key, &PARAMS)
                 .into_decryption_key()
                 .expect("should be generated decryption key from seed.");
 
-            let mut decrypted_key = [0u8; 32];
-            decryption_key.0.into_repr().write_le(&mut &mut decrypted_key[..])
-                .expect("should be casted as bytes-array.");
-
-            let balance_query = BalanceQuery::get_balance_from_decryption_key(&decrypted_key[..], api.clone());
+            let balance_query = BalanceQuery::get_balance_from_decryption_key(&dec_key, api.clone());
             let remaining_balance = balance_query.decrypted_balance - amount - fee;
             assert!(balance_query.decrypted_balance >= amount + fee, "Not enough balance you have");
 
@@ -613,18 +602,6 @@ fn subcommand_debug<R: Rng>(mut term: term::Term, root_dir: PathBuf, matches: &A
                             fee
                     ).expect("fails to generate the tx");
 
-            // println!(
-            //     "
-            //     \nEncrypted fee by sender: 0x{}
-            //     \nzkProof: 0x{}
-            //     \nEncrypted amount by sender: 0x{}
-            //     \nEncrypted amount by recipient: 0x{}
-            //     ",
-            //     HexDisplay::from(&tx.enc_fee as &AsBytesRef),
-            //     HexDisplay::from(&&tx.proof[..] as &AsBytesRef),
-            //     HexDisplay::from(&tx.enc_val_sender as &AsBytesRef),
-            //     HexDisplay::from(&tx.enc_val_recipient as &AsBytesRef),
-            // );
             println!(
                 "
                 \nzkProof(Alice): 0x{}
@@ -651,11 +628,14 @@ fn subcommand_debug<R: Rng>(mut term: term::Term, root_dir: PathBuf, matches: &A
             // let url = Url::Custom("ws://0.0.0.0:9944".to_string());
             // let api = Api::init(url);
             let api = Api::init(Url::Local);
-            let decryption_key_vec = hex::decode(sub_matches.value_of("decryption-key")
+            let decr_key_vec = hex::decode(sub_matches.value_of("decryption-key")
                 .expect("Decryption key parameter is required; qed"))
                 .expect("should be decoded to hex.");
 
-            let balance_query = BalanceQuery::get_balance_from_decryption_key(&decryption_key_vec[..], api);
+            let dec_key = DecryptionKey::read(&mut &decr_key_vec[..])
+                .expect("Reading decryption key faild.");
+
+            let balance_query = BalanceQuery::get_balance_from_decryption_key(&dec_key, api);
 
             println!("Decrypted balance: {}", balance_query.decrypted_balance);
             println!("Encrypted balance: {}", balance_query.encrypted_balance_str);
@@ -692,9 +672,9 @@ fn debug_commands_definition<'a, 'b>() -> App<'a, 'b> {
                 .required(false)
                 .default_value(ALICESEED)
             )
-            .arg(Arg::with_name("recipient-encryption-key")
-                .short("to")
-                .long("recipient-encryption-key")
+            .arg(Arg::with_name("recipient-address")
+                .short("t")
+                .long("recipient-address")
                 .help("Recipient's encryption key. (default: Bob)")
                 .takes_value(true)
                 .required(false)
