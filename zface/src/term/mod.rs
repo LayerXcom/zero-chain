@@ -3,6 +3,7 @@ use dialoguer;
 use std::{
     error::Error,
     io::{self, Write},
+    ops,
 };
 
 mod config;
@@ -112,5 +113,25 @@ impl io::Write for Term {
 
     fn flush(&mut self) -> io::Result<()> {
         io::Write::flush(&mut self.term)
+    }
+}
+
+impl io::Read for Term {
+    fn read(&mut self, buf: &mut [u8]) -> io::Result<usize> {
+        io::Read::read(&mut self.term, buf)
+    }
+}
+
+impl ops::Deref for Term {
+    type Target = console::Term;
+
+    fn deref(&self) -> &Self::Target {
+        &self.term
+    }
+}
+
+impl ops::DerefMut for Term {
+    fn deref_mut(&mut self) -> &mut Self::Target {
+        &mut self.term
     }
 }

@@ -73,14 +73,8 @@ fn gen_from_seed(seed: [u8; 32], phrase: Option<&str>) -> io::Result<PrintKeys> 
 
     let mut ek_buf = [0u8; 32];
     encryption_key.write(&mut ek_buf[..])?;
-    // .expect("fails to write payment address");
 
     let ek_ss58 = EncryptionKeyBytes(ek_buf).to_ss58check();
-
-    // let phrase = match phrase {
-    //     Some(p) => p,
-    //     None => None,
-    // }
 
     Ok(PrintKeys {
         phrase: phrase.map(|e| e.to_string()),
@@ -180,8 +174,6 @@ impl BalanceQuery {
         }
     }
 }
-
-
 
 pub fn get_address(seed: &[u8]) -> std::io::Result<Vec<u8>> {
     let address = EncryptionKey::<Bls12>::from_seed(seed, &PARAMS)?;

@@ -1,11 +1,12 @@
 use rand::Rng;
+use smallvec::SmallVec;
 
 pub mod commands;
 mod config;
 mod keyfile;
 mod error;
 mod disk;
-pub use self::keyfile::{SerdeBytes, KeyFile};
+pub use self::keyfile::KeyFile;
 pub use self::error::{Result, KeystoreError};
 pub use self::disk::{KeystoreDirectory, WalletDirectory};
 
@@ -22,4 +23,41 @@ pub trait DirOperations {
 
     /// Remove a keyfile from this keystore directory.
     fn remove(&self, keyfile: &mut KeyFile) -> Result<()>;
+}
+
+/// Serializable and deserializable bytes
+#[derive(Deserialize, Serialize, PartialEq, Eq, Debug, Clone)]
+pub struct SerdeBytes(
+    #[serde(with = "serde_bytes")]
+    pub Vec<u8>
+);
+
+impl From<Vec<u8>> for SerdeBytes {
+    fn from(v: Vec<u8>) -> Self {
+        SerdeBytes(v)
+    }
+}
+
+impl From<SmallVec<[u8; 32]>> for SerdeBytes {
+    fn from(v: SmallVec<[u8; 32]>) -> Self {
+        SerdeBytes(v.into_vec())
+    }
+}
+
+impl From<[u8; 32]> for SerdeBytes {
+    fn from(v: [u8; 32]) -> Self {
+        SerdeBytes(v.to_vec())
+    }
+}
+
+impl From<[u8; 16]> for SerdeBytes {
+    fn from(v: [u8; 16]) -> Self {
+        SerdeBytes(v.to_vec())
+    }
+}
+
+impl From<&[u8]> for SerdeBytes {
+    fn from(v: &[u8]) -> Self {
+        SerdeBytes(v.to_vec())
+    }
 }

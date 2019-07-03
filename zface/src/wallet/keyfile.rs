@@ -6,48 +6,11 @@ use crypto::Keccak256;
 use smallvec::SmallVec;
 use proofs::{SpendingKey, ProofGenerationKey, DecryptionKey, PARAMS};
 use pairing::bls12_381::Bls12;
-use std::num::NonZeroU32;
 use std::convert::TryInto;
 use std::collections::HashMap;
 use super::error::{KeystoreError, Result};
+use super::SerdeBytes;
 use crate::derive::{ExtendedSpendingKey, Derivation, ChildIndex};
-
-/// Serializable and deserializable bytes
-#[derive(Deserialize, Serialize, PartialEq, Eq, Debug, Clone)]
-pub struct SerdeBytes(
-    #[serde(with = "serde_bytes")]
-    pub Vec<u8>
-);
-
-impl From<Vec<u8>> for SerdeBytes {
-    fn from(v: Vec<u8>) -> Self {
-        SerdeBytes(v)
-    }
-}
-
-impl From<SmallVec<[u8; 32]>> for SerdeBytes {
-    fn from(v: SmallVec<[u8; 32]>) -> Self {
-        SerdeBytes(v.into_vec())
-    }
-}
-
-impl From<[u8; 32]> for SerdeBytes {
-    fn from(v: [u8; 32]) -> Self {
-        SerdeBytes(v.to_vec())
-    }
-}
-
-impl From<[u8; 16]> for SerdeBytes {
-    fn from(v: [u8; 16]) -> Self {
-        SerdeBytes(v.to_vec())
-    }
-}
-
-impl From<&[u8]> for SerdeBytes {
-    fn from(v: &[u8]) -> Self {
-        SerdeBytes(v.to_vec())
-    }
-}
 
 #[derive(Debug, PartialEq, Eq, Serialize, Deserialize, Clone)]
 #[serde(rename_all = "camelCase")]
@@ -152,6 +115,7 @@ impl KeyCiphertext {
         rng: &mut R,
     ) -> Result<Self>
     {
+        assert!(iters != 0);
         let salt: [u8; 32] = rng.gen();
         let iv: [u8; 16] = rng.gen();
 
