@@ -45,11 +45,11 @@ use self::transaction::*;
 fn main() {
     let default_root_dir = get_default_root_dir();
 
-    let matches = App::new("zeroc")
+    let matches = App::new("zface")
         .setting(AppSettings::SubcommandRequiredElseHelp)
         .version(crate_version!())
         .author(crate_authors!())
-        .about("zeroc: Zerochain Command Line Interface")
+        .about("zface: Zerochain Command Line Interface")
         .arg(global_verbose_definition())
         .arg(global_quiet_difinition())
         .arg(global_color_definition())

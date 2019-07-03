@@ -5098,47 +5098,6 @@ dependencies = [
 ]
 
 [[package]]
-name = "zeroc"
-version = "0.1.0"
-dependencies = [
- "bellman 0.1.0 (git+https://github.com/LayerXcom/librustzcash?branch=zero-chain)",
- "bellman-verifier 0.1.0",
- "blake2-rfc 0.2.18 (git+https://github.com/gtank/blake2-rfc?rev=7a5b5fc99ae483a0043db7547fb79a6fa44b88a9)",
- "byteorder 1.3.2 (registry+https://github.com/rust-lang/crates.io-index)",
- "chrono 0.4.7 (registry+https://github.com/rust-lang/crates.io-index)",
- "clap 2.32.0 (registry+https://github.com/rust-lang/crates.io-index)",
- "console 0.7.7 (registry+https://github.com/rust-lang/crates.io-index)",
- "dialoguer 0.4.0 (registry+https://github.com/rust-lang/crates.io-index)",
- "dirs 2.0.1 (registry+https://github.com/rust-lang/crates.io-index)",
- "env_logger 0.5.13 (registry+https://github.com/rust-lang/crates.io-index)",
- "hex 0.3.2 (registry+https://github.com/rust-lang/crates.io-index)",
- "jubjub 0.1.0",
- "keys 0.1.0",
- "log 0.4.6 (registry+https://github.com/rust-lang/crates.io-index)",
- "matches 0.1.8 (registry+https://github.com/rust-lang/crates.io-index)",
- "pairing 0.14.2 (git+https://github.com/LayerXcom/librustzcash?branch=zero-chain)",
- "parity-codec 3.5.4 (registry+https://github.com/rust-lang/crates.io-index)",
- "parity-crypto 0.4.0 (registry+https://github.com/rust-lang/crates.io-index)",
- "polkadot-rs 0.1.0 (git+https://github.com/LayerXcom/polkadot.rs)",
- "rand 0.4.6 (registry+https://github.com/rust-lang/crates.io-index)",
- "sapling-crypto 0.0.1 (git+https://github.com/LayerXcom/librustzcash?branch=zero-chain)",
- "serde 1.0.94 (registry+https://github.com/rust-lang/crates.io-index)",
- "serde_bytes 0.11.1 (registry+https://github.com/rust-lang/crates.io-index)",
- "serde_derive 1.0.94 (registry+https://github.com/rust-lang/crates.io-index)",
- "serde_json 1.0.40 (registry+https://github.com/rust-lang/crates.io-index)",
- "smallvec 0.6.10 (registry+https://github.com/rust-lang/crates.io-index)",
- "sr-primitives 1.0.0 (git+https://github.com/osuketh/substrate.git?branch=patch-zerochain)",
- "substrate-bip39 0.2.1 (git+https://github.com/paritytech/substrate-bip39)",
- "substrate-primitives 1.0.0 (git+https://github.com/osuketh/substrate.git?branch=patch-zerochain)",
- "tiny-bip39 0.6.2 (registry+https://github.com/rust-lang/crates.io-index)",
- "zerochain-crypto 0.1.0",
- "zerochain-pairing 0.14.2",
- "zerochain-primitives 0.1.0",
- "zerochain-proofs 0.1.0",
- "zerochain-runtime 1.0.0",
-]
-
-[[package]]
 name = "zerochain"
 version = "1.0.0"
 dependencies = [
@@ -5176,13 +5135,13 @@ dependencies = [
  "tokio 0.1.21 (registry+https://github.com/rust-lang/crates.io-index)",
  "trie-root 0.11.0 (registry+https://github.com/rust-lang/crates.io-index)",
  "vergen 3.0.4 (registry+https://github.com/rust-lang/crates.io-index)",
- "zeroc 0.1.0",
  "zerochain-crypto 0.1.0",
  "zerochain-pairing 0.14.2",
  "zerochain-primitives 0.1.0",
  "zerochain-proofs 0.1.0",
  "zerochain-runtime 1.0.0",
  "zerochain-wasm-utils 0.1.0",
+ "zface 0.1.0",
 ]
 
 [[package]]
@@ -5315,6 +5274,47 @@ dependencies = [
 name = "zeroize"
 version = "0.5.2"
 source = "registry+https://github.com/rust-lang/crates.io-index"
+
+[[package]]
+name = "zface"
+version = "0.1.0"
+dependencies = [
+ "bellman 0.1.0 (git+https://github.com/LayerXcom/librustzcash?branch=zero-chain)",
+ "bellman-verifier 0.1.0",
+ "blake2-rfc 0.2.18 (git+https://github.com/gtank/blake2-rfc?rev=7a5b5fc99ae483a0043db7547fb79a6fa44b88a9)",
+ "byteorder 1.3.2 (registry+https://github.com/rust-lang/crates.io-index)",
+ "chrono 0.4.7 (registry+https://github.com/rust-lang/crates.io-index)",
+ "clap 2.32.0 (registry+https://github.com/rust-lang/crates.io-index)",
+ "console 0.7.7 (registry+https://github.com/rust-lang/crates.io-index)",
+ "dialoguer 0.4.0 (registry+https://github.com/rust-lang/crates.io-index)",
+ "dirs 2.0.1 (registry+https://github.com/rust-lang/crates.io-index)",
+ "env_logger 0.5.13 (registry+https://github.com/rust-lang/crates.io-index)",
+ "hex 0.3.2 (registry+https://github.com/rust-lang/crates.io-index)",
+ "jubjub 0.1.0",
+ "keys 0.1.0",
+ "log 0.4.6 (registry+https://github.com/rust-lang/crates.io-index)",
+ "matches 0.1.8 (registry+https://github.com/rust-lang/crates.io-index)",
+ "pairing 0.14.2 (git+https://github.com/LayerXcom/librustzcash?branch=zero-chain)",
+ "parity-codec 3.5.4 (registry+https://github.com/rust-lang/crates.io-index)",
+ "parity-crypto 0.4.0 (registry+https://github.com/rust-lang/crates.io-index)",
+ "polkadot-rs 0.1.0 (git+https://github.com/LayerXcom/polkadot.rs)",
+ "rand 0.4.6 (registry+https://github.com/rust-lang/crates.io-index)",
+ "sapling-crypto 0.0.1 (git+https://github.com/LayerXcom/librustzcash?branch=zero-chain)",
+ "serde 1.0.94 (registry+https://github.com/rust-lang/crates.io-index)",
+ "serde_bytes 0.11.1 (registry+https://github.com/rust-lang/crates.io-index)",
+ "serde_derive 1.0.94 (registry+https://github.com/rust-lang/crates.io-index)",
+ "serde_json 1.0.40 (registry+https://github.com/rust-lang/crates.io-index)",
+ "smallvec 0.6.10 (registry+https://github.com/rust-lang/crates.io-index)",
+ "sr-primitives 1.0.0 (git+https://github.com/osuketh/substrate.git?branch=patch-zerochain)",
+ "substrate-bip39 0.2.1 (git+https://github.com/paritytech/substrate-bip39)",
+ "substrate-primitives 1.0.0 (git+https://github.com/osuketh/substrate.git?branch=patch-zerochain)",
+ "tiny-bip39 0.6.2 (registry+https://github.com/rust-lang/crates.io-index)",
+ "zerochain-crypto 0.1.0",
+ "zerochain-pairing 0.14.2",
+ "zerochain-primitives 0.1.0",
+ "zerochain-proofs 0.1.0",
+ "zerochain-runtime 1.0.0",
+]
 
 [metadata]
 "checksum aes 0.3.2 (registry+https://github.com/rust-lang/crates.io-index)" = "54eb1d8fe354e5fc611daf4f2ea97dd45a765f4f1e4512306ec183ae2e8f20c9"

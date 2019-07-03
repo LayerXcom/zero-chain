@@ -3,8 +3,8 @@ use clap::{Arg, ArgMatches};
 use super::term;
 use std::path::PathBuf;
 
-const APPLICATION_DIRECTORY_NAME: &'static str = "zeroc";
-const APPLICATION_ENVIRONMENT_ROOT_DIR: &'static str = "ZEROC_ROOT_DIR";
+const APPLICATION_DIRECTORY_NAME: &'static str = "zface";
+const APPLICATION_ENVIRONMENT_ROOT_DIR: &'static str = "ZFACE_ROOT_DIR";
 
 pub const DEFAULT_AMOUNT: &str = "10";
 pub const DEFAULT_BALANCE: &str = "100";
@@ -25,7 +25,7 @@ pub(crate) fn get_default_root_dir() -> PathBuf {
 pub(crate) fn global_rootdir_definition<'a, 'b>(default: &'a PathBuf) -> Arg<'a, 'b> {
     Arg::with_name("ROOT_DIR")
         .long("root_dir")
-        .help("the zeroc root direction")
+        .help("the zface root direction")
         .default_value(default.to_str().unwrap())
         .env(APPLICATION_ENVIRONMENT_ROOT_DIR)
 }

@@ -186,8 +186,8 @@ mod tests {
     use hex_literal::{hex, hex_impl};
 
     fn get_pk_and_vk() -> (Parameters<Bls12>, PreparedVerifyingKey<Bls12>) {
-        let pk_path = Path::new("../../zeroc/proving.params");
-        let vk_path = Path::new("../../zeroc/verification.params");
+        let pk_path = Path::new("../../zface/proving.params");
+        let vk_path = Path::new("../../zface/verification.params");
 
         let pk_file = File::open(&pk_path).unwrap();
         let vk_file = File::open(&vk_path).unwrap();
@@ -253,7 +253,7 @@ mod tests {
 
     #[test]
     fn test_read_proving_key() {
-        let pk_path = Path::new("../../zeroc/proving.params");
+        let pk_path = Path::new("../../zface/proving.params");
 
         let pk_file = File::open(&pk_path).unwrap();
 

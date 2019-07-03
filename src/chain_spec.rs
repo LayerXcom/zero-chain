@@ -19,7 +19,7 @@ use zprimitives::PARAMS;
 use std::path::Path;
 use std::fs::File;
 use std::io::{BufReader, Read};
-use zeroc::ss58::EncryptionKeyBytes;
+use zface::ss58::EncryptionKeyBytes;
 
 // Note this is the URL for the telemetry server
 //const STAGING_TELEMETRY_URL: &str = "wss://telemetry.polkadot.io/submit/";
@@ -141,7 +141,7 @@ fn testnet_genesis(initial_authorities: Vec<AuthorityId>, endowed_accounts: Vec<
 }
 
 fn get_pvk() -> PreparedVk {
-	let vk_path = Path::new("./zeroc/verification.params");
+	let vk_path = Path::new("./zface/verification.params");
 	let vk_file = File::open(&vk_path).unwrap();
 	let mut vk_reader = BufReader::new(vk_file);
 
