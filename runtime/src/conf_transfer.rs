@@ -129,13 +129,13 @@ decl_module! {
 
 decl_storage! {
     trait Store for Module<T: Trait> as ConfTransfer {
-        /// The encrypted balance for each account
+        /// An encrypted balance for each account
         pub EncryptedBalance get(encrypted_balance) config() : map PkdAddress => Option<Ciphertext>;
 
-        /// The pending transfer
+        /// A pending transfer
         pub PendingTransfer get(pending_transfer) : map PkdAddress => Option<Ciphertext>;
 
-        /// The last epoch for rollover
+        /// A last epoch for rollover
         pub LastRollOver get(last_rollover) config() : map PkdAddress => Option<T::BlockNumber>;
 
         /// Global epoch length for rollover.
@@ -143,10 +143,10 @@ decl_storage! {
         /// This parameter should be fixed based on trade-off between UX and security in terms of front-running attacks.
         pub EpochLength get(epoch_length) config() : T::BlockNumber;
 
-        /// The fee to be paid for making a transaction; the base.
+        /// A fee to be paid for making a transaction; the base.
         pub TransactionBaseFee get(transaction_base_fee) config(): FeeAmount;
 
-        /// The verification key of zk proofs (only readable)
+        /// A verification key of zk proofs (only readable)
         pub VerifyingKey get(verifying_key) config(): PreparedVk;
     }
 }
@@ -322,7 +322,7 @@ impl<T: Trait> Module<T> {
         let typed_pending_transfer = match pending_transfer.clone() {
             Some(b) => b.into_ciphertext().ok_or("Invalid pending_transfer ciphertext")?,
             // If pending_transfer is `None`, just return zero value ciphertext.
-            None => zero,
+            None => zero.clone(),
         };
 
         // Checks if the last roll over was in an older epoch.
@@ -344,8 +344,13 @@ impl<T: Trait> Module<T> {
             <LastRollOver<T>>::insert(addr, current_epoch);
         }
 
+        let res_balance = match Self::encrypted_balance(addr) {
+            Some(b) => b.into_ciphertext().ok_or("Invalid balance ciphertext")?,
+            None => zero.clone(),
+        };
+
         // return actual typed balance.
-        Ok(typed_balance)
+        Ok(res_balance)
     }
 }
 
@@ -433,7 +438,7 @@ mod tests {
     }
 
     fn get_pvk() -> PreparedVk {
-        let vk_path = Path::new("../zeroc/verification.params");
+        let vk_path = Path::new("../zface/verification.params");
         let vk_file = File::open(&vk_path).unwrap();
         let mut vk_reader = BufReader::new(vk_file);
 

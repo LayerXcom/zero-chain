@@ -1,5 +1,5 @@
 [package]
-name = "zeroc"
+name = "zface"
 version = "0.1.0"
 authors = ["osuke <dish230@gmail.com>"]
 edition = "2018"
@@ -33,9 +33,12 @@ env_logger = "0.5"
 # Cannot use `serde = { version = "1.0", features = ["derive"] }` because of incompatibility with `sr-primitives`.
 serde = "1.0"
 serde_derive = "1.0"
+serde_json = "1.0"
 serde_bytes = "0.11"
 parity-crypto = "0.4"
 smallvec = "0.6"
+chrono = "0.4"
+dialoguer = "0.4"
 
 [dependencies.blake2-rfc]
 git = "https://github.com/gtank/blake2-rfc"

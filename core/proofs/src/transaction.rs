@@ -34,13 +34,12 @@ impl Transaction {
         proving_key: &Parameters<Bls12>,
 		prepared_vk: &PreparedVerifyingKey<Bls12>,
 		address_recipient: &EncryptionKey<Bls12>,
-		seed: &[u8],
+		spending_key: &SpendingKey<Bls12>,
         ciphertext_balance: elgamal::Ciphertext<Bls12>,
 		rng: &mut R,
 		fee: u32,
     ) -> Result<Self, io::Error>
 	{
-		let spending_key = SpendingKey::from_seed(seed);
 		let proof_generation_key = ProofGenerationKey::from_spending_key(
 			&spending_key,
 			&*PARAMS
@@ -53,7 +52,7 @@ impl Transaction {
 			alpha,
 			proving_key,
 			prepared_vk,
-			proof_generation_key,
+			&proof_generation_key,
 			address_recipient.clone(),
             ciphertext_balance.clone(),
 			rng,

@@ -1,13 +1,12 @@
-use crate::{ZPARAMS, PARAMS};
-use crate::derive::EncryptionKeyBytes;
+use proofs::PARAMS;
+use zprimitives::PARAMS as ZPARAMS;
+use crate::ss58::EncryptionKeyBytes;
 use keys;
-use primitives::{hexdisplay::{HexDisplay, AsBytesRef}, crypto::{Ss58Codec, Derive, DeriveJunction}};
+use primitives::crypto::Ss58Codec;
 use zpairing::{bls12_381::Bls12 as zBls12, PrimeField as zPrimeField, PrimeFieldRepr as zPrimeFieldRepr, io};
 use pairing::bls12_381::Bls12;
-use zjubjub::{
-    curve::{JubjubBls12 as zJubjubBls12, fs::Fs as zFs, FixedGenerators as zFixedGenerators}
-};
-use proofs::keys::EncryptionKey;
+use zjubjub::curve::FixedGenerators as zFixedGenerators;
+use proofs::{EncryptionKey, DecryptionKey};
 use keys::EncryptionKey as zEncryptionKey;
 use zprimitives::PkdAddress;
 use zcrypto::elgamal as zelgamal;
@@ -15,7 +14,7 @@ use polkadot_rs::{Api, hexstr_to_vec};
 use parity_codec::Encode;
 use rand::{OsRng, Rng};
 use hex;
-use bip39::{Mnemonic, Language, MnemonicType};
+use bip39::{Mnemonic, Language};
 use substrate_bip39::mini_secret_from_entropy;
 
 pub struct PrintKeys {
@@ -37,17 +36,8 @@ impl PrintKeys {
         gen_from_seed(seed, None).unwrap()
     }
 
-    pub fn print_from_phrase(phrase: &str, password: Option<&str>) {
-        let seed = mini_secret_from_entropy(
-            Mnemonic::from_phrase(phrase, Language::English)
-                .unwrap_or_else(|_|
-                    panic!("Phrase is not a valid BIP-39 phrase: \n {}", phrase)
-                ).entropy(),
-            password.unwrap_or("")
-        )
-        .expect("32 bytes can always build a key; qed")
-        .to_bytes();
-
+    pub fn print_from_phrase(phrase: &str, password: Option<&str>, lang: Language) {
+        let seed = phrase_to_seed(phrase, password, lang);
         let print_keys = gen_from_seed(seed, Some(phrase)).unwrap();
 
         println!("Phrase `{}` is account:\n Seed: 0x{}\n Decryption key: 0x{}\n Encryption key (hex): 0x{}\n Address (SS58): {}",
@@ -58,6 +48,18 @@ impl PrintKeys {
             print_keys.ss58_encryption_key,
         );
     }
+}
+
+pub fn phrase_to_seed(phrase: &str, password: Option<&str>, lang: Language) -> [u8; 32] {
+    mini_secret_from_entropy(
+        Mnemonic::from_phrase(phrase, lang)
+            .unwrap_or_else(|_|
+                panic!("Phrase is not a valid BIP-39 phrase: \n {}", phrase)
+            ).entropy(),
+        password.unwrap_or("")
+    )
+    .expect("32 bytes can always build a key; qed")
+    .to_bytes()
 }
 
 fn gen_from_seed(seed: [u8; 32], phrase: Option<&str>) -> io::Result<PrintKeys> {
@@ -98,10 +100,15 @@ pub fn seed_to_array(seed: &str) -> [u8; 32] {
     array
 }
 
+fn no_std(dec_key: &DecryptionKey<Bls12>) -> keys::DecryptionKey<zBls12> {
+    let mut dec_key_vec = vec![];
+    dec_key.write(&mut dec_key_vec).unwrap();
+    keys::DecryptionKey::read(&mut &dec_key_vec[..]).unwrap()
+}
+
 pub struct BalanceQuery {
     pub decrypted_balance: u32,
-    pub encrypted_balance: Vec<u8>,
-    pub pending_transfer: Vec<u8>,
+    pub encrypted_balance: Vec<u8>, // total of encrypted balance and pending transfer
     pub encrypted_balance_str: String,
     pub pending_transfer_str: String,
 }
@@ -109,15 +116,10 @@ pub struct BalanceQuery {
 // Temporary code.
 impl BalanceQuery {
     /// Get encrypted and decrypted balance for the decryption key
-    pub fn get_balance_from_decryption_key(mut decryption_key: &[u8], api: Api) -> Self {
+    pub fn get_balance_from_decryption_key(dec_key: &DecryptionKey<Bls12>, api: Api) -> Self {
         let p_g = zFixedGenerators::Diversifier; // 1
 
-        let mut decryption_key_repr = zFs::default().into_repr();
-        decryption_key_repr.read_le(&mut decryption_key).unwrap();
-        let decryption_key_fs = zFs::from_repr(decryption_key_repr).unwrap();
-        let decryption_key = keys::DecryptionKey(decryption_key_fs);
-
-        let encryption_key = zEncryptionKey::from_decryption_key(&decryption_key, &*ZPARAMS);
+        let encryption_key = zEncryptionKey::from_decryption_key(&no_std(&dec_key), &*ZPARAMS);
         let account_id = PkdAddress::from_encryption_key(&encryption_key);
 
         let mut encrypted_balance_str = api.get_storage(
@@ -132,10 +134,11 @@ impl BalanceQuery {
             Some(account_id.encode())
         ).unwrap();
 
-        let mut encrypted_balance;
-        let mut decrypted_balance;
-        let mut pending_transfer;
-        let mut p_decrypted_balance;
+
+        let decrypted_balance;
+        let p_decrypted_balance;
+        let mut ciphertext = None;
+        let mut p_ciphertext = None;
 
         // TODO: redundant code
         if encrypted_balance_str.as_str() != "0x00" {
@@ -144,11 +147,10 @@ impl BalanceQuery {
                 encrypted_balance_str.remove(2);
             }
 
-            encrypted_balance = hexstr_to_vec(encrypted_balance_str.clone());
-            let ciphertext = zelgamal::Ciphertext::<zBls12>::read(&mut &encrypted_balance[..], &ZPARAMS).expect("Invalid data");
-            decrypted_balance = ciphertext.decrypt(&decryption_key, p_g, &ZPARAMS).unwrap();
+            let encrypted_balance = hexstr_to_vec(encrypted_balance_str.clone());
+            ciphertext = Some(zelgamal::Ciphertext::<zBls12>::read(&mut &encrypted_balance[..], &ZPARAMS).expect("Invalid data"));
+            decrypted_balance = ciphertext.clone().unwrap().decrypt(&no_std(&dec_key), p_g, &ZPARAMS).unwrap();
         } else {
-            encrypted_balance = vec![0u8];
             decrypted_balance = 0;
         }
 
@@ -158,18 +160,21 @@ impl BalanceQuery {
                 pending_transfer_str.remove(2);
             }
 
-            pending_transfer = hexstr_to_vec(pending_transfer_str.clone());
-            let p_ciphertext = zelgamal::Ciphertext::<zBls12>::read(&mut &pending_transfer[..], &ZPARAMS).expect("Invalid data");
-            p_decrypted_balance = p_ciphertext.decrypt(&decryption_key, p_g, &ZPARAMS).unwrap();
+            let pending_transfer = hexstr_to_vec(pending_transfer_str.clone());
+            p_ciphertext = Some(zelgamal::Ciphertext::<zBls12>::read(&mut &pending_transfer[..], &ZPARAMS).expect("Invalid data"));
+            p_decrypted_balance = p_ciphertext.clone().unwrap().decrypt(&no_std(&dec_key), p_g, &ZPARAMS).unwrap();
         } else {
-            pending_transfer = vec![0u8];
             p_decrypted_balance = 0;
         }
 
+        let zero = zelgamal::Ciphertext::<zBls12>::zero();
+        let enc_total = ciphertext.unwrap_or(zero.clone()).add(&p_ciphertext.unwrap_or(zero), &*ZPARAMS);
+        let mut buf = vec![0u8; 64];
+        enc_total.write(&mut buf[..]).unwrap();
+
         BalanceQuery {
             decrypted_balance: decrypted_balance + p_decrypted_balance,
-            encrypted_balance,
-            pending_transfer,
+            encrypted_balance: buf,
             encrypted_balance_str,
             pending_transfer_str,
         }

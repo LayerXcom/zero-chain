@@ -44,7 +44,7 @@ impl<E: JubjubEngine> TransferProof<E> {
         alpha: E::Fs,
         proving_key: &Parameters<E>,
         prepared_vk: &PreparedVerifyingKey<E>,
-        proof_generation_key: ProofGenerationKey<E>,
+        proof_generation_key: &ProofGenerationKey<E>,
         address_recipient: EncryptionKey<E>,
         ciphertext_balance: Ciphertext<E>,
         rng: &mut R,
@@ -152,6 +152,8 @@ impl<E: JubjubEngine> TransferProof<E> {
             public_input[17] = y;
         }
 
+        // This verification is just an error handling, not validate if it returns `true`,
+        // because public input of encrypted balance needs to be updated on-chain.
         if let Err(_) = verify_proof(prepared_vk, &proof, &public_input[..]) {
             return Err(SynthesisError::MalformedVerifyingKey)
         }
@@ -184,8 +186,8 @@ mod tests {
     use hex_literal::{hex, hex_impl};
 
     fn get_pk_and_vk() -> (Parameters<Bls12>, PreparedVerifyingKey<Bls12>) {
-        let pk_path = Path::new("../../zeroc/proving.params");
-        let vk_path = Path::new("../../zeroc/verification.params");
+        let pk_path = Path::new("../../zface/proving.params");
+        let vk_path = Path::new("../../zface/verification.params");
 
         let pk_file = File::open(&pk_path).unwrap();
         let vk_file = File::open(&vk_path).unwrap();
@@ -238,7 +240,7 @@ mod tests {
             alpha,
             &proving_key,
             &prepared_vk,
-            proof_generation_key,
+            &proof_generation_key,
             ek_recipient,
             ciphertext_balance,
             &mut rng,
@@ -251,7 +253,7 @@ mod tests {
 
     #[test]
     fn test_read_proving_key() {
-        let pk_path = Path::new("../../zeroc/proving.params");
+        let pk_path = Path::new("../../zface/proving.params");
 
         let pk_file = File::open(&pk_path).unwrap();
 

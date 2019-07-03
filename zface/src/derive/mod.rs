@@ -1,14 +1,12 @@
 // //! Implementation of "Hierarchical Deterministic Key Derivation" for Zerochain key components.
 // //! It is respected to ZIP32 specification defined here https://github.com/zcash/zips/blob/master/zip-0032.rst.
 
-use parity_codec::{Encode, Decode};
-use primitives::crypto::{Ss58Codec, Derive, DeriveJunction};
 use blake2_rfc::blake2b::Blake2b;
 use proofs::keys::{ProofGenerationKey, SpendingKey, prf_expand_vec, prf_expand};
-use scrypto::jubjub::{JubjubEngine, fs::Fs, ToUniform};
+use scrypto::jubjub::{fs::Fs, ToUniform};
 use pairing::{bls12_381::Bls12, Field};
 use byteorder::{ByteOrder, LittleEndian, ReadBytesExt, WriteBytesExt};
-use crate::PARAMS;
+use proofs::PARAMS;
 use super::wallet::SerdeBytes;
 use std::io::{self, Read, Write};
 use std::convert::TryFrom;
@@ -31,9 +29,9 @@ pub trait Derivation: Sized {
     /// If an index `i` >= 2^31, the child is a hardended key. If not, the child is a non-hardened key.
     fn derive_child(&self, i: ChildIndex) -> io::Result<Self>;
 
-    fn read<R: Read>(mut reader: R) -> io::Result<Self>;
+    fn read<R: Read>(reader: R) -> io::Result<Self>;
 
-    fn write<W: Write>(&self, mut writer: W) -> io::Result<()>;
+    fn write<W: Write>(&self, writer: W) -> io::Result<()>;
 }
 
 /// Extended spending key for HDKD
@@ -229,45 +227,25 @@ impl Derivation for ExtendedProofGenerationKey {
     }
 }
 
+impl TryFrom<&ExtendedSpendingKey> for Vec<u8> {
+    type Error = io::Error;
+
+    fn try_from(xsk: &ExtendedSpendingKey) -> io::Result<Vec<u8>> {
+        let mut res = vec![];
+        xsk.write(&mut res)?;
+
+        Ok(res)
+    }
+}
+
 impl TryFrom<ExtendedSpendingKey> for SerdeBytes {
     type Error = io::Error;
 
     fn try_from(xsk: ExtendedSpendingKey) -> io::Result<SerdeBytes> {
         let mut res = vec![];
-        xsk.write(&mut res[..])?;
+        xsk.write(&mut res)?;
 
         Ok(SerdeBytes(res))
-    }
-}
-
-/// Byte format of encryption key to implement SS58 trait.
-#[derive(PartialEq, Eq, PartialOrd, Ord, Clone, Encode, Decode, Default)]
-pub struct EncryptionKeyBytes(pub [u8; 32]);
-
-impl AsRef<EncryptionKeyBytes> for EncryptionKeyBytes {
-    fn as_ref(&self) -> &EncryptionKeyBytes {
-        &self
-    }
-}
-
-impl AsRef<[u8]> for EncryptionKeyBytes {
-    fn as_ref(&self) -> &[u8] {
-        &self.0[..]
-    }
-}
-
-impl AsMut<[u8]> for EncryptionKeyBytes {
-    fn as_mut(&mut self) -> &mut [u8] {
-        &mut self.0[..]
-    }
-}
-
-impl Derive for EncryptionKeyBytes {
-    /// Derive a child key from a series of given junctions.
-	///
-	/// `None` if there are any hard junctions in there.
-    fn derive<Iter: Iterator<Item=DeriveJunction>>(&self, path: Iter) -> Option<EncryptionKeyBytes> {
-        unimplemented!();
     }
 }
 
