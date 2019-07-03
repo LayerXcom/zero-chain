@@ -2,6 +2,11 @@
 [![Build Status](https://travis-ci.com/LayerXcom/zero-chain.svg?branch=master)](https://travis-ci.com/LayerXcom/zero-chain)
 [![Gitter](https://badges.gitter.im/LayerXcom/Zerochain.svg)](https://gitter.im/LayerXcom/Zerochain?utm_source=badge&utm_medium=badge&utm_campaign=pr-badge)
 
+<div align="center">
+<img src="https://user-images.githubusercontent.com/20852667/60582364-9fff4100-9dc3-11e9-84f3-afedfa6d41d1.png" width="1400px">
+</div>
+</br>
+
 Zerochain is a generic parivacy-protecting layer on top of Substrate. It provides some useful substrate modules and toolkit for protecting user's privacy and sensitive data stored on chain.
 It is designed to get efficient zero-knowledge proving, reduce the on-chain storage cost and bring the flexibility for developing applications.
 
@@ -13,11 +18,13 @@ Have a look at [Zerochain Book](https://layerxcom.github.io/zerochain-book/) for
 For now, only supported for the PoC of confidential payment inspired by [Zether](https://crypto.stanford.edu/~buenz/papers/zether.pdf) paper.
 
 - Balance for each account is encrypted
+
 <div align="center">
 <img src="https://user-images.githubusercontent.com/20852667/54678399-6d00ac80-4b48-11e9-9c8d-d1ec2b668761.png" width="400px">
 </div>
 
 - Transfer amount is encrypted
+
 <div align="center">
 <img src="https://user-images.githubusercontent.com/20852667/54678984-9cfc7f80-4b49-11e9-9784-576dcaa35ca9.png" width="400px">
 </div>
@@ -55,9 +62,9 @@ cargo build --release
 Documented in [Zerochain Book](https://layerxcom.github.io/zerochain-book/).
 
 ### Related Repositories
-- [polkadot.rs](https://github.com/LayerXcom/polkadot.rs)
-- [ZFace](https://github.com/LayerXcom/zero-chain/tree/master/zface) (in same repo currently)
-- [librustzcash for zerochain](https://github.com/LayerXcom/librustzcash)
+- [polkadot.rs](https://github.com/LayerXcom/polkadot.rs): JSON-RPC Client for Substrate API
+- [ZFace](https://github.com/LayerXcom/zero-chain/tree/master/zface) (in same repo currently): An interface for interacting with Zerochain
+- [librustzcash for zerochain](https://github.com/LayerXcom/librustzcash): zcash's toolchains for Zerochain
 
 ### Documentations
 - [Announcing Zerochain: Applying zk-SNARKs to Substrate](https://medium.com/layerx/announcing-zerochain-5b08e158355d)
