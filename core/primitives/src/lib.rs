@@ -29,7 +29,7 @@ pub use pkd_address::PkdAddress;
 pub use signature::RedjubjubSignature;
 pub use ciphertext::{Ciphertext, ElgamalCiphertext};
 pub use proof::Proof;
-pub use sig_vk::SigVerificationKey;
+pub use sig_vk::{SigVerificationKey, SigVk};
 pub use prepared_vk::PreparedVk;
 
 use lazy_static::lazy_static;

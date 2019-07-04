@@ -5,7 +5,8 @@
 
 use support::{decl_module, decl_storage, decl_event, StorageMap, dispatch::Result, ensure, Parameter};
 use rstd::prelude::*;
-use runtime_primitives::traits::{Member, SimpleArithmetic, Zero, One, StaticLookup};
+use parity_codec::Codec;
+use runtime_primitives::traits::{Member, SimpleArithmetic, Zero, One, StaticLookup, MaybeSerializeDebug};
 use zprimitives::{
     PkdAddress,
     Ciphertext,
@@ -19,7 +20,7 @@ pub trait Trait: system::Trait {
     // type Event: From<Event<Self>> + Into<<Self as system::Trait>::Event>;
 
     /// The units in which we record encrypted balances.
-    type EncryptedBalance: ElgamalCiphertext + Parameter + Member + Default;
+    type EncryptedBalance: ElgamalCiphertext + Parameter + Member + Default + MaybeSerializeDebug + Codec;
 
     /// The arithmetic type of asset identifier.
     type AssetId: Parameter + SimpleArithmetic + Default + Copy;

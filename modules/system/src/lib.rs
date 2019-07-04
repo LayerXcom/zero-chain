@@ -82,6 +82,7 @@ use substrate_primitives::storage::well_known_keys;
 use srml_support::{storage, StorageValue, StorageMap, Parameter, decl_module, decl_event, decl_storage};
 use safe_mix::TripletMix;
 use parity_codec::{Encode, Decode};
+use zprimitives::SigVk;
 
 #[cfg(any(feature = "std", test))]
 use runtime_io::{twox_128, TestExternalities, Blake2Hasher};
@@ -150,7 +151,7 @@ pub trait Trait: 'static + Eq + Clone {
 		Parameter + Member + MaybeSerializeDebugButNotDeserialize + Default + traits::Digest<Hash = Self::Hash>;
 
 	/// The user account identifier type for the runtime.
-	type AccountId: Parameter + Member + MaybeSerializeDebug + MaybeDisplay + Ord + Default;
+	type AccountId: SigVk + Parameter + Member + MaybeSerializeDebug + MaybeDisplay + Ord + Default;
 
 	/// The verification key for user account's signature
 	type SigVerificationKey: Parameter + Member + MaybeSerializeDebug + MaybeDisplay + Ord + Default;

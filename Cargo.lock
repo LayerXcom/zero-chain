@@ -3643,6 +3643,7 @@ dependencies = [
  "sr-std 1.0.0 (git+https://github.com/osuketh/substrate.git?branch=patch-zerochain)",
  "srml-support 1.0.0 (git+https://github.com/osuketh/substrate.git?branch=patch-zerochain)",
  "substrate-primitives 1.0.0 (git+https://github.com/osuketh/substrate.git?branch=patch-zerochain)",
+ "zerochain-primitives 0.1.0",
 ]
 
 [[package]]

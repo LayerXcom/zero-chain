@@ -1,4 +1,6 @@
 //! A module for dealing with confidential transfer
+#![cfg_attr(not(feature = "std"), no_std)]
+
 use support::{decl_module, decl_storage, decl_event, StorageMap, dispatch::Result, ensure, Parameter};
 use rstd::prelude::*;
 use bellman_verifier::verify_proof;
@@ -10,27 +12,28 @@ use pairing::{
     },
     Field,
 };
-use runtime_primitives::traits::{Member, Zero};
+use runtime_primitives::traits::{Member, Zero, MaybeSerializeDebug};
 use jubjub::redjubjub::PublicKey;
 use zprimitives::{
     PkdAddress,
-    Ciphertext,
     Proof,
     SigVerificationKey,
     PreparedVk,
     ElgamalCiphertext,
+    SigVk,
 };
+use parity_codec::Codec;
 use keys::EncryptionKey;
 use zcrypto::elgamal;
 use runtime_io;
-use system::IsDeadAccount;
+use system::{IsDeadAccount, ensure_signed};
 
 pub trait Trait: system::Trait {
 	/// The overarching event type.
 	type Event: From<Event<Self>> + Into<<Self as system::Trait>::Event>;
 
     /// The units in which we record encrypted balances.
-    type EncryptedBalance: ElgamalCiphertext + Parameter + Member + Default;
+    type EncryptedBalance: ElgamalCiphertext + Parameter + Member + Default + MaybeSerializeDebug + Codec;
 }
 
 struct TypedParams {
@@ -52,16 +55,16 @@ decl_module! {
 		fn deposit_event<T>() = default;
 
 		pub fn confidential_transfer(
-            _origin,
+            origin,
             zkproof: Proof,
             address_sender: PkdAddress,
             address_recipient: PkdAddress,
-            amount_sender: Ciphertext,
-            amount_recipient: Ciphertext,
+            amount_sender: T::EncryptedBalance,
+            amount_recipient: T::EncryptedBalance,
             rvk: SigVerificationKey,  // TODO: Extract from origin
-            fee_sender: Ciphertext
+            fee_sender: T::EncryptedBalance
         ) -> Result {
-			// let rvk = ensure_signed(origin)?;
+			let rvk = ensure_signed(origin)?;
 
             let typed = Self::into_types(
                 &zkproof,
@@ -103,15 +106,15 @@ decl_module! {
             // Update the sender's balance
             <EncryptedBalance<T>>::mutate(address_sender, |balance| {
                 let new_balance = balance.clone().map(
-                    |_| Ciphertext::from_ciphertext(&typed_balance_sender.sub_no_params(&amount_plus_fee)));
+                    |_| T::EncryptedBalance::from_ciphertext(&typed_balance_sender.sub_no_params(&amount_plus_fee)));
                 *balance = new_balance
             });
 
             // Update the recipient's pending transfer
             <PendingTransfer<T>>::mutate(address_recipient, |pending_transfer| {
                 let new_pending_transfer = pending_transfer.clone().map_or(
-                    Some(Ciphertext::from_ciphertext(&typed.amount_recipient)),
-                    |_| Some(Ciphertext::from_ciphertext(&typed_balance_recipient.add_no_params(&typed.amount_recipient)))
+                    Some(T::EncryptedBalance::from_ciphertext(&typed.amount_recipient)),
+                    |_| Some(T::EncryptedBalance::from_ciphertext(&typed_balance_recipient.add_no_params(&typed.amount_recipient)))
                 );
                 *pending_transfer = new_pending_transfer
             });
@@ -122,7 +125,7 @@ decl_module! {
                     zkproof,
                     amount_sender,
                     amount_recipient,
-                    Ciphertext::from_ciphertext(&typed_balance_sender),
+                    T::EncryptedBalance::from_ciphertext(&typed_balance_sender),
                     rvk
                 )
             );
@@ -135,10 +138,10 @@ decl_module! {
 decl_storage! {
     trait Store for Module<T: Trait> as EncryptedBalances {
         /// An encrypted balance for each account
-        pub EncryptedBalance get(encrypted_balance) config() : map PkdAddress => Option<Ciphertext>;
+        pub EncryptedBalance get(encrypted_balance) config() : map PkdAddress => Option<T::EncryptedBalance>;
 
         /// A pending transfer
-        pub PendingTransfer get(pending_transfer) : map PkdAddress => Option<Ciphertext>;
+        pub PendingTransfer get(pending_transfer) : map PkdAddress => Option<T::EncryptedBalance>;
 
         /// A last epoch for rollover
         pub LastRollOver get(last_rollover) config() : map PkdAddress => Option<T::BlockNumber>;
@@ -158,10 +161,9 @@ decl_storage! {
 
 decl_event! (
     /// An event in this module.
-	pub enum Event<T> where <T as system::Trait>::AccountId {
+	pub enum Event<T> where <T as Trait>::EncryptedBalance, <T as system::Trait>::AccountId {
         // TODO: tempolaly removed AccountId because of mismatched types
-		EncryptedBalances(Proof, Ciphertext, Ciphertext, Ciphertext, SigVerificationKey),
-        Phantom(AccountId),
+		EncryptedBalances(Proof, EncryptedBalance, EncryptedBalance, EncryptedBalance, AccountId),
 	}
 );
 
@@ -241,10 +243,10 @@ impl<T: Trait> Module<T> {
         zkproof: &Proof,
         address_sender: &PkdAddress,
         address_recipient: &PkdAddress,
-        amount_sender: &Ciphertext,
-        amount_recipient: &Ciphertext,
-        rvk: &SigVerificationKey,
-        fee_sender: &Ciphertext,
+        amount_sender: &T::EncryptedBalance,
+        amount_recipient: &T::EncryptedBalance,
+        rvk: &T::AccountId,
+        fee_sender: &T::EncryptedBalance,
     ) -> result::Result<TypedParams, &'static str>
     {
         // Get zkproofs with the type
@@ -293,7 +295,7 @@ impl<T: Trait> Module<T> {
         })
     }
 
-    fn total_balance(who: &PkdAddress) -> Ciphertext {
+    fn total_balance(who: &PkdAddress) -> T::EncryptedBalance {
         unimplemented!();
     }
 
@@ -341,7 +343,7 @@ impl<T: Trait> Module<T> {
             <EncryptedBalance<T>>::mutate(addr, |balance| {
                 let new_balance = balance.clone().map_or(
                     pending_transfer,
-                    |_| Some(Ciphertext::from_ciphertext(&typed_balance.add_no_params(&typed_pending_transfer)))
+                    |_| Some(T::EncryptedBalance::from_ciphertext(&typed_balance.add_no_params(&typed_pending_transfer)))
                 );
                 *balance = new_balance
             });
@@ -365,7 +367,7 @@ impl<T: Trait> Module<T> {
 
 impl<T: Trait> IsDeadAccount<T::AccountId> for Module<T>
 where
-    T::EncryptedBalance: Member
+    T::EncryptedBalance: MaybeSerializeDebug
 {
     fn is_dead_account(who: &T::AccountId) -> bool {
         unimplemented!();
@@ -414,6 +416,7 @@ mod tests {
 
     impl Trait for Test {
         type Event = ();
+        type EncryptedBalance = Ciphertext;
     }
 
     type EncryptedBalances = Module<Test>;

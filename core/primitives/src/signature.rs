@@ -2,13 +2,11 @@
 use serde::{Serialize, Serializer, Deserialize, Deserializer};
 #[cfg(feature = "std")]
 use substrate_primitives::hexdisplay::AsBytesRef;
-// use primitive_types::H512;
 use jubjub::redjubjub;
 use runtime_primitives::traits::{Verify, Lazy};
 use fixed_hash::construct_fixed_hash;
-use crate::sig_vk::SigVerificationKey;
+use crate::{SigVerificationKey, SigVk, PARAMS};
 use jubjub::curve::FixedGenerators;
-use crate::PARAMS;
 #[cfg(feature = "std")]
 use substrate_primitives::bytes;
 

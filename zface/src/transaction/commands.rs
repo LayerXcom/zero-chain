@@ -15,7 +15,7 @@ use zjubjub::{
     redjubjub::PrivateKey as zPrivateKey
     };
 use zpairing::{bls12_381::Bls12 as zBls12, PrimeField as zPrimeField, PrimeFieldRepr as zPrimeFieldRepr};
-use zprimitives::{PARAMS as ZPARAMS, Proof, Ciphertext as zCiphertext, PkdAddress, SigVerificationKey, RedjubjubSignature};
+use zprimitives::{PARAMS as ZPARAMS, Proof, Ciphertext as zCiphertext, PkdAddress, SigVerificationKey, RedjubjubSignature, SigVk};
 use zerochain_runtime::{UncheckedExtrinsic, Call, EncryptedBalancesCall};
 use runtime_primitives::generic::Era;
 use parity_codec::{Compact, Encode};
@@ -49,7 +49,7 @@ pub fn send_tx_with_arg<R: Rng>(
     let prepared_vk = PreparedVerifyingKey::<Bls12>::read(&mut &buf_vk[..])
         .expect("should ne casted to PreparedVerifyingKey<Bls12> type");
 
-    let fee_str = api.get_storage("ConfTransfer", "TransactionBaseFee", None)
+    let fee_str = api.get_storage("EncryptedBalances", "TransactionBaseFee", None)
         .expect("should be fetched TransactionBaseFee from ConfTransfer module of Zerochain.");
     let fee = hexstr_to_u64(fee_str) as u32;
 

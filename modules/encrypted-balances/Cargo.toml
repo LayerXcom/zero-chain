@@ -15,6 +15,26 @@ zcrypto = { package = "zerochain-crypto", path = "../../core/crypto", default-fe
 keys = { path = "../../core/keys", default-features = false }
 system = { package = "srml-system", path = "../system", default-features = false }
 
+[features]
+default = ['std']
+std = [
+    'parity-codec/std',
+    'primitives/std',
+    'support/std',
+    'rstd/std',
+    'runtime-primitives/std',
+    'runtime-io/std',
+    'pairing/std',
+	'bellman-verifier/std',
+	'zprimitives/std',
+	'jubjub/std',
+	'keys/std',
+    'zcrypto/std',
+    'system/std',
+    'serde_derive',
+    'serde',
+]
+
 [dev-dependencies]
 hex-literal = '0.1'
 
@@ -61,19 +81,4 @@ version = '1.0'
 optional = true
 version = '1.0'
 
-[features]
-default = ['std']
-std = [
-    'parity-codec/std',
-    'primitives/std',
-    'rstd/std',
-    'runtime-io/std',
-    "pairing/std",
-	"bellman-verifier/std",
-	"zprimitives/std",
-	"jubjub/std",
-	"keys/std",
-    'system/std',
-    'serde_derive',
-    'serde',
-]
+
