@@ -244,6 +244,7 @@ impl<AccountId> From<Option<AccountId>> for RawOrigin<AccountId> {
 
 /// Exposed trait-generic origin type.
 pub type Origin<T> = RawOrigin<<T as Trait>::AccountId>;
+
 // pub type Origin<T> = RawOrigin<<T as Trait>::SigVerificationKey>;
 
 // Exposed origin type of encrypted key.

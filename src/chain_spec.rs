@@ -10,6 +10,7 @@ use zprimitives::{
 	PkdAddress,
 	Ciphertext,
 	SigVerificationKey,
+	ElgamalCiphertext,
 };
 use keys::EncryptionKey;
 use zjubjub::{curve::{FixedGenerators, fs}};

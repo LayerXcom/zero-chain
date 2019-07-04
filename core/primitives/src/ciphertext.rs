@@ -16,17 +16,24 @@ use substrate_primitives::hexdisplay::AsBytesRef;
 #[cfg_attr(feature = "std", derive(Debug, Serialize, Deserialize))]
 pub struct Ciphertext(Vec<u8>);
 
-impl Ciphertext {
-    pub fn into_ciphertext(&self) -> Option<elgamal::Ciphertext<Bls12>> {
+pub trait ElgamalCiphertext {
+    fn into_ciphertext(&self) -> Option<elgamal::Ciphertext<Bls12>>;
+    fn from_ciphertext(ciphertext: &elgamal::Ciphertext<Bls12>) -> Self;
+}
+
+impl ElgamalCiphertext for Ciphertext {
+    fn into_ciphertext(&self) -> Option<elgamal::Ciphertext<Bls12>> {
         elgamal::Ciphertext::read(&mut &self.0[..], &PARAMS as &JubjubBls12).ok()
     }
 
-    pub fn from_ciphertext(ciphertext: &elgamal::Ciphertext<Bls12>) -> Self {
+    fn from_ciphertext(ciphertext: &elgamal::Ciphertext<Bls12>) -> Self {
         let mut writer = [0u8; 64];
         ciphertext.write(&mut writer[..]).unwrap();
         Ciphertext(writer.to_vec())
     }
+}
 
+impl Ciphertext {
     pub fn from_slice(slice: &[u8]) -> Self {
         Ciphertext(slice.to_vec())
     }

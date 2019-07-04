@@ -1,5 +1,5 @@
 //! A module for dealing with confidential transfer
-use support::{decl_module, decl_storage, decl_event, StorageMap, dispatch::Result, ensure};
+use support::{decl_module, decl_storage, decl_event, StorageMap, dispatch::Result, ensure, Parameter};
 use rstd::prelude::*;
 use bellman_verifier::verify_proof;
 use rstd::result;
@@ -10,7 +10,7 @@ use pairing::{
     },
     Field,
 };
-use runtime_primitives::traits::Zero;
+use runtime_primitives::traits::{Member, Zero};
 use jubjub::redjubjub::PublicKey;
 use zprimitives::{
     PkdAddress,
@@ -18,14 +18,19 @@ use zprimitives::{
     Proof,
     SigVerificationKey,
     PreparedVk,
+    ElgamalCiphertext,
 };
 use keys::EncryptionKey;
 use zcrypto::elgamal;
 use runtime_io;
+use system::IsDeadAccount;
 
 pub trait Trait: system::Trait {
 	/// The overarching event type.
 	type Event: From<Event<Self>> + Into<<Self as system::Trait>::Event>;
+
+    /// The units in which we record encrypted balances.
+    type EncryptedBalance: ElgamalCiphertext + Parameter + Member + Default;
 }
 
 struct TypedParams {
@@ -288,6 +293,10 @@ impl<T: Trait> Module<T> {
         })
     }
 
+    fn total_balance(who: &PkdAddress) -> Ciphertext {
+        unimplemented!();
+    }
+
     // PRIVATE MUTABLES
 
     /// Rolling over allows us to send transactions asynchronously and protect from front-running attacks.
@@ -351,6 +360,15 @@ impl<T: Trait> Module<T> {
 
         // return actual typed balance.
         Ok(res_balance)
+    }
+}
+
+impl<T: Trait> IsDeadAccount<T::AccountId> for Module<T>
+where
+    T::EncryptedBalance: Member
+{
+    fn is_dead_account(who: &T::AccountId) -> bool {
+        unimplemented!();
     }
 }
 

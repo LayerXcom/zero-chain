@@ -10,6 +10,7 @@ use zprimitives::{
     PkdAddress,
     Ciphertext,
     SigVerificationKey,
+    ElgamalCiphertext,
 };
 
 /// The module configuration trait.
@@ -18,7 +19,7 @@ pub trait Trait: system::Trait {
     // type Event: From<Event<Self>> + Into<<Self as system::Trait>::Event>;
 
     /// The units in which we record encrypted balances.
-    type EncryptedBalance: Default + Member + Parameter;
+    type EncryptedBalance: ElgamalCiphertext + Parameter + Member + Default;
 
     /// The arithmetic type of asset identifier.
     type AssetId: Parameter + SimpleArithmetic + Default + Copy;

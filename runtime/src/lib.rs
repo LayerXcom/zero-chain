@@ -24,11 +24,11 @@ use client::{
 use version::RuntimeVersion;
 #[cfg(feature = "std")]
 use version::NativeVersion;
-
 use zprimitives::{
 	RedjubjubSignature,
 	SigVerificationKey,
 	PkdAddress,
+	Ciphertext,
 };
 
 // A few exports that help ease life for downstream crates.
@@ -50,10 +50,6 @@ pub type AuthoritySignature = ed25519::Signature;
 
 /// Alias to pubkey that identifies an account on the chain.
 pub type AccountId = <AccountSignature as Verify>::Signer;
-// pub type AccountId = PkdAddress;
-
-// Alias to a signature verification key
-// pub type SigVerificationKey = <AccountSignature as Verify>::Signer;
 
 /// The type used by authorities to prove their ID.
 pub type AccountSignature = RedjubjubSignature;
@@ -166,7 +162,7 @@ impl indices::Trait for Runtime {
 	/// Use the standard means of resolving an index hint from an id.
 	type ResolveHint = indices::SimpleResolveHint<Self::AccountId, Self::AccountIndex>;
 	/// Determine whether an account is dead.
-	type IsDeadAccount = Balances;
+	type IsDeadAccount = EncryptedBalances;
 	/// The uniquitous event type.
 	type Event = Event;
 }
@@ -200,6 +196,7 @@ impl sudo::Trait for Runtime {
 
 impl encrypted_balances::Trait for Runtime {
 	type Event = Event;
+	type EncryptedBalance = Ciphertext;
 }
 
 construct_runtime!(
@@ -234,7 +231,7 @@ pub type UncheckedExtrinsic = generic::UncheckedMortalCompactExtrinsic<Address, 
 /// Extrinsic type that has already been checked.
 pub type CheckedExtrinsic = generic::CheckedExtrinsic<AccountId, Nonce, Call>;
 /// Executive: handles dispatch to the various modules.
-pub type Executive = executive::Executive<Runtime, Block, Context, Balances, AllModules>;
+pub type Executive = executive::Executive<Runtime, Block, Context, AllModules>;
 
 // Implement our runtime API endpoints. This is just a bunch of proxying.
 impl_runtime_apis! {
