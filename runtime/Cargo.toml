@@ -15,7 +15,6 @@ indices = { package = "srml-indices", path = "../modules/indices", default-featu
 sudo = { package = "srml-sudo", path = "../modules/sudo", default-features = false }
 timestamp = { package = "srml-timestamp", path = "../modules/timestamp", default-features = false }
 hex-literal = '0.1'
-
 encrypted-balances = { path = "../modules/encrypted-balances", default-features = false }
 
 [dependencies.client]

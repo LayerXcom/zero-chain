@@ -1,4 +1,4 @@
-//! A simple module for dealing with confidential transfer of fungible assets.
+//! A module for dealing with confidential transfer
 use support::{decl_module, decl_storage, decl_event, StorageMap, dispatch::Result, ensure};
 use rstd::prelude::*;
 use bellman_verifier::verify_proof;
