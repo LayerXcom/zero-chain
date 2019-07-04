@@ -113,7 +113,7 @@ decl_module! {
 
             // TODO: tempolaly removed address_sender and address_recipient because of mismatched types
             Self::deposit_event(
-                RawEvent::ConfTransfer(
+                RawEvent::EncryptedBalances(
                     zkproof,
                     amount_sender,
                     amount_recipient,
@@ -128,7 +128,7 @@ decl_module! {
 }
 
 decl_storage! {
-    trait Store for Module<T: Trait> as ConfTransfer {
+    trait Store for Module<T: Trait> as EncryptedBalances {
         /// An encrypted balance for each account
         pub EncryptedBalance get(encrypted_balance) config() : map PkdAddress => Option<Ciphertext>;
 
@@ -155,7 +155,7 @@ decl_event! (
     /// An event in this module.
 	pub enum Event<T> where <T as system::Trait>::AccountId {
         // TODO: tempolaly removed AccountId because of mismatched types
-		ConfTransfer(Proof, Ciphertext, Ciphertext, Ciphertext, SigVerificationKey),
+		EncryptedBalances(Proof, Ciphertext, Ciphertext, Ciphertext, SigVerificationKey),
         Phantom(AccountId),
 	}
 );
@@ -398,7 +398,7 @@ mod tests {
         type Event = ();
     }
 
-    type ConfTransfer = Module<Test>;
+    type EncryptedBalances = Module<Test>;
 
     fn alice_balance_init() -> (PkdAddress, Ciphertext) {
         let (alice_seed, enc_key) = get_alice_seed_ek();
@@ -438,7 +438,7 @@ mod tests {
     }
 
     fn get_pvk() -> PreparedVk {
-        let vk_path = Path::new("../zface/verification.params");
+        let vk_path = Path::new("../../zface/verification.params");
         let vk_file = File::open(&vk_path).unwrap();
         let mut vk_reader = BufReader::new(vk_file);
 
@@ -473,7 +473,7 @@ mod tests {
             let rvk: [u8; 32] = hex!("f539db3c0075f6394ff8698c95ca47921669c77bb2b23b366f42a39b05a88c96");
             let enc1_by_alice: [u8; 64] = hex!("ed19f1820c3f09da976f727e8531aa83a483d262e4abb1e9e67a1eba843b4034b8b965029e45bd78aabe14c66458dd03f138aa8b58490974f23aabb53d9bce99");
 
-            assert_ok!(ConfTransfer::confidential_transfer(
+            assert_ok!(EncryptedBalances::confidential_transfer(
                 Origin::signed(1),
                 Proof::from_slice(&proof[..]),
                 PkdAddress::from_slice(&pkd_addr_alice),
@@ -498,7 +498,7 @@ mod tests {
             let rvk: [u8; 32] = hex!("f539db3c0075f6394ff8698c95ca47921669c77bb2b23b366f42a39b05a88c96");
             let enc1_by_alice: [u8; 64] = hex!("ed19f1820c3f09da976f727e8531aa83a483d262e4abb1e9e67a1eba843b4034b8b965029e45bd78aabe14c66458dd03f138aa8b58490974f23aabb53d9bce99");
 
-            assert_ok!(ConfTransfer::confidential_transfer(
+            assert_ok!(EncryptedBalances::confidential_transfer(
                 Origin::signed(1),
                 Proof::from_slice(&proof[..]),
                 PkdAddress::from_slice(&pkd_addr_alice),

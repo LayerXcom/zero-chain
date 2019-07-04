@@ -16,7 +16,7 @@ use zjubjub::{
     };
 use zpairing::{bls12_381::Bls12 as zBls12, PrimeField as zPrimeField, PrimeFieldRepr as zPrimeFieldRepr};
 use zprimitives::{PARAMS as ZPARAMS, Proof, Ciphertext as zCiphertext, PkdAddress, SigVerificationKey, RedjubjubSignature};
-use zerochain_runtime::{UncheckedExtrinsic, Call, ConfTransferCall};
+use zerochain_runtime::{UncheckedExtrinsic, Call, EncryptedBalancesCall};
 use runtime_primitives::generic::Era;
 use parity_codec::{Compact, Encode};
 use primitives::blake2_256;
@@ -139,7 +139,7 @@ pub fn submit_tx<R: Rng>(tx: &Transaction, api: &Api, rng: &mut R) {
     let sig_sk = zPrivateKey::<zBls12>(rsk);
     let sig_vk = SigVerificationKey::from_slice(&tx.rvk[..]);
 
-    let calls = Call::ConfTransfer(ConfTransferCall::confidential_transfer(
+    let calls = Call::EncryptedBalances(EncryptedBalancesCall::confidential_transfer(
         Proof::from_slice(&tx.proof[..]),
         PkdAddress::from_slice(&tx.address_sender[..]),
         PkdAddress::from_slice(&tx.address_recipient[..]),

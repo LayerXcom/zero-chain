@@ -16,6 +16,8 @@ sudo = { package = "srml-sudo", path = "../modules/sudo", default-features = fal
 timestamp = { package = "srml-timestamp", path = "../modules/timestamp", default-features = false }
 hex-literal = '0.1'
 
+encrypted-balances = { path = "../modules/encrypted-balances", default-features = false }
+
 [dependencies.client]
 default_features = false
 git = 'https://github.com/osuketh/substrate.git'
@@ -116,6 +118,7 @@ std = [
     'consensus-aura/std',
     'offchain-primitives/std',
     'consensus-authorities/std',
+    'encrypted-balances/std',
 
     "pairing/std",
 	"bellman-verifier/std",

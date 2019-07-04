@@ -1,7 +1,7 @@
 use primitives::{ed25519, sr25519, Pair, crypto::Ss58Codec};
 use zerochain_runtime::{
 	AccountId, GenesisConfig, ConsensusConfig, TimestampConfig, BalancesConfig,
-	SudoConfig, IndicesConfig, ConfTransferConfig
+	SudoConfig, IndicesConfig, EncryptedBalancesConfig
 };
 use substrate_service;
 use ed25519::Public as AuthorityId;
@@ -130,7 +130,7 @@ fn testnet_genesis(initial_authorities: Vec<AuthorityId>, endowed_accounts: Vec<
 		sudo: Some(SudoConfig {
 			key: root_key,
 		}),
-		conf_transfer: Some(ConfTransferConfig {
+		encrypted_balances: Some(EncryptedBalancesConfig {
 			encrypted_balance: vec![alice_balance_init()],
 			last_rollover: vec![alice_epoch_init()],
 			epoch_length: 1,

@@ -37,7 +37,7 @@ pub use runtime_primitives::BuildStorage;
 pub use consensus::Call as ConsensusCall;
 pub use timestamp::Call as TimestampCall;
 pub use balances::Call as BalancesCall;
-pub use conf_transfer::Call as ConfTransferCall;
+pub use encrypted_balances::Call as EncryptedBalancesCall;
 pub use runtime_primitives::{Permill, Perbill};
 pub use timestamp::BlockPeriod;
 pub use support::{StorageValue, construct_runtime};
@@ -66,8 +66,6 @@ pub type BlockNumber = u64;
 
 /// Index of an account's extrinsic in the chain.
 pub type Nonce = u64;
-
-mod conf_transfer;
 
 /// Opaque types. These are used by the CLI to instantiate machinery that don't need to know
 /// the specifics of the runtime. They can then be made to be agnostic over specific formats
@@ -200,7 +198,7 @@ impl sudo::Trait for Runtime {
 	type Proposal = Call;
 }
 
-impl conf_transfer::Trait for Runtime {
+impl encrypted_balances::Trait for Runtime {
 	type Event = Event;
 }
 
@@ -210,7 +208,7 @@ construct_runtime!(
 		NodeBlock = opaque::Block,
 		UncheckedExtrinsic = UncheckedExtrinsic
 	{
-		ConfTransfer: conf_transfer::{Module, Call, Storage, Event<T>, Config<T>},
+		EncryptedBalances: encrypted_balances::{Module, Call, Storage, Event<T>, Config<T>},
 		System: system::{default, Log(ChangesTrieRoot)},
 		Timestamp: timestamp::{Module, Call, Storage, Config<T>, Inherent},
 		Consensus: consensus::{Module, Call, Storage, Config<T>, Log(AuthoritiesChange), Inherent},
