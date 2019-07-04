@@ -183,7 +183,11 @@ fn subcommand_wallet<R: Rng>(mut term: term::Term, root_dir: PathBuf, matches: &
         },
         ("recovery", Some(_)) => {
             recover(&mut term, root_dir, rng)
-                .expect("Invalid mnemonic to recover keystore.")
+                .expect("Invalid mnemonic to recover keystore.");
+        },
+        ("destroy", Some(_)) => {
+            destory(&mut term, root_dir)
+                .expect("Removing wallet directory failed.");
         },
         ("balance", Some(_)) => {
             println!("Getting encrypted balance from zerochain");
@@ -271,6 +275,9 @@ fn wallet_commands_definition<'a, 'b>() -> App<'a, 'b> {
         )
         .subcommand(SubCommand::with_name("recovery")
             .about("Recover keystore from mnemonic.")
+        )
+        .subcommand(SubCommand::with_name("destroy")
+            .about("Remove your all wallet directory.")
         )
         .subcommand(SubCommand::with_name("balance")
             .about("Get current balance stored in ConfTransfer module")
