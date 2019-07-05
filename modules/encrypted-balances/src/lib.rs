@@ -118,7 +118,7 @@ decl_module! {
             });
 
             Self::deposit_event(
-                RawEvent::EncryptedBalances(
+                RawEvent::ConfidentialTransfer(
                     zkproof,
                     address_sender,
                     address_recipient,
@@ -162,7 +162,7 @@ decl_storage! {
 decl_event! (
     /// An event in this module.
 	pub enum Event<T> where <T as Trait>::EncryptedBalance, <T as system::Trait>::AccountId {
-		EncryptedBalances(Proof, PkdAddress, PkdAddress, EncryptedBalance, EncryptedBalance, EncryptedBalance, EncryptedBalance, AccountId),
+		ConfidentialTransfer(Proof, PkdAddress, PkdAddress, EncryptedBalance, EncryptedBalance, EncryptedBalance, EncryptedBalance, AccountId),
 	}
 );
 
