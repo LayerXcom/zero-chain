@@ -17,7 +17,6 @@ use jubjub::redjubjub::PublicKey;
 use zprimitives::{
     PkdAddress,
     Proof,
-    SigVerificationKey,
     PreparedVk,
     ElgamalCiphertext,
     SigVk,
@@ -61,7 +60,6 @@ decl_module! {
             address_recipient: PkdAddress,
             amount_sender: T::EncryptedBalance,
             amount_recipient: T::EncryptedBalance,
-            rvk: SigVerificationKey,  // TODO: Extract from origin
             fee_sender: T::EncryptedBalance
         ) -> Result {
 			let rvk = ensure_signed(origin)?;
@@ -119,12 +117,14 @@ decl_module! {
                 *pending_transfer = new_pending_transfer
             });
 
-            // TODO: tempolaly removed address_sender and address_recipient because of mismatched types
             Self::deposit_event(
                 RawEvent::EncryptedBalances(
                     zkproof,
+                    address_sender,
+                    address_recipient,
                     amount_sender,
                     amount_recipient,
+                    fee_sender,
                     T::EncryptedBalance::from_ciphertext(&typed_balance_sender),
                     rvk
                 )
@@ -162,8 +162,7 @@ decl_storage! {
 decl_event! (
     /// An event in this module.
 	pub enum Event<T> where <T as Trait>::EncryptedBalance, <T as system::Trait>::AccountId {
-        // TODO: tempolaly removed AccountId because of mismatched types
-		EncryptedBalances(Proof, EncryptedBalance, EncryptedBalance, EncryptedBalance, AccountId),
+		EncryptedBalances(Proof, PkdAddress, PkdAddress, EncryptedBalance, EncryptedBalance, EncryptedBalance, EncryptedBalance, AccountId),
 	}
 );
 
@@ -385,6 +384,7 @@ mod tests {
         BuildStorage, traits::{BlakeTwo256, IdentityLookup},
         testing::{Digest, DigestItem, Header}
     };
+    use zprimitives::{Ciphertext, SigVerificationKey};
     use keys::{ProofGenerationKey, EncryptionKey};
     use jubjub::{curve::{JubjubBls12, FixedGenerators, fs}};
     use hex_literal::{hex, hex_impl};
@@ -406,9 +406,9 @@ mod tests {
         type Hash = H256;
         type Hashing = BlakeTwo256;
         type Digest = Digest;
-        type AccountId = u64;
+        type AccountId = SigVerificationKey;
         type SigVerificationKey = u64;
-        type Lookup = IdentityLookup<u64>;
+        type Lookup = IdentityLookup<SigVerificationKey>;
         type Header = Header;
         type Event = ();
         type Log = DigestItem;
@@ -491,17 +491,16 @@ mod tests {
             let pkd_addr_bob: [u8; 32] = hex!("45e66da531088b55dcb3b273ca825454d79d2d1d5c4fa2ba4a12c1fa1ccd6389");
             let enc10_by_alice: [u8; 64] = hex!("29f38e21e264fb8fa61edc76f79ca2889228d36e40b63f3697102010404ae1d0b8b965029e45bd78aabe14c66458dd03f138aa8b58490974f23aabb53d9bce99");
             let enc10_by_bob: [u8; 64] = hex!("4c6bda3db6977c29a115fbc5aba03b9c37b767c09ffe6c622fcec42bbb732fc7b8b965029e45bd78aabe14c66458dd03f138aa8b58490974f23aabb53d9bce99");
-            let rvk: [u8; 32] = hex!("f539db3c0075f6394ff8698c95ca47921669c77bb2b23b366f42a39b05a88c96");
             let enc1_by_alice: [u8; 64] = hex!("ed19f1820c3f09da976f727e8531aa83a483d262e4abb1e9e67a1eba843b4034b8b965029e45bd78aabe14c66458dd03f138aa8b58490974f23aabb53d9bce99");
+            let rvk: [u8; 32] = hex!("f539db3c0075f6394ff8698c95ca47921669c77bb2b23b366f42a39b05a88c96");
 
             assert_ok!(EncryptedBalances::confidential_transfer(
-                Origin::signed(1),
+                Origin::signed(SigVerificationKey::from_slice(&rvk[..])),
                 Proof::from_slice(&proof[..]),
                 PkdAddress::from_slice(&pkd_addr_alice),
                 PkdAddress::from_slice(&pkd_addr_bob),
                 Ciphertext::from_slice(&enc10_by_alice[..]),
                 Ciphertext::from_slice(&enc10_by_bob[..]),
-                SigVerificationKey::from_slice(&rvk),
                 Ciphertext::from_slice(&enc1_by_alice[..])
             ));
         })
@@ -516,17 +515,16 @@ mod tests {
             let pkd_addr_bob: [u8; 32] = hex!("45e66da531088b55dcb3b273ca825454d79d2d1d5c4fa2ba4a12c1fa1ccd6389");
             let enc10_by_alice: [u8; 64] = hex!("29f38e21e264fb8fa61edc76f79ca2889228d36e40b63f3697102010404ae1d0b8b965029e45bd78aabe14c66458dd03f138aa8b58490974f23aabb53d9bce99");
             let enc10_by_bob: [u8; 64] = hex!("4c6bda3db6977c29a115fbc5aba03b9c37b767c09ffe6c622fcec42bbb732fc7b8b965029e45bd78aabe14c66458dd03f138aa8b58490974f23aabb53d9bce99");
-            let rvk: [u8; 32] = hex!("f539db3c0075f6394ff8698c95ca47921669c77bb2b23b366f42a39b05a88c96");
             let enc1_by_alice: [u8; 64] = hex!("ed19f1820c3f09da976f727e8531aa83a483d262e4abb1e9e67a1eba843b4034b8b965029e45bd78aabe14c66458dd03f138aa8b58490974f23aabb53d9bce99");
+            let rvk: [u8; 32] = hex!("f539db3c0075f6394ff8698c95ca47921669c77bb2b23b366f42a39b05a88c96");
 
             assert_ok!(EncryptedBalances::confidential_transfer(
-                Origin::signed(1),
+                Origin::signed(SigVerificationKey::from_slice(&rvk[..])),
                 Proof::from_slice(&proof[..]),
                 PkdAddress::from_slice(&pkd_addr_alice),
                 PkdAddress::from_slice(&pkd_addr_bob),
                 Ciphertext::from_slice(&enc10_by_alice[..]),
                 Ciphertext::from_slice(&enc10_by_bob[..]),
-                SigVerificationKey::from_slice(&rvk),
                 Ciphertext::from_slice(&enc1_by_alice[..])
             ));
         })

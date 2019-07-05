@@ -27,7 +27,6 @@ use version::NativeVersion;
 use zprimitives::{
 	RedjubjubSignature,
 	SigVerificationKey,
-	PkdAddress,
 	Ciphertext,
 };
 

@@ -145,7 +145,6 @@ pub fn submit_tx<R: Rng>(tx: &Transaction, api: &Api, rng: &mut R) {
         PkdAddress::from_slice(&tx.address_recipient[..]),
         zCiphertext::from_slice(&tx.enc_amount_sender[..]),
         zCiphertext::from_slice(&tx.enc_amount_recipient[..]),
-        sig_vk,
         zCiphertext::from_slice(&tx.enc_fee[..]),
     ));
 
