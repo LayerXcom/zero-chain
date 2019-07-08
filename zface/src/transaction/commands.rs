@@ -88,7 +88,6 @@ pub fn send_tx_with_arg<R: Rng>(
     println!("Start submitting a transaction to Zerochain...");
     subscribe_event(api.clone(), remaining_balance);
     submit_tx(&tx, &api, rng);
-    // println!("Remaining balance is {}", remaining_balance);
 
     Ok(())
 }
@@ -202,24 +201,16 @@ pub fn subscribe_event(api: Api, remaining_balance: u32) {
                                     match &enc_be {
                                         encrypted_balances::RawEvent::ConfidentialTransfer(
                                             _zkproof,
-                                            _address_sender,
-                                            _address_recipient,
-                                            _amount_sender,
-                                            _amount_recipient,
-                                            _fee_sender,
-                                            _enc_balances,
-                                            _sig_vk
-                                        ) => {
-                                            println!("Submitting transaction is done successfully. \n Remaining balance is {}", remaining_balance);
-                                        },
-                                        // _ => {
-                                        //     println!("ignoring unsupported encrypted_balances event");
-                                        // }
+                                            _address_sender, _address_recipient,
+                                            _amount_sender, _amount_recipient,
+                                            _fee_sender, _enc_balances, _sig_vk
+                                        ) => println!("Submitting transaction is completed successfully. \n Remaining balance is {}", remaining_balance),
+                                        encrypted_balances::RawEvent::InvalidZkProof() => {
+                                            println!("Invalid zk proof.");
+                                        }
                                     }
                                 }
-                                _ => {
-                                    // warn!("ignoring unsupported module event: {:?}", event.event)
-                                }
+                                _ => /* warn!("ignoring unsupported module event: {:?}", event.event) */ {},
                             }
                         }
                     },

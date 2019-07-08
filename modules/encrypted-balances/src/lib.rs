@@ -85,8 +85,7 @@ decl_module! {
                 .map_err(|_| "Invalid ciphertext of recipient balance.")?;
 
             // Verify the zk proof
-            ensure!(
-                Self::validate_proof(
+            if !Self::validate_proof(
                     &typed.zkproof,
                     &typed.address_sender,
                     &typed.address_recipient,
@@ -95,9 +94,10 @@ decl_module! {
                     &typed_balance_sender,
                     &typed.rvk,
                     &typed.fee_sender,
-                )?,
-                "Invalid zkproof"
-            );
+                )? {
+                    Self::deposit_event(RawEvent::InvalidZkProof());
+                    return Err("Invalid zkproof");
+                }
 
             let amount_plus_fee = typed.amount_sender.add_no_params(&typed.fee_sender);
 
@@ -163,6 +163,7 @@ decl_event! (
     /// An event in this module.
 	pub enum Event<T> where <T as Trait>::EncryptedBalance, <T as system::Trait>::AccountId {
 		ConfidentialTransfer(Proof, PkdAddress, PkdAddress, EncryptedBalance, EncryptedBalance, EncryptedBalance, EncryptedBalance, AccountId),
+        InvalidZkProof(),
 	}
 );
 
