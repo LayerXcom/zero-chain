@@ -37,6 +37,7 @@ pub use consensus::Call as ConsensusCall;
 pub use timestamp::Call as TimestampCall;
 pub use balances::Call as BalancesCall;
 pub use encrypted_balances::Call as EncryptedBalancesCall;
+pub use encrypted_assets::Call as EncryptedAssetsCall;
 pub use runtime_primitives::{Permill, Perbill};
 pub use timestamp::BlockPeriod;
 pub use support::{StorageValue, construct_runtime};
@@ -198,6 +199,12 @@ impl encrypted_balances::Trait for Runtime {
 	type EncryptedBalance = Ciphertext;
 }
 
+impl encrypted_assets::Trait for Runtime {
+	type Event = Event;
+	type EncryptedBalance = Ciphertext;
+	type AssetId = u32;
+}
+
 construct_runtime!(
 	pub enum Runtime with Log(InternalLog: DigestItem<Hash, AuthorityId, AuthoritySignature>) where
 		Block = Block,
@@ -205,6 +212,7 @@ construct_runtime!(
 		UncheckedExtrinsic = UncheckedExtrinsic
 	{
 		EncryptedBalances: encrypted_balances::{Module, Call, Storage, Event<T>, Config<T>},
+		EncryptedAssets: encrypted_assets::{Module, Call, Storage, Event<T>},
 		System: system::{default, Log(ChangesTrieRoot)},
 		Timestamp: timestamp::{Module, Call, Storage, Config<T>, Inherent},
 		Consensus: consensus::{Module, Call, Storage, Config<T>, Log(AuthoritiesChange), Inherent},

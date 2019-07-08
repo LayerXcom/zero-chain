@@ -16,6 +16,7 @@ sudo = { package = "srml-sudo", path = "../modules/sudo", default-features = fal
 timestamp = { package = "srml-timestamp", path = "../modules/timestamp", default-features = false }
 hex-literal = '0.1'
 encrypted-balances = { path = "../modules/encrypted-balances", default-features = false }
+encrypted-assets = { path = "../modules/encrypted-assets", default-features = false }
 
 [dependencies.client]
 default_features = false
@@ -118,6 +119,7 @@ std = [
     'offchain-primitives/std',
     'consensus-authorities/std',
     'encrypted-balances/std',
+    'encrypted-assets/std',
 
     "pairing/std",
 	"bellman-verifier/std",

@@ -42,7 +42,7 @@ git = 'https://github.com/osuketh/substrate.git'
 package = 'sr-io'
 branch = "patch-zerochain"
 
-[dev-dependencies.primitives]
+[dependencies.primitives]
 default_features = false
 git = 'https://github.com/osuketh/substrate.git'
 package = 'substrate-primitives'
@@ -67,6 +67,7 @@ std = [
     'parity-codec/std',
     'primitives/std',
     'rstd/std',
+    'runtime-primitives/std',
     'runtime-io/std',
     "pairing/std",
 	"bellman-verifier/std",

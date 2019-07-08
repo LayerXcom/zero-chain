@@ -18,7 +18,7 @@ use zpairing::{bls12_381::Bls12 as zBls12, PrimeField as zPrimeField, PrimeField
 use zprimitives::{PARAMS as ZPARAMS, Proof, Ciphertext as zCiphertext, PkdAddress, SigVerificationKey, RedjubjubSignature, SigVk};
 use zerochain_runtime::{UncheckedExtrinsic, Call, EncryptedBalancesCall};
 use runtime_primitives::generic::Era;
-use parity_codec::{Compact, Encode};
+use parity_codec::{Compact, Encode, Decode};
 use primitives::blake2_256;
 use polkadot_rs::{Api, Url, hexstr_to_u64};
 use scrypto::jubjub::fs;
@@ -86,8 +86,9 @@ pub fn send_tx_with_arg<R: Rng>(
     .expect("fails to generate the tx");
 
     println!("Start submitting a transaction to Zerochain...");
+    subscribe_event(api.clone(), remaining_balance);
     submit_tx(&tx, &api, rng);
-    println!("Remaining balance is {}", remaining_balance);
+    // println!("Remaining balance is {}", remaining_balance);
 
     Ok(())
 }
@@ -170,4 +171,60 @@ pub fn submit_tx<R: Rng>(tx: &Transaction, api: &Api, rng: &mut R) {
     let uxt = UncheckedExtrinsic::new_signed(index, raw_payload.1, sig_vk.into(), sig_repr, era);
     let _tx_hash = api.submit_extrinsic(&uxt)
         .expect("Faild to submit a extrinsic to zerochain node.");
+}
+
+pub fn subscribe_event(api: Api, remaining_balance: u32) {
+    use std::sync::mpsc::channel;
+    use std::thread;
+    use polkadot_rs::hexstr_to_vec;
+    use zerochain_runtime::Event;
+
+    let (tx, rx) = channel();
+    let _ = thread::Builder::new()
+        .name("eventsubscriber".to_string())
+        .spawn(move || {
+            api.subscribe_events(tx.clone());
+    });
+
+    let _ = thread::Builder::new()
+        .name("eventlistner".to_string())
+        .spawn(move || {
+            loop {
+                let event_str = rx.recv().unwrap();
+                let res_vec = hexstr_to_vec(event_str);
+                let mut er_enc = res_vec.as_slice();
+                let events = Vec::<system::EventRecord::<Event>>::decode(&mut er_enc);
+                match events {
+                    Some(events) => {
+                        for event in &events {
+                            match &event.event {
+                                Event::encrypted_balances(enc_be) => {
+                                    match &enc_be {
+                                        encrypted_balances::RawEvent::ConfidentialTransfer(
+                                            _zkproof,
+                                            _address_sender,
+                                            _address_recipient,
+                                            _amount_sender,
+                                            _amount_recipient,
+                                            _fee_sender,
+                                            _enc_balances,
+                                            _sig_vk
+                                        ) => {
+                                            println!("Submitting transaction is done successfully. \n Remaining balance is {}", remaining_balance);
+                                        },
+                                        // _ => {
+                                        //     println!("ignoring unsupported encrypted_balances event");
+                                        // }
+                                    }
+                                }
+                                _ => {
+                                    // warn!("ignoring unsupported module event: {:?}", event.event)
+                                }
+                            }
+                        }
+                    },
+                    None => error!("couldn't decode event record list")
+                }
+            }
+        });
 }
