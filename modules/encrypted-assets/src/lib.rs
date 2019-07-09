@@ -3,6 +3,7 @@
 // Ensure we're `no_std` when compiling for Wasm.
 #![cfg_attr(not(feature = "std"), no_std)]
 
+use encrypted_balances;
 use support::{decl_module, decl_storage, decl_event, StorageMap, dispatch::Result, ensure, Parameter, StorageValue};
 use rstd::prelude::*;
 use parity_codec::Codec;
@@ -10,6 +11,7 @@ use runtime_primitives::traits::{Member, SimpleArithmetic, Zero, One, StaticLook
 use system::ensure_signed;
 use zprimitives::{
     PkdAddress,
+    Proof,
     Ciphertext,
     SigVerificationKey,
     ElgamalCiphertext,
@@ -26,6 +28,8 @@ pub trait Trait: system::Trait {
     /// The arithmetic type of asset identifier.
     type AssetId: Parameter + SimpleArithmetic + Default + Copy;
 }
+
+type FeeAmount = u32;
 
 decl_module! {
     pub struct Module<T: Trait> for enum Call where origin: T::Origin {
@@ -55,8 +59,12 @@ decl_module! {
         fn transfer(
             origin,
             id: T::AssetId,
-            target: PkdAddress,
-            amount: T::EncryptedBalance
+            zkproof: Proof,
+            address_sender: PkdAddress,
+            address_recipient: PkdAddress,
+            amount_sender: T::EncryptedBalance,
+            amount_recipient: T::EncryptedBalance,
+            fee_sender: T::EncryptedBalance
         ) {
             let origin = ensure_signed(origin)?;
 
@@ -93,9 +101,18 @@ decl_event!(
 
 decl_storage! {
     trait Store for Module<T: Trait> as EncryptedAssets {
-        EncryptedBalances: map (T::AssetId, PkdAddress) => T::EncryptedBalance;
-        NextAssetId get(next_asset_id): T::AssetId;
-        TotalSupply: map T::AssetId => T::EncryptedBalance;
+        /// An encrypted balance for each account
+        pub EncryptedBalances: map (T::AssetId, PkdAddress) => T::EncryptedBalance;
+        /// A pending transfer
+        pub PendingTransfer: map (T::AssetId, PkdAddress) => T::EncryptedBalance;
+        /// A last epoch for rollover
+        pub LastRollOver get(last_rollover) config() : map PkdAddress => Option<T::BlockNumber>;
+        /// A fee to be paid for making a transaction; the base.
+        pub TransactionBaseFee get(transaction_base_fee) config(): FeeAmount;
+        /// The next asset identifier up for grabs.
+        pub NextAssetId get(next_asset_id): T::AssetId;
+        /// The total unit supply of an asset.
+        pub TotalSupply: map T::AssetId => T::EncryptedBalance;
     }
 }
 
