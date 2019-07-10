@@ -15,7 +15,10 @@ use zprimitives::{
     Ciphertext,
     SigVerificationKey,
     ElgamalCiphertext,
+    SigVk,
 };
+use jubjub::redjubjub::PublicKey;
+use keys::EncryptionKey;
 use zcrypto::elgamal;
 use pairing::bls12_381::Bls12;
 use encrypted_balances;
@@ -29,6 +32,13 @@ pub trait Trait: system::Trait + encrypted_balances::Trait {
     type AssetId: Parameter + SimpleArithmetic + Default + Copy;
 }
 
+struct TypedParams {
+    zkproof: bellman_verifier::Proof<Bls12>,
+    issuer: EncryptionKey<Bls12>,
+    total: elgamal::Ciphertext<Bls12>,
+    rvk: PublicKey<Bls12>,
+}
+
 type FeeAmount = u32;
 
 decl_module! {
@@ -40,12 +50,35 @@ decl_module! {
 		/// identifier `AssetId` instance: this will be specified in the `Issued` event.
         fn issue(
             origin,
+            zkproof: Proof,
             issuer: PkdAddress,
             total: T::EncryptedBalance
         ) {
-            let origin = ensure_signed(origin)?;
+            let rvk = ensure_signed(origin)?;
 
-            // TODO: Verifying zk proof
+            // Convert provided parametrs into typed ones.
+            let typed = Self::into_types(
+                &zkproof,
+                &issuer,
+                &total,
+                &rvk,
+            )
+            .map_err(|_| "Failed to convert into types.")?;
+
+            // Verify the zk proof
+            if !<encrypted_balances::Module<T>>::validate_proof(
+                &typed.zkproof,
+                &typed.issuer,
+                &typed.issuer,
+                &typed.total,
+                &typed.total,
+                &typed.total,
+                &typed.rvk,
+                &elgamal::Ciphertext::zero(),
+            )? {
+                Self::deposit_event(RawEvent::InvalidZkProof());
+                return Err("Invalid zkproof");
+            }
 
             let id = Self::next_asset_id();
             <NextAssetId<T>>::mutate(|id| *id += One::one());
@@ -204,10 +237,42 @@ decl_storage! {
 }
 
 impl<T: Trait> Module<T> {
-    // PUBLIC IMMUTABLES
+    // PRIVATE IMMUTABLES
+
+    fn into_types(
+        zkproof: &Proof,
+        issuer: &PkdAddress,
+        total: &T::EncryptedBalance,
+        rvk: &T::AccountId
+    ) -> result::Result<TypedParams, &'static str>
+    {
+        // Get zkproofs with the type
+        let typed_zkproof = zkproof
+            .into_proof()
+            .ok_or("Invalid zkproof")?;
+
+        let typed_issuer = issuer
+            .into_encryption_key()
+            .ok_or("Invalid issuer")?;
+
+        let typed_total = total
+            .into_ciphertext()
+            .ok_or("Invalid total")?;
+
+        let typed_rvk = rvk
+            .into_verification_key()
+            .ok_or("Invalid rvk")?;
+
+        Ok(TypedParams {
+            zkproof: typed_zkproof,
+            issuer: typed_issuer,
+            total: typed_total,
+            rvk:typed_rvk,
+        })
+    }
 
     /// Get current epoch of specified asset id based on current block height.
-    pub fn get_current_epoch(asset_id: T::AssetId) -> T::BlockNumber {
+    fn get_current_epoch(asset_id: T::AssetId) -> T::BlockNumber {
         let current_height = <system::Module<T>>::block_number();
         current_height / Self::epoch_length(asset_id)
     }
@@ -307,6 +372,18 @@ impl<T: Trait> Module<T> {
 mod tests {
     use super::*;
     use support::{impl_outer_origin, assert_ok};
+    use primitives::{H256, Blake2Hasher};
+    use runtime_primitives::{
+        BuildStorage, traits::{BlakeTwo256, IdentityLookup},
+        testing::{Digest, DigestItem, Header}
+    };
+    use zprimitives::{Ciphertext, SigVerificationKey};
+    use keys::{ProofGenerationKey, EncryptionKey};
+    use jubjub::{curve::{JubjubBls12, FixedGenerators, fs}};
+    use hex_literal::{hex, hex_impl};
+    use std::path::Path;
+    use std::fs::File;
+    use std::io::{BufReader, Read};
 
     impl_outer_origin! {
         pub enum Origin for Test {}
@@ -331,6 +408,11 @@ mod tests {
         type Header = Header;
         type Event = ();
         type Log = DigestItem;
+    }
+
+    impl encrypted_balances::Trait for Test {
+        type Event = ();
+        type EncryptedBalance = Ciphertext;
     }
 
     impl Trait for Test {

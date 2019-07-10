@@ -64,6 +64,7 @@ decl_module! {
         ) -> Result {
 			let rvk = ensure_signed(origin)?;
 
+            // Convert provided parametrs into typed ones.
             let typed = Self::into_types(
                 &zkproof,
                 &address_sender,
