@@ -201,7 +201,6 @@ impl encrypted_balances::Trait for Runtime {
 
 impl encrypted_assets::Trait for Runtime {
 	type Event = Event;
-	type EncryptedBalance = Ciphertext;
 	type AssetId = u32;
 }
 

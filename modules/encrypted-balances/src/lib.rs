@@ -3,8 +3,8 @@
 
 use support::{decl_module, decl_storage, decl_event, StorageMap, dispatch::Result, ensure, Parameter};
 use rstd::prelude::*;
-use bellman_verifier::verify_proof;
 use rstd::result;
+use bellman_verifier::verify_proof;
 use pairing::{
     bls12_381::{
         Bls12,
@@ -35,7 +35,7 @@ pub trait Trait: system::Trait {
     type EncryptedBalance: ElgamalCiphertext + Parameter + Member + Default + MaybeSerializeDebug + Codec;
 }
 
-struct TypedParams {
+pub struct TypedParams {
     zkproof: bellman_verifier::Proof<Bls12>,
     address_sender: EncryptionKey<Bls12>,
     address_recipient: EncryptionKey<Bls12>,
@@ -77,10 +77,15 @@ decl_module! {
 
             // Rollover and get sender's balance.
             // This function causes a storage mutation, but it's needed before `verify_proof` function is called.
+            // No problem if errors occur after this function because
+            // it just rollover user's own `pending trasfer` to `encrypted balances`.
             let typed_balance_sender = Self::rollover(&address_sender)
                 .map_err(|_| "Invalid ciphertext of sender balance.")?;
 
             // Rollover and get recipient's balance
+            // This function causes a storage mutation, but it's needed before `verify_proof` function is called.
+            // No problem if errors occur after this function because
+            // it just rollover user's own `pending trasfer` to `encrypted balances`.
             let typed_balance_recipient = Self::rollover(&address_recipient)
                 .map_err(|_| "Invalid ciphertext of recipient balance.")?;
 
@@ -100,19 +105,12 @@ decl_module! {
                 }
 
             // Subtracting transferred amount and fee from the sender's encrypted balances.
+            // This function causes a storage mutation.
             Self::sub_enc_balance(&address_sender, &typed_balance_sender, &typed.amount_sender, &typed.fee_sender);
 
-            /// Adding transferred amount to the recipient's pending transfer.
+            // Adding transferred amount to the recipient's pending transfer.
+            // This function causes a storage mutation.
             Self::add_pending_transfer(&address_recipient, &typed_balance_recipient, &typed.amount_recipient);
-
-            // Update the recipient's pending transfer
-            <PendingTransfer<T>>::mutate(address_recipient, |pending_transfer| {
-                let new_pending_transfer = pending_transfer.clone().map_or(
-                    Some(T::EncryptedBalance::from_ciphertext(&typed.amount_recipient)),
-                    |_| Some(T::EncryptedBalance::from_ciphertext(&typed_balance_recipient.add_no_params(&typed.amount_recipient)))
-                );
-                *pending_transfer = new_pending_transfer
-            });
 
             Self::deposit_event(
                 RawEvent::ConfidentialTransfer(
@@ -165,10 +163,10 @@ decl_event! (
 );
 
 impl<T: Trait> Module<T> {
-    // Private IMMUTABLES
+    // PUBLIC IMMUTABLES
 
     /// Validate zk proofs
-	fn validate_proof (
+	pub fn validate_proof (
         zkproof: &bellman_verifier::Proof<Bls12>,
         address_sender: &EncryptionKey<Bls12>,
         address_recipient: &EncryptionKey<Bls12>,
@@ -236,7 +234,7 @@ impl<T: Trait> Module<T> {
     }
 
     /// Convert provided parametrs into typed ones.
-    fn into_types(
+    pub fn into_types(
         zkproof: &Proof,
         address_sender: &PkdAddress,
         address_recipient: &PkdAddress,
@@ -296,6 +294,12 @@ impl<T: Trait> Module<T> {
         unimplemented!();
     }
 
+    /// Get current epoch based on current block height.
+    pub fn get_current_epoch() -> T::BlockNumber {
+        let current_height = <system::Module<T>>::block_number();
+        current_height / Self::epoch_length()
+    }
+
     // PUBLIC MUTABLES
 
     /// Rolling over allows us to send transactions asynchronously and protect from front-running attacks.
@@ -305,10 +309,7 @@ impl<T: Trait> Module<T> {
     /// and the first thing every other method does is to call this method.
     /// More details in Section 3.1: https://crypto.stanford.edu/~buenz/papers/zether.pdf
     pub fn rollover(addr: &PkdAddress) -> result::Result<elgamal::Ciphertext<Bls12>, &'static str> {
-        let current_height = <system::Module<T>>::block_number();
-
-        // Get current epoch based on current block height.
-        let current_epoch = current_height / Self::epoch_length();
+        let current_epoch = Self::get_current_epoch();
 
         let last_rollover = match Self::last_rollover(addr) {
             Some(l) => l,

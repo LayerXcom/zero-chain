@@ -76,6 +76,7 @@ std = [
 	"jubjub/std",
 	"keys/std",
     'system/std',
+    'encrypted-balances/std',
     'serde_derive',
     'serde',
 ]
