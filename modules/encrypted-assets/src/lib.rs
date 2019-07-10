@@ -120,4 +120,19 @@ decl_storage! {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use support::{impl_outer_origin, assert_ok};
+
+    impl_outer_origin! {
+        pub enum Origin for Test {}
+    }
+
+    // For testing the module, we construct most of a mock runtime. This means
+	// first constructing a configuration type (`Test`) which `impl`s each of the
+	// configuration traits of modules we want to use.
+	#[derive(Clone, Eq, PartialEq)]
+	pub struct Test;
+
+    impl system::Trait for Test {
+        
+    }
 }

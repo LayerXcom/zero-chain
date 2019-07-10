@@ -99,14 +99,11 @@ decl_module! {
                     return Err("Invalid zkproof");
                 }
 
-            let amount_plus_fee = typed.amount_sender.add_no_params(&typed.fee_sender);
+            // Subtracting transferred amount and fee from the sender's encrypted balances.
+            Self::sub_enc_balance(&address_sender, &typed_balance_sender, &typed.amount_sender, &typed.fee_sender);
 
-            // Update the sender's balance
-            <EncryptedBalance<T>>::mutate(address_sender, |balance| {
-                let new_balance = balance.clone().map(
-                    |_| T::EncryptedBalance::from_ciphertext(&typed_balance_sender.sub_no_params(&amount_plus_fee)));
-                *balance = new_balance
-            });
+            /// Adding transferred amount to the recipient's pending transfer.
+            Self::add_pending_transfer(&address_recipient, &typed_balance_recipient, &typed.amount_recipient);
 
             // Update the recipient's pending transfer
             <PendingTransfer<T>>::mutate(address_recipient, |pending_transfer| {
@@ -299,7 +296,7 @@ impl<T: Trait> Module<T> {
         unimplemented!();
     }
 
-    // PRIVATE MUTABLES
+    // PUBLIC MUTABLES
 
     /// Rolling over allows us to send transactions asynchronously and protect from front-running attacks.
     /// We rollover an account in an epoch when the first message from this account is received;
@@ -307,7 +304,7 @@ impl<T: Trait> Module<T> {
     /// To achieve this, we define a separate (internal) method for rolling over,
     /// and the first thing every other method does is to call this method.
     /// More details in Section 3.1: https://crypto.stanford.edu/~buenz/papers/zether.pdf
-    fn rollover(addr: &PkdAddress) -> result::Result<elgamal::Ciphertext<Bls12>, &'static str> {
+    pub fn rollover(addr: &PkdAddress) -> result::Result<elgamal::Ciphertext<Bls12>, &'static str> {
         let current_height = <system::Module<T>>::block_number();
 
         // Get current epoch based on current block height.
@@ -363,6 +360,38 @@ impl<T: Trait> Module<T> {
         // return actual typed balance.
         Ok(res_balance)
     }
+
+    // Subtracting transferred amount and fee from encrypted balances.
+    pub fn sub_enc_balance(
+        address: &PkdAddress,
+        typed_balance: &elgamal::Ciphertext<Bls12>,
+        typed_amount: &elgamal::Ciphertext<Bls12>,
+        typed_fee: &elgamal::Ciphertext<Bls12>
+    ) {
+        let amount_plus_fee = typed_amount.add_no_params(&typed_fee);
+
+        <EncryptedBalance<T>>::mutate(address, |balance| {
+            let new_balance = balance.clone().map(
+                |_| T::EncryptedBalance::from_ciphertext(&typed_balance.sub_no_params(&amount_plus_fee)));
+            *balance = new_balance
+        });
+    }
+
+    /// Adding transferred amount to pending transfer.
+    pub fn add_pending_transfer(
+        address: &PkdAddress,
+        typed_balance: &elgamal::Ciphertext<Bls12>,
+        typed_amount: &elgamal::Ciphertext<Bls12>
+    ) {
+        <PendingTransfer<T>>::mutate(address, |pending_transfer| {
+            let new_pending_transfer = pending_transfer.clone().map_or(
+                Some(T::EncryptedBalance::from_ciphertext(&typed_amount)),
+                |_| Some(T::EncryptedBalance::from_ciphertext(&typed_balance.add_no_params(&typed_amount)))
+            );
+            *pending_transfer = new_pending_transfer
+        });
+    }
+
 }
 
 impl<T: Trait> IsDeadAccount<T::AccountId> for Module<T>
@@ -397,6 +426,9 @@ mod tests {
         pub enum Origin for Test {}
     }
 
+    // For testing the module, we construct most of a mock runtime. This means
+	// first constructing a configuration type (`Test`) which `impl`s each of the
+	// configuration traits of modules we want to use.
     #[derive(Clone, Eq, PartialEq)]
     pub struct Test;
 
