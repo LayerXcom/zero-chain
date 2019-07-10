@@ -49,16 +49,16 @@ decl_module! {
 
             let id = Self::next_asset_id();
             <NextAssetId<T>>::mutate(|id| *id += One::one());
-            <EncryptedBalances<T>>::insert((id, issuer.clone()), total.clone());
+            <EncryptedBalance<T>>::insert((id, issuer.clone()), total.clone());
             <TotalSupply<T>>::insert(id, total.clone());
 
             Self::deposit_event(RawEvent::Issued(id, issuer, total));
         }
 
         /// Move some encrypted assets from one holder to another.
-        fn transfer(
+        fn confidential_transfer(
             origin,
-            id: T::AssetId,
+            asset_id: T::AssetId,
             zkproof: Proof,
             address_sender: PkdAddress,
             address_recipient: PkdAddress,
@@ -79,8 +79,62 @@ decl_module! {
             )
             .map_err(|_| "Failed to convert into types.")?;
 
+            // Rollover and get sender's balance.
+            // This function causes a storage mutation, but it's needed before `verify_proof` function is called.
+            // No problem if errors occur after this function because
+            // it just rollover user's own `pending trasfer` to `encrypted balances`.
+            let typed_balance_sender = Self::rollover(&address_sender, asset_id)
+                .map_err(|_| "Invalid ciphertext of sender balance.")?;
 
+            // Rollover and get recipient's balance
+            // This function causes a storage mutation, but it's needed before `verify_proof` function is called.
+            // No problem if errors occur after this function because
+            // it just rollover user's own `pending trasfer` to `encrypted balances`.
+            let typed_balance_recipient = Self::rollover(&address_recipient, asset_id)
+                .map_err(|_| "Invalid ciphertext of recipient balance.")?;
 
+            // Verify the zk proof
+            if !<encrypted_balances::Module<T>>::validate_proof(
+                &typed.zkproof,
+                &typed.address_sender,
+                &typed.address_recipient,
+                &typed.amount_sender,
+                &typed.amount_recipient,
+                &typed_balance_sender,
+                &typed.rvk,
+                &typed.fee_sender,
+            )? {
+                Self::deposit_event(RawEvent::InvalidZkProof());
+                return Err("Invalid zkproof");
+            }
+
+            // Subtracting transferred amount and fee from the sender's encrypted balances.
+            // This function causes a storage mutation.
+            Self::sub_enc_balance(
+                &address_sender,
+                asset_id,
+                &typed_balance_sender,
+                &typed.amount_sender,
+                &typed.fee_sender
+            );
+
+            // Adding transferred amount to the recipient's pending transfer.
+            // This function causes a storage mutation.
+            Self::add_pending_transfer(
+                &address_recipient,
+                asset_id,
+                &typed_balance_recipient,
+                &typed.amount_recipient
+            );
+
+            Self::deposit_event(
+                RawEvent::ConfidentialAssetTransferred(
+                    asset_id, zkproof, address_sender, address_recipient,
+                    amount_sender, amount_recipient, fee_sender,
+                    T::EncryptedBalance::from_ciphertext(&typed_balance_sender),
+                    rvk
+                )
+            );
         }
 
         /// Destroy any encrypted assets of `id` owned by `owner`.
@@ -103,11 +157,22 @@ decl_module! {
 }
 
 decl_event!(
-    pub enum Event<T> where <T as Trait>::AssetId, <T as encrypted_balances::Trait>::EncryptedBalance {
+    pub enum Event<T>
+    where
+        <T as Trait>::AssetId,
+        <T as encrypted_balances::Trait>::EncryptedBalance,
+        <T as system::Trait>::AccountId
+    {
         /// Some encrypted assets were issued.
         Issued(AssetId, PkdAddress, EncryptedBalance),
+        /// Some encrypted assets were transferred.
+        ConfidentialAssetTransferred(
+            AssetId, Proof, PkdAddress, PkdAddress, EncryptedBalance,
+            EncryptedBalance, EncryptedBalance, EncryptedBalance, AccountId
+        ),
         /// Some encrypted assets were destroyed.
         Destroyed(AssetId, PkdAddress, EncryptedBalance),
+        InvalidZkProof(),
     }
 );
 
@@ -128,7 +193,7 @@ decl_storage! {
         pub EpochLength get(epoch_length) config() : map T::AssetId => T::BlockNumber;
 
         /// A fee to be paid for making a transaction; the base.
-        pub TransactionBaseFee get(transaction_base_fee) config(): FeeAmount;
+        pub TransactionBaseFee get(transaction_base_fee) config() : map T::AssetId => FeeAmount;
 
         /// The next asset identifier up for grabs.
         pub NextAssetId get(next_asset_id): T::AssetId;
@@ -202,6 +267,39 @@ impl<T: Trait> Module<T> {
         Ok(res_balance)
     }
 
+    // Subtracting transferred amount and fee from encrypted balances.
+    pub fn sub_enc_balance(
+        address: &PkdAddress,
+        asset_id: T::AssetId,
+        typed_balance: &elgamal::Ciphertext<Bls12>,
+        typed_amount: &elgamal::Ciphertext<Bls12>,
+        typed_fee: &elgamal::Ciphertext<Bls12>
+    ) {
+        let amount_plus_fee = typed_amount.add_no_params(&typed_fee);
+
+        <EncryptedBalance<T>>::mutate((asset_id, *address), |balance| {
+            let new_balance = balance.clone().map(
+                |_| T::EncryptedBalance::from_ciphertext(&typed_balance.sub_no_params(&amount_plus_fee)));
+            *balance = new_balance
+        });
+    }
+
+    /// Adding transferred amount to pending transfer.
+    pub fn add_pending_transfer(
+        address: &PkdAddress,
+        asset_id: T::AssetId,
+        typed_balance: &elgamal::Ciphertext<Bls12>,
+        typed_amount: &elgamal::Ciphertext<Bls12>
+    ) {
+        <PendingTransfer<T>>::mutate((asset_id, *address), |pending_transfer| {
+            let new_pending_transfer = pending_transfer.clone().map_or(
+                Some(T::EncryptedBalance::from_ciphertext(&typed_amount)),
+                |_| Some(T::EncryptedBalance::from_ciphertext(&typed_balance.add_no_params(&typed_amount)))
+            );
+            *pending_transfer = new_pending_transfer
+        });
+    }
+
 }
 
 #[cfg(feature = "std")]
@@ -221,6 +319,24 @@ mod tests {
 	pub struct Test;
 
     impl system::Trait for Test {
-
+        type Origin = Origin;
+        type Index = u64;
+        type BlockNumber = u64;
+        type Hash = H256;
+        type Hashing = BlakeTwo256;
+        type Digest = Digest;
+        type AccountId = SigVerificationKey;
+        type SigVerificationKey = u64;
+        type Lookup = IdentityLookup<SigVerificationKey>;
+        type Header = Header;
+        type Event = ();
+        type Log = DigestItem;
     }
+
+    impl Trait for Test {
+        type Event = ();
+        type AssetId = u64;
+    }
+
+    type EncryptedAssets = Module<Test>;
 }

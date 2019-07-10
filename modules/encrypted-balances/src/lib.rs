@@ -36,13 +36,13 @@ pub trait Trait: system::Trait {
 }
 
 pub struct TypedParams {
-    zkproof: bellman_verifier::Proof<Bls12>,
-    address_sender: EncryptionKey<Bls12>,
-    address_recipient: EncryptionKey<Bls12>,
-    amount_sender: elgamal::Ciphertext<Bls12>,
-    amount_recipient: elgamal::Ciphertext<Bls12>,
-    rvk: PublicKey<Bls12>,
-    fee_sender: elgamal::Ciphertext<Bls12>,
+    pub zkproof: bellman_verifier::Proof<Bls12>,
+    pub address_sender: EncryptionKey<Bls12>,
+    pub address_recipient: EncryptionKey<Bls12>,
+    pub amount_sender: elgamal::Ciphertext<Bls12>,
+    pub amount_recipient: elgamal::Ciphertext<Bls12>,
+    pub rvk: PublicKey<Bls12>,
+    pub fee_sender: elgamal::Ciphertext<Bls12>,
 }
 
 type FeeAmount = u32;
