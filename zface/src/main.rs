@@ -324,13 +324,13 @@ fn subcommand_tx<R: Rng>(mut term: term::Term, root_dir: PathBuf, matches: &ArgM
             let amount = tx_arg_amount_match(&sub_matches);
             let url = tx_arg_url_match(&sub_matches);
 
-            transfer_tx_with_arg(&mut term, root_dir, &recipient_enc_key[..], amount, url, rng)
+            transfer_tx(&mut term, root_dir, &recipient_enc_key[..], amount, url, rng)
         },
         ("asset-issue", Some(sub_matches)) => {
             let amount = tx_arg_amount_match(&sub_matches);
             let url = tx_arg_url_match(&sub_matches);
 
-            Ok(())
+            asset_issue_tx(&mut term, root_dir, amount, url, rng)
         },
         ("asset-transfer", Some(sub_matches)) => {
             let recipient_enc_key = tx_arg_recipient_address_match(&sub_matches);
@@ -486,7 +486,7 @@ fn subcommand_debug<R: Rng>(mut term: term::Term, matches: &ArgMatches, rng: &mu
 
             println!("Start submitting a transaction to Zerochain...");
 
-            submit_tx(&tx, &api, rng);
+            submit_confidential_transfer(&tx, &api, rng);
 
             println!("Remaining balance is {}", remaining_balance);
         },

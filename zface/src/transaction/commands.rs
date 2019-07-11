@@ -16,7 +16,7 @@ use zjubjub::{
     };
 use zpairing::{bls12_381::Bls12 as zBls12, PrimeField as zPrimeField, PrimeFieldRepr as zPrimeFieldRepr};
 use zprimitives::{PARAMS as ZPARAMS, Proof, Ciphertext as zCiphertext, PkdAddress, SigVerificationKey, RedjubjubSignature, SigVk};
-use zerochain_runtime::{UncheckedExtrinsic, Call, EncryptedBalancesCall};
+use zerochain_runtime::{UncheckedExtrinsic, Call, EncryptedBalancesCall, EncryptedAssetsCall};
 use runtime_primitives::generic::Era;
 use parity_codec::{Compact, Encode, Decode};
 use primitives::blake2_256;
@@ -64,10 +64,12 @@ pub fn asset_issue_tx<R: Rng>(
         )
     .expect("fails to generate the tx");
 
+    println!("Start submitting a transaction to Zerochain...");
+
     Ok(())
 }
 
-pub fn transfer_tx_with_arg<R: Rng>(
+pub fn transfer_tx<R: Rng>(
     term: &mut Term,
     root_dir: PathBuf,
     recipient_enc_key: &[u8],
@@ -119,7 +121,7 @@ pub fn transfer_tx_with_arg<R: Rng>(
 
     println!("Start submitting a transaction to Zerochain...");
     subscribe_event(api.clone(), remaining_balance);
-    submit_tx(&tx, &api, rng);
+    submit_confidential_transfer(&tx, &api, rng);
 
     Ok(())
 }
@@ -171,7 +173,30 @@ fn read_zk_params_with_path(path: &str) -> Result<Vec<u8>> {
     Ok(params_buf)
 }
 
-pub fn submit_tx<R: Rng>(tx: &Transaction, api: &Api, rng: &mut R) {
+pub fn submit_confidential_transfer<R: Rng>(tx: &Transaction, api: &Api, rng: &mut R) {
+    let calls = Call::EncryptedBalances(EncryptedBalancesCall::confidential_transfer(
+        Proof::from_slice(&tx.proof[..]),
+        PkdAddress::from_slice(&tx.address_sender[..]),
+        PkdAddress::from_slice(&tx.address_recipient[..]),
+        zCiphertext::from_slice(&tx.enc_amount_sender[..]),
+        zCiphertext::from_slice(&tx.enc_amount_recipient[..]),
+        zCiphertext::from_slice(&tx.enc_fee[..]),
+    ));
+
+    submit_tx(calls, tx, api, rng);
+}
+
+pub fn submit_asset_issue<R: Rng>(tx: &Transaction, api: &Api, rng: &mut R) {
+    let calls = Call::EncryptedAssets(EncryptedAssetsCall::issue(
+        Proof::from_slice(&tx.proof[..]),
+        PkdAddress::from_slice(&tx.address_recipient[..]),
+        zCiphertext::from_slice(&tx.enc_amount_recipient[..]),
+    ));
+
+    submit_tx(calls, tx, api, rng);
+}
+
+fn submit_tx<R: Rng>(calls: Call, tx: &Transaction, api: &Api, rng: &mut R) {
     let p_g = zFixedGenerators::Diversifier; // 1
 
     let mut rsk_repr = zFs::default().into_repr();
@@ -182,15 +207,6 @@ pub fn submit_tx<R: Rng>(tx: &Transaction, api: &Api, rng: &mut R) {
 
     let sig_sk = zPrivateKey::<zBls12>(rsk);
     let sig_vk = SigVerificationKey::from_slice(&tx.rvk[..]);
-
-    let calls = Call::EncryptedBalances(EncryptedBalancesCall::confidential_transfer(
-        Proof::from_slice(&tx.proof[..]),
-        PkdAddress::from_slice(&tx.address_sender[..]),
-        PkdAddress::from_slice(&tx.address_recipient[..]),
-        zCiphertext::from_slice(&tx.enc_amount_sender[..]),
-        zCiphertext::from_slice(&tx.enc_amount_recipient[..]),
-        zCiphertext::from_slice(&tx.enc_fee[..]),
-    ));
 
     let era = Era::Immortal;
     let index = api.get_nonce(&sig_vk).expect("Nonce must be got.");
