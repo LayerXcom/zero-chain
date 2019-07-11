@@ -126,6 +126,8 @@ members = [
     "modules/sudo",
     "modules/system",
     "modules/timestamp",
+    "modules/encrypted-balances",
+    "modules/encrypted-assets",
 ]
 exclude = [
     "runtime/wasm",

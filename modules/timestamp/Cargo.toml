@@ -17,6 +17,7 @@ system = { package = "srml-system", path = "../system", default-features = false
 [dev-dependencies]
 runtime_io = { package = "sr-io", git = "https://github.com/osuketh/substrate.git", branch = "patch-zerochain" }
 substrate-primitives = { git = "https://github.com/osuketh/substrate.git", branch = "patch-zerochain" }
+zprimitives = { package = "zerochain-primitives", path = "../../core/primitives", default-features = false }
 
 [features]
 default = ["std"]

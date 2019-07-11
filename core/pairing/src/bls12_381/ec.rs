@@ -1660,9 +1660,9 @@ pub mod g2 {
             let mut coeffs = ::std::vec::Vec::with_capacity(coeffs_len);
 
             for _ in 0..coeffs_len {
-                let mut a = Fq2::read(reader)?;
-                let mut b = Fq2::read(reader)?;
-                let mut c = Fq2::read(reader)?;
+                let a = Fq2::read(reader)?;
+                let b = Fq2::read(reader)?;
+                let c = Fq2::read(reader)?;
 
                 coeffs.push((a, b, c));
             }

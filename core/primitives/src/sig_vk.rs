@@ -52,12 +52,17 @@ impl Decode for SigVerificationKey {
     }
 }
 
-impl SigVerificationKey {
-    pub fn into_verification_key(&self) -> Option<redjubjub::PublicKey<Bls12>> {
+pub trait SigVk:  {
+    fn into_verification_key(&self) -> Option<redjubjub::PublicKey<Bls12>>;
+    fn from_verification_key(vk: &redjubjub::PublicKey<Bls12>) -> Self;
+}
+
+impl SigVk for SigVerificationKey {
+    fn into_verification_key(&self) -> Option<redjubjub::PublicKey<Bls12>> {
         redjubjub::PublicKey::read(&mut &self.0[..], &PARAMS as &JubjubBls12).ok()
     }
 
-    pub fn from_verification_key(vk: &redjubjub::PublicKey<Bls12>) -> Self {
+    fn from_verification_key(vk: &redjubjub::PublicKey<Bls12>) -> Self {
         let mut writer = [0u8; 32];
         vk.write(&mut &mut writer[..]).unwrap();
         H256::from_slice(&writer)
@@ -74,6 +79,16 @@ impl Into<SigVerificationKey> for redjubjub::PublicKey<Bls12> {
 impl AsBytesRef for SigVerificationKey {
     fn as_bytes_ref(&self) -> &[u8] {
         self.as_ref()
+    }
+}
+
+// just for test utility
+impl SigVk for u64 {
+    fn into_verification_key(&self) -> Option<redjubjub::PublicKey<Bls12>> {
+        unimplemented!();
+    }
+    fn from_verification_key(_vk: &redjubjub::PublicKey<Bls12>) -> Self {
+        unimplemented!();
     }
 }
 
