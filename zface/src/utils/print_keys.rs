@@ -123,13 +123,13 @@ impl BalanceQuery {
         let account_id = PkdAddress::from_encryption_key(&encryption_key);
 
         let mut encrypted_balance_str = api.get_storage(
-            "ConfTransfer",
+            "EncryptedBalances",
             "EncryptedBalance",
             Some(account_id.encode())
             ).unwrap();
 
         let mut pending_transfer_str = api.get_storage(
-            "ConfTransfer",
+            "EncryptedBalances",
             "PendingTransfer",
             Some(account_id.encode())
         ).unwrap();

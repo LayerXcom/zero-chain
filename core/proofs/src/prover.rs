@@ -179,11 +179,10 @@ mod tests {
     use rand::{SeedableRng, XorShiftRng, Rng};
     use crate::keys::{ProofGenerationKey, EncryptionKey};
     use scrypto::jubjub::{fs, JubjubParams, JubjubBls12};
-    use pairing::{PrimeField, bls12_381::Bls12};
+    use pairing::bls12_381::Bls12;
     use std::path::Path;
     use std::fs::File;
     use std::io::{BufReader, Read};
-    use hex_literal::{hex, hex_impl};
 
     fn get_pk_and_vk() -> (Parameters<Bls12>, PreparedVerifyingKey<Bls12>) {
         let pk_path = Path::new("../../zface/proving.params");

@@ -177,15 +177,12 @@ impl<'a, E: JubjubEngine> Circuit<E> for Transfer<'a, E> {
 
         // The balance encryption validity.
         // It is a bit complicated bacause we can not know the randomness of balance.
-        // Enc_sender(sender_balance).cl - Enc_sender(amount).cl
-        //     == (remaining_balance)G + dec_key_sender(Enc_sender(sender_balance).cr - (random)G)
-        // <==> Enc_sender(sender_balance).cl + dec_key_sender * (random)G
-        //       == (remaining_balance)G + dec_key_sender * Enc_sender(sender_balance).cr + Enc_sender(amount).cl
         //
         // Enc_sender(sender_balance).cl - Enc_sender(amount).cl - Enc_sender(fee).cl
-        //  == (remaining_balance)G + dec_key_sender * (Enc_sender(sender_balance).cr - (random)G - (random)G)
-        // <==> Enc_sender(sender_balance).cl + dec_key_sender * (random)G + dec_key_sender * (random)G
-        //       == (remaining_balance)G + dec_key_sender * Enc_sender(sender_balance).cr + Enc_sender(amount).cl + Enc_sender(fee).cl
+        //      == (remaining_balance)G + dec_key_sender * (Enc_sender(sender_balance).cr - (random)G - (random)G)
+        // <==>
+        // Enc_sender(sender_balance).cl + dec_key_sender * (random)G + dec_key_sender * (random)G
+        //      == (remaining_balance)G + dec_key_sender * Enc_sender(sender_balance).cr + Enc_sender(amount).cl + Enc_sender(fee).cl
         {
             let bal_gl = ecc::EdwardsPoint::witness(
                 cs.namespace(|| "balance left"),

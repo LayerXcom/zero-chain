@@ -15,10 +15,10 @@ use zjubjub::{
     redjubjub::PrivateKey as zPrivateKey
     };
 use zpairing::{bls12_381::Bls12 as zBls12, PrimeField as zPrimeField, PrimeFieldRepr as zPrimeFieldRepr};
-use zprimitives::{PARAMS as ZPARAMS, Proof, Ciphertext as zCiphertext, PkdAddress, SigVerificationKey, RedjubjubSignature};
-use zerochain_runtime::{UncheckedExtrinsic, Call, ConfTransferCall};
+use zprimitives::{PARAMS as ZPARAMS, Proof, Ciphertext as zCiphertext, PkdAddress, SigVerificationKey, RedjubjubSignature, SigVk};
+use zerochain_runtime::{UncheckedExtrinsic, Call, EncryptedBalancesCall};
 use runtime_primitives::generic::Era;
-use parity_codec::{Compact, Encode};
+use parity_codec::{Compact, Encode, Decode};
 use primitives::blake2_256;
 use polkadot_rs::{Api, Url, hexstr_to_u64};
 use scrypto::jubjub::fs;
@@ -49,7 +49,7 @@ pub fn send_tx_with_arg<R: Rng>(
     let prepared_vk = PreparedVerifyingKey::<Bls12>::read(&mut &buf_vk[..])
         .expect("should ne casted to PreparedVerifyingKey<Bls12> type");
 
-    let fee_str = api.get_storage("ConfTransfer", "TransactionBaseFee", None)
+    let fee_str = api.get_storage("EncryptedBalances", "TransactionBaseFee", None)
         .expect("should be fetched TransactionBaseFee from ConfTransfer module of Zerochain.");
     let fee = hexstr_to_u64(fee_str) as u32;
 
@@ -86,8 +86,8 @@ pub fn send_tx_with_arg<R: Rng>(
     .expect("fails to generate the tx");
 
     println!("Start submitting a transaction to Zerochain...");
+    subscribe_event(api.clone(), remaining_balance);
     submit_tx(&tx, &api, rng);
-    println!("Remaining balance is {}", remaining_balance);
 
     Ok(())
 }
@@ -139,13 +139,12 @@ pub fn submit_tx<R: Rng>(tx: &Transaction, api: &Api, rng: &mut R) {
     let sig_sk = zPrivateKey::<zBls12>(rsk);
     let sig_vk = SigVerificationKey::from_slice(&tx.rvk[..]);
 
-    let calls = Call::ConfTransfer(ConfTransferCall::confidential_transfer(
+    let calls = Call::EncryptedBalances(EncryptedBalancesCall::confidential_transfer(
         Proof::from_slice(&tx.proof[..]),
         PkdAddress::from_slice(&tx.address_sender[..]),
         PkdAddress::from_slice(&tx.address_recipient[..]),
         zCiphertext::from_slice(&tx.enc_amount_sender[..]),
         zCiphertext::from_slice(&tx.enc_amount_recipient[..]),
-        sig_vk,
         zCiphertext::from_slice(&tx.enc_fee[..]),
     ));
 
@@ -171,4 +170,52 @@ pub fn submit_tx<R: Rng>(tx: &Transaction, api: &Api, rng: &mut R) {
     let uxt = UncheckedExtrinsic::new_signed(index, raw_payload.1, sig_vk.into(), sig_repr, era);
     let _tx_hash = api.submit_extrinsic(&uxt)
         .expect("Faild to submit a extrinsic to zerochain node.");
+}
+
+pub fn subscribe_event(api: Api, remaining_balance: u32) {
+    use std::sync::mpsc::channel;
+    use std::thread;
+    use polkadot_rs::hexstr_to_vec;
+    use zerochain_runtime::Event;
+
+    let (tx, rx) = channel();
+    let _ = thread::Builder::new()
+        .name("eventsubscriber".to_string())
+        .spawn(move || {
+            api.subscribe_events(tx.clone());
+    });
+
+    let _ = thread::Builder::new()
+        .name("eventlistner".to_string())
+        .spawn(move || {
+            loop {
+                let event_str = rx.recv().unwrap();
+                let res_vec = hexstr_to_vec(event_str);
+                let mut er_enc = res_vec.as_slice();
+                let events = Vec::<system::EventRecord::<Event>>::decode(&mut er_enc);
+                match events {
+                    Some(events) => {
+                        for event in &events {
+                            match &event.event {
+                                Event::encrypted_balances(enc_be) => {
+                                    match &enc_be {
+                                        encrypted_balances::RawEvent::ConfidentialTransfer(
+                                            _zkproof,
+                                            _address_sender, _address_recipient,
+                                            _amount_sender, _amount_recipient,
+                                            _fee_sender, _enc_balances, _sig_vk
+                                        ) => println!("Submitting transaction is completed successfully. \n Remaining balance is {}", remaining_balance),
+                                        encrypted_balances::RawEvent::InvalidZkProof() => {
+                                            println!("Invalid zk proof.");
+                                        }
+                                    }
+                                }
+                                _ => /* warn!("ignoring unsupported module event: {:?}", event.event) */ {},
+                            }
+                        }
+                    },
+                    None => error!("couldn't decode event record list")
+                }
+            }
+        });
 }

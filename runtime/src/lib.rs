@@ -24,11 +24,10 @@ use client::{
 use version::RuntimeVersion;
 #[cfg(feature = "std")]
 use version::NativeVersion;
-
 use zprimitives::{
 	RedjubjubSignature,
 	SigVerificationKey,
-	PkdAddress,
+	Ciphertext,
 };
 
 // A few exports that help ease life for downstream crates.
@@ -37,7 +36,8 @@ pub use runtime_primitives::BuildStorage;
 pub use consensus::Call as ConsensusCall;
 pub use timestamp::Call as TimestampCall;
 pub use balances::Call as BalancesCall;
-pub use conf_transfer::Call as ConfTransferCall;
+pub use encrypted_balances::Call as EncryptedBalancesCall;
+pub use encrypted_assets::Call as EncryptedAssetsCall;
 pub use runtime_primitives::{Permill, Perbill};
 pub use timestamp::BlockPeriod;
 pub use support::{StorageValue, construct_runtime};
@@ -50,10 +50,6 @@ pub type AuthoritySignature = ed25519::Signature;
 
 /// Alias to pubkey that identifies an account on the chain.
 pub type AccountId = <AccountSignature as Verify>::Signer;
-// pub type AccountId = PkdAddress;
-
-// Alias to a signature verification key
-// pub type SigVerificationKey = <AccountSignature as Verify>::Signer;
 
 /// The type used by authorities to prove their ID.
 pub type AccountSignature = RedjubjubSignature;
@@ -66,8 +62,6 @@ pub type BlockNumber = u64;
 
 /// Index of an account's extrinsic in the chain.
 pub type Nonce = u64;
-
-mod conf_transfer;
 
 /// Opaque types. These are used by the CLI to instantiate machinery that don't need to know
 /// the specifics of the runtime. They can then be made to be agnostic over specific formats
@@ -168,7 +162,7 @@ impl indices::Trait for Runtime {
 	/// Use the standard means of resolving an index hint from an id.
 	type ResolveHint = indices::SimpleResolveHint<Self::AccountId, Self::AccountIndex>;
 	/// Determine whether an account is dead.
-	type IsDeadAccount = Balances;
+	type IsDeadAccount = EncryptedBalances;
 	/// The uniquitous event type.
 	type Event = Event;
 }
@@ -200,8 +194,14 @@ impl sudo::Trait for Runtime {
 	type Proposal = Call;
 }
 
-impl conf_transfer::Trait for Runtime {
+impl encrypted_balances::Trait for Runtime {
 	type Event = Event;
+	type EncryptedBalance = Ciphertext;
+}
+
+impl encrypted_assets::Trait for Runtime {
+	type Event = Event;
+	type AssetId = u32;
 }
 
 construct_runtime!(
@@ -210,7 +210,8 @@ construct_runtime!(
 		NodeBlock = opaque::Block,
 		UncheckedExtrinsic = UncheckedExtrinsic
 	{
-		ConfTransfer: conf_transfer::{Module, Call, Storage, Event<T>, Config<T>},
+		EncryptedBalances: encrypted_balances::{Module, Call, Storage, Event<T>, Config<T>},
+		EncryptedAssets: encrypted_assets::{Module, Call, Storage, Event<T>},
 		System: system::{default, Log(ChangesTrieRoot)},
 		Timestamp: timestamp::{Module, Call, Storage, Config<T>, Inherent},
 		Consensus: consensus::{Module, Call, Storage, Config<T>, Log(AuthoritiesChange), Inherent},
@@ -236,7 +237,7 @@ pub type UncheckedExtrinsic = generic::UncheckedMortalCompactExtrinsic<Address, 
 /// Extrinsic type that has already been checked.
 pub type CheckedExtrinsic = generic::CheckedExtrinsic<AccountId, Nonce, Call>;
 /// Executive: handles dispatch to the various modules.
-pub type Executive = executive::Executive<Runtime, Block, Context, Balances, AllModules>;
+pub type Executive = executive::Executive<Runtime, Block, Context, AllModules>;
 
 // Implement our runtime API endpoints. This is just a bunch of proxying.
 impl_runtime_apis! {
