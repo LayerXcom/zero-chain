@@ -65,6 +65,8 @@ decl_module! {
             )
             .map_err(|_| "Failed to convert into types.")?;
 
+            let zero = elgamal::Ciphertext::zero();
+
             // Verify the zk proof
             if !<encrypted_balances::Module<T>>::validate_proof(
                 &typed.zkproof,
@@ -74,7 +76,7 @@ decl_module! {
                 &typed.total,
                 &typed.total,
                 &typed.rvk,
-                &elgamal::Ciphertext::zero(),
+                &zero,
             )? {
                 Self::deposit_event(RawEvent::InvalidZkProof());
                 return Err("Invalid zkproof");
@@ -173,6 +175,7 @@ decl_module! {
         /// Destroy any encrypted assets of `id` owned by `owner`.
         fn destroy(
             origin,
+            zkproof: Proof,
             owner: PkdAddress,
             id: T::AssetId
         ) {
