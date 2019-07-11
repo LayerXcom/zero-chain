@@ -1,15 +1,14 @@
 use crate::{
 	PARAMS,
-	keys::{
-		EncryptionKey,
-		ProofGenerationKey,
-		SpendingKey,
-	},
+	EncryptionKey,
+	ProofGenerationKey,
+	SpendingKey,
 	prover::TransferProof,
 	elgamal,
 };
 use bellman::groth16::{Parameters, PreparedVerifyingKey};
 use pairing::bls12_381::Bls12;
+use pairing::Field;
 use zpairing::io;
 use scrypto::jubjub::fs;
 use rand::Rng;
@@ -30,7 +29,6 @@ impl Transaction {
     pub fn gen_tx<R: Rng>(
         value: u32,
         remaining_balance: u32,
-        alpha: fs::Fs,
         proving_key: &Parameters<Bls12>,
 		prepared_vk: &PreparedVerifyingKey<Bls12>,
 		address_recipient: &EncryptionKey<Bls12>,
@@ -40,6 +38,9 @@ impl Transaction {
 		fee: u32,
     ) -> Result<Self, io::Error>
 	{
+		// let alpha = fs::Fs::rand(rng);
+    	let alpha = fs::Fs::zero(); // TODO
+
 		let proof_generation_key = ProofGenerationKey::from_spending_key(
 			&spending_key,
 			&*PARAMS

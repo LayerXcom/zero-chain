@@ -33,6 +33,13 @@ impl<E: JubjubEngine> Ciphertext<E> {
         }
     }
 
+    pub fn zero() -> Self {
+        Ciphertext {
+            left: edwards::Point::zero(),
+            right: edwards::Point::zero()
+        }
+    }
+
     pub fn encrypt(
         value: u32, // 32-bits restriction for the decryption.
         randomness: E::Fs,

@@ -319,12 +319,25 @@ fn tx_arg_url_match<'a>(matches: &ArgMatches<'a>) -> Url {
 
 fn subcommand_tx<R: Rng>(mut term: term::Term, root_dir: PathBuf, matches: &ArgMatches, rng: &mut R) {
     let res = match matches.subcommand() {
-        ("send", Some(sub_matches)) => {
+        ("transfer", Some(sub_matches)) => {
             let recipient_enc_key = tx_arg_recipient_address_match(&sub_matches);
             let amount = tx_arg_amount_match(&sub_matches);
             let url = tx_arg_url_match(&sub_matches);
 
-            send_tx_with_arg(&mut term, root_dir, &recipient_enc_key[..], amount, url, rng)
+            transfer_tx_with_arg(&mut term, root_dir, &recipient_enc_key[..], amount, url, rng)
+        },
+        ("asset-issue", Some(sub_matches)) => {
+            let amount = tx_arg_amount_match(&sub_matches);
+            let url = tx_arg_url_match(&sub_matches);
+
+            Ok(())
+        },
+        ("asset-transfer", Some(sub_matches)) => {
+            let recipient_enc_key = tx_arg_recipient_address_match(&sub_matches);
+            let amount = tx_arg_amount_match(&sub_matches);
+            let url = tx_arg_url_match(&sub_matches);
+
+            Ok(())
         },
         _ => {
             term.error(matches.usage()).unwrap();
@@ -338,12 +351,53 @@ fn subcommand_tx<R: Rng>(mut term: term::Term, root_dir: PathBuf, matches: &ArgM
 fn tx_commands_definition<'a, 'b>() -> App<'a, 'b> {
     SubCommand::with_name(TX_COMMAND)
         .about("transaction operations")
-        .subcommand(SubCommand::with_name("send")
-            .about("Submit extrinsic to the substrate nodes")
+        .subcommand(SubCommand::with_name("transfer")
+            .about("Submit a transaction to zerochain nodes in order to call confidential_transfer function in encrypted-balances module.")
             .arg(Arg::with_name("amount")
                 .short("a")
                 .long("amount")
-                .help("The coin amount for the confidential transfer. (default: 10)")
+                .help("The coin amount for the confidential transfer.")
+                .takes_value(true)
+                .required(false)
+            )
+            .arg(Arg::with_name("recipient-address")
+                .short("to")
+                .long("recipient-address")
+                .help("Recipient's SS58-encoded address")
+                .takes_value(true)
+                .required(false)
+            )
+            .arg(Arg::with_name("url")
+                .short("u")
+                .long("url")
+                .help("Endpoint to connect zerochain nodes")
+                .takes_value(true)
+                .required(false)
+            )
+        )
+        .subcommand(SubCommand::with_name("asset-issue")
+            .about("Submit a transaction to zerochain nodes in order to call issue function in encrypted-assets module.")
+            .arg(Arg::with_name("amount")
+                .short("a")
+                .long("amount")
+                .help("The issued coin amount")
+                .takes_value(true)
+                .required(false)
+            )
+            .arg(Arg::with_name("url")
+                .short("u")
+                .long("url")
+                .help("Endpoint to connect zerochain nodes")
+                .takes_value(true)
+                .required(false)
+            )
+        )
+        .subcommand(SubCommand::with_name("asset-transfer")
+            .about("Submit a transaction to zerochain nodes in order to call confidential_transfer function in encrypted-assets module.")
+            .arg(Arg::with_name("amount")
+                .short("a")
+                .long("amount")
+                .help("The coin amount for the confidential transfer.")
                 .takes_value(true)
                 .required(false)
             )
@@ -393,16 +447,9 @@ fn subcommand_debug<R: Rng>(mut term: term::Term, matches: &ArgMatches, rng: &mu
             println!("Preparing paramters...");
 
             let api = Api::init(url);
-            // let alpha = fs::Fs::rand(rng);
-            let alpha = fs::Fs::zero(); // TODO
 
-            let buf_pk = read_zk_params_with_path(PROVING_KEY_PATH);
-            let buf_vk = read_zk_params_with_path(VERIFICATION_KEY_PATH);
-
-            let proving_key = Parameters::<Bls12>::read(&mut &buf_pk[..], true)
-                .expect("should be casted to Parameters<Bls12> type.");
-            let prepared_vk = PreparedVerifyingKey::<Bls12>::read(&mut &buf_vk[..])
-                .expect("should ne casted to PreparedVerifyingKey<Bls12> type");
+            let proving_key = get_pk().unwrap();
+            let prepared_vk = get_vk().unwrap();
 
             let fee_str = api.get_storage("ConfTransfer", "TransactionBaseFee", None)
                 .expect("should be fetched TransactionBaseFee from ConfTransfer module of Zerochain.");
@@ -427,7 +474,6 @@ fn subcommand_debug<R: Rng>(mut term: term::Term, matches: &ArgMatches, rng: &mu
             let tx = Transaction::gen_tx(
                 amount,
                 remaining_balance,
-                alpha,
                 &proving_key,
                 &prepared_vk,
                 &recipient_account_id,
@@ -496,9 +542,6 @@ fn subcommand_debug<R: Rng>(mut term: term::Term, matches: &ArgMatches, rng: &mu
 
             let rng = &mut OsRng::new().expect("should be able to construct RNG");
 
-            // let alpha = fs::Fs::rand(rng);
-            let alpha = fs::Fs::zero(); // TODO
-
             let proving_key = Parameters::<Bls12>::read(&mut &buf_pk[..], true).unwrap();
             let prepared_vk = PreparedVerifyingKey::<Bls12>::read(&mut &buf_vk[..]).unwrap();
 
@@ -513,7 +556,6 @@ fn subcommand_debug<R: Rng>(mut term: term::Term, matches: &ArgMatches, rng: &mu
             let tx = Transaction::gen_tx(
                             amount,
                             remaining_balance,
-                            alpha,
                             &proving_key,
                             &prepared_vk,
                             &address_recipient,

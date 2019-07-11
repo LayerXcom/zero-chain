@@ -1,7 +1,7 @@
 use std::path::{PathBuf, Path};
 use std::io::{BufReader, Read};
 use std::fs::File;
-use rand::Rng;
+use rand::{Rng, Rand};
 use proofs::{SpendingKey, Transaction, ProofGenerationKey, EncryptionKey, PARAMS, elgamal};
 use pairing::{bls12_381::Bls12, Field};
 use super::constants::*;
@@ -21,10 +21,53 @@ use runtime_primitives::generic::Era;
 use parity_codec::{Compact, Encode, Decode};
 use primitives::blake2_256;
 use polkadot_rs::{Api, Url, hexstr_to_u64};
-use scrypto::jubjub::fs;
+use scrypto::jubjub::{fs::Fs, FixedGenerators};
 use bellman::groth16::{Parameters, PreparedVerifyingKey};
 
-pub fn send_tx_with_arg<R: Rng>(
+pub fn asset_issue_tx<R: Rng>(
+    term: &mut Term,
+    root_dir: PathBuf,
+    amount: u32,
+    url: Url,
+    rng: &mut R,
+) -> Result<()> {
+    // user can enter password first.
+    let password = prompt_password(term).expect("Invalid password");
+    println!("Preparing paramters...");
+
+    let api = Api::init(url);
+    let p_g = FixedGenerators::NoteCommitmentRandomness; // 1
+
+    // Get setuped parameters to compute zk proving.
+    let proving_key = get_pk()?;
+    let prepared_vk = get_vk()?;
+
+    let spending_key = spending_key_from_keystore(root_dir, &password[..])?;
+
+    let issuer_address = EncryptionKey::<Bls12>::from_spending_key(&spending_key, &PARAMS)?;
+
+    let enc_amount = elgamal::Ciphertext::encrypt(amount, Fs::rand(rng), &issuer_address, p_g, &PARAMS);
+
+    // let zero = elgamal::Ciphertext::zero();
+
+    println!("Computing zk proof...");
+    let tx = Transaction::gen_tx(
+        amount,
+        0, // dummy value for remaining balance
+        &proving_key,
+        &prepared_vk,
+        &issuer_address,
+        &spending_key,
+        enc_amount,
+        rng,
+        0
+        )
+    .expect("fails to generate the tx");
+
+    Ok(())
+}
+
+pub fn transfer_tx_with_arg<R: Rng>(
     term: &mut Term,
     root_dir: PathBuf,
     recipient_enc_key: &[u8],
@@ -33,48 +76,37 @@ pub fn send_tx_with_arg<R: Rng>(
     rng: &mut R,
 ) -> Result<()> {
     // user can enter password first.
-    let password = prompt_password(term).expect("Invalid password");
+    let password = prompt_password(term)?;
 
     println!("Preparing paramters...");
 
     let api = Api::init(url);
-    // let alpha = fs::Fs::rand(rng);
-    let alpha = fs::Fs::zero(); // TODO
 
-    let buf_pk = read_zk_params_with_path(PROVING_KEY_PATH);
-    let buf_vk = read_zk_params_with_path(VERIFICATION_KEY_PATH);
+    // Get setuped parameters to compute zk proving.
+    let proving_key = get_pk()?;
+    let prepared_vk = get_vk()?;
 
-    let proving_key = Parameters::<Bls12>::read(&mut &buf_pk[..], true)
-        .expect("should be casted to Parameters<Bls12> type.");
-    let prepared_vk = PreparedVerifyingKey::<Bls12>::read(&mut &buf_vk[..])
-        .expect("should ne casted to PreparedVerifyingKey<Bls12> type");
-
+    // Get set fee amount as `TransactionBaseFee` in encrypyed-balances module.
     let fee_str = api.get_storage("EncryptedBalances", "TransactionBaseFee", None)
         .expect("should be fetched TransactionBaseFee from ConfTransfer module of Zerochain.");
     let fee = hexstr_to_u64(fee_str) as u32;
 
-    let spending_key = spending_key_from_keystore(root_dir, &password[..])
-        .expect("should load from keystore.");
+    let spending_key = spending_key_from_keystore(root_dir, &password[..])?;
 
     let dec_key = ProofGenerationKey::<Bls12>::from_spending_key(&spending_key, &PARAMS)
-        .into_decryption_key()
-        .expect("should be generated decryption key from seed.");
+        .into_decryption_key()?;
 
     let balance_query = BalanceQuery::get_balance_from_decryption_key(&dec_key, api.clone());
     let remaining_balance = balance_query.decrypted_balance - amount - fee;
     assert!(balance_query.decrypted_balance >= amount + fee, "Not enough balance you have");
 
-    let recipient_account_id = EncryptionKey::<Bls12>::read(&mut &recipient_enc_key[..], &PARAMS)
-        .expect("should be casted to EncryptionKey<Bls12> type.");
-
-    let encrypted_balance = elgamal::Ciphertext::read(&mut &balance_query.encrypted_balance[..], &*PARAMS)
-        .expect("should be casted to Ciphertext type.");
+    let recipient_account_id = EncryptionKey::<Bls12>::read(&mut &recipient_enc_key[..], &PARAMS)?;
+    let encrypted_balance = elgamal::Ciphertext::read(&mut &balance_query.encrypted_balance[..], &*PARAMS)?;
 
     println!("Computing zk proof...");
     let tx = Transaction::gen_tx(
         amount,
         remaining_balance,
-        alpha,
         &proving_key,
         &prepared_vk,
         &recipient_account_id,
@@ -114,17 +146,29 @@ pub fn prompt_password(term: &mut Term) -> Result<Vec<u8>> {
     Ok(password)
 }
 
-pub fn read_zk_params_with_path(path: &str) -> Vec<u8> {
+pub fn get_pk() -> Result<Parameters::<Bls12>> {
+    let buf_pk = read_zk_params_with_path(PROVING_KEY_PATH)?;
+    let proving_key = Parameters::<Bls12>::read(&mut &buf_pk[..], true)?;
+
+    Ok(proving_key)
+}
+
+pub fn get_vk() -> Result<PreparedVerifyingKey::<Bls12>> {
+    let buf_vk = read_zk_params_with_path(VERIFICATION_KEY_PATH)?;
+    let prepared_vk = PreparedVerifyingKey::<Bls12>::read(&mut &buf_vk[..])?;
+
+    Ok(prepared_vk)
+}
+
+fn read_zk_params_with_path(path: &str) -> Result<Vec<u8>> {
     let params_path = Path::new(path);
-    let file = File::open(&params_path)
-        .expect(&format!("couldn't open {}", params_path.display()));
+    let file = File::open(&params_path)?;
 
     let mut params_reader = BufReader::new(file);
     let mut params_buf = vec![];
-    params_reader.read_to_end(&mut params_buf)
-        .expect(&format!("couldn't read {}", params_path.display()));
+    params_reader.read_to_end(&mut params_buf)?;
 
-    params_buf
+    Ok(params_buf)
 }
 
 pub fn submit_tx<R: Rng>(tx: &Transaction, api: &Api, rng: &mut R) {
