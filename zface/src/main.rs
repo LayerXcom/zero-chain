@@ -474,8 +474,8 @@ fn subcommand_debug<R: Rng>(mut term: term::Term, matches: &ArgMatches, rng: &mu
 
             let api = Api::init(url);
 
-            let proving_key = get_pk().unwrap();
-            let prepared_vk = get_vk().unwrap();
+            let proving_key = get_pk(PROVING_KEY_PATH).unwrap();
+            let prepared_vk = get_vk(VERIFICATION_KEY_PATH).unwrap();
 
             let fee_str = api.get_storage("ConfTransfer", "TransactionBaseFee", None)
                 .expect("should be fetched TransactionBaseFee from ConfTransfer module of Zerochain.");
