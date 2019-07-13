@@ -37,6 +37,8 @@ struct TypedParams {
     issuer: EncryptionKey<Bls12>,
     total: elgamal::Ciphertext<Bls12>,
     rvk: PublicKey<Bls12>,
+    fee: elgamal::Ciphertext<Bls12>,
+    balance: elgamal::Ciphertext<Bls12>,
 }
 
 type FeeAmount = u32;
@@ -52,7 +54,9 @@ decl_module! {
             origin,
             zkproof: Proof,
             issuer: PkdAddress,
-            total: T::EncryptedBalance
+            total: T::EncryptedBalance,
+            fee: T::EncryptedBalance,
+            balance: T::EncryptedBalance
         ) {
             let rvk = ensure_signed(origin)?;
 
@@ -62,21 +66,23 @@ decl_module! {
                 &issuer,
                 &total,
                 &rvk,
+                &fee,
+                &balance
             )
             .map_err(|_| "Failed to convert into types.")?;
 
-            let zero = elgamal::Ciphertext::zero();
+            // let zero = elgamal::Ciphertext::zero();
 
-            // FIXME: Verify the zk proof
+            // Verify the zk proof
             if !<encrypted_balances::Module<T>>::validate_proof(
                 &typed.zkproof,
                 &typed.issuer,
                 &typed.issuer,
                 &typed.total,
                 &typed.total,
-                &typed.total,
+                &typed.balance,
                 &typed.rvk,
-                &zero,
+                &typed.fee,
             )? {
                 Self::deposit_event(RawEvent::InvalidZkProof());
                 return Err("Invalid zkproof");
@@ -246,7 +252,9 @@ impl<T: Trait> Module<T> {
         zkproof: &Proof,
         issuer: &PkdAddress,
         total: &T::EncryptedBalance,
-        rvk: &T::AccountId
+        rvk: &T::AccountId,
+        fee: &T::EncryptedBalance,
+        balance: &T::EncryptedBalance
     ) -> result::Result<TypedParams, &'static str>
     {
         // Get zkproofs with the type
@@ -266,11 +274,21 @@ impl<T: Trait> Module<T> {
             .into_verification_key()
             .ok_or("Invalid rvk")?;
 
+        let typed_fee = fee
+            .into_ciphertext()
+            .ok_or("Invalid fee")?;
+
+        let typed_balance = balance
+            .into_ciphertext()
+            .ok_or("Invalid balance")?;
+
         Ok(TypedParams {
             zkproof: typed_zkproof,
             issuer: typed_issuer,
             total: typed_total,
-            rvk:typed_rvk,
+            rvk: typed_rvk,
+            fee: typed_fee,
+            balance: typed_balance,
         })
     }
 

@@ -162,11 +162,11 @@ impl<E: JubjubEngine> TransferProof<E> {
             proof,
             rvk,
             address_sender: enc_key_sender,
-            address_recipient: address_recipient,
-            cipher_val_s: cipher_val_s,
-            cipher_val_r: cipher_val_r,
+            address_recipient,
+            cipher_val_s,
+            cipher_val_r,
             cipher_balance: ciphertext_balance,
-            cipher_fee_s: cipher_fee_s
+            cipher_fee_s,
         };
 
         Ok(transfer_proof)

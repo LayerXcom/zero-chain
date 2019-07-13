@@ -192,6 +192,8 @@ pub fn submit_asset_issue<R: Rng>(tx: &Transaction, api: &Api, rng: &mut R) {
         Proof::from_slice(&tx.proof[..]),
         PkdAddress::from_slice(&tx.address_recipient[..]),
         zCiphertext::from_slice(&tx.enc_amount_recipient[..]),
+        zCiphertext::from_slice(&tx.enc_fee[..]),
+        zCiphertext::from_slice(&tx.enc_balance[..])
     ));
 
     submit_tx(calls, tx, api, rng);

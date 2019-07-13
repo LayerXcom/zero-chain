@@ -23,6 +23,7 @@ pub struct Transaction{
 	pub enc_fee: [u8; 64],			     // 64 bytes
 	pub rsk: [u8; 32],                   // 32 bytes
 	pub rvk: [u8; 32],                   // 32 bytes
+	pub enc_balance: [u8; 64],           // 32 bytes
 }
 
 impl Transaction {
@@ -87,6 +88,9 @@ impl Transaction {
 		let mut enc_fee_sender = [0u8; 64];
 		proof_output.cipher_fee_s.write(&mut enc_fee_sender[..]).map_err(|_| io::Error::InvalidData)?;
 
+		let mut enc_balance = [0u8; 64];
+		proof_output.cipher_balance.write(&mut enc_balance[..]).map_err(|_| io::Error::InvalidData)?;
+
 		let tx = Transaction {
 			proof: proof_bytes,
 			rvk: rvk_bytes,
@@ -96,6 +100,7 @@ impl Transaction {
 			enc_amount_sender,
 			rsk: rsk_bytes,
 			enc_fee: enc_fee_sender,
+			enc_balance,
 		};
 
 		Ok(tx)
