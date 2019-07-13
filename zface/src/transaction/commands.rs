@@ -39,8 +39,8 @@ pub fn asset_issue_tx<R: Rng>(
     let p_g = FixedGenerators::NoteCommitmentRandomness; // 1
 
     // Get setuped parameters to compute zk proving.
-    let proving_key = get_pk()?;
-    let prepared_vk = get_vk()?;
+    let proving_key = get_pk(PROVING_KEY_PATH)?;
+    let prepared_vk = get_vk(VERIFICATION_KEY_PATH)?;
 
     let spending_key = spending_key_from_keystore(root_dir, &password[..])?;
     let issuer_address = EncryptionKey::<Bls12>::from_spending_key(&spending_key, &PARAMS)?;
@@ -86,8 +86,8 @@ pub fn transfer_tx<R: Rng>(
     let api = Api::init(url);
 
     // Get setuped parameters to compute zk proving.
-    let proving_key = get_pk()?;
-    let prepared_vk = get_vk()?;
+    let proving_key = get_pk(PROVING_KEY_PATH)?;
+    let prepared_vk = get_vk(VERIFICATION_KEY_PATH)?;
 
     // Get set fee amount as `TransactionBaseFee` in encrypyed-balances module.
     let fee_str = api.get_storage("EncryptedBalances", "TransactionBaseFee", None)
@@ -149,15 +149,15 @@ pub fn prompt_password(term: &mut Term) -> Result<Vec<u8>> {
     Ok(password)
 }
 
-pub fn get_pk() -> Result<Parameters::<Bls12>> {
-    let buf_pk = read_zk_params_with_path(PROVING_KEY_PATH)?;
+pub fn get_pk(path: &str) -> Result<Parameters::<Bls12>> {
+    let buf_pk = read_zk_params_with_path(path)?;
     let proving_key = Parameters::<Bls12>::read(&mut &buf_pk[..], true)?;
 
     Ok(proving_key)
 }
 
-pub fn get_vk() -> Result<PreparedVerifyingKey::<Bls12>> {
-    let buf_vk = read_zk_params_with_path(VERIFICATION_KEY_PATH)?;
+pub fn get_vk(path: &str) -> Result<PreparedVerifyingKey::<Bls12>> {
+    let buf_vk = read_zk_params_with_path(path)?;
     let prepared_vk = PreparedVerifyingKey::<Bls12>::read(&mut &buf_vk[..])?;
 
     Ok(prepared_vk)
