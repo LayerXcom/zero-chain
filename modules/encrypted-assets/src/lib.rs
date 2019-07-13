@@ -67,7 +67,7 @@ decl_module! {
 
             let zero = elgamal::Ciphertext::zero();
 
-            // Verify the zk proof
+            // FIXME: Verify the zk proof
             if !<encrypted_balances::Module<T>>::validate_proof(
                 &typed.zkproof,
                 &typed.issuer,

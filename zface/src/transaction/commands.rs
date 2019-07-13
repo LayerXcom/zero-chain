@@ -43,7 +43,6 @@ pub fn asset_issue_tx<R: Rng>(
     let prepared_vk = get_vk()?;
 
     let spending_key = spending_key_from_keystore(root_dir, &password[..])?;
-
     let issuer_address = EncryptionKey::<Bls12>::from_spending_key(&spending_key, &PARAMS)?;
 
     let enc_amount = elgamal::Ciphertext::encrypt(amount, Fs::rand(rng), &issuer_address, p_g, &PARAMS);
@@ -65,6 +64,8 @@ pub fn asset_issue_tx<R: Rng>(
     .expect("fails to generate the tx");
 
     println!("Start submitting a transaction to Zerochain...");
+    subscribe_event(api.clone(), amount);
+    submit_asset_issue(&tx, &api, rng);
 
     Ok(())
 }
@@ -269,7 +270,23 @@ pub fn subscribe_event(api: Api, remaining_balance: u32) {
                                             println!("Invalid zk proof.");
                                         }
                                     }
-                                }
+                                },
+                                Event::encrypted_assets(enc_assets) => {
+                                    match &enc_assets {
+                                        encrypted_assets::RawEvent::Issued(
+                                            _asset_id, _address, _total
+                                        ) => println!("Submitting transaction is completed successfully. \n The total issued coin is {}", remaining_balance),
+                                        encrypted_assets::RawEvent::ConfidentialAssetTransferred(
+                                            _asset_id, _zkproof,
+                                            _address_sender, _address_recipient,
+                                            _amount_sender, _amount_recipient,
+                                            _fee_sender, _enc_balances, _sig_vk
+                                        ) => println!("Submitting transaction is completed successfully. \n Remaining balance is {}", remaining_balance),
+                                        encrypted_assets::RawEvent::Destroyed(_asset_id, _address, _balance)
+                                            => println!("destroyed coins."),
+                                        encrypted_assets::RawEvent::InvalidZkProof() => println!("Invalid zk proof."),
+                                    }
+                                },
                                 _ => /* warn!("ignoring unsupported module event: {:?}", event.event) */ {},
                             }
                         }

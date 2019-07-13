@@ -189,11 +189,10 @@ fn subcommand_wallet<R: Rng>(mut term: term::Term, root_dir: PathBuf, matches: &
             destory(&mut term, root_dir)
                 .expect("Removing wallet directory failed.");
         },
-        ("balance", Some(_)) => {
+        ("balance", Some(sub_matches)) => {
             println!("Getting encrypted balance from zerochain");
             // let url = Url::Custom("ws://0.0.0.0:9944".to_string());
-            // let api = Api::init(url);
-            let api = Api::init(Url::Local);
+            let api = Api::init(tx_arg_url_match(&sub_matches));
 
             let dec_key_vec = load_dec_key(&mut term, root_dir)
                 .expect("loading decrption key failed.");
@@ -203,6 +202,9 @@ fn subcommand_wallet<R: Rng>(mut term: term::Term, root_dir: PathBuf, matches: &
             println!("Decrypted balance: {}", balance_query.decrypted_balance);
             println!("Encrypted balance: {}", balance_query.encrypted_balance_str);
             println!("Encrypted pending transfer: {}", balance_query.pending_transfer_str);
+        },
+        ("asset-balance", Some(_)) => {
+            println!("Getting encrypted asset from zerochain");
         },
         ("wallet-test", Some(_)) => {
             println!("Initialize key components...");
@@ -280,7 +282,31 @@ fn wallet_commands_definition<'a, 'b>() -> App<'a, 'b> {
             .about("Remove your all wallet directory.")
         )
         .subcommand(SubCommand::with_name("balance")
-            .about("Get current balance stored in ConfTransfer module")
+            .about("Get current balance stored in encrypted balances module")
+            .arg(Arg::with_name("url")
+                .short("u")
+                .long("url")
+                .help("Endpoint to connect zerochain nodes")
+                .takes_value(true)
+                .required(false)
+            )
+        )
+        .subcommand(SubCommand::with_name("asset-balance")
+            .about("Get current asset stored in encrypted asset module")
+            .arg(Arg::with_name("asset-id")
+                .short("i")
+                .long("id")
+                .help("Asset id ")
+                .takes_value(true)
+                .required(false)
+            )
+            .arg(Arg::with_name("url")
+                .short("u")
+                .long("url")
+                .help("Endpoint to connect zerochain nodes")
+                .takes_value(true)
+                .required(false)
+            )
         )
 }
 
