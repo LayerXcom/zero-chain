@@ -508,7 +508,7 @@ mod tests {
         t.extend(GenesisConfig::<Test>{
             encrypted_balance: vec![alice_balance_init()],
 			last_rollover: vec![alice_epoch_init()],
-            epoch_length: 10,
+            epoch_length: 1,
             transaction_base_fee: 1,
             verifying_key: get_pvk(),
         }.build_storage().unwrap().0);
@@ -536,8 +536,9 @@ mod tests {
 
             let spending_key = tSpendingKey::<tBls12>::from_seed(&alice_seed);
 
-            let amount = 8;
+            let current_balance = 100;
             let remaining_balance = 91;
+            let amount = 8;
             let fee = 1;
 
             let enc_key = tEncryptionKey::<tBls12>::from_seed(&alice_seed[..], &PARAMS).unwrap();
@@ -545,7 +546,7 @@ mod tests {
 
             // The default balance is not encrypted with randomness.
             let enc_alice_bal = telgamal::Ciphertext::encrypt(
-                amount,
+                current_balance,
                 tFs::one(),
                 &enc_key,
                 p_g,
