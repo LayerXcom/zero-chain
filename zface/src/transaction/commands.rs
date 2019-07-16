@@ -70,6 +70,63 @@ pub fn asset_issue_tx<R: Rng>(
     Ok(())
 }
 
+pub fn asset_transfer_tx<R: Rng>(
+    term: &mut Term,
+    root_dir: PathBuf,
+    recipient_enc_key: &[u8],
+    amount: u32,
+    asset_id: u32,
+    url: Url,
+    rng: &mut R,
+) -> Result<()> {
+    // user can enter password first.
+    let password = prompt_password(term)?;
+
+    println!("Preparing paramters...");
+
+    let api = Api::init(url);
+
+    // Get setuped parameters to compute zk proving.
+    let proving_key = get_pk(PROVING_KEY_PATH)?;
+    let prepared_vk = get_vk(VERIFICATION_KEY_PATH)?;
+
+    let spending_key = spending_key_from_keystore(root_dir, &password[..])?;
+    let dec_key = ProofGenerationKey::<Bls12>::from_spending_key(&spending_key, &PARAMS)
+        .into_decryption_key()?;
+
+    // Get set fee amount as `TransactionBaseFee` in encrypyed-balances module.
+    let fee_str = api.get_storage("EncryptedAssets", "TransactionBaseFee", Some(asset_id.encode()))
+        .expect("should be fetched TransactionBaseFee from ConfTransfer module of Zerochain.");
+    let fee = hexstr_to_u64(fee_str) as u32;
+
+    let balance_query = BalanceQuery::get_encrypted_asset(asset_id, &dec_key, api.clone());
+    let remaining_balance = balance_query.decrypted_balance - amount - fee;
+    assert!(balance_query.decrypted_balance >= amount + fee, "Not enough balance you have");
+
+    let recipient_account_id = EncryptionKey::<Bls12>::read(&mut &recipient_enc_key[..], &PARAMS)?;
+    let encrypted_balance = elgamal::Ciphertext::read(&mut &balance_query.encrypted_balance[..], &*PARAMS)?;
+
+    println!("Computing zk proof...");
+    let tx = Transaction::gen_tx(
+        amount,
+        remaining_balance,
+        &proving_key,
+        &prepared_vk,
+        &recipient_account_id,
+        &spending_key,
+        encrypted_balance,
+        rng,
+        fee
+        )
+    .expect("fails to generate the tx");
+
+    println!("Start submitting a transaction to Zerochain...");
+    subscribe_event(api.clone(), remaining_balance);
+    submit_asset_transfer(asset_id, &tx, &api, rng);
+
+    Ok(())
+}
+
 pub fn transfer_tx<R: Rng>(
     term: &mut Term,
     root_dir: PathBuf,
@@ -89,15 +146,14 @@ pub fn transfer_tx<R: Rng>(
     let proving_key = get_pk(PROVING_KEY_PATH)?;
     let prepared_vk = get_vk(VERIFICATION_KEY_PATH)?;
 
+    let spending_key = spending_key_from_keystore(root_dir, &password[..])?;
+    let dec_key = ProofGenerationKey::<Bls12>::from_spending_key(&spending_key, &PARAMS)
+        .into_decryption_key()?;
+
     // Get set fee amount as `TransactionBaseFee` in encrypyed-balances module.
     let fee_str = api.get_storage("EncryptedBalances", "TransactionBaseFee", None)
         .expect("should be fetched TransactionBaseFee from ConfTransfer module of Zerochain.");
     let fee = hexstr_to_u64(fee_str) as u32;
-
-    let spending_key = spending_key_from_keystore(root_dir, &password[..])?;
-
-    let dec_key = ProofGenerationKey::<Bls12>::from_spending_key(&spending_key, &PARAMS)
-        .into_decryption_key()?;
 
     let balance_query = BalanceQuery::get_encrypted_balance(&dec_key, api.clone());
     let remaining_balance = balance_query.decrypted_balance - amount - fee;
@@ -194,6 +250,20 @@ pub fn submit_asset_issue<R: Rng>(tx: &Transaction, api: &Api, rng: &mut R) {
         zCiphertext::from_slice(&tx.enc_amount_recipient[..]),
         zCiphertext::from_slice(&tx.enc_fee[..]),
         zCiphertext::from_slice(&tx.enc_balance[..])
+    ));
+
+    submit_tx(calls, tx, api, rng);
+}
+
+pub fn submit_asset_transfer<R: Rng>(asset_id: u32, tx: &Transaction, api: &Api, rng: &mut R) {
+    let calls = Call::EncryptedAssets(EncryptedAssetsCall::confidential_transfer(
+        asset_id,
+        Proof::from_slice(&tx.proof[..]),
+        PkdAddress::from_slice(&tx.address_sender[..]),
+        PkdAddress::from_slice(&tx.address_recipient[..]),
+        zCiphertext::from_slice(&tx.enc_amount_sender[..]),
+        zCiphertext::from_slice(&tx.enc_amount_recipient[..]),
+        zCiphertext::from_slice(&tx.enc_fee[..]),
     ));
 
     submit_tx(calls, tx, api, rng);

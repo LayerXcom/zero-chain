@@ -195,10 +195,6 @@ fn subcommand_wallet<R: Rng>(mut term: term::Term, root_dir: PathBuf, matches: &
             recover(&mut term, root_dir, rng)
                 .expect("Invalid mnemonic to recover keystore.");
         },
-        ("destroy", Some(_)) => {
-            destory(&mut term, root_dir)
-                .expect("Removing wallet directory failed.");
-        },
         ("balance", Some(sub_matches)) => {
             println!("Getting encrypted balance from zerochain");
             // let url = Url::Custom("ws://0.0.0.0:9944".to_string());
@@ -221,6 +217,10 @@ fn subcommand_wallet<R: Rng>(mut term: term::Term, root_dir: PathBuf, matches: &
             let asset_id = wallet_arg_id_match(&sub_matches);
 
             let balance_query = BalanceQuery::get_encrypted_asset(asset_id, &dec_key, api);
+
+            println!("Decrypted balance: {}", balance_query.decrypted_balance);
+            println!("Encrypted balance: {}", balance_query.encrypted_balance_str);
+            println!("Encrypted pending transfer: {}", balance_query.pending_transfer_str);
         },
         ("wallet-test", Some(_)) => {
             println!("Initialize key components...");
@@ -293,9 +293,6 @@ fn wallet_commands_definition<'a, 'b>() -> App<'a, 'b> {
         )
         .subcommand(SubCommand::with_name("recovery")
             .about("Recover keystore from mnemonic.")
-        )
-        .subcommand(SubCommand::with_name("destroy")
-            .about("Remove your all wallet directory.")
         )
         .subcommand(SubCommand::with_name("balance")
             .about("Get current balance stored in encrypted balances module")
@@ -378,8 +375,9 @@ fn subcommand_tx<R: Rng>(mut term: term::Term, root_dir: PathBuf, matches: &ArgM
             let recipient_enc_key = tx_arg_recipient_address_match(&sub_matches);
             let amount = tx_arg_amount_match(&sub_matches);
             let url = tx_arg_url_match(&sub_matches);
+            let asset_id = wallet_arg_id_match(&sub_matches);
 
-            Ok(())
+            asset_transfer_tx(&mut term, root_dir, &recipient_enc_key[..], amount, asset_id, url, rng)
         },
         _ => {
             term.error(matches.usage()).unwrap();
@@ -454,6 +452,13 @@ fn tx_commands_definition<'a, 'b>() -> App<'a, 'b> {
                 .short("u")
                 .long("url")
                 .help("Endpoint to connect zerochain nodes")
+                .takes_value(true)
+                .required(false)
+            )
+            .arg(Arg::with_name("asset-id")
+                .short("i")
+                .long("id")
+                .help("Asset id")
                 .takes_value(true)
                 .required(false)
             )
