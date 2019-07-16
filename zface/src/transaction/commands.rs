@@ -99,7 +99,7 @@ pub fn transfer_tx<R: Rng>(
     let dec_key = ProofGenerationKey::<Bls12>::from_spending_key(&spending_key, &PARAMS)
         .into_decryption_key()?;
 
-    let balance_query = BalanceQuery::get_balance_from_decryption_key(&dec_key, api.clone());
+    let balance_query = BalanceQuery::get_encrypted_balance(&dec_key, api.clone());
     let remaining_balance = balance_query.decrypted_balance - amount - fee;
     assert!(balance_query.decrypted_balance >= amount + fee, "Not enough balance you have");
 

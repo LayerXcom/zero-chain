@@ -37,8 +37,8 @@ struct TypedParams {
     issuer: EncryptionKey<Bls12>,
     total: elgamal::Ciphertext<Bls12>,
     rvk: PublicKey<Bls12>,
-    fee: elgamal::Ciphertext<Bls12>,
-    balance: elgamal::Ciphertext<Bls12>,
+    dummy_fee: elgamal::Ciphertext<Bls12>,
+    dummy_balance: elgamal::Ciphertext<Bls12>,
 }
 
 type FeeAmount = u32;
@@ -73,16 +73,19 @@ decl_module! {
 
             // let zero = elgamal::Ciphertext::zero();
 
-            // Verify the zk proof
+            // Verify a zk proof
+            // 1. Spend authority verification
+            // 2. Range proof of issued amount
+            // 3. Encryption integrity
             if !<encrypted_balances::Module<T>>::validate_proof(
                 &typed.zkproof,
                 &typed.issuer,
                 &typed.issuer,
                 &typed.total,
                 &typed.total,
-                &typed.balance,
+                &typed.dummy_balance,
                 &typed.rvk,
-                &typed.fee,
+                &typed.dummy_fee,
             )? {
                 Self::deposit_event(RawEvent::InvalidZkProof());
                 return Err("Invalid zkproof");
@@ -287,8 +290,8 @@ impl<T: Trait> Module<T> {
             issuer: typed_issuer,
             total: typed_total,
             rvk: typed_rvk,
-            fee: typed_fee,
-            balance: typed_balance,
+            dummy_fee: typed_fee,
+            dummy_balance: typed_balance,
         })
     }
 

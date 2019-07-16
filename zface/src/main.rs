@@ -158,6 +158,16 @@ fn snark_commands_definition<'a, 'b>() -> App<'a, 'b> {
 
 const WALLET_COMMAND: &'static str = "wallet";
 
+fn wallet_arg_id_match<'a>(matches: &ArgMatches<'a>) -> u32 {
+    let id_str = matches.value_of("asset-id")
+        .expect("Asset id paramter is required; qed");
+
+    let id: u32 = id_str.parse()
+        .expect("should be parsed to u32 number; qed");
+
+    id
+}
+
 fn subcommand_wallet<R: Rng>(mut term: term::Term, root_dir: PathBuf, matches: &ArgMatches, rng: &mut R) {
     match matches.subcommand() {
         ("init", Some(_)) => {
@@ -194,17 +204,23 @@ fn subcommand_wallet<R: Rng>(mut term: term::Term, root_dir: PathBuf, matches: &
             // let url = Url::Custom("ws://0.0.0.0:9944".to_string());
             let api = Api::init(tx_arg_url_match(&sub_matches));
 
-            let dec_key_vec = load_dec_key(&mut term, root_dir)
+            let dec_key = load_dec_key(&mut term, root_dir)
                 .expect("loading decrption key failed.");
 
-            let balance_query = BalanceQuery::get_balance_from_decryption_key(&dec_key_vec, api);
+            let balance_query = BalanceQuery::get_encrypted_balance(&dec_key, api);
 
             println!("Decrypted balance: {}", balance_query.decrypted_balance);
             println!("Encrypted balance: {}", balance_query.encrypted_balance_str);
             println!("Encrypted pending transfer: {}", balance_query.pending_transfer_str);
         },
-        ("asset-balance", Some(_)) => {
+        ("asset-balance", Some(sub_matches)) => {
             println!("Getting encrypted asset from zerochain");
+            let api = Api::init(tx_arg_url_match(&sub_matches));
+            let dec_key = load_dec_key(&mut term, root_dir)
+                .expect("loading decrption key failed.");
+            let asset_id = wallet_arg_id_match(&sub_matches);
+
+            let balance_query = BalanceQuery::get_encrypted_asset(asset_id, &dec_key, api);
         },
         ("wallet-test", Some(_)) => {
             println!("Initialize key components...");
@@ -296,7 +312,7 @@ fn wallet_commands_definition<'a, 'b>() -> App<'a, 'b> {
             .arg(Arg::with_name("asset-id")
                 .short("i")
                 .long("id")
-                .help("Asset id ")
+                .help("Asset id")
                 .takes_value(true)
                 .required(false)
             )
@@ -487,7 +503,7 @@ fn subcommand_debug<R: Rng>(mut term: term::Term, matches: &ArgMatches, rng: &mu
                 .into_decryption_key()
                 .expect("should be generated decryption key from seed.");
 
-            let balance_query = BalanceQuery::get_balance_from_decryption_key(&dec_key, api.clone());
+            let balance_query = BalanceQuery::get_encrypted_balance(&dec_key, api.clone());
             let remaining_balance = balance_query.decrypted_balance - amount - fee;
             assert!(balance_query.decrypted_balance >= amount + fee, "Not enough balance you have");
 
@@ -624,7 +640,7 @@ fn subcommand_debug<R: Rng>(mut term: term::Term, matches: &ArgMatches, rng: &mu
             let dec_key = DecryptionKey::read(&mut &decr_key_vec[..])
                 .expect("Reading decryption key faild.");
 
-            let balance_query = BalanceQuery::get_balance_from_decryption_key(&dec_key, api);
+            let balance_query = BalanceQuery::get_encrypted_balance(&dec_key, api);
 
             println!("Decrypted balance: {}", balance_query.decrypted_balance);
             println!("Encrypted balance: {}", balance_query.encrypted_balance_str);

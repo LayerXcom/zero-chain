@@ -110,25 +110,50 @@ pub struct BalanceQuery {
 // Temporary code.
 impl BalanceQuery {
     /// Get encrypted and decrypted balance for the decryption key
-    pub fn get_balance_from_decryption_key(dec_key: &DecryptionKey<Bls12>, api: Api) -> Self {
-        let p_g = zFixedGenerators::Diversifier; // 1
-
+    pub fn get_encrypted_balance(dec_key: &DecryptionKey<Bls12>, api: Api) -> Self {
         let encryption_key = zEncryptionKey::from_decryption_key(&no_std(&dec_key), &*ZPARAMS);
         let account_id = PkdAddress::from_encryption_key(&encryption_key);
 
-        let mut encrypted_balance_str = api.get_storage(
+        let encrypted_balance_str = api.get_storage(
             "EncryptedBalances",
             "EncryptedBalance",
             Some(account_id.encode())
             ).unwrap();
 
-        let mut pending_transfer_str = api.get_storage(
+        let pending_transfer_str = api.get_storage(
             "EncryptedBalances",
             "PendingTransfer",
             Some(account_id.encode())
         ).unwrap();
 
+        Self::get_balance_from_decryption_key(encrypted_balance_str, pending_transfer_str, dec_key)
+    }
 
+    pub fn get_encrypted_asset(asset_id: u32, dec_key: &DecryptionKey<Bls12>, api: Api) -> Self {
+        let encryption_key = zEncryptionKey::from_decryption_key(&no_std(&dec_key), &*ZPARAMS);
+        let account_id = PkdAddress::from_encryption_key(&encryption_key);
+
+        let encrypted_asset_str = api.get_storage(
+            "EncryptedAssets",
+            "EncryptedBalance",
+            Some((asset_id, account_id).encode())
+        ).unwrap();
+
+        let pending_transfer_str = api.get_storage(
+            "EncryptedAssets",
+            "PendingTransfer",
+            Some((asset_id, account_id).encode())
+        ).unwrap();
+
+        Self::get_balance_from_decryption_key(encrypted_asset_str, pending_transfer_str, dec_key)
+    }
+
+    fn get_balance_from_decryption_key(
+        mut encrypted_balance_str: String,
+        mut pending_transfer_str: String,
+        dec_key: &DecryptionKey<Bls12>
+    ) -> Self {
+        let p_g = zFixedGenerators::Diversifier; // 1
         let decrypted_balance;
         let p_decrypted_balance;
         let mut ciphertext = None;
