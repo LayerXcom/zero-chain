@@ -20,7 +20,7 @@ use zprimitives::PARAMS;
 use std::path::Path;
 use std::fs::File;
 use std::io::{BufReader, Read};
-use zface::ss58::EncryptionKeyBytes;
+// use zface::ss58::EncryptionKeyBytes;
 
 // Note this is the URL for the telemetry server
 //const STAGING_TELEMETRY_URL: &str = "wss://telemetry.polkadot.io/submit/";

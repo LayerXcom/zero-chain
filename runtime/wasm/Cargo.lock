@@ -896,7 +896,6 @@ dependencies = [
  "blake2-rfc 0.2.18 (git+https://github.com/gtank/blake2-rfc?rev=7a5b5fc99ae483a0043db7547fb79a6fa44b88a9)",
  "jubjub 0.1.0",
  "parity-codec 3.5.1 (registry+https://github.com/rust-lang/crates.io-index)",
- "parity-codec-derive 3.3.0 (registry+https://github.com/rust-lang/crates.io-index)",
  "rand 0.4.6 (registry+https://github.com/rust-lang/crates.io-index)",
  "substrate-primitives 1.0.0 (git+https://github.com/osuketh/substrate.git?branch=patch-zerochain)",
  "zerochain-pairing 0.14.2",
@@ -2215,7 +2214,6 @@ version = "1.0.0"
 dependencies = [
  "hex-literal 0.1.4 (registry+https://github.com/rust-lang/crates.io-index)",
  "parity-codec 3.5.1 (registry+https://github.com/rust-lang/crates.io-index)",
- "parity-codec-derive 3.3.0 (registry+https://github.com/rust-lang/crates.io-index)",
  "serde 1.0.92 (registry+https://github.com/rust-lang/crates.io-index)",
  "sr-primitives 1.0.0 (git+https://github.com/osuketh/substrate.git?branch=patch-zerochain)",
  "sr-std 1.0.0 (git+https://github.com/osuketh/substrate.git?branch=patch-zerochain)",
@@ -2264,7 +2262,6 @@ version = "0.1.0"
 dependencies = [
  "hex-literal 0.1.4 (registry+https://github.com/rust-lang/crates.io-index)",
  "parity-codec 3.5.1 (registry+https://github.com/rust-lang/crates.io-index)",
- "parity-codec-derive 3.3.0 (registry+https://github.com/rust-lang/crates.io-index)",
  "serde 1.0.92 (registry+https://github.com/rust-lang/crates.io-index)",
  "sr-io 1.0.0 (git+https://github.com/osuketh/substrate.git?branch=patch-zerochain)",
  "sr-primitives 1.0.0 (git+https://github.com/osuketh/substrate.git?branch=patch-zerochain)",
@@ -2282,7 +2279,6 @@ version = "1.0.0"
 dependencies = [
  "hex-literal 0.1.4 (registry+https://github.com/rust-lang/crates.io-index)",
  "parity-codec 3.5.1 (registry+https://github.com/rust-lang/crates.io-index)",
- "parity-codec-derive 3.3.0 (registry+https://github.com/rust-lang/crates.io-index)",
  "safe-mix 1.0.0 (registry+https://github.com/rust-lang/crates.io-index)",
  "serde 1.0.92 (registry+https://github.com/rust-lang/crates.io-index)",
  "sr-io 1.0.0 (git+https://github.com/osuketh/substrate.git?branch=patch-zerochain)",
@@ -2312,7 +2308,6 @@ version = "1.0.0"
 dependencies = [
  "hex-literal 0.1.4 (registry+https://github.com/rust-lang/crates.io-index)",
  "parity-codec 3.5.1 (registry+https://github.com/rust-lang/crates.io-index)",
- "parity-codec-derive 3.3.0 (registry+https://github.com/rust-lang/crates.io-index)",
  "safe-mix 1.0.0 (registry+https://github.com/rust-lang/crates.io-index)",
  "serde 1.0.92 (registry+https://github.com/rust-lang/crates.io-index)",
  "sr-primitives 1.0.0 (git+https://github.com/osuketh/substrate.git?branch=patch-zerochain)",
@@ -2347,7 +2342,6 @@ version = "1.0.0"
 dependencies = [
  "hex-literal 0.1.4 (registry+https://github.com/rust-lang/crates.io-index)",
  "parity-codec 3.5.1 (registry+https://github.com/rust-lang/crates.io-index)",
- "parity-codec-derive 3.3.0 (registry+https://github.com/rust-lang/crates.io-index)",
  "serde 1.0.92 (registry+https://github.com/rust-lang/crates.io-index)",
  "sr-primitives 1.0.0 (git+https://github.com/osuketh/substrate.git?branch=patch-zerochain)",
  "sr-std 1.0.0 (git+https://github.com/osuketh/substrate.git?branch=patch-zerochain)",
@@ -2416,7 +2410,6 @@ version = "1.0.0"
 dependencies = [
  "hex-literal 0.1.4 (registry+https://github.com/rust-lang/crates.io-index)",
  "parity-codec 3.5.1 (registry+https://github.com/rust-lang/crates.io-index)",
- "parity-codec-derive 3.3.0 (registry+https://github.com/rust-lang/crates.io-index)",
  "safe-mix 1.0.0 (registry+https://github.com/rust-lang/crates.io-index)",
  "serde 1.0.92 (registry+https://github.com/rust-lang/crates.io-index)",
  "serde_derive 1.0.92 (registry+https://github.com/rust-lang/crates.io-index)",
@@ -3357,7 +3350,6 @@ dependencies = [
  "keys 0.1.0",
  "lazy_static 1.3.0 (registry+https://github.com/rust-lang/crates.io-index)",
  "parity-codec 3.5.1 (registry+https://github.com/rust-lang/crates.io-index)",
- "parity-codec-derive 3.3.0 (registry+https://github.com/rust-lang/crates.io-index)",
  "rand 0.4.6 (registry+https://github.com/rust-lang/crates.io-index)",
  "serde 1.0.92 (registry+https://github.com/rust-lang/crates.io-index)",
  "serde_derive 1.0.92 (registry+https://github.com/rust-lang/crates.io-index)",

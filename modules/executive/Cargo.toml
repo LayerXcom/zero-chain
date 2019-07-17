@@ -19,11 +19,8 @@ version = '1.0'
 
 [dependencies.parity-codec]
 default-features = false
-version = '3.1'
-
-[dependencies.parity-codec-derive]
-default-features = false
-version = '3.1'
+features = ['derive']
+version = '3.2'
 
 [dependencies.rstd]
 default_features = false
@@ -60,7 +57,6 @@ std = [
 	"srml-support/std",
 	"serde/std",
 	"parity-codec/std",
-	'parity-codec-derive/std',
 	"primitives/std",
 	"system/std",
 	"substrate-primitives/std",

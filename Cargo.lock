@@ -122,16 +122,16 @@ dependencies = [
 
 [[package]]
 name = "atty"
-version = "0.2.12"
+version = "0.2.13"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 dependencies = [
- "libc 0.2.59 (registry+https://github.com/rust-lang/crates.io-index)",
+ "libc 0.2.60 (registry+https://github.com/rust-lang/crates.io-index)",
  "winapi 0.3.7 (registry+https://github.com/rust-lang/crates.io-index)",
 ]
 
 [[package]]
 name = "autocfg"
-version = "0.1.4"
+version = "0.1.5"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 
 [[package]]
@@ -141,7 +141,7 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 dependencies = [
  "backtrace-sys 0.1.30 (registry+https://github.com/rust-lang/crates.io-index)",
  "cfg-if 0.1.9 (registry+https://github.com/rust-lang/crates.io-index)",
- "libc 0.2.59 (registry+https://github.com/rust-lang/crates.io-index)",
+ "libc 0.2.60 (registry+https://github.com/rust-lang/crates.io-index)",
  "rustc-demangle 0.1.15 (registry+https://github.com/rust-lang/crates.io-index)",
 ]
 
@@ -151,7 +151,7 @@ version = "0.1.30"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 dependencies = [
  "cc 1.0.26 (registry+https://github.com/rust-lang/crates.io-index)",
- "libc 0.2.59 (registry+https://github.com/rust-lang/crates.io-index)",
+ "libc 0.2.60 (registry+https://github.com/rust-lang/crates.io-index)",
 ]
 
 [[package]]
@@ -348,7 +348,7 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 
 [[package]]
 name = "bstr"
-version = "0.2.1"
+version = "0.2.2"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 dependencies = [
  "memchr 2.2.1 (registry+https://github.com/rust-lang/crates.io-index)",
@@ -424,7 +424,7 @@ name = "chrono"
 version = "0.4.7"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 dependencies = [
- "libc 0.2.59 (registry+https://github.com/rust-lang/crates.io-index)",
+ "libc 0.2.60 (registry+https://github.com/rust-lang/crates.io-index)",
  "num-integer 0.1.41 (registry+https://github.com/rust-lang/crates.io-index)",
  "num-traits 0.2.8 (registry+https://github.com/rust-lang/crates.io-index)",
  "time 0.1.42 (registry+https://github.com/rust-lang/crates.io-index)",
@@ -436,7 +436,7 @@ version = "0.26.4"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 dependencies = [
  "glob 0.2.11 (registry+https://github.com/rust-lang/crates.io-index)",
- "libc 0.2.59 (registry+https://github.com/rust-lang/crates.io-index)",
+ "libc 0.2.60 (registry+https://github.com/rust-lang/crates.io-index)",
  "libloading 0.5.2 (registry+https://github.com/rust-lang/crates.io-index)",
 ]
 
@@ -446,7 +446,7 @@ version = "2.32.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 dependencies = [
  "ansi_term 0.11.0 (registry+https://github.com/rust-lang/crates.io-index)",
- "atty 0.2.12 (registry+https://github.com/rust-lang/crates.io-index)",
+ "atty 0.2.13 (registry+https://github.com/rust-lang/crates.io-index)",
  "bitflags 1.1.0 (registry+https://github.com/rust-lang/crates.io-index)",
  "strsim 0.7.0 (registry+https://github.com/rust-lang/crates.io-index)",
  "textwrap 0.10.0 (registry+https://github.com/rust-lang/crates.io-index)",
@@ -467,9 +467,9 @@ name = "clicolors-control"
 version = "1.0.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 dependencies = [
- "atty 0.2.12 (registry+https://github.com/rust-lang/crates.io-index)",
+ "atty 0.2.13 (registry+https://github.com/rust-lang/crates.io-index)",
  "lazy_static 1.3.0 (registry+https://github.com/rust-lang/crates.io-index)",
- "libc 0.2.59 (registry+https://github.com/rust-lang/crates.io-index)",
+ "libc 0.2.60 (registry+https://github.com/rust-lang/crates.io-index)",
  "winapi 0.3.7 (registry+https://github.com/rust-lang/crates.io-index)",
 ]
 
@@ -486,12 +486,12 @@ name = "console"
 version = "0.7.7"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 dependencies = [
- "atty 0.2.12 (registry+https://github.com/rust-lang/crates.io-index)",
+ "atty 0.2.13 (registry+https://github.com/rust-lang/crates.io-index)",
  "clicolors-control 1.0.0 (registry+https://github.com/rust-lang/crates.io-index)",
  "encode_unicode 0.3.5 (registry+https://github.com/rust-lang/crates.io-index)",
  "lazy_static 1.3.0 (registry+https://github.com/rust-lang/crates.io-index)",
- "libc 0.2.59 (registry+https://github.com/rust-lang/crates.io-index)",
- "parking_lot 0.8.0 (registry+https://github.com/rust-lang/crates.io-index)",
+ "libc 0.2.60 (registry+https://github.com/rust-lang/crates.io-index)",
+ "parking_lot 0.9.0 (registry+https://github.com/rust-lang/crates.io-index)",
  "regex 1.1.9 (registry+https://github.com/rust-lang/crates.io-index)",
  "termios 0.3.1 (registry+https://github.com/rust-lang/crates.io-index)",
  "unicode-width 0.1.5 (registry+https://github.com/rust-lang/crates.io-index)",
@@ -518,7 +518,7 @@ version = "0.6.4"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 dependencies = [
  "core-foundation-sys 0.6.2 (registry+https://github.com/rust-lang/crates.io-index)",
- "libc 0.2.59 (registry+https://github.com/rust-lang/crates.io-index)",
+ "libc 0.2.60 (registry+https://github.com/rust-lang/crates.io-index)",
 ]
 
 [[package]]
@@ -750,7 +750,7 @@ version = "0.3.3"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 dependencies = [
  "cfg-if 0.1.9 (registry+https://github.com/rust-lang/crates.io-index)",
- "libc 0.2.59 (registry+https://github.com/rust-lang/crates.io-index)",
+ "libc 0.2.60 (registry+https://github.com/rust-lang/crates.io-index)",
  "redox_users 0.3.0 (registry+https://github.com/rust-lang/crates.io-index)",
  "winapi 0.3.7 (registry+https://github.com/rust-lang/crates.io-index)",
 ]
@@ -814,8 +814,8 @@ dependencies = [
  "jubjub 0.1.0",
  "keys 0.1.0",
  "parity-codec 3.5.4 (registry+https://github.com/rust-lang/crates.io-index)",
- "serde 1.0.94 (registry+https://github.com/rust-lang/crates.io-index)",
- "serde_derive 1.0.94 (registry+https://github.com/rust-lang/crates.io-index)",
+ "serde 1.0.95 (registry+https://github.com/rust-lang/crates.io-index)",
+ "serde_derive 1.0.95 (registry+https://github.com/rust-lang/crates.io-index)",
  "sr-io 1.0.0 (git+https://github.com/osuketh/substrate.git?branch=patch-zerochain)",
  "sr-primitives 1.0.0 (git+https://github.com/osuketh/substrate.git?branch=patch-zerochain)",
  "sr-std 1.0.0 (git+https://github.com/osuketh/substrate.git?branch=patch-zerochain)",
@@ -839,8 +839,8 @@ dependencies = [
  "parity-codec 3.5.4 (registry+https://github.com/rust-lang/crates.io-index)",
  "rand 0.4.6 (registry+https://github.com/rust-lang/crates.io-index)",
  "sapling-crypto 0.0.1 (git+https://github.com/LayerXcom/librustzcash?branch=zero-chain)",
- "serde 1.0.94 (registry+https://github.com/rust-lang/crates.io-index)",
- "serde_derive 1.0.94 (registry+https://github.com/rust-lang/crates.io-index)",
+ "serde 1.0.95 (registry+https://github.com/rust-lang/crates.io-index)",
+ "serde_derive 1.0.95 (registry+https://github.com/rust-lang/crates.io-index)",
  "sr-io 1.0.0 (git+https://github.com/osuketh/substrate.git?branch=patch-zerochain)",
  "sr-primitives 1.0.0 (git+https://github.com/osuketh/substrate.git?branch=patch-zerochain)",
  "sr-std 1.0.0 (git+https://github.com/osuketh/substrate.git?branch=patch-zerochain)",
@@ -859,7 +859,7 @@ name = "env_logger"
 version = "0.5.13"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 dependencies = [
- "atty 0.2.12 (registry+https://github.com/rust-lang/crates.io-index)",
+ "atty 0.2.13 (registry+https://github.com/rust-lang/crates.io-index)",
  "humantime 1.2.0 (registry+https://github.com/rust-lang/crates.io-index)",
  "log 0.4.7 (registry+https://github.com/rust-lang/crates.io-index)",
  "regex 1.1.9 (registry+https://github.com/rust-lang/crates.io-index)",
@@ -871,7 +871,7 @@ name = "env_logger"
 version = "0.6.2"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 dependencies = [
- "atty 0.2.12 (registry+https://github.com/rust-lang/crates.io-index)",
+ "atty 0.2.13 (registry+https://github.com/rust-lang/crates.io-index)",
  "humantime 1.2.0 (registry+https://github.com/rust-lang/crates.io-index)",
  "log 0.4.7 (registry+https://github.com/rust-lang/crates.io-index)",
  "regex 1.1.9 (registry+https://github.com/rust-lang/crates.io-index)",
@@ -931,7 +931,7 @@ name = "fdlimit"
 version = "0.1.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 dependencies = [
- "libc 0.2.59 (registry+https://github.com/rust-lang/crates.io-index)",
+ "libc 0.2.60 (registry+https://github.com/rust-lang/crates.io-index)",
 ]
 
 [[package]]
@@ -941,7 +941,7 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 dependencies = [
  "byteorder 1.3.2 (registry+https://github.com/rust-lang/crates.io-index)",
  "heapsize 0.4.2 (registry+https://github.com/rust-lang/crates.io-index)",
- "libc 0.2.59 (registry+https://github.com/rust-lang/crates.io-index)",
+ "libc 0.2.60 (registry+https://github.com/rust-lang/crates.io-index)",
  "rand 0.5.6 (registry+https://github.com/rust-lang/crates.io-index)",
  "rustc-hex 2.0.1 (registry+https://github.com/rust-lang/crates.io-index)",
  "static_assertions 0.2.5 (registry+https://github.com/rust-lang/crates.io-index)",
@@ -968,7 +968,7 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 [[package]]
 name = "fork-tree"
 version = "1.0.0"
-source = "git+https://github.com/osuketh/substrate.git?branch=patch-zerochain#108276dd6c7265343c74236ddaa9f9e64ce263f5"
+source = "git+https://github.com/osuketh/substrate.git?branch=patch-zerochain#3c82354be88a86f2a1618db01d98ce7c6ad2e64c"
 dependencies = [
  "parity-codec 3.5.4 (registry+https://github.com/rust-lang/crates.io-index)",
 ]
@@ -979,7 +979,7 @@ version = "0.2.4"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 dependencies = [
  "lazy_static 1.3.0 (registry+https://github.com/rust-lang/crates.io-index)",
- "libc 0.2.59 (registry+https://github.com/rust-lang/crates.io-index)",
+ "libc 0.2.60 (registry+https://github.com/rust-lang/crates.io-index)",
  "libloading 0.5.2 (registry+https://github.com/rust-lang/crates.io-index)",
  "winapi 0.3.7 (registry+https://github.com/rust-lang/crates.io-index)",
 ]
@@ -1048,7 +1048,7 @@ version = "0.1.6"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 dependencies = [
  "lazy_static 1.3.0 (registry+https://github.com/rust-lang/crates.io-index)",
- "libc 0.2.59 (registry+https://github.com/rust-lang/crates.io-index)",
+ "libc 0.2.60 (registry+https://github.com/rust-lang/crates.io-index)",
 ]
 
 [[package]]
@@ -1062,7 +1062,7 @@ version = "0.4.4"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 dependencies = [
  "aho-corasick 0.7.4 (registry+https://github.com/rust-lang/crates.io-index)",
- "bstr 0.2.1 (registry+https://github.com/rust-lang/crates.io-index)",
+ "bstr 0.2.2 (registry+https://github.com/rust-lang/crates.io-index)",
  "fnv 1.0.6 (registry+https://github.com/rust-lang/crates.io-index)",
  "log 0.4.7 (registry+https://github.com/rust-lang/crates.io-index)",
  "regex 1.1.9 (registry+https://github.com/rust-lang/crates.io-index)",
@@ -1084,11 +1084,6 @@ dependencies = [
  "string 0.2.1 (registry+https://github.com/rust-lang/crates.io-index)",
  "tokio-io 0.1.12 (registry+https://github.com/rust-lang/crates.io-index)",
 ]
-
-[[package]]
-name = "hash-db"
-version = "0.11.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
 
 [[package]]
 name = "hash-db"
@@ -1144,7 +1139,7 @@ version = "0.1.4"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 dependencies = [
  "hex-literal-impl 0.1.2 (registry+https://github.com/rust-lang/crates.io-index)",
- "proc-macro-hack 0.4.1 (registry+https://github.com/rust-lang/crates.io-index)",
+ "proc-macro-hack 0.4.2 (registry+https://github.com/rust-lang/crates.io-index)",
 ]
 
 [[package]]
@@ -1152,7 +1147,7 @@ name = "hex-literal-impl"
 version = "0.1.2"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 dependencies = [
- "proc-macro-hack 0.4.1 (registry+https://github.com/rust-lang/crates.io-index)",
+ "proc-macro-hack 0.4.2 (registry+https://github.com/rust-lang/crates.io-index)",
 ]
 
 [[package]]
@@ -1247,7 +1242,7 @@ dependencies = [
 
 [[package]]
 name = "hyper"
-version = "0.12.32"
+version = "0.12.33"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 dependencies = [
  "bytes 0.4.12 (registry+https://github.com/rust-lang/crates.io-index)",
@@ -1298,7 +1293,7 @@ version = "0.1.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 dependencies = [
  "rustc-hex 2.0.1 (registry+https://github.com/rust-lang/crates.io-index)",
- "serde 1.0.94 (registry+https://github.com/rust-lang/crates.io-index)",
+ "serde 1.0.95 (registry+https://github.com/rust-lang/crates.io-index)",
 ]
 
 [[package]]
@@ -1306,7 +1301,7 @@ name = "impl-serde"
 version = "0.2.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 dependencies = [
- "serde 1.0.94 (registry+https://github.com/rust-lang/crates.io-index)",
+ "serde 1.0.95 (registry+https://github.com/rust-lang/crates.io-index)",
 ]
 
 [[package]]
@@ -1329,7 +1324,7 @@ name = "iovec"
 version = "0.1.2"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 dependencies = [
- "libc 0.2.59 (registry+https://github.com/rust-lang/crates.io-index)",
+ "libc 0.2.60 (registry+https://github.com/rust-lang/crates.io-index)",
  "winapi 0.2.8 (registry+https://github.com/rust-lang/crates.io-index)",
 ]
 
@@ -1345,8 +1340,8 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 dependencies = [
  "futures 0.1.28 (registry+https://github.com/rust-lang/crates.io-index)",
  "log 0.4.7 (registry+https://github.com/rust-lang/crates.io-index)",
- "serde 1.0.94 (registry+https://github.com/rust-lang/crates.io-index)",
- "serde_derive 1.0.94 (registry+https://github.com/rust-lang/crates.io-index)",
+ "serde 1.0.95 (registry+https://github.com/rust-lang/crates.io-index)",
+ "serde_derive 1.0.95 (registry+https://github.com/rust-lang/crates.io-index)",
  "serde_json 1.0.40 (registry+https://github.com/rust-lang/crates.io-index)",
 ]
 
@@ -1357,8 +1352,8 @@ source = "git+https://github.com/paritytech/jsonrpc?rev=ff4e20ecce6321835aab7a81
 dependencies = [
  "futures 0.1.28 (registry+https://github.com/rust-lang/crates.io-index)",
  "log 0.4.7 (registry+https://github.com/rust-lang/crates.io-index)",
- "serde 1.0.94 (registry+https://github.com/rust-lang/crates.io-index)",
- "serde_derive 1.0.94 (registry+https://github.com/rust-lang/crates.io-index)",
+ "serde 1.0.95 (registry+https://github.com/rust-lang/crates.io-index)",
+ "serde_derive 1.0.95 (registry+https://github.com/rust-lang/crates.io-index)",
  "serde_json 1.0.40 (registry+https://github.com/rust-lang/crates.io-index)",
 ]
 
@@ -1369,10 +1364,10 @@ source = "git+https://github.com/paritytech/jsonrpc?rev=ff4e20ecce6321835aab7a81
 dependencies = [
  "failure 0.1.5 (registry+https://github.com/rust-lang/crates.io-index)",
  "futures 0.1.28 (registry+https://github.com/rust-lang/crates.io-index)",
- "hyper 0.12.32 (registry+https://github.com/rust-lang/crates.io-index)",
+ "hyper 0.12.33 (registry+https://github.com/rust-lang/crates.io-index)",
  "jsonrpc-core 11.0.0 (git+https://github.com/paritytech/jsonrpc?rev=ff4e20ecce6321835aab7a81cbb6fa2458a6082d)",
  "log 0.4.7 (registry+https://github.com/rust-lang/crates.io-index)",
- "serde 1.0.94 (registry+https://github.com/rust-lang/crates.io-index)",
+ "serde 1.0.95 (registry+https://github.com/rust-lang/crates.io-index)",
  "serde_json 1.0.40 (registry+https://github.com/rust-lang/crates.io-index)",
  "tokio 0.1.22 (registry+https://github.com/rust-lang/crates.io-index)",
  "websocket 0.22.4 (registry+https://github.com/rust-lang/crates.io-index)",
@@ -1404,7 +1399,7 @@ name = "jsonrpc-http-server"
 version = "10.1.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 dependencies = [
- "hyper 0.12.32 (registry+https://github.com/rust-lang/crates.io-index)",
+ "hyper 0.12.33 (registry+https://github.com/rust-lang/crates.io-index)",
  "jsonrpc-core 10.1.0 (registry+https://github.com/rust-lang/crates.io-index)",
  "jsonrpc-server-utils 10.1.0 (registry+https://github.com/rust-lang/crates.io-index)",
  "log 0.4.7 (registry+https://github.com/rust-lang/crates.io-index)",
@@ -1420,7 +1415,7 @@ dependencies = [
  "jsonrpc-core 10.1.0 (registry+https://github.com/rust-lang/crates.io-index)",
  "log 0.4.7 (registry+https://github.com/rust-lang/crates.io-index)",
  "parking_lot 0.7.1 (registry+https://github.com/rust-lang/crates.io-index)",
- "serde 1.0.94 (registry+https://github.com/rust-lang/crates.io-index)",
+ "serde 1.0.95 (registry+https://github.com/rust-lang/crates.io-index)",
 ]
 
 [[package]]
@@ -1485,7 +1480,6 @@ dependencies = [
  "blake2-rfc 0.2.18 (git+https://github.com/gtank/blake2-rfc?rev=7a5b5fc99ae483a0043db7547fb79a6fa44b88a9)",
  "jubjub 0.1.0",
  "parity-codec 3.5.4 (registry+https://github.com/rust-lang/crates.io-index)",
- "parity-codec-derive 3.3.0 (registry+https://github.com/rust-lang/crates.io-index)",
  "rand 0.4.6 (registry+https://github.com/rust-lang/crates.io-index)",
  "substrate-primitives 1.0.0 (git+https://github.com/osuketh/substrate.git?branch=patch-zerochain)",
  "zerochain-pairing 0.14.2",
@@ -1536,7 +1530,7 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 
 [[package]]
 name = "libc"
-version = "0.2.59"
+version = "0.2.60"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 
 [[package]]
@@ -1577,7 +1571,7 @@ dependencies = [
  "parity-multihash 0.1.2 (registry+https://github.com/rust-lang/crates.io-index)",
  "parking_lot 0.7.1 (registry+https://github.com/rust-lang/crates.io-index)",
  "smallvec 0.6.10 (registry+https://github.com/rust-lang/crates.io-index)",
- "stdweb 0.4.17 (registry+https://github.com/rust-lang/crates.io-index)",
+ "stdweb 0.4.18 (registry+https://github.com/rust-lang/crates.io-index)",
  "tokio-codec 0.1.1 (registry+https://github.com/rust-lang/crates.io-index)",
  "tokio-executor 0.1.8 (registry+https://github.com/rust-lang/crates.io-index)",
  "tokio-io 0.1.12 (registry+https://github.com/rust-lang/crates.io-index)",
@@ -1826,7 +1820,7 @@ dependencies = [
  "rw-stream-sink 0.1.2 (registry+https://github.com/rust-lang/crates.io-index)",
  "secp256k1 0.12.2 (registry+https://github.com/rust-lang/crates.io-index)",
  "sha2 0.8.0 (registry+https://github.com/rust-lang/crates.io-index)",
- "stdweb 0.4.17 (registry+https://github.com/rust-lang/crates.io-index)",
+ "stdweb 0.4.18 (registry+https://github.com/rust-lang/crates.io-index)",
  "tokio-io 0.1.12 (registry+https://github.com/rust-lang/crates.io-index)",
  "twofish 0.2.0 (registry+https://github.com/rust-lang/crates.io-index)",
  "untrusted 0.6.2 (registry+https://github.com/rust-lang/crates.io-index)",
@@ -1868,7 +1862,7 @@ dependencies = [
  "log 0.4.7 (registry+https://github.com/rust-lang/crates.io-index)",
  "parity-multiaddr 0.2.0 (registry+https://github.com/rust-lang/crates.io-index)",
  "rw-stream-sink 0.1.2 (registry+https://github.com/rust-lang/crates.io-index)",
- "stdweb 0.4.17 (registry+https://github.com/rust-lang/crates.io-index)",
+ "stdweb 0.4.18 (registry+https://github.com/rust-lang/crates.io-index)",
  "tokio-io 0.1.12 (registry+https://github.com/rust-lang/crates.io-index)",
  "websocket 0.22.4 (registry+https://github.com/rust-lang/crates.io-index)",
 ]
@@ -1893,7 +1887,7 @@ dependencies = [
  "bindgen 0.47.3 (registry+https://github.com/rust-lang/crates.io-index)",
  "cc 1.0.26 (registry+https://github.com/rust-lang/crates.io-index)",
  "glob 0.2.11 (registry+https://github.com/rust-lang/crates.io-index)",
- "libc 0.2.59 (registry+https://github.com/rust-lang/crates.io-index)",
+ "libc 0.2.60 (registry+https://github.com/rust-lang/crates.io-index)",
 ]
 
 [[package]]
@@ -1933,7 +1927,7 @@ dependencies = [
 
 [[package]]
 name = "lock_api"
-version = "0.2.0"
+version = "0.3.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 dependencies = [
  "scopeguard 1.0.0 (registry+https://github.com/rust-lang/crates.io-index)",
@@ -2036,7 +2030,7 @@ dependencies = [
  "fuchsia-zircon-sys 0.3.3 (registry+https://github.com/rust-lang/crates.io-index)",
  "iovec 0.1.2 (registry+https://github.com/rust-lang/crates.io-index)",
  "kernel32-sys 0.2.2 (registry+https://github.com/rust-lang/crates.io-index)",
- "libc 0.2.59 (registry+https://github.com/rust-lang/crates.io-index)",
+ "libc 0.2.60 (registry+https://github.com/rust-lang/crates.io-index)",
  "log 0.4.7 (registry+https://github.com/rust-lang/crates.io-index)",
  "miow 0.2.1 (registry+https://github.com/rust-lang/crates.io-index)",
  "net2 0.2.33 (registry+https://github.com/rust-lang/crates.io-index)",
@@ -2061,7 +2055,7 @@ version = "0.6.7"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 dependencies = [
  "iovec 0.1.2 (registry+https://github.com/rust-lang/crates.io-index)",
- "libc 0.2.59 (registry+https://github.com/rust-lang/crates.io-index)",
+ "libc 0.2.60 (registry+https://github.com/rust-lang/crates.io-index)",
  "mio 0.6.19 (registry+https://github.com/rust-lang/crates.io-index)",
 ]
 
@@ -2104,7 +2098,7 @@ version = "0.2.3"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 dependencies = [
  "lazy_static 1.3.0 (registry+https://github.com/rust-lang/crates.io-index)",
- "libc 0.2.59 (registry+https://github.com/rust-lang/crates.io-index)",
+ "libc 0.2.60 (registry+https://github.com/rust-lang/crates.io-index)",
  "log 0.4.7 (registry+https://github.com/rust-lang/crates.io-index)",
  "openssl 0.10.23 (registry+https://github.com/rust-lang/crates.io-index)",
  "openssl-probe 0.1.2 (registry+https://github.com/rust-lang/crates.io-index)",
@@ -2121,7 +2115,7 @@ version = "0.2.33"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 dependencies = [
  "cfg-if 0.1.9 (registry+https://github.com/rust-lang/crates.io-index)",
- "libc 0.2.59 (registry+https://github.com/rust-lang/crates.io-index)",
+ "libc 0.2.60 (registry+https://github.com/rust-lang/crates.io-index)",
  "winapi 0.3.7 (registry+https://github.com/rust-lang/crates.io-index)",
 ]
 
@@ -2133,7 +2127,7 @@ dependencies = [
  "bitflags 1.1.0 (registry+https://github.com/rust-lang/crates.io-index)",
  "cc 1.0.26 (registry+https://github.com/rust-lang/crates.io-index)",
  "cfg-if 0.1.9 (registry+https://github.com/rust-lang/crates.io-index)",
- "libc 0.2.59 (registry+https://github.com/rust-lang/crates.io-index)",
+ "libc 0.2.60 (registry+https://github.com/rust-lang/crates.io-index)",
  "void 1.0.2 (registry+https://github.com/rust-lang/crates.io-index)",
 ]
 
@@ -2161,7 +2155,7 @@ name = "num-integer"
 version = "0.1.41"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 dependencies = [
- "autocfg 0.1.4 (registry+https://github.com/rust-lang/crates.io-index)",
+ "autocfg 0.1.5 (registry+https://github.com/rust-lang/crates.io-index)",
  "num-traits 0.2.8 (registry+https://github.com/rust-lang/crates.io-index)",
 ]
 
@@ -2170,7 +2164,7 @@ name = "num-traits"
 version = "0.2.8"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 dependencies = [
- "autocfg 0.1.4 (registry+https://github.com/rust-lang/crates.io-index)",
+ "autocfg 0.1.5 (registry+https://github.com/rust-lang/crates.io-index)",
 ]
 
 [[package]]
@@ -2178,7 +2172,7 @@ name = "num_cpus"
 version = "1.10.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 dependencies = [
- "libc 0.2.59 (registry+https://github.com/rust-lang/crates.io-index)",
+ "libc 0.2.60 (registry+https://github.com/rust-lang/crates.io-index)",
 ]
 
 [[package]]
@@ -2212,7 +2206,7 @@ dependencies = [
  "cfg-if 0.1.9 (registry+https://github.com/rust-lang/crates.io-index)",
  "foreign-types 0.3.2 (registry+https://github.com/rust-lang/crates.io-index)",
  "lazy_static 1.3.0 (registry+https://github.com/rust-lang/crates.io-index)",
- "libc 0.2.59 (registry+https://github.com/rust-lang/crates.io-index)",
+ "libc 0.2.60 (registry+https://github.com/rust-lang/crates.io-index)",
  "openssl-sys 0.9.47 (registry+https://github.com/rust-lang/crates.io-index)",
 ]
 
@@ -2226,9 +2220,9 @@ name = "openssl-sys"
 version = "0.9.47"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 dependencies = [
- "autocfg 0.1.4 (registry+https://github.com/rust-lang/crates.io-index)",
+ "autocfg 0.1.5 (registry+https://github.com/rust-lang/crates.io-index)",
  "cc 1.0.26 (registry+https://github.com/rust-lang/crates.io-index)",
- "libc 0.2.59 (registry+https://github.com/rust-lang/crates.io-index)",
+ "libc 0.2.60 (registry+https://github.com/rust-lang/crates.io-index)",
  "pkg-config 0.3.14 (registry+https://github.com/rust-lang/crates.io-index)",
  "vcpkg 0.2.7 (registry+https://github.com/rust-lang/crates.io-index)",
 ]
@@ -2270,7 +2264,7 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 dependencies = [
  "arrayvec 0.4.11 (registry+https://github.com/rust-lang/crates.io-index)",
  "parity-codec-derive 3.3.0 (registry+https://github.com/rust-lang/crates.io-index)",
- "serde 1.0.94 (registry+https://github.com/rust-lang/crates.io-index)",
+ "serde 1.0.95 (registry+https://github.com/rust-lang/crates.io-index)",
 ]
 
 [[package]]
@@ -2330,7 +2324,7 @@ dependencies = [
  "byteorder 1.3.2 (registry+https://github.com/rust-lang/crates.io-index)",
  "data-encoding 2.1.2 (registry+https://github.com/rust-lang/crates.io-index)",
  "parity-multihash 0.1.2 (registry+https://github.com/rust-lang/crates.io-index)",
- "serde 1.0.94 (registry+https://github.com/rust-lang/crates.io-index)",
+ "serde 1.0.95 (registry+https://github.com/rust-lang/crates.io-index)",
  "unsigned-varint 0.2.2 (registry+https://github.com/rust-lang/crates.io-index)",
 ]
 
@@ -2412,11 +2406,11 @@ dependencies = [
 
 [[package]]
 name = "parking_lot"
-version = "0.8.0"
+version = "0.9.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 dependencies = [
- "lock_api 0.2.0 (registry+https://github.com/rust-lang/crates.io-index)",
- "parking_lot_core 0.5.0 (registry+https://github.com/rust-lang/crates.io-index)",
+ "lock_api 0.3.1 (registry+https://github.com/rust-lang/crates.io-index)",
+ "parking_lot_core 0.6.0 (registry+https://github.com/rust-lang/crates.io-index)",
  "rustc_version 0.2.3 (registry+https://github.com/rust-lang/crates.io-index)",
 ]
 
@@ -2425,7 +2419,7 @@ name = "parking_lot_core"
 version = "0.2.14"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 dependencies = [
- "libc 0.2.59 (registry+https://github.com/rust-lang/crates.io-index)",
+ "libc 0.2.60 (registry+https://github.com/rust-lang/crates.io-index)",
  "rand 0.4.6 (registry+https://github.com/rust-lang/crates.io-index)",
  "smallvec 0.6.10 (registry+https://github.com/rust-lang/crates.io-index)",
  "winapi 0.3.7 (registry+https://github.com/rust-lang/crates.io-index)",
@@ -2436,7 +2430,7 @@ name = "parking_lot_core"
 version = "0.3.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 dependencies = [
- "libc 0.2.59 (registry+https://github.com/rust-lang/crates.io-index)",
+ "libc 0.2.60 (registry+https://github.com/rust-lang/crates.io-index)",
  "rand 0.5.6 (registry+https://github.com/rust-lang/crates.io-index)",
  "rustc_version 0.2.3 (registry+https://github.com/rust-lang/crates.io-index)",
  "smallvec 0.6.10 (registry+https://github.com/rust-lang/crates.io-index)",
@@ -2448,7 +2442,7 @@ name = "parking_lot_core"
 version = "0.4.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 dependencies = [
- "libc 0.2.59 (registry+https://github.com/rust-lang/crates.io-index)",
+ "libc 0.2.60 (registry+https://github.com/rust-lang/crates.io-index)",
  "rand 0.6.5 (registry+https://github.com/rust-lang/crates.io-index)",
  "rustc_version 0.2.3 (registry+https://github.com/rust-lang/crates.io-index)",
  "smallvec 0.6.10 (registry+https://github.com/rust-lang/crates.io-index)",
@@ -2457,13 +2451,12 @@ dependencies = [
 
 [[package]]
 name = "parking_lot_core"
-version = "0.5.0"
+version = "0.6.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 dependencies = [
  "cfg-if 0.1.9 (registry+https://github.com/rust-lang/crates.io-index)",
  "cloudabi 0.0.3 (registry+https://github.com/rust-lang/crates.io-index)",
- "libc 0.2.59 (registry+https://github.com/rust-lang/crates.io-index)",
- "rand 0.6.5 (registry+https://github.com/rust-lang/crates.io-index)",
+ "libc 0.2.60 (registry+https://github.com/rust-lang/crates.io-index)",
  "redox_syscall 0.1.56 (registry+https://github.com/rust-lang/crates.io-index)",
  "rustc_version 0.2.3 (registry+https://github.com/rust-lang/crates.io-index)",
  "smallvec 0.6.10 (registry+https://github.com/rust-lang/crates.io-index)",
@@ -2544,8 +2537,8 @@ dependencies = [
  "jsonrpc-derive 11.0.0 (git+https://github.com/paritytech/jsonrpc?rev=ff4e20ecce6321835aab7a81cbb6fa2458a6082d)",
  "log 0.4.7 (registry+https://github.com/rust-lang/crates.io-index)",
  "parity-codec 3.5.4 (registry+https://github.com/rust-lang/crates.io-index)",
- "serde 1.0.94 (registry+https://github.com/rust-lang/crates.io-index)",
- "serde_derive 1.0.94 (registry+https://github.com/rust-lang/crates.io-index)",
+ "serde 1.0.95 (registry+https://github.com/rust-lang/crates.io-index)",
+ "serde_derive 1.0.95 (registry+https://github.com/rust-lang/crates.io-index)",
  "serde_json 1.0.40 (registry+https://github.com/rust-lang/crates.io-index)",
  "sr-primitives 1.0.0 (git+https://github.com/osuketh/substrate.git?branch=patch-zerochain)",
  "substrate-primitives 1.0.0 (git+https://github.com/osuketh/substrate.git?branch=patch-zerochain)",
@@ -2578,10 +2571,10 @@ dependencies = [
 
 [[package]]
 name = "proc-macro-hack"
-version = "0.4.1"
+version = "0.4.2"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 dependencies = [
- "proc-macro-hack-impl 0.4.1 (registry+https://github.com/rust-lang/crates.io-index)",
+ "proc-macro-hack-impl 0.4.2 (registry+https://github.com/rust-lang/crates.io-index)",
 ]
 
 [[package]]
@@ -2596,7 +2589,7 @@ dependencies = [
 
 [[package]]
 name = "proc-macro-hack-impl"
-version = "0.4.1"
+version = "0.4.2"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 
 [[package]]
@@ -2635,7 +2628,7 @@ name = "rand"
 version = "0.3.23"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 dependencies = [
- "libc 0.2.59 (registry+https://github.com/rust-lang/crates.io-index)",
+ "libc 0.2.60 (registry+https://github.com/rust-lang/crates.io-index)",
  "rand 0.4.6 (registry+https://github.com/rust-lang/crates.io-index)",
 ]
 
@@ -2645,7 +2638,7 @@ version = "0.4.6"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 dependencies = [
  "fuchsia-cprng 0.1.1 (registry+https://github.com/rust-lang/crates.io-index)",
- "libc 0.2.59 (registry+https://github.com/rust-lang/crates.io-index)",
+ "libc 0.2.60 (registry+https://github.com/rust-lang/crates.io-index)",
  "rand_core 0.3.1 (registry+https://github.com/rust-lang/crates.io-index)",
  "rdrand 0.4.0 (registry+https://github.com/rust-lang/crates.io-index)",
  "winapi 0.3.7 (registry+https://github.com/rust-lang/crates.io-index)",
@@ -2658,7 +2651,7 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 dependencies = [
  "cloudabi 0.0.3 (registry+https://github.com/rust-lang/crates.io-index)",
  "fuchsia-cprng 0.1.1 (registry+https://github.com/rust-lang/crates.io-index)",
- "libc 0.2.59 (registry+https://github.com/rust-lang/crates.io-index)",
+ "libc 0.2.60 (registry+https://github.com/rust-lang/crates.io-index)",
  "rand_core 0.3.1 (registry+https://github.com/rust-lang/crates.io-index)",
  "winapi 0.3.7 (registry+https://github.com/rust-lang/crates.io-index)",
 ]
@@ -2668,8 +2661,8 @@ name = "rand"
 version = "0.6.5"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 dependencies = [
- "autocfg 0.1.4 (registry+https://github.com/rust-lang/crates.io-index)",
- "libc 0.2.59 (registry+https://github.com/rust-lang/crates.io-index)",
+ "autocfg 0.1.5 (registry+https://github.com/rust-lang/crates.io-index)",
+ "libc 0.2.60 (registry+https://github.com/rust-lang/crates.io-index)",
  "rand_chacha 0.1.1 (registry+https://github.com/rust-lang/crates.io-index)",
  "rand_core 0.4.0 (registry+https://github.com/rust-lang/crates.io-index)",
  "rand_hc 0.1.0 (registry+https://github.com/rust-lang/crates.io-index)",
@@ -2687,7 +2680,7 @@ version = "0.7.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 dependencies = [
  "getrandom 0.1.6 (registry+https://github.com/rust-lang/crates.io-index)",
- "libc 0.2.59 (registry+https://github.com/rust-lang/crates.io-index)",
+ "libc 0.2.60 (registry+https://github.com/rust-lang/crates.io-index)",
  "rand_chacha 0.2.0 (registry+https://github.com/rust-lang/crates.io-index)",
  "rand_core 0.5.0 (registry+https://github.com/rust-lang/crates.io-index)",
  "rand_hc 0.2.0 (registry+https://github.com/rust-lang/crates.io-index)",
@@ -2698,7 +2691,7 @@ name = "rand_chacha"
 version = "0.1.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 dependencies = [
- "autocfg 0.1.4 (registry+https://github.com/rust-lang/crates.io-index)",
+ "autocfg 0.1.5 (registry+https://github.com/rust-lang/crates.io-index)",
  "rand_core 0.3.1 (registry+https://github.com/rust-lang/crates.io-index)",
 ]
 
@@ -2707,7 +2700,7 @@ name = "rand_chacha"
 version = "0.2.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 dependencies = [
- "autocfg 0.1.4 (registry+https://github.com/rust-lang/crates.io-index)",
+ "autocfg 0.1.5 (registry+https://github.com/rust-lang/crates.io-index)",
  "c2-chacha 0.2.2 (registry+https://github.com/rust-lang/crates.io-index)",
  "rand_core 0.5.0 (registry+https://github.com/rust-lang/crates.io-index)",
 ]
@@ -2762,7 +2755,7 @@ name = "rand_jitter"
 version = "0.1.4"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 dependencies = [
- "libc 0.2.59 (registry+https://github.com/rust-lang/crates.io-index)",
+ "libc 0.2.60 (registry+https://github.com/rust-lang/crates.io-index)",
  "rand_core 0.4.0 (registry+https://github.com/rust-lang/crates.io-index)",
  "winapi 0.3.7 (registry+https://github.com/rust-lang/crates.io-index)",
 ]
@@ -2774,7 +2767,7 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 dependencies = [
  "cloudabi 0.0.3 (registry+https://github.com/rust-lang/crates.io-index)",
  "fuchsia-cprng 0.1.1 (registry+https://github.com/rust-lang/crates.io-index)",
- "libc 0.2.59 (registry+https://github.com/rust-lang/crates.io-index)",
+ "libc 0.2.60 (registry+https://github.com/rust-lang/crates.io-index)",
  "rand_core 0.4.0 (registry+https://github.com/rust-lang/crates.io-index)",
  "rdrand 0.4.0 (registry+https://github.com/rust-lang/crates.io-index)",
  "winapi 0.3.7 (registry+https://github.com/rust-lang/crates.io-index)",
@@ -2785,7 +2778,7 @@ name = "rand_pcg"
 version = "0.1.2"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 dependencies = [
- "autocfg 0.1.4 (registry+https://github.com/rust-lang/crates.io-index)",
+ "autocfg 0.1.5 (registry+https://github.com/rust-lang/crates.io-index)",
  "rand_core 0.4.0 (registry+https://github.com/rust-lang/crates.io-index)",
 ]
 
@@ -2883,7 +2876,7 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 dependencies = [
  "cc 1.0.26 (registry+https://github.com/rust-lang/crates.io-index)",
  "lazy_static 1.3.0 (registry+https://github.com/rust-lang/crates.io-index)",
- "libc 0.2.59 (registry+https://github.com/rust-lang/crates.io-index)",
+ "libc 0.2.60 (registry+https://github.com/rust-lang/crates.io-index)",
  "spin 0.5.0 (registry+https://github.com/rust-lang/crates.io-index)",
  "untrusted 0.6.2 (registry+https://github.com/rust-lang/crates.io-index)",
  "winapi 0.3.7 (registry+https://github.com/rust-lang/crates.io-index)",
@@ -2904,7 +2897,7 @@ name = "rocksdb"
 version = "0.11.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 dependencies = [
- "libc 0.2.59 (registry+https://github.com/rust-lang/crates.io-index)",
+ "libc 0.2.60 (registry+https://github.com/rust-lang/crates.io-index)",
  "librocksdb-sys 5.18.3 (registry+https://github.com/rust-lang/crates.io-index)",
 ]
 
@@ -3048,7 +3041,7 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 dependencies = [
  "core-foundation 0.6.4 (registry+https://github.com/rust-lang/crates.io-index)",
  "core-foundation-sys 0.6.2 (registry+https://github.com/rust-lang/crates.io-index)",
- "libc 0.2.59 (registry+https://github.com/rust-lang/crates.io-index)",
+ "libc 0.2.60 (registry+https://github.com/rust-lang/crates.io-index)",
  "security-framework-sys 0.3.1 (registry+https://github.com/rust-lang/crates.io-index)",
 ]
 
@@ -3075,7 +3068,7 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 
 [[package]]
 name = "serde"
-version = "1.0.94"
+version = "1.0.95"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 
 [[package]]
@@ -3083,12 +3076,12 @@ name = "serde_bytes"
 version = "0.11.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 dependencies = [
- "serde 1.0.94 (registry+https://github.com/rust-lang/crates.io-index)",
+ "serde 1.0.95 (registry+https://github.com/rust-lang/crates.io-index)",
 ]
 
 [[package]]
 name = "serde_derive"
-version = "1.0.94"
+version = "1.0.95"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 dependencies = [
  "proc-macro2 0.4.30 (registry+https://github.com/rust-lang/crates.io-index)",
@@ -3103,7 +3096,7 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 dependencies = [
  "itoa 0.4.4 (registry+https://github.com/rust-lang/crates.io-index)",
  "ryu 1.0.0 (registry+https://github.com/rust-lang/crates.io-index)",
- "serde 1.0.94 (registry+https://github.com/rust-lang/crates.io-index)",
+ "serde 1.0.95 (registry+https://github.com/rust-lang/crates.io-index)",
 ]
 
 [[package]]
@@ -3203,7 +3196,7 @@ version = "2.3.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 dependencies = [
  "chrono 0.4.7 (registry+https://github.com/rust-lang/crates.io-index)",
- "serde 1.0.94 (registry+https://github.com/rust-lang/crates.io-index)",
+ "serde 1.0.95 (registry+https://github.com/rust-lang/crates.io-index)",
  "serde_json 1.0.40 (registry+https://github.com/rust-lang/crates.io-index)",
  "slog 2.5.0 (registry+https://github.com/rust-lang/crates.io-index)",
 ]
@@ -3248,7 +3241,7 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 [[package]]
 name = "sr-api-macros"
 version = "1.0.0"
-source = "git+https://github.com/osuketh/substrate.git?branch=patch-zerochain#108276dd6c7265343c74236ddaa9f9e64ce263f5"
+source = "git+https://github.com/osuketh/substrate.git?branch=patch-zerochain#3c82354be88a86f2a1618db01d98ce7c6ad2e64c"
 dependencies = [
  "blake2-rfc 0.2.18 (registry+https://github.com/rust-lang/crates.io-index)",
  "proc-macro-crate 0.1.4 (registry+https://github.com/rust-lang/crates.io-index)",
@@ -3260,7 +3253,7 @@ dependencies = [
 [[package]]
 name = "sr-io"
 version = "1.0.0"
-source = "git+https://github.com/osuketh/substrate.git?branch=patch-zerochain#108276dd6c7265343c74236ddaa9f9e64ce263f5"
+source = "git+https://github.com/osuketh/substrate.git?branch=patch-zerochain#3c82354be88a86f2a1618db01d98ce7c6ad2e64c"
 dependencies = [
  "environmental 1.0.1 (registry+https://github.com/rust-lang/crates.io-index)",
  "hash-db 0.12.4 (registry+https://github.com/rust-lang/crates.io-index)",
@@ -3277,14 +3270,14 @@ dependencies = [
 [[package]]
 name = "sr-primitives"
 version = "1.0.0"
-source = "git+https://github.com/osuketh/substrate.git?branch=patch-zerochain#108276dd6c7265343c74236ddaa9f9e64ce263f5"
+source = "git+https://github.com/osuketh/substrate.git?branch=patch-zerochain#3c82354be88a86f2a1618db01d98ce7c6ad2e64c"
 dependencies = [
  "integer-sqrt 0.1.2 (registry+https://github.com/rust-lang/crates.io-index)",
  "log 0.4.7 (registry+https://github.com/rust-lang/crates.io-index)",
  "num-traits 0.2.8 (registry+https://github.com/rust-lang/crates.io-index)",
  "parity-codec 3.5.4 (registry+https://github.com/rust-lang/crates.io-index)",
- "serde 1.0.94 (registry+https://github.com/rust-lang/crates.io-index)",
- "serde_derive 1.0.94 (registry+https://github.com/rust-lang/crates.io-index)",
+ "serde 1.0.95 (registry+https://github.com/rust-lang/crates.io-index)",
+ "serde_derive 1.0.95 (registry+https://github.com/rust-lang/crates.io-index)",
  "sr-io 1.0.0 (git+https://github.com/osuketh/substrate.git?branch=patch-zerochain)",
  "sr-std 1.0.0 (git+https://github.com/osuketh/substrate.git?branch=patch-zerochain)",
  "substrate-primitives 1.0.0 (git+https://github.com/osuketh/substrate.git?branch=patch-zerochain)",
@@ -3293,7 +3286,7 @@ dependencies = [
 [[package]]
 name = "sr-std"
 version = "1.0.0"
-source = "git+https://github.com/osuketh/substrate.git?branch=patch-zerochain#108276dd6c7265343c74236ddaa9f9e64ce263f5"
+source = "git+https://github.com/osuketh/substrate.git?branch=patch-zerochain#3c82354be88a86f2a1618db01d98ce7c6ad2e64c"
 dependencies = [
  "rustc_version 0.2.3 (registry+https://github.com/rust-lang/crates.io-index)",
 ]
@@ -3301,12 +3294,12 @@ dependencies = [
 [[package]]
 name = "sr-version"
 version = "1.0.0"
-source = "git+https://github.com/osuketh/substrate.git?branch=patch-zerochain#108276dd6c7265343c74236ddaa9f9e64ce263f5"
+source = "git+https://github.com/osuketh/substrate.git?branch=patch-zerochain#3c82354be88a86f2a1618db01d98ce7c6ad2e64c"
 dependencies = [
  "impl-serde 0.1.1 (registry+https://github.com/rust-lang/crates.io-index)",
  "parity-codec 3.5.4 (registry+https://github.com/rust-lang/crates.io-index)",
- "serde 1.0.94 (registry+https://github.com/rust-lang/crates.io-index)",
- "serde_derive 1.0.94 (registry+https://github.com/rust-lang/crates.io-index)",
+ "serde 1.0.95 (registry+https://github.com/rust-lang/crates.io-index)",
+ "serde_derive 1.0.95 (registry+https://github.com/rust-lang/crates.io-index)",
  "sr-primitives 1.0.0 (git+https://github.com/osuketh/substrate.git?branch=patch-zerochain)",
  "sr-std 1.0.0 (git+https://github.com/osuketh/substrate.git?branch=patch-zerochain)",
 ]
@@ -3314,12 +3307,12 @@ dependencies = [
 [[package]]
 name = "srml-aura"
 version = "1.0.0"
-source = "git+https://github.com/osuketh/substrate.git?branch=patch-zerochain#108276dd6c7265343c74236ddaa9f9e64ce263f5"
+source = "git+https://github.com/osuketh/substrate.git?branch=patch-zerochain#3c82354be88a86f2a1618db01d98ce7c6ad2e64c"
 dependencies = [
  "hex-literal 0.1.4 (registry+https://github.com/rust-lang/crates.io-index)",
  "parity-codec 3.5.4 (registry+https://github.com/rust-lang/crates.io-index)",
  "parity-codec-derive 3.3.0 (registry+https://github.com/rust-lang/crates.io-index)",
- "serde 1.0.94 (registry+https://github.com/rust-lang/crates.io-index)",
+ "serde 1.0.95 (registry+https://github.com/rust-lang/crates.io-index)",
  "sr-primitives 1.0.0 (git+https://github.com/osuketh/substrate.git?branch=patch-zerochain)",
  "sr-std 1.0.0 (git+https://github.com/osuketh/substrate.git?branch=patch-zerochain)",
  "srml-session 1.0.0 (git+https://github.com/osuketh/substrate.git?branch=patch-zerochain)",
@@ -3337,9 +3330,8 @@ dependencies = [
  "hex-literal 0.1.4 (registry+https://github.com/rust-lang/crates.io-index)",
  "lazy_static 1.3.0 (registry+https://github.com/rust-lang/crates.io-index)",
  "parity-codec 3.5.4 (registry+https://github.com/rust-lang/crates.io-index)",
- "parity-codec-derive 3.3.0 (registry+https://github.com/rust-lang/crates.io-index)",
  "parking_lot 0.7.1 (registry+https://github.com/rust-lang/crates.io-index)",
- "serde 1.0.94 (registry+https://github.com/rust-lang/crates.io-index)",
+ "serde 1.0.95 (registry+https://github.com/rust-lang/crates.io-index)",
  "sr-io 1.0.0 (git+https://github.com/osuketh/substrate.git?branch=patch-zerochain)",
  "sr-primitives 1.0.0 (git+https://github.com/osuketh/substrate.git?branch=patch-zerochain)",
  "sr-std 1.0.0 (git+https://github.com/osuketh/substrate.git?branch=patch-zerochain)",
@@ -3360,7 +3352,7 @@ dependencies = [
  "hex-literal 0.1.4 (registry+https://github.com/rust-lang/crates.io-index)",
  "parity-codec 3.5.4 (registry+https://github.com/rust-lang/crates.io-index)",
  "safe-mix 1.0.0 (registry+https://github.com/rust-lang/crates.io-index)",
- "serde 1.0.94 (registry+https://github.com/rust-lang/crates.io-index)",
+ "serde 1.0.95 (registry+https://github.com/rust-lang/crates.io-index)",
  "sr-io 1.0.0 (git+https://github.com/osuketh/substrate.git?branch=patch-zerochain)",
  "sr-primitives 1.0.0 (git+https://github.com/osuketh/substrate.git?branch=patch-zerochain)",
  "sr-std 1.0.0 (git+https://github.com/osuketh/substrate.git?branch=patch-zerochain)",
@@ -3373,12 +3365,12 @@ dependencies = [
 [[package]]
 name = "srml-consensus"
 version = "1.0.0"
-source = "git+https://github.com/osuketh/substrate.git?branch=patch-zerochain#108276dd6c7265343c74236ddaa9f9e64ce263f5"
+source = "git+https://github.com/osuketh/substrate.git?branch=patch-zerochain#3c82354be88a86f2a1618db01d98ce7c6ad2e64c"
 dependencies = [
  "hex-literal 0.1.4 (registry+https://github.com/rust-lang/crates.io-index)",
  "parity-codec 3.5.4 (registry+https://github.com/rust-lang/crates.io-index)",
- "serde 1.0.94 (registry+https://github.com/rust-lang/crates.io-index)",
- "serde_derive 1.0.94 (registry+https://github.com/rust-lang/crates.io-index)",
+ "serde 1.0.95 (registry+https://github.com/rust-lang/crates.io-index)",
+ "serde_derive 1.0.95 (registry+https://github.com/rust-lang/crates.io-index)",
  "sr-primitives 1.0.0 (git+https://github.com/osuketh/substrate.git?branch=patch-zerochain)",
  "sr-std 1.0.0 (git+https://github.com/osuketh/substrate.git?branch=patch-zerochain)",
  "srml-support 1.0.0 (git+https://github.com/osuketh/substrate.git?branch=patch-zerochain)",
@@ -3393,8 +3385,8 @@ version = "1.0.0"
 dependencies = [
  "hex-literal 0.1.4 (registry+https://github.com/rust-lang/crates.io-index)",
  "parity-codec 3.5.4 (registry+https://github.com/rust-lang/crates.io-index)",
- "serde 1.0.94 (registry+https://github.com/rust-lang/crates.io-index)",
- "serde_derive 1.0.94 (registry+https://github.com/rust-lang/crates.io-index)",
+ "serde 1.0.95 (registry+https://github.com/rust-lang/crates.io-index)",
+ "serde_derive 1.0.95 (registry+https://github.com/rust-lang/crates.io-index)",
  "sr-io 1.0.0 (git+https://github.com/osuketh/substrate.git?branch=patch-zerochain)",
  "sr-primitives 1.0.0 (git+https://github.com/osuketh/substrate.git?branch=patch-zerochain)",
  "sr-std 1.0.0 (git+https://github.com/osuketh/substrate.git?branch=patch-zerochain)",
@@ -3410,8 +3402,7 @@ version = "0.1.0"
 dependencies = [
  "hex-literal 0.1.4 (registry+https://github.com/rust-lang/crates.io-index)",
  "parity-codec 3.5.4 (registry+https://github.com/rust-lang/crates.io-index)",
- "parity-codec-derive 3.3.0 (registry+https://github.com/rust-lang/crates.io-index)",
- "serde 1.0.94 (registry+https://github.com/rust-lang/crates.io-index)",
+ "serde 1.0.95 (registry+https://github.com/rust-lang/crates.io-index)",
  "sr-io 1.0.0 (git+https://github.com/osuketh/substrate.git?branch=patch-zerochain)",
  "sr-primitives 1.0.0 (git+https://github.com/osuketh/substrate.git?branch=patch-zerochain)",
  "sr-std 1.0.0 (git+https://github.com/osuketh/substrate.git?branch=patch-zerochain)",
@@ -3428,10 +3419,9 @@ version = "1.0.0"
 dependencies = [
  "hex-literal 0.1.4 (registry+https://github.com/rust-lang/crates.io-index)",
  "parity-codec 3.5.4 (registry+https://github.com/rust-lang/crates.io-index)",
- "parity-codec-derive 3.3.0 (registry+https://github.com/rust-lang/crates.io-index)",
  "ref_thread_local 0.0.0 (registry+https://github.com/rust-lang/crates.io-index)",
  "safe-mix 1.0.0 (registry+https://github.com/rust-lang/crates.io-index)",
- "serde 1.0.94 (registry+https://github.com/rust-lang/crates.io-index)",
+ "serde 1.0.95 (registry+https://github.com/rust-lang/crates.io-index)",
  "sr-io 1.0.0 (git+https://github.com/osuketh/substrate.git?branch=patch-zerochain)",
  "sr-primitives 1.0.0 (git+https://github.com/osuketh/substrate.git?branch=patch-zerochain)",
  "sr-std 1.0.0 (git+https://github.com/osuketh/substrate.git?branch=patch-zerochain)",
@@ -3444,11 +3434,11 @@ dependencies = [
 [[package]]
 name = "srml-metadata"
 version = "1.0.0"
-source = "git+https://github.com/osuketh/substrate.git?branch=patch-zerochain#108276dd6c7265343c74236ddaa9f9e64ce263f5"
+source = "git+https://github.com/osuketh/substrate.git?branch=patch-zerochain#3c82354be88a86f2a1618db01d98ce7c6ad2e64c"
 dependencies = [
  "parity-codec 3.5.4 (registry+https://github.com/rust-lang/crates.io-index)",
- "serde 1.0.94 (registry+https://github.com/rust-lang/crates.io-index)",
- "serde_derive 1.0.94 (registry+https://github.com/rust-lang/crates.io-index)",
+ "serde 1.0.95 (registry+https://github.com/rust-lang/crates.io-index)",
+ "serde_derive 1.0.95 (registry+https://github.com/rust-lang/crates.io-index)",
  "sr-std 1.0.0 (git+https://github.com/osuketh/substrate.git?branch=patch-zerochain)",
  "substrate-primitives 1.0.0 (git+https://github.com/osuketh/substrate.git?branch=patch-zerochain)",
 ]
@@ -3456,13 +3446,13 @@ dependencies = [
 [[package]]
 name = "srml-session"
 version = "1.0.0"
-source = "git+https://github.com/osuketh/substrate.git?branch=patch-zerochain#108276dd6c7265343c74236ddaa9f9e64ce263f5"
+source = "git+https://github.com/osuketh/substrate.git?branch=patch-zerochain#3c82354be88a86f2a1618db01d98ce7c6ad2e64c"
 dependencies = [
  "hex-literal 0.1.4 (registry+https://github.com/rust-lang/crates.io-index)",
  "parity-codec 3.5.4 (registry+https://github.com/rust-lang/crates.io-index)",
  "parity-codec-derive 3.3.0 (registry+https://github.com/rust-lang/crates.io-index)",
  "safe-mix 1.0.0 (registry+https://github.com/rust-lang/crates.io-index)",
- "serde 1.0.94 (registry+https://github.com/rust-lang/crates.io-index)",
+ "serde 1.0.95 (registry+https://github.com/rust-lang/crates.io-index)",
  "sr-primitives 1.0.0 (git+https://github.com/osuketh/substrate.git?branch=patch-zerochain)",
  "sr-std 1.0.0 (git+https://github.com/osuketh/substrate.git?branch=patch-zerochain)",
  "srml-consensus 1.0.0 (git+https://github.com/osuketh/substrate.git?branch=patch-zerochain)",
@@ -3478,9 +3468,8 @@ dependencies = [
  "hex-literal 0.1.4 (registry+https://github.com/rust-lang/crates.io-index)",
  "lazy_static 1.3.0 (registry+https://github.com/rust-lang/crates.io-index)",
  "parity-codec 3.5.4 (registry+https://github.com/rust-lang/crates.io-index)",
- "parity-codec-derive 3.3.0 (registry+https://github.com/rust-lang/crates.io-index)",
  "safe-mix 1.0.0 (registry+https://github.com/rust-lang/crates.io-index)",
- "serde 1.0.94 (registry+https://github.com/rust-lang/crates.io-index)",
+ "serde 1.0.95 (registry+https://github.com/rust-lang/crates.io-index)",
  "sr-io 1.0.0 (git+https://github.com/osuketh/substrate.git?branch=patch-zerochain)",
  "sr-primitives 1.0.0 (git+https://github.com/osuketh/substrate.git?branch=patch-zerochain)",
  "sr-std 1.0.0 (git+https://github.com/osuketh/substrate.git?branch=patch-zerochain)",
@@ -3494,12 +3483,12 @@ dependencies = [
 [[package]]
 name = "srml-staking"
 version = "1.0.0"
-source = "git+https://github.com/osuketh/substrate.git?branch=patch-zerochain#108276dd6c7265343c74236ddaa9f9e64ce263f5"
+source = "git+https://github.com/osuketh/substrate.git?branch=patch-zerochain#3c82354be88a86f2a1618db01d98ce7c6ad2e64c"
 dependencies = [
  "hex-literal 0.1.4 (registry+https://github.com/rust-lang/crates.io-index)",
  "parity-codec 3.5.4 (registry+https://github.com/rust-lang/crates.io-index)",
  "safe-mix 1.0.0 (registry+https://github.com/rust-lang/crates.io-index)",
- "serde 1.0.94 (registry+https://github.com/rust-lang/crates.io-index)",
+ "serde 1.0.95 (registry+https://github.com/rust-lang/crates.io-index)",
  "sr-io 1.0.0 (git+https://github.com/osuketh/substrate.git?branch=patch-zerochain)",
  "sr-primitives 1.0.0 (git+https://github.com/osuketh/substrate.git?branch=patch-zerochain)",
  "sr-std 1.0.0 (git+https://github.com/osuketh/substrate.git?branch=patch-zerochain)",
@@ -3517,7 +3506,7 @@ dependencies = [
  "hex-literal 0.1.4 (registry+https://github.com/rust-lang/crates.io-index)",
  "parity-codec 3.5.4 (registry+https://github.com/rust-lang/crates.io-index)",
  "safe-mix 1.0.0 (registry+https://github.com/rust-lang/crates.io-index)",
- "serde 1.0.94 (registry+https://github.com/rust-lang/crates.io-index)",
+ "serde 1.0.95 (registry+https://github.com/rust-lang/crates.io-index)",
  "sr-io 1.0.0 (git+https://github.com/osuketh/substrate.git?branch=patch-zerochain)",
  "sr-primitives 1.0.0 (git+https://github.com/osuketh/substrate.git?branch=patch-zerochain)",
  "sr-std 1.0.0 (git+https://github.com/osuketh/substrate.git?branch=patch-zerochain)",
@@ -3537,8 +3526,7 @@ version = "1.0.0"
 dependencies = [
  "hex-literal 0.1.4 (registry+https://github.com/rust-lang/crates.io-index)",
  "parity-codec 3.5.4 (registry+https://github.com/rust-lang/crates.io-index)",
- "parity-codec-derive 3.3.0 (registry+https://github.com/rust-lang/crates.io-index)",
- "serde 1.0.94 (registry+https://github.com/rust-lang/crates.io-index)",
+ "serde 1.0.95 (registry+https://github.com/rust-lang/crates.io-index)",
  "sr-io 1.0.0 (git+https://github.com/osuketh/substrate.git?branch=patch-zerochain)",
  "sr-primitives 1.0.0 (git+https://github.com/osuketh/substrate.git?branch=patch-zerochain)",
  "sr-std 1.0.0 (git+https://github.com/osuketh/substrate.git?branch=patch-zerochain)",
@@ -3551,15 +3539,15 @@ dependencies = [
 [[package]]
 name = "srml-support"
 version = "1.0.0"
-source = "git+https://github.com/osuketh/substrate.git?branch=patch-zerochain#108276dd6c7265343c74236ddaa9f9e64ce263f5"
+source = "git+https://github.com/osuketh/substrate.git?branch=patch-zerochain#3c82354be88a86f2a1618db01d98ce7c6ad2e64c"
 dependencies = [
  "bitmask 0.5.0 (registry+https://github.com/rust-lang/crates.io-index)",
  "hex-literal 0.1.4 (registry+https://github.com/rust-lang/crates.io-index)",
  "once_cell 0.1.8 (registry+https://github.com/rust-lang/crates.io-index)",
  "parity-codec 3.5.4 (registry+https://github.com/rust-lang/crates.io-index)",
  "paste 0.1.5 (registry+https://github.com/rust-lang/crates.io-index)",
- "serde 1.0.94 (registry+https://github.com/rust-lang/crates.io-index)",
- "serde_derive 1.0.94 (registry+https://github.com/rust-lang/crates.io-index)",
+ "serde 1.0.95 (registry+https://github.com/rust-lang/crates.io-index)",
+ "serde_derive 1.0.95 (registry+https://github.com/rust-lang/crates.io-index)",
  "sr-io 1.0.0 (git+https://github.com/osuketh/substrate.git?branch=patch-zerochain)",
  "sr-primitives 1.0.0 (git+https://github.com/osuketh/substrate.git?branch=patch-zerochain)",
  "sr-std 1.0.0 (git+https://github.com/osuketh/substrate.git?branch=patch-zerochain)",
@@ -3571,7 +3559,7 @@ dependencies = [
 [[package]]
 name = "srml-support-procedural"
 version = "1.0.0"
-source = "git+https://github.com/osuketh/substrate.git?branch=patch-zerochain#108276dd6c7265343c74236ddaa9f9e64ce263f5"
+source = "git+https://github.com/osuketh/substrate.git?branch=patch-zerochain#3c82354be88a86f2a1618db01d98ce7c6ad2e64c"
 dependencies = [
  "proc-macro2 0.4.30 (registry+https://github.com/rust-lang/crates.io-index)",
  "quote 0.6.13 (registry+https://github.com/rust-lang/crates.io-index)",
@@ -3583,7 +3571,7 @@ dependencies = [
 [[package]]
 name = "srml-support-procedural-tools"
 version = "1.0.0"
-source = "git+https://github.com/osuketh/substrate.git?branch=patch-zerochain#108276dd6c7265343c74236ddaa9f9e64ce263f5"
+source = "git+https://github.com/osuketh/substrate.git?branch=patch-zerochain#3c82354be88a86f2a1618db01d98ce7c6ad2e64c"
 dependencies = [
  "proc-macro-crate 0.1.4 (registry+https://github.com/rust-lang/crates.io-index)",
  "proc-macro2 0.4.30 (registry+https://github.com/rust-lang/crates.io-index)",
@@ -3595,7 +3583,7 @@ dependencies = [
 [[package]]
 name = "srml-support-procedural-tools-derive"
 version = "1.0.0"
-source = "git+https://github.com/osuketh/substrate.git?branch=patch-zerochain#108276dd6c7265343c74236ddaa9f9e64ce263f5"
+source = "git+https://github.com/osuketh/substrate.git?branch=patch-zerochain#3c82354be88a86f2a1618db01d98ce7c6ad2e64c"
 dependencies = [
  "proc-macro2 0.4.30 (registry+https://github.com/rust-lang/crates.io-index)",
  "quote 0.6.13 (registry+https://github.com/rust-lang/crates.io-index)",
@@ -3605,13 +3593,13 @@ dependencies = [
 [[package]]
 name = "srml-system"
 version = "1.0.0"
-source = "git+https://github.com/osuketh/substrate.git?branch=patch-zerochain#108276dd6c7265343c74236ddaa9f9e64ce263f5"
+source = "git+https://github.com/osuketh/substrate.git?branch=patch-zerochain#3c82354be88a86f2a1618db01d98ce7c6ad2e64c"
 dependencies = [
  "hex-literal 0.1.4 (registry+https://github.com/rust-lang/crates.io-index)",
  "parity-codec 3.5.4 (registry+https://github.com/rust-lang/crates.io-index)",
  "safe-mix 1.0.0 (registry+https://github.com/rust-lang/crates.io-index)",
- "serde 1.0.94 (registry+https://github.com/rust-lang/crates.io-index)",
- "serde_derive 1.0.94 (registry+https://github.com/rust-lang/crates.io-index)",
+ "serde 1.0.95 (registry+https://github.com/rust-lang/crates.io-index)",
+ "serde_derive 1.0.95 (registry+https://github.com/rust-lang/crates.io-index)",
  "sr-io 1.0.0 (git+https://github.com/osuketh/substrate.git?branch=patch-zerochain)",
  "sr-primitives 1.0.0 (git+https://github.com/osuketh/substrate.git?branch=patch-zerochain)",
  "sr-std 1.0.0 (git+https://github.com/osuketh/substrate.git?branch=patch-zerochain)",
@@ -3625,10 +3613,9 @@ version = "1.0.0"
 dependencies = [
  "hex-literal 0.1.4 (registry+https://github.com/rust-lang/crates.io-index)",
  "parity-codec 3.5.4 (registry+https://github.com/rust-lang/crates.io-index)",
- "parity-codec-derive 3.3.0 (registry+https://github.com/rust-lang/crates.io-index)",
  "safe-mix 1.0.0 (registry+https://github.com/rust-lang/crates.io-index)",
- "serde 1.0.94 (registry+https://github.com/rust-lang/crates.io-index)",
- "serde_derive 1.0.94 (registry+https://github.com/rust-lang/crates.io-index)",
+ "serde 1.0.95 (registry+https://github.com/rust-lang/crates.io-index)",
+ "serde_derive 1.0.95 (registry+https://github.com/rust-lang/crates.io-index)",
  "sr-io 1.0.0 (git+https://github.com/osuketh/substrate.git?branch=patch-zerochain)",
  "sr-primitives 1.0.0 (git+https://github.com/osuketh/substrate.git?branch=patch-zerochain)",
  "sr-std 1.0.0 (git+https://github.com/osuketh/substrate.git?branch=patch-zerochain)",
@@ -3640,11 +3627,11 @@ dependencies = [
 [[package]]
 name = "srml-timestamp"
 version = "1.0.0"
-source = "git+https://github.com/osuketh/substrate.git?branch=patch-zerochain#108276dd6c7265343c74236ddaa9f9e64ce263f5"
+source = "git+https://github.com/osuketh/substrate.git?branch=patch-zerochain#3c82354be88a86f2a1618db01d98ce7c6ad2e64c"
 dependencies = [
  "hex-literal 0.1.4 (registry+https://github.com/rust-lang/crates.io-index)",
  "parity-codec 3.5.4 (registry+https://github.com/rust-lang/crates.io-index)",
- "serde 1.0.94 (registry+https://github.com/rust-lang/crates.io-index)",
+ "serde 1.0.95 (registry+https://github.com/rust-lang/crates.io-index)",
  "sr-primitives 1.0.0 (git+https://github.com/osuketh/substrate.git?branch=patch-zerochain)",
  "sr-std 1.0.0 (git+https://github.com/osuketh/substrate.git?branch=patch-zerochain)",
  "srml-support 1.0.0 (git+https://github.com/osuketh/substrate.git?branch=patch-zerochain)",
@@ -3658,7 +3645,7 @@ version = "1.0.0"
 dependencies = [
  "hex-literal 0.1.4 (registry+https://github.com/rust-lang/crates.io-index)",
  "parity-codec 3.5.4 (registry+https://github.com/rust-lang/crates.io-index)",
- "serde 1.0.94 (registry+https://github.com/rust-lang/crates.io-index)",
+ "serde 1.0.95 (registry+https://github.com/rust-lang/crates.io-index)",
  "sr-io 1.0.0 (git+https://github.com/osuketh/substrate.git?branch=patch-zerochain)",
  "sr-primitives 1.0.0 (git+https://github.com/osuketh/substrate.git?branch=patch-zerochain)",
  "sr-std 1.0.0 (git+https://github.com/osuketh/substrate.git?branch=patch-zerochain)",
@@ -3686,7 +3673,7 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 
 [[package]]
 name = "stdweb"
-version = "0.4.17"
+version = "0.4.18"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 dependencies = [
  "discard 1.0.4 (registry+https://github.com/rust-lang/crates.io-index)",
@@ -3704,8 +3691,8 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 dependencies = [
  "proc-macro2 0.4.30 (registry+https://github.com/rust-lang/crates.io-index)",
  "quote 0.6.13 (registry+https://github.com/rust-lang/crates.io-index)",
- "serde 1.0.94 (registry+https://github.com/rust-lang/crates.io-index)",
- "serde_derive 1.0.94 (registry+https://github.com/rust-lang/crates.io-index)",
+ "serde 1.0.95 (registry+https://github.com/rust-lang/crates.io-index)",
+ "serde_derive 1.0.95 (registry+https://github.com/rust-lang/crates.io-index)",
  "syn 0.15.31 (registry+https://github.com/rust-lang/crates.io-index)",
 ]
 
@@ -3717,8 +3704,8 @@ dependencies = [
  "base-x 0.2.5 (registry+https://github.com/rust-lang/crates.io-index)",
  "proc-macro2 0.4.30 (registry+https://github.com/rust-lang/crates.io-index)",
  "quote 0.6.13 (registry+https://github.com/rust-lang/crates.io-index)",
- "serde 1.0.94 (registry+https://github.com/rust-lang/crates.io-index)",
- "serde_derive 1.0.94 (registry+https://github.com/rust-lang/crates.io-index)",
+ "serde 1.0.95 (registry+https://github.com/rust-lang/crates.io-index)",
+ "serde_derive 1.0.95 (registry+https://github.com/rust-lang/crates.io-index)",
  "serde_json 1.0.40 (registry+https://github.com/rust-lang/crates.io-index)",
  "sha1 0.6.0 (registry+https://github.com/rust-lang/crates.io-index)",
  "syn 0.15.31 (registry+https://github.com/rust-lang/crates.io-index)",
@@ -3789,7 +3776,7 @@ dependencies = [
 [[package]]
 name = "substrate-basic-authorship"
 version = "1.0.0"
-source = "git+https://github.com/osuketh/substrate.git?branch=patch-zerochain#108276dd6c7265343c74236ddaa9f9e64ce263f5"
+source = "git+https://github.com/osuketh/substrate.git?branch=patch-zerochain#3c82354be88a86f2a1618db01d98ce7c6ad2e64c"
 dependencies = [
  "log 0.4.7 (registry+https://github.com/rust-lang/crates.io-index)",
  "parity-codec 3.5.4 (registry+https://github.com/rust-lang/crates.io-index)",
@@ -3817,11 +3804,11 @@ dependencies = [
 [[package]]
 name = "substrate-cli"
 version = "1.0.0"
-source = "git+https://github.com/osuketh/substrate.git?branch=patch-zerochain#108276dd6c7265343c74236ddaa9f9e64ce263f5"
+source = "git+https://github.com/osuketh/substrate.git?branch=patch-zerochain#3c82354be88a86f2a1618db01d98ce7c6ad2e64c"
 dependencies = [
  "ansi_term 0.11.0 (registry+https://github.com/rust-lang/crates.io-index)",
  "app_dirs 1.2.1 (registry+https://github.com/rust-lang/crates.io-index)",
- "atty 0.2.12 (registry+https://github.com/rust-lang/crates.io-index)",
+ "atty 0.2.13 (registry+https://github.com/rust-lang/crates.io-index)",
  "clap 2.32.0 (registry+https://github.com/rust-lang/crates.io-index)",
  "env_logger 0.6.2 (registry+https://github.com/rust-lang/crates.io-index)",
  "error-chain 0.12.1 (registry+https://github.com/rust-lang/crates.io-index)",
@@ -3851,7 +3838,7 @@ dependencies = [
 [[package]]
 name = "substrate-client"
 version = "1.0.0"
-source = "git+https://github.com/osuketh/substrate.git?branch=patch-zerochain#108276dd6c7265343c74236ddaa9f9e64ce263f5"
+source = "git+https://github.com/osuketh/substrate.git?branch=patch-zerochain#3c82354be88a86f2a1618db01d98ce7c6ad2e64c"
 dependencies = [
  "error-chain 0.12.1 (registry+https://github.com/rust-lang/crates.io-index)",
  "fnv 1.0.6 (registry+https://github.com/rust-lang/crates.io-index)",
@@ -3880,7 +3867,7 @@ dependencies = [
 [[package]]
 name = "substrate-client-db"
 version = "1.0.0"
-source = "git+https://github.com/osuketh/substrate.git?branch=patch-zerochain#108276dd6c7265343c74236ddaa9f9e64ce263f5"
+source = "git+https://github.com/osuketh/substrate.git?branch=patch-zerochain#3c82354be88a86f2a1618db01d98ce7c6ad2e64c"
 dependencies = [
  "hash-db 0.12.4 (registry+https://github.com/rust-lang/crates.io-index)",
  "kvdb 0.1.0 (git+https://github.com/paritytech/parity-common?rev=b0317f649ab2c665b7987b8475878fc4d2e1f81d)",
@@ -3902,7 +3889,7 @@ dependencies = [
 [[package]]
 name = "substrate-consensus-aura"
 version = "1.0.0"
-source = "git+https://github.com/osuketh/substrate.git?branch=patch-zerochain#108276dd6c7265343c74236ddaa9f9e64ce263f5"
+source = "git+https://github.com/osuketh/substrate.git?branch=patch-zerochain#3c82354be88a86f2a1618db01d98ce7c6ad2e64c"
 dependencies = [
  "error-chain 0.12.1 (registry+https://github.com/rust-lang/crates.io-index)",
  "futures 0.1.28 (registry+https://github.com/rust-lang/crates.io-index)",
@@ -3929,7 +3916,7 @@ dependencies = [
 [[package]]
 name = "substrate-consensus-aura-primitives"
 version = "1.0.0"
-source = "git+https://github.com/osuketh/substrate.git?branch=patch-zerochain#108276dd6c7265343c74236ddaa9f9e64ce263f5"
+source = "git+https://github.com/osuketh/substrate.git?branch=patch-zerochain#3c82354be88a86f2a1618db01d98ce7c6ad2e64c"
 dependencies = [
  "sr-primitives 1.0.0 (git+https://github.com/osuketh/substrate.git?branch=patch-zerochain)",
  "substrate-client 1.0.0 (git+https://github.com/osuketh/substrate.git?branch=patch-zerochain)",
@@ -3938,7 +3925,7 @@ dependencies = [
 [[package]]
 name = "substrate-consensus-aura-slots"
 version = "1.0.0"
-source = "git+https://github.com/osuketh/substrate.git?branch=patch-zerochain#108276dd6c7265343c74236ddaa9f9e64ce263f5"
+source = "git+https://github.com/osuketh/substrate.git?branch=patch-zerochain#3c82354be88a86f2a1618db01d98ce7c6ad2e64c"
 dependencies = [
  "error-chain 0.12.1 (registry+https://github.com/rust-lang/crates.io-index)",
  "futures 0.1.28 (registry+https://github.com/rust-lang/crates.io-index)",
@@ -3957,7 +3944,7 @@ dependencies = [
 [[package]]
 name = "substrate-consensus-authorities"
 version = "1.0.0"
-source = "git+https://github.com/osuketh/substrate.git?branch=patch-zerochain#108276dd6c7265343c74236ddaa9f9e64ce263f5"
+source = "git+https://github.com/osuketh/substrate.git?branch=patch-zerochain#3c82354be88a86f2a1618db01d98ce7c6ad2e64c"
 dependencies = [
  "parity-codec 3.5.4 (registry+https://github.com/rust-lang/crates.io-index)",
  "sr-io 1.0.0 (git+https://github.com/osuketh/substrate.git?branch=patch-zerochain)",
@@ -3972,7 +3959,7 @@ dependencies = [
 [[package]]
 name = "substrate-consensus-common"
 version = "1.0.0"
-source = "git+https://github.com/osuketh/substrate.git?branch=patch-zerochain#108276dd6c7265343c74236ddaa9f9e64ce263f5"
+source = "git+https://github.com/osuketh/substrate.git?branch=patch-zerochain#3c82354be88a86f2a1618db01d98ce7c6ad2e64c"
 dependencies = [
  "crossbeam-channel 0.3.8 (registry+https://github.com/rust-lang/crates.io-index)",
  "error-chain 0.12.1 (registry+https://github.com/rust-lang/crates.io-index)",
@@ -3991,7 +3978,7 @@ dependencies = [
 [[package]]
 name = "substrate-executor"
 version = "1.0.0"
-source = "git+https://github.com/osuketh/substrate.git?branch=patch-zerochain#108276dd6c7265343c74236ddaa9f9e64ce263f5"
+source = "git+https://github.com/osuketh/substrate.git?branch=patch-zerochain#3c82354be88a86f2a1618db01d98ce7c6ad2e64c"
 dependencies = [
  "byteorder 1.3.2 (registry+https://github.com/rust-lang/crates.io-index)",
  "error-chain 0.12.1 (registry+https://github.com/rust-lang/crates.io-index)",
@@ -4000,8 +3987,8 @@ dependencies = [
  "log 0.4.7 (registry+https://github.com/rust-lang/crates.io-index)",
  "parity-codec 3.5.4 (registry+https://github.com/rust-lang/crates.io-index)",
  "parking_lot 0.7.1 (registry+https://github.com/rust-lang/crates.io-index)",
- "serde 1.0.94 (registry+https://github.com/rust-lang/crates.io-index)",
- "serde_derive 1.0.94 (registry+https://github.com/rust-lang/crates.io-index)",
+ "serde 1.0.95 (registry+https://github.com/rust-lang/crates.io-index)",
+ "serde_derive 1.0.95 (registry+https://github.com/rust-lang/crates.io-index)",
  "sr-io 1.0.0 (git+https://github.com/osuketh/substrate.git?branch=patch-zerochain)",
  "sr-version 1.0.0 (git+https://github.com/osuketh/substrate.git?branch=patch-zerochain)",
  "substrate-panic-handler 1.0.0 (git+https://github.com/osuketh/substrate.git?branch=patch-zerochain)",
@@ -4016,7 +4003,7 @@ dependencies = [
 [[package]]
 name = "substrate-inherents"
 version = "1.0.0"
-source = "git+https://github.com/osuketh/substrate.git?branch=patch-zerochain#108276dd6c7265343c74236ddaa9f9e64ce263f5"
+source = "git+https://github.com/osuketh/substrate.git?branch=patch-zerochain#3c82354be88a86f2a1618db01d98ce7c6ad2e64c"
 dependencies = [
  "parity-codec 3.5.4 (registry+https://github.com/rust-lang/crates.io-index)",
  "parking_lot 0.7.1 (registry+https://github.com/rust-lang/crates.io-index)",
@@ -4027,7 +4014,7 @@ dependencies = [
 [[package]]
 name = "substrate-keyring"
 version = "1.0.0"
-source = "git+https://github.com/osuketh/substrate.git?branch=patch-zerochain#108276dd6c7265343c74236ddaa9f9e64ce263f5"
+source = "git+https://github.com/osuketh/substrate.git?branch=patch-zerochain#3c82354be88a86f2a1618db01d98ce7c6ad2e64c"
 dependencies = [
  "hex-literal 0.1.4 (registry+https://github.com/rust-lang/crates.io-index)",
  "lazy_static 1.3.0 (registry+https://github.com/rust-lang/crates.io-index)",
@@ -4039,14 +4026,14 @@ dependencies = [
 [[package]]
 name = "substrate-keystore"
 version = "1.0.0"
-source = "git+https://github.com/osuketh/substrate.git?branch=patch-zerochain#108276dd6c7265343c74236ddaa9f9e64ce263f5"
+source = "git+https://github.com/osuketh/substrate.git?branch=patch-zerochain#3c82354be88a86f2a1618db01d98ce7c6ad2e64c"
 dependencies = [
  "error-chain 0.12.1 (registry+https://github.com/rust-lang/crates.io-index)",
  "hex 0.3.2 (registry+https://github.com/rust-lang/crates.io-index)",
  "parity-crypto 0.3.1 (registry+https://github.com/rust-lang/crates.io-index)",
  "rand 0.6.5 (registry+https://github.com/rust-lang/crates.io-index)",
- "serde 1.0.94 (registry+https://github.com/rust-lang/crates.io-index)",
- "serde_derive 1.0.94 (registry+https://github.com/rust-lang/crates.io-index)",
+ "serde 1.0.95 (registry+https://github.com/rust-lang/crates.io-index)",
+ "serde_derive 1.0.95 (registry+https://github.com/rust-lang/crates.io-index)",
  "serde_json 1.0.40 (registry+https://github.com/rust-lang/crates.io-index)",
  "substrate-primitives 1.0.0 (git+https://github.com/osuketh/substrate.git?branch=patch-zerochain)",
  "subtle 2.1.0 (registry+https://github.com/rust-lang/crates.io-index)",
@@ -4055,7 +4042,7 @@ dependencies = [
 [[package]]
 name = "substrate-network"
 version = "0.1.0"
-source = "git+https://github.com/osuketh/substrate.git?branch=patch-zerochain#108276dd6c7265343c74236ddaa9f9e64ce263f5"
+source = "git+https://github.com/osuketh/substrate.git?branch=patch-zerochain#3c82354be88a86f2a1618db01d98ce7c6ad2e64c"
 dependencies = [
  "bitflags 1.1.0 (registry+https://github.com/rust-lang/crates.io-index)",
  "crossbeam-channel 0.3.8 (registry+https://github.com/rust-lang/crates.io-index)",
@@ -4082,7 +4069,7 @@ dependencies = [
 [[package]]
 name = "substrate-network-libp2p"
 version = "1.0.0"
-source = "git+https://github.com/osuketh/substrate.git?branch=patch-zerochain#108276dd6c7265343c74236ddaa9f9e64ce263f5"
+source = "git+https://github.com/osuketh/substrate.git?branch=patch-zerochain#3c82354be88a86f2a1618db01d98ce7c6ad2e64c"
 dependencies = [
  "byteorder 1.3.2 (registry+https://github.com/rust-lang/crates.io-index)",
  "bytes 0.4.12 (registry+https://github.com/rust-lang/crates.io-index)",
@@ -4094,8 +4081,8 @@ dependencies = [
  "log 0.4.7 (registry+https://github.com/rust-lang/crates.io-index)",
  "parking_lot 0.7.1 (registry+https://github.com/rust-lang/crates.io-index)",
  "rand 0.6.5 (registry+https://github.com/rust-lang/crates.io-index)",
- "serde 1.0.94 (registry+https://github.com/rust-lang/crates.io-index)",
- "serde_derive 1.0.94 (registry+https://github.com/rust-lang/crates.io-index)",
+ "serde 1.0.95 (registry+https://github.com/rust-lang/crates.io-index)",
+ "serde_derive 1.0.95 (registry+https://github.com/rust-lang/crates.io-index)",
  "serde_json 1.0.40 (registry+https://github.com/rust-lang/crates.io-index)",
  "smallvec 0.6.10 (registry+https://github.com/rust-lang/crates.io-index)",
  "substrate-peerset 1.0.0 (git+https://github.com/osuketh/substrate.git?branch=patch-zerochain)",
@@ -4109,7 +4096,7 @@ dependencies = [
 [[package]]
 name = "substrate-offchain"
 version = "0.1.0"
-source = "git+https://github.com/osuketh/substrate.git?branch=patch-zerochain#108276dd6c7265343c74236ddaa9f9e64ce263f5"
+source = "git+https://github.com/osuketh/substrate.git?branch=patch-zerochain#3c82354be88a86f2a1618db01d98ce7c6ad2e64c"
 dependencies = [
  "futures 0.1.28 (registry+https://github.com/rust-lang/crates.io-index)",
  "log 0.4.7 (registry+https://github.com/rust-lang/crates.io-index)",
@@ -4127,7 +4114,7 @@ dependencies = [
 [[package]]
 name = "substrate-offchain-primitives"
 version = "0.1.0"
-source = "git+https://github.com/osuketh/substrate.git?branch=patch-zerochain#108276dd6c7265343c74236ddaa9f9e64ce263f5"
+source = "git+https://github.com/osuketh/substrate.git?branch=patch-zerochain#3c82354be88a86f2a1618db01d98ce7c6ad2e64c"
 dependencies = [
  "sr-primitives 1.0.0 (git+https://github.com/osuketh/substrate.git?branch=patch-zerochain)",
  "substrate-client 1.0.0 (git+https://github.com/osuketh/substrate.git?branch=patch-zerochain)",
@@ -4136,7 +4123,7 @@ dependencies = [
 [[package]]
 name = "substrate-panic-handler"
 version = "1.0.0"
-source = "git+https://github.com/osuketh/substrate.git?branch=patch-zerochain#108276dd6c7265343c74236ddaa9f9e64ce263f5"
+source = "git+https://github.com/osuketh/substrate.git?branch=patch-zerochain#3c82354be88a86f2a1618db01d98ce7c6ad2e64c"
 dependencies = [
  "backtrace 0.3.32 (registry+https://github.com/rust-lang/crates.io-index)",
  "log 0.4.7 (registry+https://github.com/rust-lang/crates.io-index)",
@@ -4145,7 +4132,7 @@ dependencies = [
 [[package]]
 name = "substrate-peerset"
 version = "1.0.0"
-source = "git+https://github.com/osuketh/substrate.git?branch=patch-zerochain#108276dd6c7265343c74236ddaa9f9e64ce263f5"
+source = "git+https://github.com/osuketh/substrate.git?branch=patch-zerochain#3c82354be88a86f2a1618db01d98ce7c6ad2e64c"
 dependencies = [
  "fnv 1.0.6 (registry+https://github.com/rust-lang/crates.io-index)",
  "futures 0.1.28 (registry+https://github.com/rust-lang/crates.io-index)",
@@ -4153,8 +4140,8 @@ dependencies = [
  "log 0.4.7 (registry+https://github.com/rust-lang/crates.io-index)",
  "parking_lot 0.7.1 (registry+https://github.com/rust-lang/crates.io-index)",
  "rand 0.6.5 (registry+https://github.com/rust-lang/crates.io-index)",
- "serde 1.0.94 (registry+https://github.com/rust-lang/crates.io-index)",
- "serde_derive 1.0.94 (registry+https://github.com/rust-lang/crates.io-index)",
+ "serde 1.0.95 (registry+https://github.com/rust-lang/crates.io-index)",
+ "serde_derive 1.0.95 (registry+https://github.com/rust-lang/crates.io-index)",
  "serde_json 1.0.40 (registry+https://github.com/rust-lang/crates.io-index)",
  "tokio-io 0.1.12 (registry+https://github.com/rust-lang/crates.io-index)",
 ]
@@ -4162,7 +4149,7 @@ dependencies = [
 [[package]]
 name = "substrate-primitives"
 version = "1.0.0"
-source = "git+https://github.com/osuketh/substrate.git?branch=patch-zerochain#108276dd6c7265343c74236ddaa9f9e64ce263f5"
+source = "git+https://github.com/osuketh/substrate.git?branch=patch-zerochain#3c82354be88a86f2a1618db01d98ce7c6ad2e64c"
 dependencies = [
  "base58 0.1.0 (registry+https://github.com/rust-lang/crates.io-index)",
  "blake2-rfc 0.2.18 (registry+https://github.com/rust-lang/crates.io-index)",
@@ -4179,8 +4166,8 @@ dependencies = [
  "ring 0.14.6 (registry+https://github.com/rust-lang/crates.io-index)",
  "rustc-hex 2.0.1 (registry+https://github.com/rust-lang/crates.io-index)",
  "schnorrkel 0.1.1 (registry+https://github.com/rust-lang/crates.io-index)",
- "serde 1.0.94 (registry+https://github.com/rust-lang/crates.io-index)",
- "serde_derive 1.0.94 (registry+https://github.com/rust-lang/crates.io-index)",
+ "serde 1.0.95 (registry+https://github.com/rust-lang/crates.io-index)",
+ "serde_derive 1.0.95 (registry+https://github.com/rust-lang/crates.io-index)",
  "sha2 0.8.0 (registry+https://github.com/rust-lang/crates.io-index)",
  "sr-std 1.0.0 (git+https://github.com/osuketh/substrate.git?branch=patch-zerochain)",
  "substrate-bip39 0.2.2 (git+https://github.com/paritytech/substrate-bip39)",
@@ -4193,7 +4180,7 @@ dependencies = [
 [[package]]
 name = "substrate-rpc"
 version = "1.0.0"
-source = "git+https://github.com/osuketh/substrate.git?branch=patch-zerochain#108276dd6c7265343c74236ddaa9f9e64ce263f5"
+source = "git+https://github.com/osuketh/substrate.git?branch=patch-zerochain#3c82354be88a86f2a1618db01d98ce7c6ad2e64c"
 dependencies = [
  "error-chain 0.12.1 (registry+https://github.com/rust-lang/crates.io-index)",
  "jsonrpc-core 10.1.0 (registry+https://github.com/rust-lang/crates.io-index)",
@@ -4202,8 +4189,8 @@ dependencies = [
  "log 0.4.7 (registry+https://github.com/rust-lang/crates.io-index)",
  "parity-codec 3.5.4 (registry+https://github.com/rust-lang/crates.io-index)",
  "parking_lot 0.7.1 (registry+https://github.com/rust-lang/crates.io-index)",
- "serde 1.0.94 (registry+https://github.com/rust-lang/crates.io-index)",
- "serde_derive 1.0.94 (registry+https://github.com/rust-lang/crates.io-index)",
+ "serde 1.0.95 (registry+https://github.com/rust-lang/crates.io-index)",
+ "serde_derive 1.0.95 (registry+https://github.com/rust-lang/crates.io-index)",
  "serde_json 1.0.40 (registry+https://github.com/rust-lang/crates.io-index)",
  "sr-primitives 1.0.0 (git+https://github.com/osuketh/substrate.git?branch=patch-zerochain)",
  "sr-version 1.0.0 (git+https://github.com/osuketh/substrate.git?branch=patch-zerochain)",
@@ -4219,13 +4206,13 @@ dependencies = [
 [[package]]
 name = "substrate-rpc-servers"
 version = "1.0.0"
-source = "git+https://github.com/osuketh/substrate.git?branch=patch-zerochain#108276dd6c7265343c74236ddaa9f9e64ce263f5"
+source = "git+https://github.com/osuketh/substrate.git?branch=patch-zerochain#3c82354be88a86f2a1618db01d98ce7c6ad2e64c"
 dependencies = [
  "jsonrpc-http-server 10.1.0 (registry+https://github.com/rust-lang/crates.io-index)",
  "jsonrpc-pubsub 10.1.0 (registry+https://github.com/rust-lang/crates.io-index)",
  "jsonrpc-ws-server 10.1.0 (registry+https://github.com/rust-lang/crates.io-index)",
  "log 0.4.7 (registry+https://github.com/rust-lang/crates.io-index)",
- "serde 1.0.94 (registry+https://github.com/rust-lang/crates.io-index)",
+ "serde 1.0.95 (registry+https://github.com/rust-lang/crates.io-index)",
  "sr-primitives 1.0.0 (git+https://github.com/osuketh/substrate.git?branch=patch-zerochain)",
  "substrate-rpc 1.0.0 (git+https://github.com/osuketh/substrate.git?branch=patch-zerochain)",
 ]
@@ -4233,16 +4220,16 @@ dependencies = [
 [[package]]
 name = "substrate-serializer"
 version = "1.0.0"
-source = "git+https://github.com/osuketh/substrate.git?branch=patch-zerochain#108276dd6c7265343c74236ddaa9f9e64ce263f5"
+source = "git+https://github.com/osuketh/substrate.git?branch=patch-zerochain#3c82354be88a86f2a1618db01d98ce7c6ad2e64c"
 dependencies = [
- "serde 1.0.94 (registry+https://github.com/rust-lang/crates.io-index)",
+ "serde 1.0.95 (registry+https://github.com/rust-lang/crates.io-index)",
  "serde_json 1.0.40 (registry+https://github.com/rust-lang/crates.io-index)",
 ]
 
 [[package]]
 name = "substrate-service"
 version = "1.0.0"
-source = "git+https://github.com/osuketh/substrate.git?branch=patch-zerochain#108276dd6c7265343c74236ddaa9f9e64ce263f5"
+source = "git+https://github.com/osuketh/substrate.git?branch=patch-zerochain#3c82354be88a86f2a1618db01d98ce7c6ad2e64c"
 dependencies = [
  "error-chain 0.12.1 (registry+https://github.com/rust-lang/crates.io-index)",
  "exit-future 0.1.4 (registry+https://github.com/rust-lang/crates.io-index)",
@@ -4251,8 +4238,8 @@ dependencies = [
  "log 0.4.7 (registry+https://github.com/rust-lang/crates.io-index)",
  "parity-codec 3.5.4 (registry+https://github.com/rust-lang/crates.io-index)",
  "parking_lot 0.7.1 (registry+https://github.com/rust-lang/crates.io-index)",
- "serde 1.0.94 (registry+https://github.com/rust-lang/crates.io-index)",
- "serde_derive 1.0.94 (registry+https://github.com/rust-lang/crates.io-index)",
+ "serde 1.0.95 (registry+https://github.com/rust-lang/crates.io-index)",
+ "serde_derive 1.0.95 (registry+https://github.com/rust-lang/crates.io-index)",
  "serde_json 1.0.40 (registry+https://github.com/rust-lang/crates.io-index)",
  "slog 2.5.0 (registry+https://github.com/rust-lang/crates.io-index)",
  "sr-io 1.0.0 (git+https://github.com/osuketh/substrate.git?branch=patch-zerochain)",
@@ -4276,7 +4263,7 @@ dependencies = [
 [[package]]
 name = "substrate-state-db"
 version = "1.0.0"
-source = "git+https://github.com/osuketh/substrate.git?branch=patch-zerochain#108276dd6c7265343c74236ddaa9f9e64ce263f5"
+source = "git+https://github.com/osuketh/substrate.git?branch=patch-zerochain#3c82354be88a86f2a1618db01d98ce7c6ad2e64c"
 dependencies = [
  "log 0.4.7 (registry+https://github.com/rust-lang/crates.io-index)",
  "parity-codec 3.5.4 (registry+https://github.com/rust-lang/crates.io-index)",
@@ -4287,7 +4274,7 @@ dependencies = [
 [[package]]
 name = "substrate-state-machine"
 version = "1.0.0"
-source = "git+https://github.com/osuketh/substrate.git?branch=patch-zerochain#108276dd6c7265343c74236ddaa9f9e64ce263f5"
+source = "git+https://github.com/osuketh/substrate.git?branch=patch-zerochain#3c82354be88a86f2a1618db01d98ce7c6ad2e64c"
 dependencies = [
  "hash-db 0.12.4 (registry+https://github.com/rust-lang/crates.io-index)",
  "heapsize 0.4.2 (registry+https://github.com/rust-lang/crates.io-index)",
@@ -4305,14 +4292,14 @@ dependencies = [
 [[package]]
 name = "substrate-telemetry"
 version = "1.0.0"
-source = "git+https://github.com/osuketh/substrate.git?branch=patch-zerochain#108276dd6c7265343c74236ddaa9f9e64ce263f5"
+source = "git+https://github.com/osuketh/substrate.git?branch=patch-zerochain#3c82354be88a86f2a1618db01d98ce7c6ad2e64c"
 dependencies = [
  "lazy_static 1.3.0 (registry+https://github.com/rust-lang/crates.io-index)",
  "log 0.4.7 (registry+https://github.com/rust-lang/crates.io-index)",
  "parking_lot 0.7.1 (registry+https://github.com/rust-lang/crates.io-index)",
  "rand 0.6.5 (registry+https://github.com/rust-lang/crates.io-index)",
- "serde 1.0.94 (registry+https://github.com/rust-lang/crates.io-index)",
- "serde_derive 1.0.94 (registry+https://github.com/rust-lang/crates.io-index)",
+ "serde 1.0.95 (registry+https://github.com/rust-lang/crates.io-index)",
+ "serde_derive 1.0.95 (registry+https://github.com/rust-lang/crates.io-index)",
  "slog 2.5.0 (registry+https://github.com/rust-lang/crates.io-index)",
  "slog-async 2.3.0 (registry+https://github.com/rust-lang/crates.io-index)",
  "slog-json 2.3.0 (registry+https://github.com/rust-lang/crates.io-index)",
@@ -4323,14 +4310,14 @@ dependencies = [
 [[package]]
 name = "substrate-transaction-graph"
 version = "1.0.0"
-source = "git+https://github.com/osuketh/substrate.git?branch=patch-zerochain#108276dd6c7265343c74236ddaa9f9e64ce263f5"
+source = "git+https://github.com/osuketh/substrate.git?branch=patch-zerochain#3c82354be88a86f2a1618db01d98ce7c6ad2e64c"
 dependencies = [
  "error-chain 0.12.1 (registry+https://github.com/rust-lang/crates.io-index)",
  "futures 0.1.28 (registry+https://github.com/rust-lang/crates.io-index)",
  "log 0.4.7 (registry+https://github.com/rust-lang/crates.io-index)",
  "parking_lot 0.7.1 (registry+https://github.com/rust-lang/crates.io-index)",
- "serde 1.0.94 (registry+https://github.com/rust-lang/crates.io-index)",
- "serde_derive 1.0.94 (registry+https://github.com/rust-lang/crates.io-index)",
+ "serde 1.0.95 (registry+https://github.com/rust-lang/crates.io-index)",
+ "serde_derive 1.0.95 (registry+https://github.com/rust-lang/crates.io-index)",
  "sr-primitives 1.0.0 (git+https://github.com/osuketh/substrate.git?branch=patch-zerochain)",
  "substrate-primitives 1.0.0 (git+https://github.com/osuketh/substrate.git?branch=patch-zerochain)",
 ]
@@ -4338,7 +4325,7 @@ dependencies = [
 [[package]]
 name = "substrate-transaction-pool"
 version = "1.0.0"
-source = "git+https://github.com/osuketh/substrate.git?branch=patch-zerochain#108276dd6c7265343c74236ddaa9f9e64ce263f5"
+source = "git+https://github.com/osuketh/substrate.git?branch=patch-zerochain#3c82354be88a86f2a1618db01d98ce7c6ad2e64c"
 dependencies = [
  "error-chain 0.12.1 (registry+https://github.com/rust-lang/crates.io-index)",
  "futures 0.1.28 (registry+https://github.com/rust-lang/crates.io-index)",
@@ -4354,7 +4341,7 @@ dependencies = [
 [[package]]
 name = "substrate-trie"
 version = "1.0.0"
-source = "git+https://github.com/osuketh/substrate.git?branch=patch-zerochain#108276dd6c7265343c74236ddaa9f9e64ce263f5"
+source = "git+https://github.com/osuketh/substrate.git?branch=patch-zerochain#3c82354be88a86f2a1618db01d98ce7c6ad2e64c"
 dependencies = [
  "hash-db 0.12.4 (registry+https://github.com/rust-lang/crates.io-index)",
  "memory-db 0.12.4 (registry+https://github.com/rust-lang/crates.io-index)",
@@ -4401,7 +4388,7 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 dependencies = [
  "cfg-if 0.1.9 (registry+https://github.com/rust-lang/crates.io-index)",
  "doc-comment 0.3.1 (registry+https://github.com/rust-lang/crates.io-index)",
- "libc 0.2.59 (registry+https://github.com/rust-lang/crates.io-index)",
+ "libc 0.2.60 (registry+https://github.com/rust-lang/crates.io-index)",
  "rayon 1.1.0 (registry+https://github.com/rust-lang/crates.io-index)",
  "winapi 0.3.7 (registry+https://github.com/rust-lang/crates.io-index)",
 ]
@@ -4422,7 +4409,7 @@ version = "3.1.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 dependencies = [
  "cfg-if 0.1.9 (registry+https://github.com/rust-lang/crates.io-index)",
- "libc 0.2.59 (registry+https://github.com/rust-lang/crates.io-index)",
+ "libc 0.2.60 (registry+https://github.com/rust-lang/crates.io-index)",
  "rand 0.7.0 (registry+https://github.com/rust-lang/crates.io-index)",
  "redox_syscall 0.1.56 (registry+https://github.com/rust-lang/crates.io-index)",
  "remove_dir_all 0.5.2 (registry+https://github.com/rust-lang/crates.io-index)",
@@ -4442,7 +4429,7 @@ name = "termios"
 version = "0.3.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 dependencies = [
- "libc 0.2.59 (registry+https://github.com/rust-lang/crates.io-index)",
+ "libc 0.2.60 (registry+https://github.com/rust-lang/crates.io-index)",
 ]
 
 [[package]]
@@ -4466,7 +4453,7 @@ name = "time"
 version = "0.1.42"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 dependencies = [
- "libc 0.2.59 (registry+https://github.com/rust-lang/crates.io-index)",
+ "libc 0.2.60 (registry+https://github.com/rust-lang/crates.io-index)",
  "redox_syscall 0.1.56 (registry+https://github.com/rust-lang/crates.io-index)",
  "winapi 0.3.7 (registry+https://github.com/rust-lang/crates.io-index)",
 ]
@@ -4695,7 +4682,7 @@ dependencies = [
  "bytes 0.4.12 (registry+https://github.com/rust-lang/crates.io-index)",
  "futures 0.1.28 (registry+https://github.com/rust-lang/crates.io-index)",
  "iovec 0.1.2 (registry+https://github.com/rust-lang/crates.io-index)",
- "libc 0.2.59 (registry+https://github.com/rust-lang/crates.io-index)",
+ "libc 0.2.60 (registry+https://github.com/rust-lang/crates.io-index)",
  "log 0.4.7 (registry+https://github.com/rust-lang/crates.io-index)",
  "mio 0.6.19 (registry+https://github.com/rust-lang/crates.io-index)",
  "mio-uds 0.6.7 (registry+https://github.com/rust-lang/crates.io-index)",
@@ -4709,7 +4696,7 @@ name = "toml"
 version = "0.5.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 dependencies = [
- "serde 1.0.94 (registry+https://github.com/rust-lang/crates.io-index)",
+ "serde 1.0.95 (registry+https://github.com/rust-lang/crates.io-index)",
 ]
 
 [[package]]
@@ -4727,14 +4714,6 @@ dependencies = [
  "hashmap_core 0.1.10 (registry+https://github.com/rust-lang/crates.io-index)",
  "log 0.4.7 (registry+https://github.com/rust-lang/crates.io-index)",
  "rand 0.6.5 (registry+https://github.com/rust-lang/crates.io-index)",
-]
-
-[[package]]
-name = "trie-root"
-version = "0.11.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-dependencies = [
- "hash-db 0.11.0 (registry+https://github.com/rust-lang/crates.io-index)",
 ]
 
 [[package]]
@@ -4915,7 +4894,7 @@ name = "wasm-bindgen"
 version = "0.2.48"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 dependencies = [
- "serde 1.0.94 (registry+https://github.com/rust-lang/crates.io-index)",
+ "serde 1.0.95 (registry+https://github.com/rust-lang/crates.io-index)",
  "serde_json 1.0.40 (registry+https://github.com/rust-lang/crates.io-index)",
  "wasm-bindgen-macro 0.2.48 (registry+https://github.com/rust-lang/crates.io-index)",
 ]
@@ -5007,7 +4986,7 @@ version = "2.0.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 dependencies = [
  "failure 0.1.5 (registry+https://github.com/rust-lang/crates.io-index)",
- "libc 0.2.59 (registry+https://github.com/rust-lang/crates.io-index)",
+ "libc 0.2.60 (registry+https://github.com/rust-lang/crates.io-index)",
 ]
 
 [[package]]
@@ -5150,7 +5129,7 @@ dependencies = [
  "substrate-service 1.0.0 (git+https://github.com/osuketh/substrate.git?branch=patch-zerochain)",
  "substrate-transaction-pool 1.0.0 (git+https://github.com/osuketh/substrate.git?branch=patch-zerochain)",
  "tokio 0.1.22 (registry+https://github.com/rust-lang/crates.io-index)",
- "trie-root 0.11.0 (registry+https://github.com/rust-lang/crates.io-index)",
+ "trie-root 0.12.4 (registry+https://github.com/rust-lang/crates.io-index)",
  "vergen 3.0.4 (registry+https://github.com/rust-lang/crates.io-index)",
  "zerochain-crypto 0.1.0",
  "zerochain-pairing 0.14.2",
@@ -5158,7 +5137,6 @@ dependencies = [
  "zerochain-proofs 0.1.0",
  "zerochain-runtime 1.0.0",
  "zerochain-wasm-utils 0.1.0",
- "zface 0.1.0",
 ]
 
 [[package]]
@@ -5194,10 +5172,9 @@ dependencies = [
  "keys 0.1.0",
  "lazy_static 1.3.0 (registry+https://github.com/rust-lang/crates.io-index)",
  "parity-codec 3.5.4 (registry+https://github.com/rust-lang/crates.io-index)",
- "parity-codec-derive 3.3.0 (registry+https://github.com/rust-lang/crates.io-index)",
  "rand 0.4.6 (registry+https://github.com/rust-lang/crates.io-index)",
- "serde 1.0.94 (registry+https://github.com/rust-lang/crates.io-index)",
- "serde_derive 1.0.94 (registry+https://github.com/rust-lang/crates.io-index)",
+ "serde 1.0.95 (registry+https://github.com/rust-lang/crates.io-index)",
+ "serde_derive 1.0.95 (registry+https://github.com/rust-lang/crates.io-index)",
  "sr-primitives 1.0.0 (git+https://github.com/osuketh/substrate.git?branch=patch-zerochain)",
  "substrate-primitives 1.0.0 (git+https://github.com/osuketh/substrate.git?branch=patch-zerochain)",
  "zerochain-crypto 0.1.0",
@@ -5218,7 +5195,6 @@ dependencies = [
  "lazy_static 1.3.0 (registry+https://github.com/rust-lang/crates.io-index)",
  "pairing 0.14.2 (git+https://github.com/LayerXcom/librustzcash?branch=zero-chain)",
  "parity-codec 3.5.4 (registry+https://github.com/rust-lang/crates.io-index)",
- "parity-codec-derive 3.3.0 (registry+https://github.com/rust-lang/crates.io-index)",
  "rand 0.4.6 (registry+https://github.com/rust-lang/crates.io-index)",
  "sapling-crypto 0.0.1 (git+https://github.com/LayerXcom/librustzcash?branch=zero-chain)",
  "substrate-primitives 1.0.0 (git+https://github.com/osuketh/substrate.git?branch=patch-zerochain)",
@@ -5239,8 +5215,8 @@ dependencies = [
  "parity-codec 3.5.4 (registry+https://github.com/rust-lang/crates.io-index)",
  "rand 0.4.6 (registry+https://github.com/rust-lang/crates.io-index)",
  "safe-mix 1.0.0 (registry+https://github.com/rust-lang/crates.io-index)",
- "serde 1.0.94 (registry+https://github.com/rust-lang/crates.io-index)",
- "serde_derive 1.0.94 (registry+https://github.com/rust-lang/crates.io-index)",
+ "serde 1.0.95 (registry+https://github.com/rust-lang/crates.io-index)",
+ "serde_derive 1.0.95 (registry+https://github.com/rust-lang/crates.io-index)",
  "sr-io 1.0.0 (git+https://github.com/osuketh/substrate.git?branch=patch-zerochain)",
  "sr-primitives 1.0.0 (git+https://github.com/osuketh/substrate.git?branch=patch-zerochain)",
  "sr-std 1.0.0 (git+https://github.com/osuketh/substrate.git?branch=patch-zerochain)",
@@ -5280,8 +5256,8 @@ dependencies = [
  "pairing 0.14.2 (git+https://github.com/LayerXcom/librustzcash?branch=zero-chain)",
  "rand 0.4.6 (registry+https://github.com/rust-lang/crates.io-index)",
  "sapling-crypto 0.0.1 (git+https://github.com/LayerXcom/librustzcash?branch=zero-chain)",
- "serde 1.0.94 (registry+https://github.com/rust-lang/crates.io-index)",
- "serde_derive 1.0.94 (registry+https://github.com/rust-lang/crates.io-index)",
+ "serde 1.0.95 (registry+https://github.com/rust-lang/crates.io-index)",
+ "serde_derive 1.0.95 (registry+https://github.com/rust-lang/crates.io-index)",
  "serde_json 1.0.40 (registry+https://github.com/rust-lang/crates.io-index)",
  "wasm-bindgen 0.2.48 (registry+https://github.com/rust-lang/crates.io-index)",
  "zerochain-crypto 0.1.0",
@@ -5321,9 +5297,9 @@ dependencies = [
  "polkadot-rs 0.1.0 (git+https://github.com/LayerXcom/polkadot.rs)",
  "rand 0.4.6 (registry+https://github.com/rust-lang/crates.io-index)",
  "sapling-crypto 0.0.1 (git+https://github.com/LayerXcom/librustzcash?branch=zero-chain)",
- "serde 1.0.94 (registry+https://github.com/rust-lang/crates.io-index)",
+ "serde 1.0.95 (registry+https://github.com/rust-lang/crates.io-index)",
  "serde_bytes 0.11.1 (registry+https://github.com/rust-lang/crates.io-index)",
- "serde_derive 1.0.94 (registry+https://github.com/rust-lang/crates.io-index)",
+ "serde_derive 1.0.95 (registry+https://github.com/rust-lang/crates.io-index)",
  "serde_json 1.0.40 (registry+https://github.com/rust-lang/crates.io-index)",
  "smallvec 0.6.10 (registry+https://github.com/rust-lang/crates.io-index)",
  "sr-primitives 1.0.0 (git+https://github.com/osuketh/substrate.git?branch=patch-zerochain)",
@@ -5352,8 +5328,8 @@ dependencies = [
 "checksum arrayvec 0.4.11 (registry+https://github.com/rust-lang/crates.io-index)" = "b8d73f9beda665eaa98ab9e4f7442bd4e7de6652587de55b2525e52e29c1b0ba"
 "checksum asn1_der 0.6.2 (registry+https://github.com/rust-lang/crates.io-index)" = "bea40e881533b1fe23afca9cd1c1ca022219a10fce604099ecfc96bfa26eaf1a"
 "checksum asn1_der_derive 0.1.1 (registry+https://github.com/rust-lang/crates.io-index)" = "9e7f92edafad155aff997fa5b727c6429b91e996b5a5d62a2b0adbae1306b5fe"
-"checksum atty 0.2.12 (registry+https://github.com/rust-lang/crates.io-index)" = "ecaaea69f52b3b18633611ec0007d188517d0366f47ff703d400fa6879d6f8d5"
-"checksum autocfg 0.1.4 (registry+https://github.com/rust-lang/crates.io-index)" = "0e49efa51329a5fd37e7c79db4621af617cd4e3e5bc224939808d076077077bf"
+"checksum atty 0.2.13 (registry+https://github.com/rust-lang/crates.io-index)" = "1803c647a3ec87095e7ae7acfca019e98de5ec9a7d01343f611cf3152ed71a90"
+"checksum autocfg 0.1.5 (registry+https://github.com/rust-lang/crates.io-index)" = "22130e92352b948e7e82a49cdb0aa94f2211761117f29e052dd397c1ac33542b"
 "checksum backtrace 0.3.32 (registry+https://github.com/rust-lang/crates.io-index)" = "18b50f5258d1a9ad8396d2d345827875de4261b158124d4c819d9b351454fae5"
 "checksum backtrace-sys 0.1.30 (registry+https://github.com/rust-lang/crates.io-index)" = "5b3a000b9c543553af61bc01cbfc403b04b5caa9e421033866f2e98061eb3e61"
 "checksum base-x 0.2.5 (registry+https://github.com/rust-lang/crates.io-index)" = "76f4eae81729e69bb1819a26c6caac956cc429238388091f98cb6cd858f16443"
@@ -5377,7 +5353,7 @@ dependencies = [
 "checksum block-modes 0.3.3 (registry+https://github.com/rust-lang/crates.io-index)" = "31aa8410095e39fdb732909fb5730a48d5bd7c2e3cd76bd1b07b3dbea130c529"
 "checksum block-padding 0.1.4 (registry+https://github.com/rust-lang/crates.io-index)" = "6d4dc3af3ee2e12f3e5d224e5e1e3d73668abbeb69e566d361f7d5563a4fdf09"
 "checksum bs58 0.2.2 (registry+https://github.com/rust-lang/crates.io-index)" = "0de79cfb98e7aa9988188784d8664b4b5dad6eaaa0863b91d9a4ed871d4f7a42"
-"checksum bstr 0.2.1 (registry+https://github.com/rust-lang/crates.io-index)" = "6cc0572e02f76cb335f309b19e0a0d585b4f62788f7d26de2a13a836a637385f"
+"checksum bstr 0.2.2 (registry+https://github.com/rust-lang/crates.io-index)" = "fc0662252f9bba48c251a16d16a768b9fcd959593bde07544710bce6efe60b7a"
 "checksum bumpalo 2.5.0 (registry+https://github.com/rust-lang/crates.io-index)" = "2cd43d82f27d68911e6ee11ee791fb248f138f5d69424dc02e098d4f152b0b05"
 "checksum byte-tools 0.2.0 (registry+https://github.com/rust-lang/crates.io-index)" = "560c32574a12a89ecd91f5e742165893f86e3ab98d21f8ea548658eb9eef5f40"
 "checksum byte-tools 0.3.1 (registry+https://github.com/rust-lang/crates.io-index)" = "e3b5ca7a04898ad4bcd41c90c5285445ff5b791899bb1b0abdd2a2aa791211d7"
@@ -5458,7 +5434,6 @@ dependencies = [
 "checksum glob 0.2.11 (registry+https://github.com/rust-lang/crates.io-index)" = "8be18de09a56b60ed0edf84bc9df007e30040691af7acd1c41874faac5895bfb"
 "checksum globset 0.4.4 (registry+https://github.com/rust-lang/crates.io-index)" = "925aa2cac82d8834e2b2a4415b6f6879757fb5c0928fc445ae76461a12eed8f2"
 "checksum h2 0.1.25 (registry+https://github.com/rust-lang/crates.io-index)" = "a539b63339fbbb00e081e84b6e11bd1d9634a82d91da2984a18ac74a8823f392"
-"checksum hash-db 0.11.0 (registry+https://github.com/rust-lang/crates.io-index)" = "1b03501f6e1a2a97f1618879aba3156f14ca2847faa530c4e28859638bd11483"
 "checksum hash-db 0.12.4 (registry+https://github.com/rust-lang/crates.io-index)" = "0b3c95a428c86ed4633d83e07ef9e0a147a906da01e931f07e74a85bedce5a43"
 "checksum hash256-std-hasher 0.12.4 (registry+https://github.com/rust-lang/crates.io-index)" = "663ce20dae36902c16d12c6aaae400ca40d922407a8cf2b4caf8cae9b39b4f03"
 "checksum hashbrown 0.1.8 (registry+https://github.com/rust-lang/crates.io-index)" = "3bae29b6653b3412c2e71e9d486db9f9df5d701941d86683005efb9f2d28e3da"
@@ -5477,7 +5452,7 @@ dependencies = [
 "checksum httparse 1.3.4 (registry+https://github.com/rust-lang/crates.io-index)" = "cd179ae861f0c2e53da70d892f5f3029f9594be0c41dc5269cd371691b1dc2f9"
 "checksum humantime 1.2.0 (registry+https://github.com/rust-lang/crates.io-index)" = "3ca7e5f2e110db35f93b837c81797f3714500b81d517bf20c431b16d3ca4f114"
 "checksum hyper 0.10.16 (registry+https://github.com/rust-lang/crates.io-index)" = "0a0652d9a2609a968c14be1a9ea00bf4b1d64e2e1f53a1b51b6fff3a6e829273"
-"checksum hyper 0.12.32 (registry+https://github.com/rust-lang/crates.io-index)" = "a64d71c1e77d39da024f06f5821ee00ad9c38febb90370bad1f07a94e0bc8793"
+"checksum hyper 0.12.33 (registry+https://github.com/rust-lang/crates.io-index)" = "7cb44cbce9d8ee4fb36e4c0ad7b794ac44ebaad924b9c8291a63215bb44c2c8f"
 "checksum idna 0.1.5 (registry+https://github.com/rust-lang/crates.io-index)" = "38f09e0f0b1fb55fdee1f17470ad800da77af5186a1a76c026b679358b7e844e"
 "checksum impl-codec 0.2.0 (registry+https://github.com/rust-lang/crates.io-index)" = "d2050d823639fbeae26b2b5ba09aca8907793117324858070ade0673c49f793b"
 "checksum impl-serde 0.1.1 (registry+https://github.com/rust-lang/crates.io-index)" = "5158079de9d4158e0ce1de3ae0bd7be03904efc40b3d7dd8b8c301cbf6b52b56"
@@ -5503,7 +5478,7 @@ dependencies = [
 "checksum language-tags 0.2.2 (registry+https://github.com/rust-lang/crates.io-index)" = "a91d884b6667cd606bb5a69aa0c99ba811a115fc68915e7056ec08a46e93199a"
 "checksum lazy_static 1.3.0 (registry+https://github.com/rust-lang/crates.io-index)" = "bc5729f27f159ddd61f4df6228e827e86643d4d3e7c32183cb30a1c08f604a14"
 "checksum lazycell 1.2.1 (registry+https://github.com/rust-lang/crates.io-index)" = "b294d6fa9ee409a054354afc4352b0b9ef7ca222c69b8812cbea9e7d2bf3783f"
-"checksum libc 0.2.59 (registry+https://github.com/rust-lang/crates.io-index)" = "3262021842bf00fe07dbd6cf34ff25c99d7a7ebef8deea84db72be3ea3bb0aff"
+"checksum libc 0.2.60 (registry+https://github.com/rust-lang/crates.io-index)" = "d44e80633f007889c7eff624b709ab43c92d708caad982295768a7b13ca3b5eb"
 "checksum libloading 0.5.2 (registry+https://github.com/rust-lang/crates.io-index)" = "f2b111a074963af1d37a139918ac6d49ad1d0d5e47f72fd55388619691a7d753"
 "checksum libp2p 0.6.0 (registry+https://github.com/rust-lang/crates.io-index)" = "f5b9cd37b1ca54fa2fd0bbf0486adf2f55f8994f2be9410b65265050b24709b2"
 "checksum libp2p-core 0.6.0 (registry+https://github.com/rust-lang/crates.io-index)" = "bf9c56e6f04cb649fdeb806e963d2da223e3ed17748d9e924fdb836c09f76307"
@@ -5528,7 +5503,7 @@ dependencies = [
 "checksum linked-hash-map 0.5.2 (registry+https://github.com/rust-lang/crates.io-index)" = "ae91b68aebc4ddb91978b11a1b02ddd8602a05ec19002801c5666000e05e0f83"
 "checksum linked_hash_set 0.1.3 (registry+https://github.com/rust-lang/crates.io-index)" = "3c7c91c4c7bbeb4f2f7c4e5be11e6a05bd6830bc37249c47ce1ad86ad453ff9c"
 "checksum lock_api 0.1.5 (registry+https://github.com/rust-lang/crates.io-index)" = "62ebf1391f6acad60e5c8b43706dde4582df75c06698ab44511d15016bc2442c"
-"checksum lock_api 0.2.0 (registry+https://github.com/rust-lang/crates.io-index)" = "ed946d4529956a20f2d63ebe1b69996d5a2137c91913fe3ebbeff957f5bca7ff"
+"checksum lock_api 0.3.1 (registry+https://github.com/rust-lang/crates.io-index)" = "f8912e782533a93a167888781b836336a6ca5da6175c05944c86cf28c31104dc"
 "checksum log 0.3.9 (registry+https://github.com/rust-lang/crates.io-index)" = "e19e8d5c34a3e0e2223db8e060f9e8264aeeb5c5fc64a4ee9965c062211c024b"
 "checksum log 0.4.7 (registry+https://github.com/rust-lang/crates.io-index)" = "c275b6ad54070ac2d665eef9197db647b32239c9d244bfb6f041a766d00da5b3"
 "checksum lru-cache 0.1.2 (registry+https://github.com/rust-lang/crates.io-index)" = "31e24f1ad8321ca0e8a1e0ac13f23cb668e6f5466c2c57319f6a5cf1cc8e3b1c"
@@ -5578,11 +5553,11 @@ dependencies = [
 "checksum parking_lot 0.5.5 (registry+https://github.com/rust-lang/crates.io-index)" = "d4d05f1349491390b1730afba60bb20d55761bef489a954546b58b4b34e1e2ac"
 "checksum parking_lot 0.6.4 (registry+https://github.com/rust-lang/crates.io-index)" = "f0802bff09003b291ba756dc7e79313e51cc31667e94afbe847def490424cde5"
 "checksum parking_lot 0.7.1 (registry+https://github.com/rust-lang/crates.io-index)" = "ab41b4aed082705d1056416ae4468b6ea99d52599ecf3169b00088d43113e337"
-"checksum parking_lot 0.8.0 (registry+https://github.com/rust-lang/crates.io-index)" = "fa7767817701cce701d5585b9c4db3cdd02086398322c1d7e8bf5094a96a2ce7"
+"checksum parking_lot 0.9.0 (registry+https://github.com/rust-lang/crates.io-index)" = "f842b1982eb6c2fe34036a4fbfb06dd185a3f5c8edfaacdf7d1ea10b07de6252"
 "checksum parking_lot_core 0.2.14 (registry+https://github.com/rust-lang/crates.io-index)" = "4db1a8ccf734a7bce794cc19b3df06ed87ab2f3907036b693c68f56b4d4537fa"
 "checksum parking_lot_core 0.3.1 (registry+https://github.com/rust-lang/crates.io-index)" = "ad7f7e6ebdc79edff6fdcb87a55b620174f7a989e3eb31b65231f4af57f00b8c"
 "checksum parking_lot_core 0.4.0 (registry+https://github.com/rust-lang/crates.io-index)" = "94c8c7923936b28d546dfd14d4472eaf34c99b14e1c973a32b3e6d4eb04298c9"
-"checksum parking_lot_core 0.5.0 (registry+https://github.com/rust-lang/crates.io-index)" = "cb88cb1cb3790baa6776844f968fea3be44956cf184fa1be5a03341f5491278c"
+"checksum parking_lot_core 0.6.0 (registry+https://github.com/rust-lang/crates.io-index)" = "67812d70a819b886655846594086c00ac1f3e8b77c36ef494aa730c620b19d57"
 "checksum paste 0.1.5 (registry+https://github.com/rust-lang/crates.io-index)" = "1f4a4a1c555c6505821f9d58b8779d0f630a6b7e4e1be24ba718610acf01fa79"
 "checksum paste-impl 0.1.5 (registry+https://github.com/rust-lang/crates.io-index)" = "26e796e623b8b257215f27e6c80a5478856cae305f5b59810ff9acdaa34570e6"
 "checksum pbkdf2 0.2.3 (registry+https://github.com/rust-lang/crates.io-index)" = "0c09cddfbfc98de7f76931acf44460972edb4023eb14d0c6d4018800e552d8e0"
@@ -5594,9 +5569,9 @@ dependencies = [
 "checksum ppv-lite86 0.2.5 (registry+https://github.com/rust-lang/crates.io-index)" = "e3cbf9f658cdb5000fcf6f362b8ea2ba154b9f146a61c7a20d647034c6b6561b"
 "checksum primitive-types 0.2.4 (registry+https://github.com/rust-lang/crates.io-index)" = "6e8612a8dc70f26276fed6131c153ca277cf275ee0a5e2a50cd8a69c697beb8f"
 "checksum proc-macro-crate 0.1.4 (registry+https://github.com/rust-lang/crates.io-index)" = "e10d4b51f154c8a7fb96fd6dad097cb74b863943ec010ac94b9fd1be8861fe1e"
-"checksum proc-macro-hack 0.4.1 (registry+https://github.com/rust-lang/crates.io-index)" = "2c725b36c99df7af7bf9324e9c999b9e37d92c8f8caf106d82e1d7953218d2d8"
+"checksum proc-macro-hack 0.4.2 (registry+https://github.com/rust-lang/crates.io-index)" = "463bf29e7f11344e58c9e01f171470ab15c925c6822ad75028cc1c0e1d1eb63b"
 "checksum proc-macro-hack 0.5.8 (registry+https://github.com/rust-lang/crates.io-index)" = "982a35d1194084ba319d65c4a68d24ca28f5fdb5b8bc20899e4eef8641ea5178"
-"checksum proc-macro-hack-impl 0.4.1 (registry+https://github.com/rust-lang/crates.io-index)" = "2b753ad9ed99dd8efeaa7d2fb8453c8f6bc3e54b97966d35f1bc77ca6865254a"
+"checksum proc-macro-hack-impl 0.4.2 (registry+https://github.com/rust-lang/crates.io-index)" = "38c47dcb1594802de8c02f3b899e2018c78291168a22c281be21ea0fb4796842"
 "checksum proc-macro2 0.4.30 (registry+https://github.com/rust-lang/crates.io-index)" = "cf3d2011ab5c909338f7887f4fc896d35932e29146c12c8d01da6b22a80ba759"
 "checksum protobuf 2.7.0 (registry+https://github.com/rust-lang/crates.io-index)" = "5f00e4a3cb64ecfeac2c0a73c74c68ae3439d7a6bead3870be56ad5dd2620a6f"
 "checksum quick-error 0.1.4 (registry+https://github.com/rust-lang/crates.io-index)" = "5fb6ccf8db7bbcb9c2eae558db5ab4f3da1c2a87e4e597ed394726bc8ea6ca1d"
@@ -5651,9 +5626,9 @@ dependencies = [
 "checksum security-framework-sys 0.3.1 (registry+https://github.com/rust-lang/crates.io-index)" = "9636f8989cbf61385ae4824b98c1aaa54c994d7d8b41f11c601ed799f0549a56"
 "checksum semver 0.9.0 (registry+https://github.com/rust-lang/crates.io-index)" = "1d7eb9ef2c18661902cc47e535f9bc51b78acd254da71d375c2f6720d9a40403"
 "checksum semver-parser 0.7.0 (registry+https://github.com/rust-lang/crates.io-index)" = "388a1df253eca08550bef6c72392cfe7c30914bf41df5269b68cbd6ff8f570a3"
-"checksum serde 1.0.94 (registry+https://github.com/rust-lang/crates.io-index)" = "076a696fdea89c19d3baed462576b8f6d663064414b5c793642da8dfeb99475b"
+"checksum serde 1.0.95 (registry+https://github.com/rust-lang/crates.io-index)" = "e47a9fd6b2d2d2330b19b0b3e5248a170a5acd6356fd88c7bb30362ef9c70567"
 "checksum serde_bytes 0.11.1 (registry+https://github.com/rust-lang/crates.io-index)" = "aaff47db6ef8771cca5d88febef2f22f47f645420e51226374049f68c6b08569"
-"checksum serde_derive 1.0.94 (registry+https://github.com/rust-lang/crates.io-index)" = "ef45eb79d6463b22f5f9e16d283798b7c0175ba6050bc25c1a946c122727fe7b"
+"checksum serde_derive 1.0.95 (registry+https://github.com/rust-lang/crates.io-index)" = "5ea8eb91549d859275aef70c58bb30bd62ce50e5eb1a52d32b1b6886e02f7bce"
 "checksum serde_json 1.0.40 (registry+https://github.com/rust-lang/crates.io-index)" = "051c49229f282f7c6f3813f8286cc1e3323e8051823fce42c7ea80fe13521704"
 "checksum sha-1 0.8.1 (registry+https://github.com/rust-lang/crates.io-index)" = "23962131a91661d643c98940b20fcaffe62d776a823247be80a48fcb8b6fce68"
 "checksum sha1 0.6.0 (registry+https://github.com/rust-lang/crates.io-index)" = "2579985fda508104f7587689507983eadd6a6e84dd35d6d115361f530916fa0d"
@@ -5689,7 +5664,7 @@ dependencies = [
 "checksum stable_deref_trait 1.1.1 (registry+https://github.com/rust-lang/crates.io-index)" = "dba1a27d3efae4351c8051072d619e3ade2820635c3958d826bfea39d59b54c8"
 "checksum static_assertions 0.2.5 (registry+https://github.com/rust-lang/crates.io-index)" = "c19be23126415861cb3a23e501d34a708f7f9b2183c5252d690941c2e69199d5"
 "checksum static_slice 0.0.3 (registry+https://github.com/rust-lang/crates.io-index)" = "92a7e0c5e3dfb52e8fbe0e63a1b947bbb17b4036408b151353c4491374931362"
-"checksum stdweb 0.4.17 (registry+https://github.com/rust-lang/crates.io-index)" = "c34362bb10ac1a9439674795cc0e1bdcb0c46444c8fd4874ef39a01d9a8a8f24"
+"checksum stdweb 0.4.18 (registry+https://github.com/rust-lang/crates.io-index)" = "a68c0ce28cf7400ed022e18da3c4591e14e1df02c70e93573cc59921b3923aeb"
 "checksum stdweb-derive 0.5.1 (registry+https://github.com/rust-lang/crates.io-index)" = "0e21ebd9179de08f2300a65454268a17ea3de204627458588c84319c4def3930"
 "checksum stdweb-internal-macros 0.2.7 (registry+https://github.com/rust-lang/crates.io-index)" = "e68f7d08b76979a43e93fe043b66d2626e35d41d68b0b85519202c6dd8ac59fa"
 "checksum stdweb-internal-runtime 0.1.4 (registry+https://github.com/rust-lang/crates.io-index)" = "d52317523542cc0af5b7e31017ad0f7d1e78da50455e38d5657cd17754f617da"
@@ -5766,7 +5741,6 @@ dependencies = [
 "checksum toml 0.5.1 (registry+https://github.com/rust-lang/crates.io-index)" = "b8c96d7873fa7ef8bdeb3a9cda3ac48389b4154f32b9803b4bc26220b677b039"
 "checksum traitobject 0.1.0 (registry+https://github.com/rust-lang/crates.io-index)" = "efd1f82c56340fdf16f2a953d7bda4f8fdffba13d93b00844c25572110b26079"
 "checksum trie-db 0.12.4 (registry+https://github.com/rust-lang/crates.io-index)" = "ae063390324bfcf36c7e8e4fb1f85f6f0fb5dd04e1cd282581eb7b8b34b32de7"
-"checksum trie-root 0.11.0 (registry+https://github.com/rust-lang/crates.io-index)" = "e3c6fef2705af3258ec46a7e22286090394a44216201a1cf7d04b78db825e543"
 "checksum trie-root 0.12.4 (registry+https://github.com/rust-lang/crates.io-index)" = "485c5dd851148b6fdac9009f7c256d0a4b5f99f08bd2e63c258f1e483aed4f1d"
 "checksum try-lock 0.2.2 (registry+https://github.com/rust-lang/crates.io-index)" = "e604eb7b43c06650e854be16a2a03155743d3752dd1c943f6829e26b7a36e382"
 "checksum twofish 0.2.0 (registry+https://github.com/rust-lang/crates.io-index)" = "712d261e83e727c8e2dbb75dacac67c36e35db36a958ee504f2164fc052434e1"
