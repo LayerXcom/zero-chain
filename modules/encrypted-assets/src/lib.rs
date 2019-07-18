@@ -402,7 +402,7 @@ mod tests {
         BuildStorage, traits::{BlakeTwo256, IdentityLookup},
         testing::{Digest, DigestItem, Header}
     };
-    use zprimitives::{Ciphertext, SigVerificationKey};
+    use zprimitives::{Ciphertext, SigVerificationKey, PreparedVk};
     use keys::{ProofGenerationKey, EncryptionKey};
     use jubjub::{curve::{JubjubBls12, FixedGenerators, fs}};
     use pairing::Field;
@@ -455,7 +455,7 @@ mod tests {
     type EncryptedAssets = Module<Test>;
     type EncryptedBalances = encrypted_balances::Module<Test>;
 
-    fn alice_balance_init() -> ((u64, PkdAddress), Ciphertext) {
+    fn alice_balance_init() -> (PkdAddress, Ciphertext) {
         let (alice_seed, enc_key) = get_alice_seed_ek();
         let alice_amount = 100 as u32;
         let params = &JubjubBls12::new();
@@ -475,13 +475,13 @@ mod tests {
         let dec_alice_bal = enc_alice_bal.decrypt(&decryption_key, p_g, params).unwrap();
         assert_eq!(dec_alice_bal, alice_amount);
 
-        ((0, PkdAddress::from_encryption_key(&enc_key)), Ciphertext::from_ciphertext(&enc_alice_bal))
+        (PkdAddress::from_encryption_key(&enc_key), Ciphertext::from_ciphertext(&enc_alice_bal))
     }
 
-    fn alice_epoch_init() -> ((u64, PkdAddress), u64) {
+    fn alice_epoch_init() -> (PkdAddress, u64) {
         let (_, enc_key) = get_alice_seed_ek();
 
-        ((0, PkdAddress::from_encryption_key(&enc_key)), 0)
+        (PkdAddress::from_encryption_key(&enc_key), 0)
     }
 
     fn get_alice_seed_ek() -> (Vec<u8>, EncryptionKey<Bls12>) {
@@ -504,18 +504,21 @@ mod tests {
     }
 
     fn new_test_ext() -> runtime_io::TestExternalities<Blake2Hasher> {
+        let balance_init = alice_balance_init();
+        let epoch_init = alice_epoch_init();
+
         let mut t = system::GenesisConfig::<Test>::default().build_storage().unwrap().0;
         t.extend(GenesisConfig::<Test>{
-            encrypted_balance: vec![alice_balance_init()],
-			last_rollover: vec![alice_epoch_init()],
+            encrypted_balance: vec![((0, balance_init.0), balance_init.clone().1)],
+			last_rollover: vec![((0, epoch_init.0), epoch_init.1)],
             epoch_length: vec![(0, 1)],
             transaction_base_fee: vec![(0, 1)],
             _genesis_phantom_data: Default::default()
         }.build_storage().unwrap().0);
 
         t.extend(encrypted_balances::GenesisConfig::<Test>{
-            encrypted_balance: vec![alice_balance_init()],
-			last_rollover: vec![alice_epoch_init()],
+            encrypted_balance: vec![balance_init],
+			last_rollover: vec![epoch_init],
             epoch_length: 1,
             transaction_base_fee: 1,
             verifying_key: get_pvk(),
