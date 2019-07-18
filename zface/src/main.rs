@@ -498,7 +498,7 @@ fn subcommand_debug<R: Rng>(mut term: term::Term, matches: &ArgMatches, rng: &mu
             let proving_key = get_pk(PROVING_KEY_PATH).unwrap();
             let prepared_vk = get_vk(VERIFICATION_KEY_PATH).unwrap();
 
-            let fee_str = api.get_storage("ConfTransfer", "TransactionBaseFee", None)
+            let fee_str = api.get_storage("EncryptedBalances", "TransactionBaseFee", None)
                 .expect("should be fetched TransactionBaseFee from ConfTransfer module of Zerochain.");
             let fee = hexstr_to_u64(fee_str) as u32;
 

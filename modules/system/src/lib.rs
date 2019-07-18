@@ -71,7 +71,7 @@
 #![cfg_attr(not(feature = "std"), no_std)]
 
 #[cfg(feature = "std")]
-use serde_derive::Serialize;
+use serde::Serialize;
 use rstd::prelude::*;
 #[cfg(any(feature = "std", test))]
 use rstd::map;
@@ -79,7 +79,8 @@ use primitives::traits::{self, CheckEqual, SimpleArithmetic, SimpleBitOps, Zero,
 	Hash, Member, MaybeDisplay, EnsureOrigin, Digest as DigestT, As, CurrentHeight, BlockNumberToHash,
 	MaybeSerializeDebugButNotDeserialize, MaybeSerializeDebug, StaticLookup};
 use substrate_primitives::storage::well_known_keys;
-use srml_support::{storage, StorageValue, StorageMap, Parameter, decl_module, decl_event, decl_storage};
+use srml_support::{storage, StorageValue, StorageMap, Parameter, decl_module, decl_event,
+	decl_storage, for_each_tuple};
 use safe_mix::TripletMix;
 use parity_codec::{Encode, Decode};
 use zprimitives::SigVk;
@@ -96,9 +97,23 @@ pub trait OnNewAccount<AccountId> {
 	fn on_new_account(who: &AccountId);
 }
 
-impl<AccountId> OnNewAccount<AccountId> for () {
-	fn on_new_account(_who: &AccountId) {}
+macro_rules! impl_on_new_account {
+	() => (
+		impl<AccountId> OnNewAccount<AccountId> for () {
+			fn on_new_account(_: &AccountId) {}
+		}
+	);
+
+	( $($t:ident)* ) => {
+		impl<AccountId, $($t: OnNewAccount<AccountId>),*> OnNewAccount<AccountId> for ($($t,)*) {
+			fn on_new_account(who: &AccountId) {
+				$($t::on_new_account(who);)*
+			}
+		}
+	}
 }
+
+for_each_tuple!(impl_on_new_account);
 
 /// Determinator to say whether a given account is unused.
 pub trait IsDeadAccount<AccountId> {
@@ -126,7 +141,6 @@ pub fn extrinsics_data_root<H: Hash>(xts: Vec<Vec<u8>>) -> H::Output {
 pub trait Trait: 'static + Eq + Clone {
 	/// The aggregated `Origin` type used by dispatchable calls.
 	type Origin: Into<Option<RawOrigin<Self::AccountId>>> + From<RawOrigin<Self::AccountId>>;
-	// type Origin: Into<Option<RawOrigin<Self::SigVerificationKey>>> + From<RawOrigin<Self::SigVerificationKey>>;
 
 	/// Account index (aka nonce) type. This stores the number of previous transactions associated with a sender
 	/// account.
@@ -245,11 +259,6 @@ impl<AccountId> From<Option<AccountId>> for RawOrigin<AccountId> {
 
 /// Exposed trait-generic origin type.
 pub type Origin<T> = RawOrigin<<T as Trait>::AccountId>;
-
-// pub type Origin<T> = RawOrigin<<T as Trait>::SigVerificationKey>;
-
-// Exposed origin type of encrypted key.
-// pub type EncryptedKeyOrigin<T> = RawOrigin<<T as Trait>::AccountId>;
 
 pub type Log<T> = RawLog<
 	<T as Trait>::Hash,
