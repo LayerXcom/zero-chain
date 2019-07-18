@@ -162,15 +162,6 @@ pub fn recover<R: Rng>(
     Ok(())
 }
 
-pub fn destory(
-    term: &mut Term,
-    root_dir: PathBuf,
-) -> Result<()> {
-    let (wallet_dir, keystore_dir) = wallet_keystore_dirs(&root_dir)?;
-    
-    unimplemented!();
-}
-
 pub fn load_dec_key(
     term: &mut Term,
     root_dir: PathBuf,

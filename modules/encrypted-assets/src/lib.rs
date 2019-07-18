@@ -454,6 +454,7 @@ mod tests {
 
     type EncryptedAssets = Module<Test>;
     type EncryptedBalances = encrypted_balances::Module<Test>;
+    type System = system::Module<Test>;
 
     fn alice_balance_init() -> (PkdAddress, Ciphertext) {
         let (alice_seed, enc_key) = get_alice_seed_ek();
@@ -507,22 +508,21 @@ mod tests {
         let balance_init = alice_balance_init();
         let epoch_init = alice_epoch_init();
 
-        let mut t = system::GenesisConfig::<Test>::default().build_storage().unwrap().0;
-        t.extend(GenesisConfig::<Test>{
-            encrypted_balance: vec![((0, balance_init.0), balance_init.clone().1)],
-			last_rollover: vec![((0, epoch_init.0), epoch_init.1)],
-            epoch_length: vec![(0, 1)],
-            transaction_base_fee: vec![(0, 1)],
-            _genesis_phantom_data: Default::default()
-        }.build_storage().unwrap().0);
-
-        t.extend(encrypted_balances::GenesisConfig::<Test>{
-            encrypted_balance: vec![balance_init],
+        let (mut t, mut c) = system::GenesisConfig::<Test>::default().build_storage().unwrap();
+        let _ = encrypted_balances::GenesisConfig::<Test>{
+            encrypted_balance: vec![balance_init.clone()],
 			last_rollover: vec![epoch_init],
             epoch_length: 1,
             transaction_base_fee: 1,
             verifying_key: get_pvk(),
-        }.build_storage().unwrap().0);
+        }.assimilate_storage(&mut t, &mut c);
+        let _ = GenesisConfig::<Test>{
+            encrypted_balance: vec![((0, balance_init.0), balance_init.1)],
+			last_rollover: vec![((0, epoch_init.0), epoch_init.1)],
+            epoch_length: vec![(0, 1)],
+            transaction_base_fee: vec![(0, 1)],
+            _genesis_phantom_data: Default::default()
+        }.assimilate_storage(&mut t, &mut c);
 
         t.into()
     }
@@ -563,6 +563,8 @@ mod tests {
                 )
             .expect("fails to generate the tx");
 
+            System::set_block_number(10);
+
             assert_ok!(EncryptedAssets::issue(
                 Origin::signed(SigVerificationKey::from_slice(&tx.rvk[..])),
                 Proof::from_slice(&tx.proof[..]),
@@ -570,6 +572,63 @@ mod tests {
                 Ciphertext::from_slice(&tx.enc_amount_recipient[..]),
                 Ciphertext::from_slice(&tx.enc_fee[..]),
                 Ciphertext::from_slice(&tx.enc_balance[..])
+            ));
+        })
+    }
+
+    #[test]
+    fn test_confidential_transfer_from_zface() {
+        with_externalities(&mut new_test_ext(), || {
+            let alice_seed = b"Alice                           ".to_vec();
+            let rng = &mut XorShiftRng::from_seed([0x3dbe6259, 0x8d313d76, 0x3237db17, 0xe5bc0654]);
+            let bob_addr: [u8; 32] = hex!("45e66da531088b55dcb3b273ca825454d79d2d1d5c4fa2ba4a12c1fa1ccd6389");
+            let recipient_account_id = tEncryptionKey::<tBls12>::read(&mut &bob_addr[..], &PARAMS).unwrap();
+
+            // Get setuped parameters to compute zk proving.
+            let proving_key = get_pk("../../zface/tests/proving.dat").unwrap();
+            let prepared_vk = get_vk("../../zface/tests/verification.dat").unwrap();
+
+            let spending_key = tSpendingKey::<tBls12>::from_seed(&alice_seed);
+
+            let current_balance = 100;
+            let remaining_balance = 91;
+            let amount = 8;
+            let fee = 1;
+
+            let enc_key = tEncryptionKey::<tBls12>::from_seed(&alice_seed[..], &PARAMS).unwrap();
+            let p_g = tFixedGenerators::NoteCommitmentRandomness;
+
+            // The default balance is not encrypted with randomness.
+            let enc_alice_bal = telgamal::Ciphertext::encrypt(
+                current_balance,
+                tFs::one(),
+                &enc_key,
+                p_g,
+                &*PARAMS
+            );
+
+            let tx = Transaction::gen_tx(
+                amount,
+                remaining_balance,
+                &proving_key,
+                &prepared_vk,
+                &recipient_account_id,
+                &spending_key,
+                enc_alice_bal,
+                rng,
+                fee
+                )
+            .expect("fails to generate the tx");
+
+            assert_ok!(EncryptedAssets::confidential_transfer(
+                Origin::signed(SigVerificationKey::from_slice(&tx.rvk[..])),
+                0,
+                Proof::from_slice(&tx.proof[..]),
+                PkdAddress::from_slice(&tx.address_sender[..]),
+                PkdAddress::from_slice(&tx.address_recipient[..]),
+                Ciphertext::from_slice(&tx.enc_amount_sender[..]),
+                Ciphertext::from_slice(&tx.enc_amount_recipient[..]),
+                Ciphertext::from_slice(&tx.enc_fee[..]),
             ));
         })
     }
