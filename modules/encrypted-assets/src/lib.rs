@@ -224,7 +224,7 @@ decl_event!(
 decl_storage! {
     trait Store for Module<T: Trait> as EncryptedAssets {
         /// An encrypted balance for each account
-        pub EncryptedBalance get(encrypted_balance) : map (T::AssetId, PkdAddress) => Option<T::EncryptedBalance>;
+        pub EncryptedBalance get(encrypted_balance) config() : map (T::AssetId, PkdAddress) => Option<T::EncryptedBalance>;
 
         /// A pending transfer
         pub PendingTransfer get(pending_transfer) : map (T::AssetId, PkdAddress) => Option<T::EncryptedBalance>;
@@ -395,6 +395,7 @@ impl<T: Trait> Module<T> {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use runtime_io::with_externalities;
     use support::{impl_outer_origin, assert_ok};
     use primitives::{H256, Blake2Hasher};
     use runtime_primitives::{
@@ -404,10 +405,17 @@ mod tests {
     use zprimitives::{Ciphertext, SigVerificationKey};
     use keys::{ProofGenerationKey, EncryptionKey};
     use jubjub::{curve::{JubjubBls12, FixedGenerators, fs}};
+    use pairing::Field;
     use hex_literal::{hex, hex_impl};
     use std::path::Path;
     use std::fs::File;
     use std::io::{BufReader, Read};
+    use rand::{SeedableRng, XorShiftRng};
+    use test_pairing::{bls12_381::Bls12 as tBls12, Field as tField};
+    use test_proofs::{EncryptionKey as tEncryptionKey, SpendingKey as tSpendingKey, elgamal as telgamal, Transaction, PARAMS};
+    use zface::transaction::commands::{get_pk, get_vk};
+    use scrypto::jubjub::{FixedGenerators as tFixedGenerators, fs::Fs as tFs};
+
 
     impl_outer_origin! {
         pub enum Origin for Test {}
@@ -445,4 +453,121 @@ mod tests {
     }
 
     type EncryptedAssets = Module<Test>;
+    type EncryptedBalances = encrypted_balances::Module<Test>;
+
+    fn alice_balance_init() -> ((u64, PkdAddress), Ciphertext) {
+        let (alice_seed, enc_key) = get_alice_seed_ek();
+        let alice_amount = 100 as u32;
+        let params = &JubjubBls12::new();
+        let p_g = FixedGenerators::Diversifier; // 1 same as NoteCommitmentRandomness;
+
+        // The default balance is not encrypted with randomness.
+        let enc_alice_bal = elgamal::Ciphertext::encrypt(
+            alice_amount,
+            fs::Fs::one(),
+            &enc_key,
+            p_g,
+            params
+        );
+
+        let decryption_key = ProofGenerationKey::<Bls12>::from_seed(&alice_seed[..], params).into_decryption_key().unwrap();
+
+        let dec_alice_bal = enc_alice_bal.decrypt(&decryption_key, p_g, params).unwrap();
+        assert_eq!(dec_alice_bal, alice_amount);
+
+        ((0, PkdAddress::from_encryption_key(&enc_key)), Ciphertext::from_ciphertext(&enc_alice_bal))
+    }
+
+    fn alice_epoch_init() -> ((u64, PkdAddress), u64) {
+        let (_, enc_key) = get_alice_seed_ek();
+
+        ((0, PkdAddress::from_encryption_key(&enc_key)), 0)
+    }
+
+    fn get_alice_seed_ek() -> (Vec<u8>, EncryptionKey<Bls12>) {
+        let params = &JubjubBls12::new();
+        let alice_seed = b"Alice                           ".to_vec();
+
+        (alice_seed.clone(), EncryptionKey::<Bls12>::from_seed(&alice_seed[..], params)
+            .expect("should be generated encryption key from seed."))
+    }
+
+    pub fn get_pvk() -> PreparedVk {
+        let vk_path = Path::new("../../zface/tests/verification.dat");
+        let vk_file = File::open(&vk_path).unwrap();
+        let mut vk_reader = BufReader::new(vk_file);
+
+        let mut buf_vk = vec![];
+        vk_reader.read_to_end(&mut buf_vk).unwrap();
+
+        PreparedVk::from_slice(&buf_vk[..])
+    }
+
+    fn new_test_ext() -> runtime_io::TestExternalities<Blake2Hasher> {
+        let mut t = system::GenesisConfig::<Test>::default().build_storage().unwrap().0;
+        t.extend(GenesisConfig::<Test>{
+            encrypted_balance: vec![alice_balance_init()],
+			last_rollover: vec![alice_epoch_init()],
+            epoch_length: vec![(0, 1)],
+            transaction_base_fee: vec![(0, 1)],
+            _genesis_phantom_data: Default::default()
+        }.build_storage().unwrap().0);
+
+        t.extend(encrypted_balances::GenesisConfig::<Test>{
+            encrypted_balance: vec![alice_balance_init()],
+			last_rollover: vec![alice_epoch_init()],
+            epoch_length: 1,
+            transaction_base_fee: 1,
+            verifying_key: get_pvk(),
+        }.build_storage().unwrap().0);
+
+        t.into()
+    }
+
+    #[test]
+    fn test_issue_from_zface() {
+        with_externalities(&mut new_test_ext(), || {
+            let seed = b"Alice                           ".to_vec();
+            let rng = &mut XorShiftRng::from_seed([0x3dbe6259, 0x8d313d76, 0x3237db17, 0xe5bc0654]);
+            let p_g = tFixedGenerators::NoteCommitmentRandomness;
+
+            // Get setuped parameters to compute zk proving.
+            let proving_key = get_pk("../../zface/tests/proving.dat").unwrap();
+            let prepared_vk = get_vk("../../zface/tests/verification.dat").unwrap();
+
+            let spending_key = tSpendingKey::<tBls12>::from_seed(&seed);
+            let enc_key = tEncryptionKey::from_seed(&seed[..], &*PARAMS).unwrap();
+
+            let amount = 100;
+            let enc_balance = telgamal::Ciphertext::encrypt(
+                amount,
+                tFs::one(),
+                &enc_key,
+                p_g,
+                &*PARAMS
+            );
+
+            let tx = Transaction::gen_tx(
+                amount,
+                0, // dummy value for remaining balance
+                &proving_key,
+                &prepared_vk,
+                &enc_key,
+                &spending_key,
+                enc_balance,
+                rng,
+                0
+                )
+            .expect("fails to generate the tx");
+
+            assert_ok!(EncryptedAssets::issue(
+                Origin::signed(SigVerificationKey::from_slice(&tx.rvk[..])),
+                Proof::from_slice(&tx.proof[..]),
+                PkdAddress::from_slice(&tx.address_recipient[..]),
+                Ciphertext::from_slice(&tx.enc_amount_recipient[..]),
+                Ciphertext::from_slice(&tx.enc_fee[..]),
+                Ciphertext::from_slice(&tx.enc_balance[..])
+            ));
+        })
+    }
 }

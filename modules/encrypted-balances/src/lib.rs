@@ -406,7 +406,7 @@ where
 
 #[cfg(feature = "std")]
 #[cfg(test)]
-mod tests {
+pub mod tests {
     use super::*;
     use runtime_io::with_externalities;
     use support::{impl_outer_origin, assert_ok};
@@ -492,7 +492,7 @@ mod tests {
             .expect("should be generated encryption key from seed."))
     }
 
-    fn get_pvk() -> PreparedVk {
+    pub fn get_pvk() -> PreparedVk {
         let vk_path = Path::new("../../zface/tests/verification.dat");
         let vk_file = File::open(&vk_path).unwrap();
         let mut vk_reader = BufReader::new(vk_file);

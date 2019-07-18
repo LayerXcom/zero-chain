@@ -1,7 +1,7 @@
 use primitives::{ed25519, sr25519, Pair, crypto::Ss58Codec};
 use zerochain_runtime::{
 	AccountId, GenesisConfig, ConsensusConfig, TimestampConfig, BalancesConfig,
-	SudoConfig, IndicesConfig, EncryptedBalancesConfig
+	SudoConfig, IndicesConfig, EncryptedBalancesConfig, EncryptedAssetsConfig
 };
 use substrate_service;
 use ed25519::Public as AuthorityId;
@@ -106,6 +106,8 @@ impl Alternative {
 }
 
 fn testnet_genesis(initial_authorities: Vec<AuthorityId>, endowed_accounts: Vec<AccountId>, root_key: AccountId) -> GenesisConfig {
+	let balance_init = alice_balance_init();
+	let epoch_init = alice_epoch_init();
 	GenesisConfig {
 		consensus: Some(ConsensusConfig {
 			code: include_bytes!("../runtime/wasm/target/wasm32-unknown-unknown/release/zerochain_runtime_wasm.compact.wasm").to_vec(),
@@ -131,11 +133,18 @@ fn testnet_genesis(initial_authorities: Vec<AuthorityId>, endowed_accounts: Vec<
 			key: root_key,
 		}),
 		encrypted_balances: Some(EncryptedBalancesConfig {
-			encrypted_balance: vec![alice_balance_init()],
-			last_rollover: vec![alice_epoch_init()],
+			encrypted_balance: vec![balance_init.clone()],
+			last_rollover: vec![epoch_init],
 			epoch_length: 1,
 			transaction_base_fee: 1,
 			verifying_key: get_pvk(),
+		}),
+		encrypted_assets: Some(EncryptedAssetsConfig {
+			encrypted_balance: vec![((0, balance_init.0), balance_init.1)],
+			last_rollover: vec![((0, epoch_init.0), epoch_init.1)],
+            epoch_length: vec![(0, 1)],
+            transaction_base_fee: vec![(0, 1)],
+			_genesis_phantom_data: Default::default(),
 		})
 	}
 }
