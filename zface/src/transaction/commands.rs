@@ -1,9 +1,9 @@
 use std::path::{PathBuf, Path};
 use std::io::{BufReader, Read};
 use std::fs::File;
-use rand::Rng;
+use rand::{Rng, Rand};
 use proofs::{SpendingKey, Transaction, ProofGenerationKey, EncryptionKey, PARAMS, elgamal};
-use pairing::{bls12_381::Bls12, Field};
+use pairing::bls12_381::Bls12;
 use super::constants::*;
 use crate::term::Term;
 use crate::wallet::{Result, DirOperations};
@@ -16,65 +16,100 @@ use zjubjub::{
     };
 use zpairing::{bls12_381::Bls12 as zBls12, PrimeField as zPrimeField, PrimeFieldRepr as zPrimeFieldRepr};
 use zprimitives::{PARAMS as ZPARAMS, Proof, Ciphertext as zCiphertext, PkdAddress, SigVerificationKey, RedjubjubSignature, SigVk};
-use zerochain_runtime::{UncheckedExtrinsic, Call, EncryptedBalancesCall};
+use zerochain_runtime::{UncheckedExtrinsic, Call, EncryptedBalancesCall, EncryptedAssetsCall};
 use runtime_primitives::generic::Era;
 use parity_codec::{Compact, Encode, Decode};
 use primitives::blake2_256;
 use polkadot_rs::{Api, Url, hexstr_to_u64};
-use scrypto::jubjub::fs;
+use scrypto::jubjub::{fs::Fs, FixedGenerators};
 use bellman::groth16::{Parameters, PreparedVerifyingKey};
 
-pub fn send_tx_with_arg<R: Rng>(
+pub fn asset_issue_tx<R: Rng>(
     term: &mut Term,
     root_dir: PathBuf,
-    recipient_enc_key: &[u8],
     amount: u32,
     url: Url,
     rng: &mut R,
 ) -> Result<()> {
     // user can enter password first.
     let password = prompt_password(term).expect("Invalid password");
+    println!("Preparing paramters...");
+
+    let api = Api::init(url);
+    let p_g = FixedGenerators::NoteCommitmentRandomness; // 1
+
+    // Get setuped parameters to compute zk proving.
+    let proving_key = get_pk(PROVING_KEY_PATH)?;
+    let prepared_vk = get_vk(VERIFICATION_KEY_PATH)?;
+
+    let spending_key = spending_key_from_keystore(root_dir, &password[..])?;
+    let issuer_address = EncryptionKey::<Bls12>::from_spending_key(&spending_key, &PARAMS)?;
+
+    let enc_amount = elgamal::Ciphertext::encrypt(amount, Fs::rand(rng), &issuer_address, p_g, &PARAMS);
+
+    // let zero = elgamal::Ciphertext::zero();
+
+    println!("Computing zk proof...");
+    let tx = Transaction::gen_tx(
+        amount,
+        0, // dummy value for remaining balance
+        &proving_key,
+        &prepared_vk,
+        &issuer_address,
+        &spending_key,
+        enc_amount,
+        rng,
+        0
+        )
+    .expect("fails to generate the tx");
+
+    println!("Start submitting a transaction to Zerochain...");
+    subscribe_event(api.clone(), amount);
+    submit_asset_issue(&tx, &api, rng);
+
+    Ok(())
+}
+
+pub fn asset_transfer_tx<R: Rng>(
+    term: &mut Term,
+    root_dir: PathBuf,
+    recipient_enc_key: &[u8],
+    amount: u32,
+    asset_id: u32,
+    url: Url,
+    rng: &mut R,
+) -> Result<()> {
+    // user can enter password first.
+    let password = prompt_password(term)?;
 
     println!("Preparing paramters...");
 
     let api = Api::init(url);
-    // let alpha = fs::Fs::rand(rng);
-    let alpha = fs::Fs::zero(); // TODO
 
-    let buf_pk = read_zk_params_with_path(PROVING_KEY_PATH);
-    let buf_vk = read_zk_params_with_path(VERIFICATION_KEY_PATH);
+    // Get setuped parameters to compute zk proving.
+    let proving_key = get_pk(PROVING_KEY_PATH)?;
+    let prepared_vk = get_vk(VERIFICATION_KEY_PATH)?;
 
-    let proving_key = Parameters::<Bls12>::read(&mut &buf_pk[..], true)
-        .expect("should be casted to Parameters<Bls12> type.");
-    let prepared_vk = PreparedVerifyingKey::<Bls12>::read(&mut &buf_vk[..])
-        .expect("should ne casted to PreparedVerifyingKey<Bls12> type");
+    let spending_key = spending_key_from_keystore(root_dir, &password[..])?;
+    let dec_key = ProofGenerationKey::<Bls12>::from_spending_key(&spending_key, &PARAMS)
+        .into_decryption_key()?;
 
-    let fee_str = api.get_storage("EncryptedBalances", "TransactionBaseFee", None)
+    // Get set fee amount as `TransactionBaseFee` in encrypyed-balances module.
+    let fee_str = api.get_storage("EncryptedAssets", "TransactionBaseFee", Some(asset_id.encode()))
         .expect("should be fetched TransactionBaseFee from ConfTransfer module of Zerochain.");
     let fee = hexstr_to_u64(fee_str) as u32;
 
-    let spending_key = spending_key_from_keystore(root_dir, &password[..])
-        .expect("should load from keystore.");
-
-    let dec_key = ProofGenerationKey::<Bls12>::from_spending_key(&spending_key, &PARAMS)
-        .into_decryption_key()
-        .expect("should be generated decryption key from seed.");
-
-    let balance_query = BalanceQuery::get_balance_from_decryption_key(&dec_key, api.clone());
+    let balance_query = BalanceQuery::get_encrypted_asset(asset_id, &dec_key, api.clone());
     let remaining_balance = balance_query.decrypted_balance - amount - fee;
     assert!(balance_query.decrypted_balance >= amount + fee, "Not enough balance you have");
 
-    let recipient_account_id = EncryptionKey::<Bls12>::read(&mut &recipient_enc_key[..], &PARAMS)
-        .expect("should be casted to EncryptionKey<Bls12> type.");
-
-    let encrypted_balance = elgamal::Ciphertext::read(&mut &balance_query.encrypted_balance[..], &*PARAMS)
-        .expect("should be casted to Ciphertext type.");
+    let recipient_account_id = EncryptionKey::<Bls12>::read(&mut &recipient_enc_key[..], &PARAMS)?;
+    let encrypted_balance = elgamal::Ciphertext::read(&mut &balance_query.encrypted_balance[..], &*PARAMS)?;
 
     println!("Computing zk proof...");
     let tx = Transaction::gen_tx(
         amount,
         remaining_balance,
-        alpha,
         &proving_key,
         &prepared_vk,
         &recipient_account_id,
@@ -87,7 +122,63 @@ pub fn send_tx_with_arg<R: Rng>(
 
     println!("Start submitting a transaction to Zerochain...");
     subscribe_event(api.clone(), remaining_balance);
-    submit_tx(&tx, &api, rng);
+    submit_asset_transfer(asset_id, &tx, &api, rng);
+
+    Ok(())
+}
+
+pub fn transfer_tx<R: Rng>(
+    term: &mut Term,
+    root_dir: PathBuf,
+    recipient_enc_key: &[u8],
+    amount: u32,
+    url: Url,
+    rng: &mut R,
+) -> Result<()> {
+    // user can enter password first.
+    let password = prompt_password(term)?;
+
+    println!("Preparing paramters...");
+
+    let api = Api::init(url);
+
+    // Get setuped parameters to compute zk proving.
+    let proving_key = get_pk(PROVING_KEY_PATH)?;
+    let prepared_vk = get_vk(VERIFICATION_KEY_PATH)?;
+
+    let spending_key = spending_key_from_keystore(root_dir, &password[..])?;
+    let dec_key = ProofGenerationKey::<Bls12>::from_spending_key(&spending_key, &PARAMS)
+        .into_decryption_key()?;
+
+    // Get set fee amount as `TransactionBaseFee` in encrypyed-balances module.
+    let fee_str = api.get_storage("EncryptedBalances", "TransactionBaseFee", None)
+        .expect("should be fetched TransactionBaseFee from ConfTransfer module of Zerochain.");
+    let fee = hexstr_to_u64(fee_str) as u32;
+
+    let balance_query = BalanceQuery::get_encrypted_balance(&dec_key, api.clone());
+    let remaining_balance = balance_query.decrypted_balance - amount - fee;
+    assert!(balance_query.decrypted_balance >= amount + fee, "Not enough balance you have");
+
+    let recipient_account_id = EncryptionKey::<Bls12>::read(&mut &recipient_enc_key[..], &PARAMS)?;
+    let encrypted_balance = elgamal::Ciphertext::read(&mut &balance_query.encrypted_balance[..], &*PARAMS)?;
+
+    println!("Computing zk proof...");
+    let tx = Transaction::gen_tx(
+        amount,
+        remaining_balance,
+        &proving_key,
+        &prepared_vk,
+        &recipient_account_id,
+        &spending_key,
+        encrypted_balance,
+        rng,
+        fee
+        )
+    .expect("fails to generate the tx");
+
+    println!("Start submitting a transaction to Zerochain...");
+    subscribe_event(api.clone(), remaining_balance);
+    submit_confidential_transfer(&tx, &api, rng);
 
     Ok(())
 }
@@ -114,20 +205,71 @@ pub fn prompt_password(term: &mut Term) -> Result<Vec<u8>> {
     Ok(password)
 }
 
-pub fn read_zk_params_with_path(path: &str) -> Vec<u8> {
+pub fn get_pk(path: &str) -> Result<Parameters::<Bls12>> {
+    let buf_pk = read_zk_params_with_path(path)?;
+    let proving_key = Parameters::<Bls12>::read(&mut &buf_pk[..], true)?;
+
+    Ok(proving_key)
+}
+
+pub fn get_vk(path: &str) -> Result<PreparedVerifyingKey::<Bls12>> {
+    let buf_vk = read_zk_params_with_path(path)?;
+    let prepared_vk = PreparedVerifyingKey::<Bls12>::read(&mut &buf_vk[..])?;
+
+    Ok(prepared_vk)
+}
+
+fn read_zk_params_with_path(path: &str) -> Result<Vec<u8>> {
     let params_path = Path::new(path);
-    let file = File::open(&params_path)
-        .expect(&format!("couldn't open {}", params_path.display()));
+    let file = File::open(&params_path)?;
 
     let mut params_reader = BufReader::new(file);
     let mut params_buf = vec![];
-    params_reader.read_to_end(&mut params_buf)
-        .expect(&format!("couldn't read {}", params_path.display()));
+    params_reader.read_to_end(&mut params_buf)?;
 
-    params_buf
+    Ok(params_buf)
 }
 
-pub fn submit_tx<R: Rng>(tx: &Transaction, api: &Api, rng: &mut R) {
+pub fn submit_confidential_transfer<R: Rng>(tx: &Transaction, api: &Api, rng: &mut R) {
+    let calls = Call::EncryptedBalances(EncryptedBalancesCall::confidential_transfer(
+        Proof::from_slice(&tx.proof[..]),
+        PkdAddress::from_slice(&tx.address_sender[..]),
+        PkdAddress::from_slice(&tx.address_recipient[..]),
+        zCiphertext::from_slice(&tx.enc_amount_sender[..]),
+        zCiphertext::from_slice(&tx.enc_amount_recipient[..]),
+        zCiphertext::from_slice(&tx.enc_fee[..]),
+    ));
+
+    submit_tx(calls, tx, api, rng);
+}
+
+pub fn submit_asset_issue<R: Rng>(tx: &Transaction, api: &Api, rng: &mut R) {
+    let calls = Call::EncryptedAssets(EncryptedAssetsCall::issue(
+        Proof::from_slice(&tx.proof[..]),
+        PkdAddress::from_slice(&tx.address_recipient[..]),
+        zCiphertext::from_slice(&tx.enc_amount_recipient[..]),
+        zCiphertext::from_slice(&tx.enc_fee[..]),
+        zCiphertext::from_slice(&tx.enc_balance[..])
+    ));
+
+    submit_tx(calls, tx, api, rng);
+}
+
+pub fn submit_asset_transfer<R: Rng>(asset_id: u32, tx: &Transaction, api: &Api, rng: &mut R) {
+    let calls = Call::EncryptedAssets(EncryptedAssetsCall::confidential_transfer(
+        asset_id,
+        Proof::from_slice(&tx.proof[..]),
+        PkdAddress::from_slice(&tx.address_sender[..]),
+        PkdAddress::from_slice(&tx.address_recipient[..]),
+        zCiphertext::from_slice(&tx.enc_amount_sender[..]),
+        zCiphertext::from_slice(&tx.enc_amount_recipient[..]),
+        zCiphertext::from_slice(&tx.enc_fee[..]),
+    ));
+
+    submit_tx(calls, tx, api, rng);
+}
+
+fn submit_tx<R: Rng>(calls: Call, tx: &Transaction, api: &Api, rng: &mut R) {
     let p_g = zFixedGenerators::Diversifier; // 1
 
     let mut rsk_repr = zFs::default().into_repr();
@@ -138,15 +280,6 @@ pub fn submit_tx<R: Rng>(tx: &Transaction, api: &Api, rng: &mut R) {
 
     let sig_sk = zPrivateKey::<zBls12>(rsk);
     let sig_vk = SigVerificationKey::from_slice(&tx.rvk[..]);
-
-    let calls = Call::EncryptedBalances(EncryptedBalancesCall::confidential_transfer(
-        Proof::from_slice(&tx.proof[..]),
-        PkdAddress::from_slice(&tx.address_sender[..]),
-        PkdAddress::from_slice(&tx.address_recipient[..]),
-        zCiphertext::from_slice(&tx.enc_amount_sender[..]),
-        zCiphertext::from_slice(&tx.enc_amount_recipient[..]),
-        zCiphertext::from_slice(&tx.enc_fee[..]),
-    ));
 
     let era = Era::Immortal;
     let index = api.get_nonce(&sig_vk).expect("Nonce must be got.");
@@ -209,7 +342,23 @@ pub fn subscribe_event(api: Api, remaining_balance: u32) {
                                             println!("Invalid zk proof.");
                                         }
                                     }
-                                }
+                                },
+                                Event::encrypted_assets(enc_assets) => {
+                                    match &enc_assets {
+                                        encrypted_assets::RawEvent::Issued(
+                                            _asset_id, _address, _total
+                                        ) => println!("Submitting transaction is completed successfully. \n The total issued coin is {}", remaining_balance),
+                                        encrypted_assets::RawEvent::ConfidentialAssetTransferred(
+                                            _asset_id, _zkproof,
+                                            _address_sender, _address_recipient,
+                                            _amount_sender, _amount_recipient,
+                                            _fee_sender, _enc_balances, _sig_vk
+                                        ) => println!("Submitting transaction is completed successfully. \n Remaining balance is {}", remaining_balance),
+                                        encrypted_assets::RawEvent::Destroyed(_asset_id, _address, _balance)
+                                            => println!("destroyed coins."),
+                                        encrypted_assets::RawEvent::InvalidZkProof() => println!("Invalid zk proof."),
+                                    }
+                                },
                                 _ => /* warn!("ignoring unsupported module event: {:?}", event.event) */ {},
                             }
                         }

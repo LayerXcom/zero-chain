@@ -37,6 +37,11 @@ std = [
 
 [dev-dependencies]
 hex-literal = '0.1'
+rand = "0.4"
+zface = { path = "../../zface" }
+test-pairing = { package = "pairing", git = "https://github.com/LayerXcom/librustzcash", branch = "zero-chain" }
+scrypto = { package = "sapling-crypto", git = "https://github.com/LayerXcom/librustzcash", branch = "zero-chain" }
+test-proofs = { package = "zerochain-proofs", path = "../../core/proofs" }
 
 [dependencies.support]
 default_features = false

@@ -6,7 +6,7 @@ use ::std::{vec::Vec, fmt, write};
 #[cfg(not(feature = "std"))]
 use crate::std::vec::Vec;
 
-use parity_codec_derive::{Encode, Decode};
+use parity_codec::{Encode, Decode};
 #[cfg(feature = "std")]
 use substrate_primitives::hexdisplay::AsBytesRef;
 

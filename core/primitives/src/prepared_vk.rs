@@ -8,7 +8,7 @@ use ::std::{vec::Vec, fmt, write};
 #[cfg(not(feature = "std"))]
 use crate::std::{vec::Vec, fmt, write};
 
-use parity_codec_derive::{Encode, Decode};
+use parity_codec::{Encode, Decode};
 
 /// Prepared Verifying Key for SNARKs proofs
 #[derive(Eq, PartialEq, Clone, Default, Encode, Decode)]

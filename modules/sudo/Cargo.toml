@@ -7,8 +7,6 @@ edition = "2018"
 [dependencies]
 hex-literal = "0.1.0"
 serde = { version = "1.0", optional = true }
-parity-codec = { version = "3.2", default-features = false }
-parity-codec-derive = { version = "3.1", default-features = false }
 sr-std = { git = "https://github.com/osuketh/substrate.git", branch = "patch-zerochain", default-features = false }
 sr-primitives = { git = "https://github.com/osuketh/substrate.git", branch = "patch-zerochain", default-features = false }
 srml-support = { git = "https://github.com/osuketh/substrate.git", branch = "patch-zerochain", default-features = false }
@@ -19,12 +17,16 @@ system = { package = "srml-system", path = "../system", default-features = false
 sr-io = { git = "https://github.com/osuketh/substrate.git", branch = "patch-zerochain", default-features = false }
 substrate-primitives = { git = "https://github.com/osuketh/substrate.git", branch = "patch-zerochain" }
 
+[dependencies.parity-codec]
+default-features = false
+features = ['derive']
+version = '3.2'
+
 [features]
 default = ["std"]
 std = [
 	"serde",
 	"parity-codec/std",
-	"parity-codec-derive/std",
 	"sr-std/std",
 	"sr-primitives/std",
 	"srml-support/std",

@@ -47,21 +47,27 @@ impl fmt::Display for KeystoreError {
             KeystoreError::InvalidKeyfile => write!(f, "Invalid keyfile"),
             KeystoreError::OverRetries => write!(f, "Exceeded maximum retries when deduplicating filename."),
             KeystoreError::InvalidPath => write!(f, "Invalid path"),
-            KeystoreError::IoError(_) => write!(f, "I/O error occurred"),
-            KeystoreError::CryptoError(_) => write!(f, "crypto error occured"),
-            KeystoreError::SerdeError(_) => write!(f, "Serialization or deserialization error occured"),
-            KeystoreError::InfallibleError(_) => write!(f, "Need to be infallible"),
+            KeystoreError::IoError(ref err) => write!(f, "I/O error: {}", err),
+            KeystoreError::CryptoError(ref err) => write!(f, "crypto error: {}", err),
+            KeystoreError::SerdeError(ref err) => write!(f, "serde error: {}", err),
+            KeystoreError::InfallibleError(ref err) => write!(f, "infallible: {}", err),
         }
     }
 }
 
 impl Error for KeystoreError {
-    // fn source(&self) -> Option<&Error> {
-    //     match self {
-    //         Error::IoError(ref err) => Some(err),
-    //     }
-    //     unimplemented!();
-    // }
+    fn description(&self) -> &str {
+        match *self {
+            KeystoreError::InvalidPassword => "Invalid password",
+            KeystoreError::InvalidKeyfile => "Invalid keyfile",
+            KeystoreError::OverRetries => "Exceeded maximum retries when deduplicating filename.",
+            KeystoreError::InvalidPath => "Invalid path",
+            KeystoreError::IoError(ref err) => err.description(),
+            KeystoreError::CryptoError(ref err) => err.description(),
+            KeystoreError::SerdeError(ref err) => err.description(),
+            KeystoreError::InfallibleError(ref err) => err.description(),
+        }
+    }
 }
 
 /// Alias for keystore operation result

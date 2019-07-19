@@ -14,8 +14,6 @@ zcrypto = { package = "zerochain-crypto", path = "../crypto" }
 bellman-verifier = { path = "../bellman-verifier" }
 zpairing = { package = "zerochain-pairing", path = "../pairing"}
 hex-literal = '0.1'
-parity-codec = "3.1"
-parity-codec-derive = "3.1"
 keys = { path = "../keys"}
 zjubjub = { package = "jubjub", path = "../jubjub" }
 lazy_static = "1.3.0"
@@ -28,3 +26,7 @@ branch = "patch-zerochain"
 [dependencies.blake2-rfc]
 git = "https://github.com/gtank/blake2-rfc"
 rev = "7a5b5fc99ae483a0043db7547fb79a6fa44b88a9"
+
+[dependencies.parity-codec]
+features = ['derive']
+version = '3.2'

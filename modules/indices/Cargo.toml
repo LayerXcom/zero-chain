@@ -8,8 +8,6 @@ edition = "2018"
 hex-literal = "0.1.0"
 serde = { version = "1.0", optional = true }
 safe-mix = { version = "1.0", default-features = false}
-parity-codec = { version = "3.2", default-features = false }
-parity-codec-derive = { version = "3.1", default-features = false }
 substrate-keyring = { git = "https://github.com/osuketh/substrate.git", branch = "patch-zerochain", optional = true }
 rstd = { package = "sr-std", git = "https://github.com/osuketh/substrate.git", branch = "patch-zerochain", default-features = false }
 runtime-io = { package = "sr-io", git = "https://github.com/osuketh/substrate.git", branch = "patch-zerochain", default-features = false }
@@ -21,6 +19,11 @@ substrate-primitives = { git = "https://github.com/osuketh/substrate.git", branc
 [dev-dependencies]
 ref_thread_local = "0.0"
 
+[dependencies.parity-codec]
+default-features = false
+features = ['derive']
+version = '3.2'
+
 [features]
 default = ["std"]
 std = [
@@ -28,7 +31,6 @@ std = [
 	"safe-mix/std",
 	"substrate-keyring",
 	"parity-codec/std",
-	"parity-codec-derive/std",
 	"substrate-primitives/std",
 	"rstd/std",
 	"runtime-io/std",

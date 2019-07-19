@@ -45,7 +45,7 @@ branch = "patch-zerochain"
 [dependencies.parity-codec]
 default-features = false
 features = ['derive']
-version = '3.2'
+version = '3.5'
 
 [dependencies.primitives]
 default_features = false

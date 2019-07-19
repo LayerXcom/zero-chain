@@ -1,15 +1,14 @@
 use crate::{
 	PARAMS,
-	keys::{
-		EncryptionKey,
-		ProofGenerationKey,
-		SpendingKey,
-	},
+	EncryptionKey,
+	ProofGenerationKey,
+	SpendingKey,
 	prover::TransferProof,
 	elgamal,
 };
 use bellman::groth16::{Parameters, PreparedVerifyingKey};
 use pairing::bls12_381::Bls12;
+use pairing::Field;
 use zpairing::io;
 use scrypto::jubjub::fs;
 use rand::Rng;
@@ -24,13 +23,13 @@ pub struct Transaction{
 	pub enc_fee: [u8; 64],			     // 64 bytes
 	pub rsk: [u8; 32],                   // 32 bytes
 	pub rvk: [u8; 32],                   // 32 bytes
+	pub enc_balance: [u8; 64],           // 32 bytes
 }
 
 impl Transaction {
     pub fn gen_tx<R: Rng>(
         value: u32,
         remaining_balance: u32,
-        alpha: fs::Fs,
         proving_key: &Parameters<Bls12>,
 		prepared_vk: &PreparedVerifyingKey<Bls12>,
 		address_recipient: &EncryptionKey<Bls12>,
@@ -40,6 +39,9 @@ impl Transaction {
 		fee: u32,
     ) -> Result<Self, io::Error>
 	{
+		// let alpha = fs::Fs::rand(rng);
+    	let alpha = fs::Fs::zero(); // TODO
+
 		let proof_generation_key = ProofGenerationKey::from_spending_key(
 			&spending_key,
 			&*PARAMS
@@ -86,6 +88,9 @@ impl Transaction {
 		let mut enc_fee_sender = [0u8; 64];
 		proof_output.cipher_fee_s.write(&mut enc_fee_sender[..]).map_err(|_| io::Error::InvalidData)?;
 
+		let mut enc_balance = [0u8; 64];
+		proof_output.cipher_balance.write(&mut enc_balance[..]).map_err(|_| io::Error::InvalidData)?;
+
 		let tx = Transaction {
 			proof: proof_bytes,
 			rvk: rvk_bytes,
@@ -95,6 +100,7 @@ impl Transaction {
 			enc_amount_sender,
 			rsk: rsk_bytes,
 			enc_fee: enc_fee_sender,
+			enc_balance,
 		};
 
 		Ok(tx)

@@ -24,7 +24,6 @@ use zprimitives::{
 use parity_codec::Codec;
 use keys::EncryptionKey;
 use zcrypto::elgamal;
-use runtime_io;
 use system::{IsDeadAccount, ensure_signed};
 
 pub trait Trait: system::Trait {
@@ -407,7 +406,7 @@ where
 
 #[cfg(feature = "std")]
 #[cfg(test)]
-mod tests {
+pub mod tests {
     use super::*;
     use runtime_io::with_externalities;
     use support::{impl_outer_origin, assert_ok};
@@ -493,7 +492,7 @@ mod tests {
             .expect("should be generated encryption key from seed."))
     }
 
-    fn get_pvk() -> PreparedVk {
+    pub fn get_pvk() -> PreparedVk {
         let vk_path = Path::new("../../zface/tests/verification.dat");
         let vk_file = File::open(&vk_path).unwrap();
         let mut vk_reader = BufReader::new(vk_file);
@@ -509,12 +508,74 @@ mod tests {
         t.extend(GenesisConfig::<Test>{
             encrypted_balance: vec![alice_balance_init()],
 			last_rollover: vec![alice_epoch_init()],
-            epoch_length: 10,
+            epoch_length: 1,
             transaction_base_fee: 1,
             verifying_key: get_pvk(),
         }.build_storage().unwrap().0);
 
         t.into()
+    }
+
+    #[test]
+    fn test_call_from_zface() {
+        use rand::{SeedableRng, XorShiftRng};
+        use test_pairing::{bls12_381::Bls12 as tBls12, Field as tField};
+        use test_proofs::{EncryptionKey as tEncryptionKey, SpendingKey as tSpendingKey, elgamal as telgamal, Transaction, PARAMS};
+        use zface::transaction::commands::{get_pk, get_vk};
+        use scrypto::jubjub::{FixedGenerators as tFixedGenerators, fs::Fs as tFs};
+
+        with_externalities(&mut new_test_ext(), || {
+            let alice_seed = b"Alice                           ".to_vec();
+            let rng = &mut XorShiftRng::from_seed([0x3dbe6259, 0x8d313d76, 0x3237db17, 0xe5bc0654]);
+            let bob_addr: [u8; 32] = hex!("45e66da531088b55dcb3b273ca825454d79d2d1d5c4fa2ba4a12c1fa1ccd6389");
+            let recipient_account_id = tEncryptionKey::<tBls12>::read(&mut &bob_addr[..], &PARAMS).unwrap();
+
+            // Get setuped parameters to compute zk proving.
+            let proving_key = get_pk("../../zface/tests/proving.dat").unwrap();
+            let prepared_vk = get_vk("../../zface/tests/verification.dat").unwrap();
+
+            let spending_key = tSpendingKey::<tBls12>::from_seed(&alice_seed);
+
+            let current_balance = 100;
+            let remaining_balance = 91;
+            let amount = 8;
+            let fee = 1;
+
+            let enc_key = tEncryptionKey::<tBls12>::from_seed(&alice_seed[..], &PARAMS).unwrap();
+            let p_g = tFixedGenerators::NoteCommitmentRandomness;
+
+            // The default balance is not encrypted with randomness.
+            let enc_alice_bal = telgamal::Ciphertext::encrypt(
+                current_balance,
+                tFs::one(),
+                &enc_key,
+                p_g,
+                &*PARAMS
+            );
+
+            let tx = Transaction::gen_tx(
+                amount,
+                remaining_balance,
+                &proving_key,
+                &prepared_vk,
+                &recipient_account_id,
+                &spending_key,
+                enc_alice_bal,
+                rng,
+                fee
+                )
+            .expect("fails to generate the tx");
+
+            assert_ok!(EncryptedBalances::confidential_transfer(
+                Origin::signed(SigVerificationKey::from_slice(&tx.rvk[..])),
+                Proof::from_slice(&tx.proof[..]),
+                PkdAddress::from_slice(&tx.address_sender[..]),
+                PkdAddress::from_slice(&tx.address_recipient[..]),
+                Ciphertext::from_slice(&tx.enc_amount_sender[..]),
+                Ciphertext::from_slice(&tx.enc_amount_recipient[..]),
+                Ciphertext::from_slice(&tx.enc_fee[..]),
+            ));
+        })
     }
 
     #[test]

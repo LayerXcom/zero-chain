@@ -3,6 +3,7 @@ pub mod derive;
 pub mod wallet;
 pub mod term;
 pub mod utils;
+pub mod transaction;
 
 #[macro_use]
 extern crate serde_derive;

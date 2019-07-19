@@ -33,6 +33,13 @@ impl<E: JubjubEngine> Ciphertext<E> {
         }
     }
 
+    pub fn zero() -> Self {
+        Ciphertext {
+            left: edwards::Point::zero(),
+            right: edwards::Point::zero()
+        }
+    }
+
     pub fn encrypt(
         value: u32, // 32-bits restriction for the decryption.
         randomness: E::Fs,
@@ -69,10 +76,10 @@ impl<E: JubjubEngine> Ciphertext<E> {
 
         // Brute-force decryption
         for i in 0..1_000_000 {
-            acc = acc.add(&one, params);
             if acc == v_point {
-                return Some(i + 1)
+                return Some(i)
             }
+            acc = acc.add(&one, params);
         }
 
         None

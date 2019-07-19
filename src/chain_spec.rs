@@ -1,7 +1,7 @@
 use primitives::{ed25519, sr25519, Pair, crypto::Ss58Codec};
 use zerochain_runtime::{
 	AccountId, GenesisConfig, ConsensusConfig, TimestampConfig, BalancesConfig,
-	SudoConfig, IndicesConfig, EncryptedBalancesConfig
+	SudoConfig, IndicesConfig, EncryptedBalancesConfig, EncryptedAssetsConfig
 };
 use substrate_service;
 use ed25519::Public as AuthorityId;
@@ -20,7 +20,6 @@ use zprimitives::PARAMS;
 use std::path::Path;
 use std::fs::File;
 use std::io::{BufReader, Read};
-use zface::ss58::EncryptionKeyBytes;
 
 // Note this is the URL for the telemetry server
 //const STAGING_TELEMETRY_URL: &str = "wss://telemetry.polkadot.io/submit/";
@@ -107,6 +106,8 @@ impl Alternative {
 }
 
 fn testnet_genesis(initial_authorities: Vec<AuthorityId>, endowed_accounts: Vec<AccountId>, root_key: AccountId) -> GenesisConfig {
+	let balance_init = alice_balance_init();
+	let epoch_init = alice_epoch_init();
 	GenesisConfig {
 		consensus: Some(ConsensusConfig {
 			code: include_bytes!("../runtime/wasm/target/wasm32-unknown-unknown/release/zerochain_runtime_wasm.compact.wasm").to_vec(),
@@ -132,11 +133,18 @@ fn testnet_genesis(initial_authorities: Vec<AuthorityId>, endowed_accounts: Vec<
 			key: root_key,
 		}),
 		encrypted_balances: Some(EncryptedBalancesConfig {
-			encrypted_balance: vec![alice_balance_init()],
-			last_rollover: vec![alice_epoch_init()],
+			encrypted_balance: vec![balance_init.clone()],
+			last_rollover: vec![epoch_init],
 			epoch_length: 1,
 			transaction_base_fee: 1,
 			verifying_key: get_pvk(),
+		}),
+		encrypted_assets: Some(EncryptedAssetsConfig {
+			encrypted_balance: vec![((0, balance_init.0), balance_init.1)],
+			last_rollover: vec![((0, epoch_init.0), epoch_init.1)],
+            epoch_length: vec![(0, 1)],
+            transaction_base_fee: vec![(0, 1)],
+			_genesis_phantom_data: Default::default(),
 		})
 	}
 }
@@ -170,7 +178,8 @@ fn alice_epoch_init() -> (PkdAddress, u64) {
 }
 
 fn get_alice_enc_key() -> EncryptionKey<Bls12> {
-	// let ss58_address = "5FJBWVp6Bb8wrGV5GmWwD1NhBNfNuUz5HvKTfpLcvR4qrpfP";
+	// use zface::ss58::EncryptionKeyBytes;
+	// let ss58_address = "5DC4kJ84b4KfVyddcFMYfy5skTJWVtxtWRETZo2i4nh8Ao1i";
 	// let enc_key_bytes = EncryptionKeyBytes::from_ss58check(ss58_address).unwrap();
 	// let enc_key = EncryptionKey::read(&mut &enc_key_bytes.0[..], &*PARAMS).unwrap();
 	let alice_seed = b"Alice                           ".to_vec();

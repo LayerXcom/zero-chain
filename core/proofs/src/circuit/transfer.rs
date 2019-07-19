@@ -59,7 +59,7 @@ impl<'a, E: JubjubEngine> Circuit<E> for Transfer<'a, E> {
             self.remaining_balance
         )?;
 
-        //Ensure the fee is u32.
+        // Ensure the fee is u32.
         let fee_bits = u32_into_boolean_vec_le(
             cs.namespace(|| "range proof of fee"),
             self.fee

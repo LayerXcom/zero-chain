@@ -158,6 +158,16 @@ fn snark_commands_definition<'a, 'b>() -> App<'a, 'b> {
 
 const WALLET_COMMAND: &'static str = "wallet";
 
+fn wallet_arg_id_match<'a>(matches: &ArgMatches<'a>) -> u32 {
+    let id_str = matches.value_of("asset-id")
+        .expect("Asset id paramter is required; qed");
+
+    let id: u32 = id_str.parse()
+        .expect("should be parsed to u32 number; qed");
+
+    id
+}
+
 fn subcommand_wallet<R: Rng>(mut term: term::Term, root_dir: PathBuf, matches: &ArgMatches, rng: &mut R) {
     match matches.subcommand() {
         ("init", Some(_)) => {
@@ -183,18 +193,30 @@ fn subcommand_wallet<R: Rng>(mut term: term::Term, root_dir: PathBuf, matches: &
         },
         ("recovery", Some(_)) => {
             recover(&mut term, root_dir, rng)
-                .expect("Invalid mnemonic to recover keystore.")
+                .expect("Invalid mnemonic to recover keystore.");
         },
-        ("balance", Some(_)) => {
+        ("balance", Some(sub_matches)) => {
             println!("Getting encrypted balance from zerochain");
             // let url = Url::Custom("ws://0.0.0.0:9944".to_string());
-            // let api = Api::init(url);
-            let api = Api::init(Url::Local);
+            let api = Api::init(tx_arg_url_match(&sub_matches));
 
-            let dec_key_vec = load_dec_key(&mut term, root_dir)
+            let dec_key = load_dec_key(&mut term, root_dir)
                 .expect("loading decrption key failed.");
 
-            let balance_query = BalanceQuery::get_balance_from_decryption_key(&dec_key_vec, api);
+            let balance_query = BalanceQuery::get_encrypted_balance(&dec_key, api);
+
+            println!("Decrypted balance: {}", balance_query.decrypted_balance);
+            println!("Encrypted balance: {}", balance_query.encrypted_balance_str);
+            println!("Encrypted pending transfer: {}", balance_query.pending_transfer_str);
+        },
+        ("asset-balance", Some(sub_matches)) => {
+            println!("Getting encrypted asset from zerochain");
+            let api = Api::init(tx_arg_url_match(&sub_matches));
+            let dec_key = load_dec_key(&mut term, root_dir)
+                .expect("loading decrption key failed.");
+            let asset_id = wallet_arg_id_match(&sub_matches);
+
+            let balance_query = BalanceQuery::get_encrypted_asset(asset_id, &dec_key, api);
 
             println!("Decrypted balance: {}", balance_query.decrypted_balance);
             println!("Encrypted balance: {}", balance_query.encrypted_balance_str);
@@ -273,7 +295,31 @@ fn wallet_commands_definition<'a, 'b>() -> App<'a, 'b> {
             .about("Recover keystore from mnemonic.")
         )
         .subcommand(SubCommand::with_name("balance")
-            .about("Get current balance stored in ConfTransfer module")
+            .about("Get current balance stored in encrypted balances module")
+            .arg(Arg::with_name("url")
+                .short("u")
+                .long("url")
+                .help("Endpoint to connect zerochain nodes")
+                .takes_value(true)
+                .required(false)
+            )
+        )
+        .subcommand(SubCommand::with_name("asset-balance")
+            .about("Get current asset stored in encrypted asset module")
+            .arg(Arg::with_name("asset-id")
+                .short("i")
+                .long("id")
+                .help("Asset id")
+                .takes_value(true)
+                .required(false)
+            )
+            .arg(Arg::with_name("url")
+                .short("u")
+                .long("url")
+                .help("Endpoint to connect zerochain nodes")
+                .takes_value(true)
+                .required(false)
+            )
         )
 }
 
@@ -312,12 +358,26 @@ fn tx_arg_url_match<'a>(matches: &ArgMatches<'a>) -> Url {
 
 fn subcommand_tx<R: Rng>(mut term: term::Term, root_dir: PathBuf, matches: &ArgMatches, rng: &mut R) {
     let res = match matches.subcommand() {
-        ("send", Some(sub_matches)) => {
+        ("transfer", Some(sub_matches)) => {
             let recipient_enc_key = tx_arg_recipient_address_match(&sub_matches);
             let amount = tx_arg_amount_match(&sub_matches);
             let url = tx_arg_url_match(&sub_matches);
 
-            send_tx_with_arg(&mut term, root_dir, &recipient_enc_key[..], amount, url, rng)
+            transfer_tx(&mut term, root_dir, &recipient_enc_key[..], amount, url, rng)
+        },
+        ("asset-issue", Some(sub_matches)) => {
+            let amount = tx_arg_amount_match(&sub_matches);
+            let url = tx_arg_url_match(&sub_matches);
+
+            asset_issue_tx(&mut term, root_dir, amount, url, rng)
+        },
+        ("asset-transfer", Some(sub_matches)) => {
+            let recipient_enc_key = tx_arg_recipient_address_match(&sub_matches);
+            let amount = tx_arg_amount_match(&sub_matches);
+            let url = tx_arg_url_match(&sub_matches);
+            let asset_id = wallet_arg_id_match(&sub_matches);
+
+            asset_transfer_tx(&mut term, root_dir, &recipient_enc_key[..], amount, asset_id, url, rng)
         },
         _ => {
             term.error(matches.usage()).unwrap();
@@ -331,12 +391,12 @@ fn subcommand_tx<R: Rng>(mut term: term::Term, root_dir: PathBuf, matches: &ArgM
 fn tx_commands_definition<'a, 'b>() -> App<'a, 'b> {
     SubCommand::with_name(TX_COMMAND)
         .about("transaction operations")
-        .subcommand(SubCommand::with_name("send")
-            .about("Submit extrinsic to the substrate nodes")
+        .subcommand(SubCommand::with_name("transfer")
+            .about("Submit a transaction to zerochain nodes in order to call confidential_transfer function in encrypted-balances module.")
             .arg(Arg::with_name("amount")
                 .short("a")
                 .long("amount")
-                .help("The coin amount for the confidential transfer. (default: 10)")
+                .help("The coin amount for the confidential transfer.")
                 .takes_value(true)
                 .required(false)
             )
@@ -351,6 +411,54 @@ fn tx_commands_definition<'a, 'b>() -> App<'a, 'b> {
                 .short("u")
                 .long("url")
                 .help("Endpoint to connect zerochain nodes")
+                .takes_value(true)
+                .required(false)
+            )
+        )
+        .subcommand(SubCommand::with_name("asset-issue")
+            .about("Submit a transaction to zerochain nodes in order to call issue function in encrypted-assets module.")
+            .arg(Arg::with_name("amount")
+                .short("a")
+                .long("amount")
+                .help("The issued coin amount")
+                .takes_value(true)
+                .required(false)
+            )
+            .arg(Arg::with_name("url")
+                .short("u")
+                .long("url")
+                .help("Endpoint to connect zerochain nodes")
+                .takes_value(true)
+                .required(false)
+            )
+        )
+        .subcommand(SubCommand::with_name("asset-transfer")
+            .about("Submit a transaction to zerochain nodes in order to call confidential_transfer function in encrypted-assets module.")
+            .arg(Arg::with_name("amount")
+                .short("a")
+                .long("amount")
+                .help("The coin amount for the confidential transfer.")
+                .takes_value(true)
+                .required(false)
+            )
+            .arg(Arg::with_name("recipient-address")
+                .short("to")
+                .long("recipient-address")
+                .help("Recipient's SS58-encoded address")
+                .takes_value(true)
+                .required(false)
+            )
+            .arg(Arg::with_name("url")
+                .short("u")
+                .long("url")
+                .help("Endpoint to connect zerochain nodes")
+                .takes_value(true)
+                .required(false)
+            )
+            .arg(Arg::with_name("asset-id")
+                .short("i")
+                .long("id")
+                .help("Asset id")
                 .takes_value(true)
                 .required(false)
             )
@@ -386,18 +494,11 @@ fn subcommand_debug<R: Rng>(mut term: term::Term, matches: &ArgMatches, rng: &mu
             println!("Preparing paramters...");
 
             let api = Api::init(url);
-            // let alpha = fs::Fs::rand(rng);
-            let alpha = fs::Fs::zero(); // TODO
 
-            let buf_pk = read_zk_params_with_path(PROVING_KEY_PATH);
-            let buf_vk = read_zk_params_with_path(VERIFICATION_KEY_PATH);
+            let proving_key = get_pk(PROVING_KEY_PATH).unwrap();
+            let prepared_vk = get_vk(VERIFICATION_KEY_PATH).unwrap();
 
-            let proving_key = Parameters::<Bls12>::read(&mut &buf_pk[..], true)
-                .expect("should be casted to Parameters<Bls12> type.");
-            let prepared_vk = PreparedVerifyingKey::<Bls12>::read(&mut &buf_vk[..])
-                .expect("should ne casted to PreparedVerifyingKey<Bls12> type");
-
-            let fee_str = api.get_storage("ConfTransfer", "TransactionBaseFee", None)
+            let fee_str = api.get_storage("EncryptedBalances", "TransactionBaseFee", None)
                 .expect("should be fetched TransactionBaseFee from ConfTransfer module of Zerochain.");
             let fee = hexstr_to_u64(fee_str) as u32;
 
@@ -407,7 +508,7 @@ fn subcommand_debug<R: Rng>(mut term: term::Term, matches: &ArgMatches, rng: &mu
                 .into_decryption_key()
                 .expect("should be generated decryption key from seed.");
 
-            let balance_query = BalanceQuery::get_balance_from_decryption_key(&dec_key, api.clone());
+            let balance_query = BalanceQuery::get_encrypted_balance(&dec_key, api.clone());
             let remaining_balance = balance_query.decrypted_balance - amount - fee;
             assert!(balance_query.decrypted_balance >= amount + fee, "Not enough balance you have");
 
@@ -420,7 +521,6 @@ fn subcommand_debug<R: Rng>(mut term: term::Term, matches: &ArgMatches, rng: &mu
             let tx = Transaction::gen_tx(
                 amount,
                 remaining_balance,
-                alpha,
                 &proving_key,
                 &prepared_vk,
                 &recipient_account_id,
@@ -433,7 +533,7 @@ fn subcommand_debug<R: Rng>(mut term: term::Term, matches: &ArgMatches, rng: &mu
 
             println!("Start submitting a transaction to Zerochain...");
 
-            submit_tx(&tx, &api, rng);
+            submit_confidential_transfer(&tx, &api, rng);
 
             println!("Remaining balance is {}", remaining_balance);
         },
@@ -489,9 +589,6 @@ fn subcommand_debug<R: Rng>(mut term: term::Term, matches: &ArgMatches, rng: &mu
 
             let rng = &mut OsRng::new().expect("should be able to construct RNG");
 
-            // let alpha = fs::Fs::rand(rng);
-            let alpha = fs::Fs::zero(); // TODO
-
             let proving_key = Parameters::<Bls12>::read(&mut &buf_pk[..], true).unwrap();
             let prepared_vk = PreparedVerifyingKey::<Bls12>::read(&mut &buf_vk[..]).unwrap();
 
@@ -506,7 +603,6 @@ fn subcommand_debug<R: Rng>(mut term: term::Term, matches: &ArgMatches, rng: &mu
             let tx = Transaction::gen_tx(
                             amount,
                             remaining_balance,
-                            alpha,
                             &proving_key,
                             &prepared_vk,
                             &address_recipient,
@@ -549,7 +645,7 @@ fn subcommand_debug<R: Rng>(mut term: term::Term, matches: &ArgMatches, rng: &mu
             let dec_key = DecryptionKey::read(&mut &decr_key_vec[..])
                 .expect("Reading decryption key faild.");
 
-            let balance_query = BalanceQuery::get_balance_from_decryption_key(&dec_key, api);
+            let balance_query = BalanceQuery::get_encrypted_balance(&dec_key, api);
 
             println!("Decrypted balance: {}", balance_query.decrypted_balance);
             println!("Encrypted balance: {}", balance_query.encrypted_balance_str);

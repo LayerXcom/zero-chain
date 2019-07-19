@@ -9,20 +9,13 @@ edition = "2018"
 
 [dependencies]
 hex-literal = "0.1.0"
-serde_derive = { version = "1.0", optional = true }
+serde = { version = "1.0", optional = true, features = ["derive"] }
 zprimitives = { package = "zerochain-primitives", path = "../../core/primitives", default-features = false }
-
-[dependencies.serde]
-default-features = false
-version = '1.0'
 
 [dependencies.parity-codec]
 default-features = false
-version = '3.1'
-
-[dependencies.parity-codec-derive]
-default-features = false
-version = '3.1'
+features = ['derive']
+version = '3.2'
 
 [dependencies.substrate-primitives]
 default_features = false
@@ -60,8 +53,7 @@ version = '1.0'
 default = ["std"]
 std = [
 	"zprimitives/std",
-	"serde/std",
-	"serde_derive",
+	"serde",
 	"safe-mix/std",
 	"parity-codec/std",
 	"substrate-primitives/std",

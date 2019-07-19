@@ -148,7 +148,7 @@ impl AuraReport {
 	pub fn punish<F>(&self, validator_count: usize, mut punish_with: F)
 		where F: FnMut(usize, usize)
 	{
-		// If all validators have been skipped, then it implies some sort of 
+		// If all validators have been skipped, then it implies some sort of
 		// systematic problem common to all rather than a minority of validators
 		// unfulfilling their specific duties. In this case, it doesn't make
 		// sense to punish anyone, so we guard against it.
