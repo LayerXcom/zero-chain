@@ -20,7 +20,6 @@ RUN curl https://sh.rustup.rs -sSf | sh -s -- -y && \
     ./build.sh && \
     rustup default stable && \
     cargo build --$PROFILE --all && \
-    ./target/$PROFILE/zface snark setup
 
 # ===== SECOND STAGE ======
 
