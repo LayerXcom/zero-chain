@@ -19,7 +19,7 @@ RUN curl https://sh.rustup.rs -sSf | sh -s -- -y && \
     rustup default nightly && \
     ./build.sh && \
     rustup default stable && \
-    cargo build --$PROFILE --all && \
+    cargo build --$PROFILE --all
 
 # ===== SECOND STAGE ======
 
