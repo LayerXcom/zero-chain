@@ -147,7 +147,6 @@ pub fn asset_burn_tx<R: Rng>(
     let issuer_address = EncryptionKey::<Bls12>::from_spending_key(&spending_key, &PARAMS)?;
 
     let amount = 0;
-
     let enc_amount = elgamal::Ciphertext::encrypt(amount, Fs::rand(rng), &issuer_address, p_g, &PARAMS);
 
     println!("Computing zk proof...");

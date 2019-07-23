@@ -6,14 +6,11 @@
 use support::{decl_module, decl_storage, decl_event, StorageMap, dispatch::Result, ensure, Parameter, StorageValue};
 use rstd::prelude::*;
 use rstd::result;
-use parity_codec::Codec;
-use runtime_primitives::traits::{Member, SimpleArithmetic, Zero, One, StaticLookup, MaybeSerializeDebug};
+use runtime_primitives::traits::{SimpleArithmetic, Zero, One};
 use system::ensure_signed;
 use zprimitives::{
     PkdAddress,
     Proof,
-    Ciphertext,
-    SigVerificationKey,
     ElgamalCiphertext,
     SigVk,
 };
@@ -34,7 +31,7 @@ pub trait Trait: system::Trait + encrypted_balances::Trait {
 
 struct TypedParams {
     zkproof: bellman_verifier::Proof<Bls12>,
-    issuer: EncryptionKey<Bls12>,
+    account: EncryptionKey<Bls12>,
     total: elgamal::Ciphertext<Bls12>,
     rvk: PublicKey<Bls12>,
     dummy_fee: elgamal::Ciphertext<Bls12>,
@@ -77,8 +74,8 @@ decl_module! {
             // 3. Encryption integrity
             if !<encrypted_balances::Module<T>>::validate_proof(
                 &typed.zkproof,
-                &typed.issuer,
-                &typed.issuer,
+                &typed.account,
+                &typed.account,
                 &typed.total,
                 &typed.total,
                 &typed.dummy_balance,
@@ -206,8 +203,8 @@ decl_module! {
             // 1. Spend authority verification
             if !<encrypted_balances::Module<T>>::validate_proof(
                 &typed.zkproof,
-                &typed.issuer,
-                &typed.issuer,
+                &typed.account,
+                &typed.account,
                 &typed.total,
                 &typed.total,
                 &typed.dummy_balance,
@@ -219,9 +216,10 @@ decl_module! {
             }
 
             let balance = <EncryptedBalance<T>>::take((id, owner.clone()))
-                .ok_or("balance should exist.")?;
+                .map_or(Default::default(), |e| e);
+
             let pending_transfer = <PendingTransfer<T>>::take((id, owner.clone()))
-                .ok_or("pending_transfer should exits.")?;
+                .map_or(Default::default(), |e| e);
 
             Self::deposit_event(RawEvent::Destroyed(id, owner, balance, pending_transfer));
         }
@@ -280,7 +278,7 @@ impl<T: Trait> Module<T> {
 
     fn into_types(
         zkproof: &Proof,
-        issuer: &PkdAddress,
+        account: &PkdAddress,
         total: &T::EncryptedBalance,
         rvk: &T::AccountId,
         fee: &T::EncryptedBalance,
@@ -292,9 +290,9 @@ impl<T: Trait> Module<T> {
             .into_proof()
             .ok_or("Invalid zkproof")?;
 
-        let typed_issuer = issuer
+        let typed_account = account
             .into_encryption_key()
-            .ok_or("Invalid issuer")?;
+            .ok_or("Invalid account")?;
 
         let typed_total = total
             .into_ciphertext()
@@ -314,7 +312,7 @@ impl<T: Trait> Module<T> {
 
         Ok(TypedParams {
             zkproof: typed_zkproof,
-            issuer: typed_issuer,
+            account: typed_account,
             total: typed_total,
             rvk: typed_rvk,
             dummy_fee: typed_fee,
@@ -665,8 +663,6 @@ mod tests {
         with_externalities(&mut new_test_ext(), || {
             let alice_seed = b"Alice                           ".to_vec();
             let rng = &mut XorShiftRng::from_seed([0x3dbe6259, 0x8d313d76, 0x3237db17, 0xe5bc0654]);
-            let bob_addr: [u8; 32] = hex!("45e66da531088b55dcb3b273ca825454d79d2d1d5c4fa2ba4a12c1fa1ccd6389");
-            let recipient_account_id = tEncryptionKey::<tBls12>::read(&mut &bob_addr[..], &PARAMS).unwrap();
 
             // Get setuped parameters to compute zk proving.
             let proving_key = get_pk("../../zface/tests/proving.dat").unwrap();
@@ -689,7 +685,7 @@ mod tests {
                 0,
                 &proving_key,
                 &prepared_vk,
-                &recipient_account_id,
+                &enc_key,
                 &spending_key,
                 dummy_balance,
                 rng,
