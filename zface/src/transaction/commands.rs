@@ -354,7 +354,7 @@ pub fn subscribe_event(api: Api, remaining_balance: u32) {
                                             _amount_sender, _amount_recipient,
                                             _fee_sender, _enc_balances, _sig_vk
                                         ) => println!("Submitting transaction is completed successfully. \n Remaining balance is {}", remaining_balance),
-                                        encrypted_assets::RawEvent::Destroyed(_asset_id, _address, _balance)
+                                        encrypted_assets::RawEvent::Destroyed(_asset_id, _address, _balance, _pending_transfer)
                                             => println!("destroyed coins."),
                                         encrypted_assets::RawEvent::InvalidZkProof() => println!("Invalid zk proof."),
                                     }
