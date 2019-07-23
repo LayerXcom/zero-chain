@@ -47,8 +47,6 @@ pub fn asset_issue_tx<R: Rng>(
 
     let enc_amount = elgamal::Ciphertext::encrypt(amount, Fs::rand(rng), &issuer_address, p_g, &PARAMS);
 
-    // let zero = elgamal::Ciphertext::zero();
-
     println!("Computing zk proof...");
     let tx = Transaction::gen_tx(
         amount,
@@ -123,6 +121,52 @@ pub fn asset_transfer_tx<R: Rng>(
     println!("Start submitting a transaction to Zerochain...");
     subscribe_event(api.clone(), remaining_balance);
     submit_asset_transfer(asset_id, &tx, &api, rng);
+
+    Ok(())
+}
+
+pub fn asset_burn_tx<R: Rng>(
+    term: &mut Term,
+    root_dir: PathBuf,
+    asset_id: u32,
+    url: Url,
+    rng: &mut R,
+) -> Result<()> {
+    // user can enter password first.
+    let password = prompt_password(term).expect("Invalid password");
+    println!("Preparing paramters...");
+
+    let api = Api::init(url);
+    let p_g = FixedGenerators::NoteCommitmentRandomness; // 1
+
+    // Get setuped parameters to compute zk proving.
+    let proving_key = get_pk(PROVING_KEY_PATH)?;
+    let prepared_vk = get_vk(VERIFICATION_KEY_PATH)?;
+
+    let spending_key = spending_key_from_keystore(root_dir, &password[..])?;
+    let issuer_address = EncryptionKey::<Bls12>::from_spending_key(&spending_key, &PARAMS)?;
+
+    let amount = 0;
+
+    let enc_amount = elgamal::Ciphertext::encrypt(amount, Fs::rand(rng), &issuer_address, p_g, &PARAMS);
+
+    println!("Computing zk proof...");
+    let tx = Transaction::gen_tx(
+        amount,
+        0, // dummy value for remaining balance
+        &proving_key,
+        &prepared_vk,
+        &issuer_address,
+        &spending_key,
+        enc_amount,
+        rng,
+        0
+        )
+    .expect("fails to generate the tx");
+
+    println!("Start submitting a transaction to Zerochain...");
+    subscribe_event(api.clone(), amount);
+    submit_asset_burn(asset_id, &tx, &api, rng);
 
     Ok(())
 }
@@ -264,6 +308,19 @@ pub fn submit_asset_transfer<R: Rng>(asset_id: u32, tx: &Transaction, api: &Api,
         zCiphertext::from_slice(&tx.enc_amount_sender[..]),
         zCiphertext::from_slice(&tx.enc_amount_recipient[..]),
         zCiphertext::from_slice(&tx.enc_fee[..]),
+    ));
+
+    submit_tx(calls, tx, api, rng);
+}
+
+pub fn submit_asset_burn<R: Rng>(asset_id: u32, tx: &Transaction, api: &Api, rng: &mut R) {
+    let calls = Call::EncryptedAssets(EncryptedAssetsCall::destroy(
+        Proof::from_slice(&tx.proof[..]),
+        PkdAddress::from_slice(&tx.address_recipient[..]),
+        asset_id,
+        zCiphertext::from_slice(&tx.enc_amount_recipient[..]),
+        zCiphertext::from_slice(&tx.enc_fee[..]),
+        zCiphertext::from_slice(&tx.enc_balance[..])
     ));
 
     submit_tx(calls, tx, api, rng);
