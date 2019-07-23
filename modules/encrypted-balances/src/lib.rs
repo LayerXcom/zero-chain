@@ -1,7 +1,7 @@
 //! A module for dealing with confidential transfer
 #![cfg_attr(not(feature = "std"), no_std)]
 
-use support::{decl_module, decl_storage, decl_event, StorageMap, dispatch::Result, ensure, Parameter};
+use support::{decl_module, decl_storage, decl_event, StorageMap, dispatch::Result, Parameter};
 use rstd::prelude::*;
 use rstd::result;
 use bellman_verifier::verify_proof;
@@ -288,10 +288,6 @@ impl<T: Trait> Module<T> {
             rvk:typed_rvk,
             fee_sender: typed_fee_sender,
         })
-    }
-
-    fn total_balance(who: &PkdAddress) -> T::EncryptedBalance {
-        unimplemented!();
     }
 
     /// Get current epoch based on current block height.

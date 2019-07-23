@@ -21,8 +21,7 @@ use proofs::{
     PARAMS,
     };
 use primitives::{hexdisplay::{HexDisplay, AsBytesRef}, crypto::Ss58Codec};
-use pairing::{bls12_381::Bls12, Field};
-use scrypto::jubjub::fs;
+use pairing::bls12_381::Bls12;
 
 use bellman::groth16::{Parameters, PreparedVerifyingKey};
 use polkadot_rs::{Api, Url, hexstr_to_u64};

@@ -3,7 +3,7 @@
 // Ensure we're `no_std` when compiling for Wasm.
 #![cfg_attr(not(feature = "std"), no_std)]
 
-use support::{decl_module, decl_storage, decl_event, StorageMap, dispatch::Result, ensure, Parameter, StorageValue};
+use support::{decl_module, decl_storage, decl_event, StorageMap, Parameter, StorageValue};
 use rstd::prelude::*;
 use rstd::result;
 use runtime_primitives::traits::{SimpleArithmetic, Zero, One};
