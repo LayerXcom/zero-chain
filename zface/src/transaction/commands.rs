@@ -402,16 +402,16 @@ pub fn subscribe_event(api: Api, remaining_balance: u32) {
                                 Event::encrypted_assets(enc_assets) => {
                                     match &enc_assets {
                                         encrypted_assets::RawEvent::Issued(
-                                            _asset_id, _address, _total
-                                        ) => println!("Submitting transaction is completed successfully. \n The total issued coin is {}", remaining_balance),
+                                            asset_id, _address, _total
+                                        ) => println!("Submitting transaction is completed successfully. \nThe total issued coin is {}. \nThe asset id is {}.", remaining_balance, asset_id),
                                         encrypted_assets::RawEvent::ConfidentialAssetTransferred(
-                                            _asset_id, _zkproof,
+                                            asset_id, _zkproof,
                                             _address_sender, _address_recipient,
                                             _amount_sender, _amount_recipient,
                                             _fee_sender, _enc_balances, _sig_vk
-                                        ) => println!("Submitting transaction is completed successfully. \n Remaining balance is {}", remaining_balance),
-                                        encrypted_assets::RawEvent::Destroyed(_asset_id, _address, _balance, _pending_transfer)
-                                            => println!("destroyed coins."),
+                                        ) => println!("Submitting transaction is completed successfully. \nRemaining balance is {}. \nThe asset id is {}.", remaining_balance, asset_id),
+                                        encrypted_assets::RawEvent::Destroyed(asset_id, _address, _balance, _pending_transfer)
+                                            => println!("destroyed coins. \nThe asset id is {}.", asset_id),
                                         encrypted_assets::RawEvent::InvalidZkProof() => println!("Invalid zk proof."),
                                     }
                                 },
