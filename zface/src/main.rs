@@ -21,8 +21,7 @@ use proofs::{
     PARAMS,
     };
 use primitives::{hexdisplay::{HexDisplay, AsBytesRef}, crypto::Ss58Codec};
-use pairing::{bls12_381::Bls12, Field};
-use scrypto::jubjub::fs;
+use pairing::bls12_381::Bls12;
 
 use bellman::groth16::{Parameters, PreparedVerifyingKey};
 use polkadot_rs::{Api, Url, hexstr_to_u64};
@@ -379,6 +378,11 @@ fn subcommand_tx<R: Rng>(mut term: term::Term, root_dir: PathBuf, matches: &ArgM
 
             asset_transfer_tx(&mut term, root_dir, &recipient_enc_key[..], amount, asset_id, url, rng)
         },
+        ("asset-burn", Some(sub_matches)) => {
+            let url = tx_arg_url_match(&sub_matches);
+            let asset_id = wallet_arg_id_match(&sub_matches);
+            asset_burn_tx(&mut term, root_dir, asset_id, url, rng)
+        },
         _ => {
             term.error(matches.usage()).unwrap();
             ::std::process::exit(1)
@@ -448,6 +452,23 @@ fn tx_commands_definition<'a, 'b>() -> App<'a, 'b> {
                 .takes_value(true)
                 .required(false)
             )
+            .arg(Arg::with_name("url")
+                .short("u")
+                .long("url")
+                .help("Endpoint to connect zerochain nodes")
+                .takes_value(true)
+                .required(false)
+            )
+            .arg(Arg::with_name("asset-id")
+                .short("i")
+                .long("id")
+                .help("Asset id")
+                .takes_value(true)
+                .required(false)
+            )
+        )
+        .subcommand(SubCommand::with_name("asset-burn")
+            .about("Submit a transaction to zerochain in order to call destroy function in encrypted-assets module.")
             .arg(Arg::with_name("url")
                 .short("u")
                 .long("url")

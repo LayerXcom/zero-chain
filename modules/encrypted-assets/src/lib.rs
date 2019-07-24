@@ -3,17 +3,14 @@
 // Ensure we're `no_std` when compiling for Wasm.
 #![cfg_attr(not(feature = "std"), no_std)]
 
-use support::{decl_module, decl_storage, decl_event, StorageMap, dispatch::Result, ensure, Parameter, StorageValue};
+use support::{decl_module, decl_storage, decl_event, StorageMap, Parameter, StorageValue};
 use rstd::prelude::*;
 use rstd::result;
-use parity_codec::Codec;
-use runtime_primitives::traits::{Member, SimpleArithmetic, Zero, One, StaticLookup, MaybeSerializeDebug};
+use runtime_primitives::traits::{SimpleArithmetic, Zero, One};
 use system::ensure_signed;
 use zprimitives::{
     PkdAddress,
     Proof,
-    Ciphertext,
-    SigVerificationKey,
     ElgamalCiphertext,
     SigVk,
 };
@@ -34,7 +31,7 @@ pub trait Trait: system::Trait + encrypted_balances::Trait {
 
 struct TypedParams {
     zkproof: bellman_verifier::Proof<Bls12>,
-    issuer: EncryptionKey<Bls12>,
+    account: EncryptionKey<Bls12>,
     total: elgamal::Ciphertext<Bls12>,
     rvk: PublicKey<Bls12>,
     dummy_fee: elgamal::Ciphertext<Bls12>,
@@ -71,16 +68,14 @@ decl_module! {
             )
             .map_err(|_| "Failed to convert into types.")?;
 
-            // let zero = elgamal::Ciphertext::zero();
-
             // Verify a zk proof
             // 1. Spend authority verification
             // 2. Range proof of issued amount
             // 3. Encryption integrity
             if !<encrypted_balances::Module<T>>::validate_proof(
                 &typed.zkproof,
-                &typed.issuer,
-                &typed.issuer,
+                &typed.account,
+                &typed.account,
                 &typed.total,
                 &typed.total,
                 &typed.dummy_balance,
@@ -186,18 +181,48 @@ decl_module! {
             origin,
             zkproof: Proof,
             owner: PkdAddress,
-            id: T::AssetId
+            id: T::AssetId,
+            dummy_amount: T::EncryptedBalance,
+            dummy_fee: T::EncryptedBalance,
+            dummy_balance: T::EncryptedBalance
         ) {
-            let origin = ensure_signed(origin)?;
+            let rvk = ensure_signed(origin)?;
 
-            // TODO: Verifying zk proof
+            // Convert provided parametrs into typed ones.
+            let typed = Self::into_types(
+                &zkproof,
+                &owner,
+                &dummy_amount,
+                &rvk,
+                &dummy_fee,
+                &dummy_balance
+            )
+            .map_err(|_| "Failed to convert into types.")?;
 
-            // let balance = <EncryptedBalances<T>>::take((id, owner.clone()));
+            // Verify the zk proof
+            // 1. Spend authority verification
+            if !<encrypted_balances::Module<T>>::validate_proof(
+                &typed.zkproof,
+                &typed.account,
+                &typed.account,
+                &typed.total,
+                &typed.total,
+                &typed.dummy_balance,
+                &typed.rvk,
+                &typed.dummy_fee,
+            )? {
+                Self::deposit_event(RawEvent::InvalidZkProof());
+                return Err("Invalid zkproof");
+            }
 
-            // Self::deposit_event(RawEvent::Destroyed(id, owner, balance));
+            let balance = <EncryptedBalance<T>>::take((id, owner.clone()))
+                .map_or(Default::default(), |e| e);
 
+            let pending_transfer = <PendingTransfer<T>>::take((id, owner.clone()))
+                .map_or(Default::default(), |e| e);
+
+            Self::deposit_event(RawEvent::Destroyed(id, owner, balance, pending_transfer));
         }
-
     }
 }
 
@@ -216,7 +241,7 @@ decl_event!(
             EncryptedBalance, EncryptedBalance, EncryptedBalance, AccountId
         ),
         /// Some encrypted assets were destroyed.
-        Destroyed(AssetId, PkdAddress, EncryptedBalance),
+        Destroyed(AssetId, PkdAddress, EncryptedBalance, EncryptedBalance),
         InvalidZkProof(),
     }
 );
@@ -253,7 +278,7 @@ impl<T: Trait> Module<T> {
 
     fn into_types(
         zkproof: &Proof,
-        issuer: &PkdAddress,
+        account: &PkdAddress,
         total: &T::EncryptedBalance,
         rvk: &T::AccountId,
         fee: &T::EncryptedBalance,
@@ -265,9 +290,9 @@ impl<T: Trait> Module<T> {
             .into_proof()
             .ok_or("Invalid zkproof")?;
 
-        let typed_issuer = issuer
+        let typed_account = account
             .into_encryption_key()
-            .ok_or("Invalid issuer")?;
+            .ok_or("Invalid account")?;
 
         let typed_total = total
             .into_ciphertext()
@@ -287,7 +312,7 @@ impl<T: Trait> Module<T> {
 
         Ok(TypedParams {
             zkproof: typed_zkproof,
-            issuer: typed_issuer,
+            account: typed_account,
             total: typed_total,
             rvk: typed_rvk,
             dummy_fee: typed_fee,
@@ -630,6 +655,54 @@ mod tests {
                 Ciphertext::from_slice(&tx.enc_amount_recipient[..]),
                 Ciphertext::from_slice(&tx.enc_fee[..]),
             ));
+        })
+    }
+
+    #[test]
+    fn test_destroy_from_zface() {
+        with_externalities(&mut new_test_ext(), || {
+            let alice_seed = b"Alice                           ".to_vec();
+            let rng = &mut XorShiftRng::from_seed([0x3dbe6259, 0x8d313d76, 0x3237db17, 0xe5bc0654]);
+
+            // Get setuped parameters to compute zk proving.
+            let proving_key = get_pk("../../zface/tests/proving.dat").unwrap();
+            let prepared_vk = get_vk("../../zface/tests/verification.dat").unwrap();
+
+            let spending_key = tSpendingKey::<tBls12>::from_seed(&alice_seed);
+            let enc_key = tEncryptionKey::<tBls12>::from_seed(&alice_seed[..], &PARAMS).unwrap();
+            let p_g = tFixedGenerators::NoteCommitmentRandomness;
+
+            let dummy_balance  = telgamal::Ciphertext::encrypt(
+                0,
+                tFs::one(),
+                &enc_key,
+                p_g,
+                &*PARAMS
+            );
+
+            let tx = Transaction::gen_tx(
+                0,
+                0,
+                &proving_key,
+                &prepared_vk,
+                &enc_key,
+                &spending_key,
+                dummy_balance,
+                rng,
+                0
+                )
+            .expect("fails to generate the tx");
+
+            assert_ok!(EncryptedAssets::destroy(
+                Origin::signed(SigVerificationKey::from_slice(&tx.rvk[..])),
+                Proof::from_slice(&tx.proof[..]),
+                PkdAddress::from_slice(&tx.address_recipient[..]),
+                0,
+                Ciphertext::from_slice(&tx.enc_amount_recipient[..]),
+                Ciphertext::from_slice(&tx.enc_fee[..]),
+                Ciphertext::from_slice(&tx.enc_balance[..])
+            ));
+
         })
     }
 }
