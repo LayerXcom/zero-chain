@@ -211,7 +211,7 @@ construct_runtime!(
 		UncheckedExtrinsic = UncheckedExtrinsic
 	{
 		EncryptedBalances: encrypted_balances::{Module, Call, Storage, Event<T>, Config<T>},
-		EncryptedAssets: encrypted_assets::{Module, Call, Storage, Event<T>, Config<T>},
+		EncryptedAssets: encrypted_assets::{Module, Call, Storage, Event<T>},
 		System: system::{default, Log(ChangesTrieRoot)},
 		Timestamp: timestamp::{Module, Call, Storage, Config<T>, Inherent},
 		Consensus: consensus::{Module, Call, Storage, Config<T>, Log(AuthoritiesChange), Inherent},

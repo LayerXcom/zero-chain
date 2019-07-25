@@ -1,7 +1,7 @@
 use primitives::{ed25519, sr25519, Pair, crypto::Ss58Codec};
 use zerochain_runtime::{
 	AccountId, GenesisConfig, ConsensusConfig, TimestampConfig, BalancesConfig,
-	SudoConfig, IndicesConfig, EncryptedBalancesConfig, EncryptedAssetsConfig
+	SudoConfig, IndicesConfig, EncryptedBalancesConfig,
 };
 use substrate_service;
 use ed25519::Public as AuthorityId;
@@ -106,8 +106,6 @@ impl Alternative {
 }
 
 fn testnet_genesis(initial_authorities: Vec<AuthorityId>, endowed_accounts: Vec<AccountId>, root_key: AccountId) -> GenesisConfig {
-	let balance_init = alice_balance_init();
-	let epoch_init = alice_epoch_init();
 	GenesisConfig {
 		consensus: Some(ConsensusConfig {
 			code: include_bytes!("../runtime/wasm/target/wasm32-unknown-unknown/release/zerochain_runtime_wasm.compact.wasm").to_vec(),
@@ -133,19 +131,19 @@ fn testnet_genesis(initial_authorities: Vec<AuthorityId>, endowed_accounts: Vec<
 			key: root_key,
 		}),
 		encrypted_balances: Some(EncryptedBalancesConfig {
-			encrypted_balance: vec![balance_init.clone()],
-			last_rollover: vec![epoch_init],
+			encrypted_balance:  alice_balance_init(),
+			last_rollover: alice_epoch_init(),
 			epoch_length: 1,
 			transaction_base_fee: 1,
 			verifying_key: get_pvk(),
 		}),
-		encrypted_assets: Some(EncryptedAssetsConfig {
-			encrypted_balance: vec![((0, balance_init.0), balance_init.1)],
-			last_rollover: vec![((0, epoch_init.0), epoch_init.1)],
-            epoch_length: vec![(0, 1)],
-            transaction_base_fee: vec![(0, 1)],
-			_genesis_phantom_data: Default::default(),
-		})
+		// encrypted_assets: Some(EncryptedAssetsConfig {
+		// 	encrypted_balance: vec![((0, balance_init.0), balance_init.1)],
+		// 	last_rollover: vec![((0, epoch_init.0), epoch_init.1)],
+        //     epoch_length: vec![(0, 1)],
+        //     transaction_base_fee: vec![(0, 1)],
+		// 	_genesis_phantom_data: Default::default(),
+		// })
 	}
 }
 
@@ -160,30 +158,49 @@ fn get_pvk() -> PreparedVk {
 	PreparedVk::from_slice(&buf_vk[..])
 }
 
-fn alice_balance_init() -> (PkdAddress, Ciphertext) {
+fn alice_balance_init() -> Vec<(PkdAddress, Ciphertext)> {
 	let enc_key = get_alice_enc_key();
-	let alice_value = 10_000 as u32;
+	let alice_value = 100_000 as u32;
 	let p_g = FixedGenerators::Diversifier; // 1 same as NoteCommitmentRandomness;
 
-	// The default balance is not encrypted with randomness.
-	let enc_alice_bal = elgamal::Ciphertext::encrypt(alice_value, fs::Fs::one(), &enc_key, p_g, &PARAMS);
-
-	(PkdAddress::from_encryption_key(&enc_key), Ciphertext::from_ciphertext(&enc_alice_bal))
+	let mut res = vec![];
+	for key in enc_key {
+		// The default balance is not encrypted with randomness.
+		let enc_bal = elgamal::Ciphertext::encrypt(alice_value, fs::Fs::one(), &key, p_g, &PARAMS);
+		res.push((PkdAddress::from_encryption_key(&key), Ciphertext::from_ciphertext(&enc_bal)))
+	}
+	res
 }
 
-fn alice_epoch_init() -> (PkdAddress, u64) {
+fn alice_epoch_init() -> Vec<(PkdAddress, u64)> {
 	let enc_key = get_alice_enc_key();
+	let mut res = vec![];
 
-	(PkdAddress::from_encryption_key(&enc_key), 0)
+	for key in enc_key {
+		res.push((PkdAddress::from_encryption_key(&key), 0))
+	}
+
+	res
 }
 
-fn get_alice_enc_key() -> EncryptionKey<Bls12> {
+fn get_alice_enc_key() -> Vec<EncryptionKey<Bls12>> {
 	// use zface::ss58::EncryptionKeyBytes;
 	// let ss58_address = "5DC4kJ84b4KfVyddcFMYfy5skTJWVtxtWRETZo2i4nh8Ao1i";
 	// let enc_key_bytes = EncryptionKeyBytes::from_ss58check(ss58_address).unwrap();
 	// let enc_key = EncryptionKey::read(&mut &enc_key_bytes.0[..], &*PARAMS).unwrap();
-	let alice_seed = b"Alice                           ".to_vec();
-	let enc_key = EncryptionKey::<Bls12>::from_seed(&&alice_seed, &*PARAMS)
-		.expect("should be generated encryption key from seed.");
-	enc_key
+	let alice = b"Alice                           ".to_vec();
+	let bob = b"Bob                             ".to_vec();
+	let charlie = b"Charlie                         ".to_vec();
+	let dave = b"Dave                            ".to_vec();
+	let eve = b"Eve                             ".to_vec();
+	let ferdie = b"Ferdie                          ".to_vec();
+
+	let mut res = vec![];
+	for seed in [alice, bob, charlie, dave, eve, ferdie].iter() {
+		let enc_key = EncryptionKey::<Bls12>::from_seed(&seed[..], &*PARAMS)
+			.expect("should be generated encryption key from seed.");
+		res.push(enc_key)
+	}
+
+	res
 }
