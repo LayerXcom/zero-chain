@@ -134,7 +134,7 @@ fn testnet_genesis(initial_authorities: Vec<AuthorityId>, endowed_accounts: Vec<
 			encrypted_balance:  alice_balance_init(),
 			last_rollover: alice_epoch_init(),
 			epoch_length: 1,
-			transaction_base_fee: 1,
+			transaction_base_fee: 0,
 			verifying_key: get_pvk(),
 		}),
 		// encrypted_assets: Some(EncryptedAssetsConfig {
