@@ -119,7 +119,13 @@ pub fn asset_transfer_tx<R: Rng>(
     .expect("fails to generate the tx");
 
     println!("Start submitting a transaction to Zerochain...");
-    subscribe_event(api.clone(), remaining_balance);
+
+    if recipient_account_id == EncryptionKey::from_decryption_key(&dec_key, &*PARAMS) {
+        subscribe_event(api.clone(), remaining_balance + amount);
+    } else {
+        subscribe_event(api.clone(), remaining_balance);
+    }
+
     submit_asset_transfer(asset_id, &tx, &api, rng);
 
     Ok(())
@@ -220,7 +226,11 @@ pub fn transfer_tx<R: Rng>(
     .expect("fails to generate the tx");
 
     println!("Start submitting a transaction to Zerochain...");
-    subscribe_event(api.clone(), remaining_balance);
+    if recipient_account_id == EncryptionKey::from_decryption_key(&dec_key, &*PARAMS) {
+        subscribe_event(api.clone(), remaining_balance + amount);
+    } else {
+        subscribe_event(api.clone(), remaining_balance);
+    }
     submit_confidential_transfer(&tx, &api, rng);
 
     Ok(())
