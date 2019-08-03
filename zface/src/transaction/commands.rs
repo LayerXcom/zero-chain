@@ -92,10 +92,7 @@ pub fn asset_transfer_tx<R: Rng>(
     let dec_key = ProofGenerationKey::<Bls12>::from_spending_key(&spending_key, &PARAMS)
         .into_decryption_key()?;
 
-    // Get set fee amount as `TransactionBaseFee` in encrypyed-balances module.
-    let fee_str = api.get_storage("EncryptedAssets", "TransactionBaseFee", Some(asset_id.encode()))
-        .expect("should be fetched TransactionBaseFee from ConfTransfer module of Zerochain.");
-    let fee = hexstr_to_u64(fee_str) as u32;
+    let fee = get_fee(&api);
 
     let balance_query = BalanceQuery::get_encrypted_asset(asset_id, &dec_key, api.clone());
     let remaining_balance = balance_query.decrypted_balance - amount - fee;
@@ -199,10 +196,7 @@ pub fn transfer_tx<R: Rng>(
     let dec_key = ProofGenerationKey::<Bls12>::from_spending_key(&spending_key, &PARAMS)
         .into_decryption_key()?;
 
-    // Get set fee amount as `TransactionBaseFee` in encrypyed-balances module.
-    let fee_str = api.get_storage("EncryptedBalances", "TransactionBaseFee", None)
-        .expect("should be fetched TransactionBaseFee from ConfTransfer module of Zerochain.");
-    let fee = hexstr_to_u64(fee_str) as u32;
+    let fee = get_fee(&api);
 
     let balance_query = BalanceQuery::get_encrypted_balance(&dec_key, api.clone());
     let remaining_balance = balance_query.decrypted_balance - amount - fee;
@@ -234,6 +228,13 @@ pub fn transfer_tx<R: Rng>(
     submit_confidential_transfer(&tx, &api, rng);
 
     Ok(())
+}
+
+// Get set fee amount as `TransactionBaseFee` in encrypyed-balances module.
+fn get_fee(api: &Api) -> u32 {
+    let fee_str = api.get_storage("EncryptedBalances", "TransactionBaseFee", None)
+        .expect("should be fetched TransactionBaseFee from ConfTransfer module of Zerochain.");
+    hexstr_to_u64(fee_str) as u32
 }
 
 pub fn spending_key_from_keystore(

@@ -257,14 +257,6 @@ decl_storage! {
         /// A last epoch for rollover
         pub LastRollOver get(last_rollover) config() : map (T::AssetId, PkdAddress) => Option<T::BlockNumber>;
 
-        /// Global epoch length for rollover.
-        /// The longer epoch length is, the longer rollover time is.
-        /// This parameter should be fixed based on trade-off between UX and security in terms of front-running attacks.
-        pub EpochLength get(epoch_length) config() : map T::AssetId => T::BlockNumber;
-
-        /// A fee to be paid for making a transaction; the base.
-        pub TransactionBaseFee get(transaction_base_fee) config() : map T::AssetId => FeeAmount;
-
         /// The next asset identifier up for grabs.
         pub NextAssetId get(next_asset_id): T::AssetId;
 
@@ -320,16 +312,10 @@ impl<T: Trait> Module<T> {
         })
     }
 
-    /// Get current epoch of specified asset id based on current block height.
-    fn get_current_epoch(asset_id: T::AssetId) -> T::BlockNumber {
-        let current_height = <system::Module<T>>::block_number();
-        current_height / Self::epoch_length(asset_id)
-    }
-
     // PUBLIC MUTABLES
 
     pub fn rollover(addr: &PkdAddress, asset_id: T::AssetId) -> result::Result<elgamal::Ciphertext<Bls12>, &'static str> {
-        let current_epoch = Self::get_current_epoch(asset_id);
+        let current_epoch = <encrypted_balances::Module<T>>::get_current_epoch();
         let addr_id = (asset_id, *addr);
         let zero = elgamal::Ciphertext::zero();
 
@@ -544,8 +530,6 @@ mod tests {
         let _ = GenesisConfig::<Test>{
             encrypted_balance: vec![((0, balance_init.0), balance_init.1)],
 			last_rollover: vec![((0, epoch_init.0), epoch_init.1)],
-            epoch_length: vec![(0, 1)],
-            transaction_base_fee: vec![(0, 1)],
             _genesis_phantom_data: Default::default()
         }.assimilate_storage(&mut t, &mut c);
 
