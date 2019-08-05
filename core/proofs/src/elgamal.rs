@@ -12,8 +12,7 @@ use blake2_rfc::{
     blake2b::{Blake2b, Blake2bResult}
 };
 use std::io;
-
-pub const ELGAMAL_EXTEND_PERSONALIZATION: &'static [u8; 16] = b"zech_elgamal_ext";
+use zcrypto::constants::ELGAMAL_EXTEND_PERSONALIZATION;
 
 #[derive(Clone, PartialEq, Debug)]
 pub struct Ciphertext<E: JubjubEngine> {

@@ -63,7 +63,6 @@ impl AsBytesRef for Ciphertext {
     }
 }
 
-
 #[cfg(test)]
 mod tests {
     use super::*;

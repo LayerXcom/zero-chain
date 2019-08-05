@@ -1,3 +1,8 @@
+#[cfg(feature = "std")]
+use ::std::u32;
+#[cfg(not(feature = "std"))]
+use crate::std::u32;
+
 use jubjub::curve::{
         JubjubEngine,
         JubjubParams,
@@ -5,18 +10,11 @@ use jubjub::curve::{
         PrimeOrder,
         FixedGenerators,
 };
-
-#[cfg(feature = "std")]
-use ::std::u32;
-#[cfg(not(feature = "std"))]
-use crate::std::u32;
-
 use blake2_rfc::{
     blake2b::{Blake2b, Blake2bResult}
 };
 use pairing::io;
-
-pub const ELGAMAL_EXTEND_PERSONALIZATION: &'static [u8; 16] = b"zech_elgamal_ext";
+use crate::constants::ELGAMAL_EXTEND_PERSONALIZATION;
 
 #[derive(Clone, PartialEq)]
 pub struct Ciphertext<E: JubjubEngine> {
