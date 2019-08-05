@@ -183,7 +183,33 @@ pub fn transfer_tx<R: Rng>(
 ) -> Result<()> {
     // user can enter password first.
     let password = prompt_password(term)?;
+    let spending_key = spending_key_from_keystore(root_dir, &password[..])?;
 
+    inner_transfer_tx(spending_key, recipient_enc_key, amount, url, rng)?;
+
+    Ok(())
+}
+
+pub fn transfer_tx_for_debug<R: Rng>(
+    seed: &[u8],
+    recipient_enc_key: &[u8],
+    amount: u32,
+    url: Url,
+    rng: &mut R,
+) -> Result<()> {
+    let spending_key = SpendingKey::from_seed(seed);
+    inner_transfer_tx(spending_key, recipient_enc_key, amount, url, rng)?;
+
+    Ok(())
+}
+
+fn inner_transfer_tx<R: Rng>(
+    spending_key: SpendingKey::<Bls12>,
+    recipient_enc_key: &[u8],
+    amount: u32,
+    url: Url,
+    rng: &mut R
+) -> Result<()> {
     println!("Preparing paramters...");
 
     let api = Api::init(url);
@@ -192,7 +218,7 @@ pub fn transfer_tx<R: Rng>(
     let proving_key = get_pk(PROVING_KEY_PATH)?;
     let prepared_vk = get_vk(VERIFICATION_KEY_PATH)?;
 
-    let spending_key = spending_key_from_keystore(root_dir, &password[..])?;
+
     let dec_key = ProofGenerationKey::<Bls12>::from_spending_key(&spending_key, &PARAMS)
         .into_decryption_key()?;
 

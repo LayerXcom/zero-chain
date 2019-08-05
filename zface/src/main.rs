@@ -196,7 +196,6 @@ fn subcommand_wallet<R: Rng>(mut term: term::Term, root_dir: PathBuf, matches: &
         },
         ("balance", Some(sub_matches)) => {
             println!("Getting encrypted balance from zerochain");
-            // let url = Url::Custom("ws://0.0.0.0:9944".to_string());
             let api = Api::init(tx_arg_url_match(&sub_matches));
 
             let dec_key = load_dec_key(&mut term, root_dir)
@@ -512,51 +511,7 @@ fn subcommand_debug<R: Rng>(mut term: term::Term, matches: &ArgMatches, rng: &mu
             let amount = tx_arg_amount_match(&sub_matches);
             let url = tx_arg_url_match(&sub_matches);
 
-            println!("Preparing paramters...");
-
-            let api = Api::init(url);
-
-            let proving_key = get_pk(PROVING_KEY_PATH).unwrap();
-            let prepared_vk = get_vk(VERIFICATION_KEY_PATH).unwrap();
-
-            let fee_str = api.get_storage("EncryptedBalances", "TransactionBaseFee", None)
-                .expect("should be fetched TransactionBaseFee from ConfTransfer module of Zerochain.");
-            let fee = hexstr_to_u64(fee_str) as u32;
-
-            let spending_key = SpendingKey::from_seed(&seed[..]);
-
-            let dec_key = ProofGenerationKey::<Bls12>::from_spending_key(&spending_key, &PARAMS)
-                .into_decryption_key()
-                .expect("should be generated decryption key from seed.");
-
-            let balance_query = BalanceQuery::get_encrypted_balance(&dec_key, api.clone());
-            let remaining_balance = balance_query.decrypted_balance - amount - fee;
-            assert!(balance_query.decrypted_balance >= amount + fee, "Not enough balance you have");
-
-            let recipient_account_id = EncryptionKey::<Bls12>::read(&mut &recipient_enc_key[..], &PARAMS)
-                .expect("should be casted to EncryptionKey<Bls12> type.");
-            let encrypted_balance = elgamal::Ciphertext::read(&mut &balance_query.encrypted_balance[..], &*PARAMS)
-                .expect("should be casted to Ciphertext type.");
-
-            println!("Computing zk proof...");
-            let tx = Transaction::gen_tx(
-                amount,
-                remaining_balance,
-                &proving_key,
-                &prepared_vk,
-                &recipient_account_id,
-                &spending_key,
-                encrypted_balance,
-                rng,
-                fee
-                )
-            .expect("fails to generate the tx");
-
-            println!("Start submitting a transaction to Zerochain...");
-
-            submit_confidential_transfer(&tx, &api, rng);
-
-            println!("Remaining balance is {}", remaining_balance);
+            transfer_tx_for_debug(&seed[..], &recipient_enc_key[..], amount, url, rng).unwrap();
         },
         ("print-tx", Some(sub_matches)) => {
             println!("Generate transaction...");
@@ -657,7 +612,7 @@ fn subcommand_debug<R: Rng>(mut term: term::Term, matches: &ArgMatches, rng: &mu
         ("balance", Some(sub_matches)) => {
             println!("Getting encrypted balance from zerochain");
 
-            let api = Api::init(Url::Local);
+            let api = Api::init(tx_arg_url_match(&sub_matches));
             let decr_key_vec = hex::decode(sub_matches.value_of("decryption-key")
                 .expect("Decryption key parameter is required; qed"))
                 .expect("should be decoded to hex.");
@@ -788,6 +743,13 @@ fn debug_commands_definition<'a, 'b>() -> App<'a, 'b> {
                 .takes_value(true)
                 .required(true)
                 .default_value(ALICEDECRYPTIONKEY)
+            )
+            .arg(Arg::with_name("url")
+                .short("u")
+                .long("url")
+                .help("Endpoint to connect zerochain nodes")
+                .takes_value(true)
+                .required(false)
             )
         )
 }
