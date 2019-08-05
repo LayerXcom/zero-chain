@@ -18,14 +18,14 @@ mod std {
 #[macro_use]
 extern crate serde_derive;
 
-pub mod pkd_address;
+pub mod enc_key;
 pub mod signature;
 pub mod ciphertext;
 pub mod proof;
 pub mod sig_vk;
 pub mod prepared_vk;
 
-pub use pkd_address::PkdAddress;
+pub use enc_key::EncKey;
 pub use signature::RedjubjubSignature;
 pub use ciphertext::{Ciphertext, ElgamalCiphertext};
 pub use proof::Proof;

@@ -9,7 +9,7 @@ use rstd::result;
 use runtime_primitives::traits::{SimpleArithmetic, Zero, One};
 use system::ensure_signed;
 use zprimitives::{
-    PkdAddress,
+    EncKey,
     Proof,
     ElgamalCiphertext,
     SigVk,
@@ -50,7 +50,7 @@ decl_module! {
         fn issue(
             origin,
             zkproof: Proof,
-            issuer: PkdAddress,
+            issuer: EncKey,
             total: T::EncryptedBalance,
             fee: T::EncryptedBalance,
             balance: T::EncryptedBalance
@@ -99,8 +99,8 @@ decl_module! {
             origin,
             asset_id: T::AssetId,
             zkproof: Proof,
-            address_sender: PkdAddress,
-            address_recipient: PkdAddress,
+            address_sender: EncKey,
+            address_recipient: EncKey,
             amount_sender: T::EncryptedBalance,
             amount_recipient: T::EncryptedBalance,
             fee_sender: T::EncryptedBalance
@@ -180,7 +180,7 @@ decl_module! {
         fn destroy(
             origin,
             zkproof: Proof,
-            owner: PkdAddress,
+            owner: EncKey,
             id: T::AssetId,
             dummy_amount: T::EncryptedBalance,
             dummy_fee: T::EncryptedBalance,
@@ -234,14 +234,14 @@ decl_event!(
         <T as system::Trait>::AccountId
     {
         /// Some encrypted assets were issued.
-        Issued(AssetId, PkdAddress, EncryptedBalance),
+        Issued(AssetId, EncKey, EncryptedBalance),
         /// Some encrypted assets were transferred.
         ConfidentialAssetTransferred(
-            AssetId, Proof, PkdAddress, PkdAddress, EncryptedBalance,
+            AssetId, Proof, EncKey, EncKey, EncryptedBalance,
             EncryptedBalance, EncryptedBalance, EncryptedBalance, AccountId
         ),
         /// Some encrypted assets were destroyed.
-        Destroyed(AssetId, PkdAddress, EncryptedBalance, EncryptedBalance),
+        Destroyed(AssetId, EncKey, EncryptedBalance, EncryptedBalance),
         InvalidZkProof(),
     }
 );
@@ -249,13 +249,13 @@ decl_event!(
 decl_storage! {
     trait Store for Module<T: Trait> as EncryptedAssets {
         /// An encrypted balance for each account
-        pub EncryptedBalance get(encrypted_balance) config() : map (T::AssetId, PkdAddress) => Option<T::EncryptedBalance>;
+        pub EncryptedBalance get(encrypted_balance) config() : map (T::AssetId, EncKey) => Option<T::EncryptedBalance>;
 
         /// A pending transfer
-        pub PendingTransfer get(pending_transfer) : map (T::AssetId, PkdAddress) => Option<T::EncryptedBalance>;
+        pub PendingTransfer get(pending_transfer) : map (T::AssetId, EncKey) => Option<T::EncryptedBalance>;
 
         /// A last epoch for rollover
-        pub LastRollOver get(last_rollover) config() : map (T::AssetId, PkdAddress) => Option<T::BlockNumber>;
+        pub LastRollOver get(last_rollover) config() : map (T::AssetId, EncKey) => Option<T::BlockNumber>;
 
         /// The next asset identifier up for grabs.
         pub NextAssetId get(next_asset_id): T::AssetId;
@@ -270,7 +270,7 @@ impl<T: Trait> Module<T> {
 
     fn into_types(
         zkproof: &Proof,
-        account: &PkdAddress,
+        account: &EncKey,
         total: &T::EncryptedBalance,
         rvk: &T::AccountId,
         fee: &T::EncryptedBalance,
@@ -314,7 +314,7 @@ impl<T: Trait> Module<T> {
 
     // PUBLIC MUTABLES
 
-    pub fn rollover(addr: &PkdAddress, asset_id: T::AssetId) -> result::Result<elgamal::Ciphertext<Bls12>, &'static str> {
+    pub fn rollover(addr: &EncKey, asset_id: T::AssetId) -> result::Result<elgamal::Ciphertext<Bls12>, &'static str> {
         let current_epoch = <encrypted_balances::Module<T>>::get_current_epoch();
         let addr_id = (asset_id, *addr);
         let zero = elgamal::Ciphertext::zero();
@@ -369,7 +369,7 @@ impl<T: Trait> Module<T> {
 
     // Subtracting transferred amount and fee from encrypted balances.
     pub fn sub_enc_balance(
-        address: &PkdAddress,
+        address: &EncKey,
         asset_id: T::AssetId,
         typed_balance: &elgamal::Ciphertext<Bls12>,
         typed_amount: &elgamal::Ciphertext<Bls12>,
@@ -386,7 +386,7 @@ impl<T: Trait> Module<T> {
 
     /// Adding transferred amount to pending transfer.
     pub fn add_pending_transfer(
-        address: &PkdAddress,
+        address: &EncKey,
         asset_id: T::AssetId,
         typed_balance: &elgamal::Ciphertext<Bls12>,
         typed_amount: &elgamal::Ciphertext<Bls12>
@@ -467,7 +467,7 @@ mod tests {
     type EncryptedBalances = encrypted_balances::Module<Test>;
     type System = system::Module<Test>;
 
-    fn alice_balance_init() -> (PkdAddress, Ciphertext) {
+    fn alice_balance_init() -> (EncKey, Ciphertext) {
         let (alice_seed, enc_key) = get_alice_seed_ek();
         let alice_amount = 100 as u32;
         let params = &JubjubBls12::new();
@@ -487,13 +487,13 @@ mod tests {
         let dec_alice_bal = enc_alice_bal.decrypt(&decryption_key, p_g, params).unwrap();
         assert_eq!(dec_alice_bal, alice_amount);
 
-        (PkdAddress::from_encryption_key(&enc_key), Ciphertext::from_ciphertext(&enc_alice_bal))
+        (EncKey::from_encryption_key(&enc_key), Ciphertext::from_ciphertext(&enc_alice_bal))
     }
 
-    fn alice_epoch_init() -> (PkdAddress, u64) {
+    fn alice_epoch_init() -> (EncKey, u64) {
         let (_, enc_key) = get_alice_seed_ek();
 
-        (PkdAddress::from_encryption_key(&enc_key), 0)
+        (EncKey::from_encryption_key(&enc_key), 0)
     }
 
     fn get_alice_seed_ek() -> (Vec<u8>, EncryptionKey<Bls12>) {
@@ -577,7 +577,7 @@ mod tests {
             assert_ok!(EncryptedAssets::issue(
                 Origin::signed(SigVerificationKey::from_slice(&tx.rvk[..])),
                 Proof::from_slice(&tx.proof[..]),
-                PkdAddress::from_slice(&tx.address_recipient[..]),
+                EncKey::from_slice(&tx.address_recipient[..]),
                 Ciphertext::from_slice(&tx.enc_amount_recipient[..]),
                 Ciphertext::from_slice(&tx.enc_fee[..]),
                 Ciphertext::from_slice(&tx.enc_balance[..])
@@ -633,8 +633,8 @@ mod tests {
                 Origin::signed(SigVerificationKey::from_slice(&tx.rvk[..])),
                 0,
                 Proof::from_slice(&tx.proof[..]),
-                PkdAddress::from_slice(&tx.address_sender[..]),
-                PkdAddress::from_slice(&tx.address_recipient[..]),
+                EncKey::from_slice(&tx.address_sender[..]),
+                EncKey::from_slice(&tx.address_recipient[..]),
                 Ciphertext::from_slice(&tx.enc_amount_sender[..]),
                 Ciphertext::from_slice(&tx.enc_amount_recipient[..]),
                 Ciphertext::from_slice(&tx.enc_fee[..]),
@@ -680,7 +680,7 @@ mod tests {
             assert_ok!(EncryptedAssets::destroy(
                 Origin::signed(SigVerificationKey::from_slice(&tx.rvk[..])),
                 Proof::from_slice(&tx.proof[..]),
-                PkdAddress::from_slice(&tx.address_recipient[..]),
+                EncKey::from_slice(&tx.address_recipient[..]),
                 0,
                 Ciphertext::from_slice(&tx.enc_amount_recipient[..]),
                 Ciphertext::from_slice(&tx.enc_fee[..]),

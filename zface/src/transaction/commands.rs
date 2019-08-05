@@ -15,7 +15,7 @@ use zjubjub::{
     redjubjub::PrivateKey as zPrivateKey
     };
 use zpairing::{bls12_381::Bls12 as zBls12, PrimeField as zPrimeField, PrimeFieldRepr as zPrimeFieldRepr};
-use zprimitives::{PARAMS as ZPARAMS, Proof, Ciphertext as zCiphertext, PkdAddress, SigVerificationKey, RedjubjubSignature, SigVk};
+use zprimitives::{PARAMS as ZPARAMS, Proof, Ciphertext as zCiphertext, EncKey, SigVerificationKey, RedjubjubSignature, SigVk};
 use zerochain_runtime::{UncheckedExtrinsic, Call, EncryptedBalancesCall, EncryptedAssetsCall};
 use runtime_primitives::generic::Era;
 use parity_codec::{Compact, Encode, Decode};
@@ -287,8 +287,8 @@ fn read_zk_params_with_path(path: &str) -> Result<Vec<u8>> {
 pub fn submit_confidential_transfer<R: Rng>(tx: &Transaction, api: &Api, rng: &mut R) {
     let calls = Call::EncryptedBalances(EncryptedBalancesCall::confidential_transfer(
         Proof::from_slice(&tx.proof[..]),
-        PkdAddress::from_slice(&tx.address_sender[..]),
-        PkdAddress::from_slice(&tx.address_recipient[..]),
+        EncKey::from_slice(&tx.address_sender[..]),
+        EncKey::from_slice(&tx.address_recipient[..]),
         zCiphertext::from_slice(&tx.enc_amount_sender[..]),
         zCiphertext::from_slice(&tx.enc_amount_recipient[..]),
         zCiphertext::from_slice(&tx.enc_fee[..]),
@@ -300,7 +300,7 @@ pub fn submit_confidential_transfer<R: Rng>(tx: &Transaction, api: &Api, rng: &m
 pub fn submit_asset_issue<R: Rng>(tx: &Transaction, api: &Api, rng: &mut R) {
     let calls = Call::EncryptedAssets(EncryptedAssetsCall::issue(
         Proof::from_slice(&tx.proof[..]),
-        PkdAddress::from_slice(&tx.address_recipient[..]),
+        EncKey::from_slice(&tx.address_recipient[..]),
         zCiphertext::from_slice(&tx.enc_amount_recipient[..]),
         zCiphertext::from_slice(&tx.enc_fee[..]),
         zCiphertext::from_slice(&tx.enc_balance[..])
@@ -313,8 +313,8 @@ pub fn submit_asset_transfer<R: Rng>(asset_id: u32, tx: &Transaction, api: &Api,
     let calls = Call::EncryptedAssets(EncryptedAssetsCall::confidential_transfer(
         asset_id,
         Proof::from_slice(&tx.proof[..]),
-        PkdAddress::from_slice(&tx.address_sender[..]),
-        PkdAddress::from_slice(&tx.address_recipient[..]),
+        EncKey::from_slice(&tx.address_sender[..]),
+        EncKey::from_slice(&tx.address_recipient[..]),
         zCiphertext::from_slice(&tx.enc_amount_sender[..]),
         zCiphertext::from_slice(&tx.enc_amount_recipient[..]),
         zCiphertext::from_slice(&tx.enc_fee[..]),
@@ -326,7 +326,7 @@ pub fn submit_asset_transfer<R: Rng>(asset_id: u32, tx: &Transaction, api: &Api,
 pub fn submit_asset_burn<R: Rng>(asset_id: u32, tx: &Transaction, api: &Api, rng: &mut R) {
     let calls = Call::EncryptedAssets(EncryptedAssetsCall::destroy(
         Proof::from_slice(&tx.proof[..]),
-        PkdAddress::from_slice(&tx.address_recipient[..]),
+        EncKey::from_slice(&tx.address_recipient[..]),
         asset_id,
         zCiphertext::from_slice(&tx.enc_amount_recipient[..]),
         zCiphertext::from_slice(&tx.enc_fee[..]),

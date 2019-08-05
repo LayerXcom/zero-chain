@@ -18,10 +18,10 @@ construct_fixed_hash! {
     pub struct H256(SIZE);
 }
 
-pub type PkdAddress = H256;
+pub type EncKey = H256;
 
 #[cfg(feature = "std")]
-impl Serialize for PkdAddress {
+impl Serialize for EncKey {
     fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
         where S: Serializer
     {
@@ -30,28 +30,28 @@ impl Serialize for PkdAddress {
 }
 
 #[cfg(feature = "std")]
-impl<'de> Deserialize<'de> for PkdAddress {
+impl<'de> Deserialize<'de> for EncKey {
     fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
         where D: Deserializer<'de>
     {
         bytes::deserialize_check_len(deserializer, bytes::ExpectedLen::Exact(SIZE))
-            .map(|x| PkdAddress::from_slice(&x))
+            .map(|x| EncKey::from_slice(&x))
     }
 }
 
-impl Encode for PkdAddress {
+impl Encode for EncKey {
     fn using_encoded<R, F: FnOnce(&[u8]) -> R>(&self, f: F) -> R {
         self.0.using_encoded(f)
     }
 }
 
-impl Decode for PkdAddress {
+impl Decode for EncKey {
     fn decode<I: Input>(input: &mut I) -> Option<Self> {
         <[u8; SIZE] as Decode>::decode(input).map(H256)
     }
 }
 
-impl PkdAddress {
+impl EncKey {
     pub fn into_encryption_key(&self) -> Option<EncryptionKey<Bls12>> {
         EncryptionKey::<Bls12>::read(&mut &self.0[..], &PARAMS).ok()
     }
@@ -63,14 +63,14 @@ impl PkdAddress {
     }
 }
 
-impl Into<PkdAddress> for EncryptionKey<Bls12> {
-    fn into(self) -> PkdAddress {
-        PkdAddress::from_encryption_key(&self)
+impl Into<EncKey> for EncryptionKey<Bls12> {
+    fn into(self) -> EncKey {
+        EncKey::from_encryption_key(&self)
     }
 }
 
 #[cfg(feature = "std")]
-impl AsBytesRef for PkdAddress {
+impl AsBytesRef for EncKey {
     fn as_bytes_ref(&self) -> &[u8] {
         self.as_ref()
     }
@@ -90,7 +90,7 @@ mod tests {
 
         let addr1 = EncryptionKey::from_seed(&seed[..], &PARAMS as &JubjubBls12).unwrap();
 
-        let account_id = PkdAddress::from_encryption_key(&addr1);
+        let account_id = EncKey::from_encryption_key(&addr1);
         let addr2 = account_id.into_encryption_key().unwrap();
         assert!(addr1 == addr2);
     }

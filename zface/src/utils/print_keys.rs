@@ -8,7 +8,7 @@ use pairing::bls12_381::Bls12;
 use zjubjub::curve::FixedGenerators as zFixedGenerators;
 use proofs::{EncryptionKey, DecryptionKey};
 use keys::EncryptionKey as zEncryptionKey;
-use zprimitives::PkdAddress;
+use zprimitives::EncKey;
 use zcrypto::elgamal as zelgamal;
 use polkadot_rs::{Api, hexstr_to_vec};
 use parity_codec::Encode;
@@ -112,7 +112,7 @@ impl BalanceQuery {
     /// Get encrypted and decrypted balance for the decryption key
     pub fn get_encrypted_balance(dec_key: &DecryptionKey<Bls12>, api: Api) -> Self {
         let encryption_key = zEncryptionKey::from_decryption_key(&no_std(&dec_key), &*ZPARAMS);
-        let account_id = PkdAddress::from_encryption_key(&encryption_key);
+        let account_id = EncKey::from_encryption_key(&encryption_key);
 
         let encrypted_balance_str = api.get_storage(
             "EncryptedBalances",
@@ -131,7 +131,7 @@ impl BalanceQuery {
 
     pub fn get_encrypted_asset(asset_id: u32, dec_key: &DecryptionKey<Bls12>, api: Api) -> Self {
         let encryption_key = zEncryptionKey::from_decryption_key(&no_std(&dec_key), &*ZPARAMS);
-        let account_id = PkdAddress::from_encryption_key(&encryption_key);
+        let account_id = EncKey::from_encryption_key(&encryption_key);
 
         let encrypted_asset_str = api.get_storage(
             "EncryptedAssets",

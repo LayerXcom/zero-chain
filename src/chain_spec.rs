@@ -7,7 +7,7 @@ use substrate_service;
 use ed25519::Public as AuthorityId;
 use zprimitives::{
 	PreparedVk,
-	PkdAddress,
+	EncKey,
 	Ciphertext,
 	SigVerificationKey,
 	ElgamalCiphertext,
@@ -158,7 +158,7 @@ fn get_pvk() -> PreparedVk {
 	PreparedVk::from_slice(&buf_vk[..])
 }
 
-fn alice_balance_init() -> (PkdAddress, Ciphertext) {
+fn alice_balance_init() -> (EncKey, Ciphertext) {
 	let enc_key = get_alice_enc_key();
 	let alice_value = 10_000 as u32;
 	let p_g = FixedGenerators::Diversifier; // 1 same as NoteCommitmentRandomness;
@@ -166,13 +166,13 @@ fn alice_balance_init() -> (PkdAddress, Ciphertext) {
 	// The default balance is not encrypted with randomness.
 	let enc_alice_bal = elgamal::Ciphertext::encrypt(alice_value, fs::Fs::one(), &enc_key, p_g, &PARAMS);
 
-	(PkdAddress::from_encryption_key(&enc_key), Ciphertext::from_ciphertext(&enc_alice_bal))
+	(EncKey::from_encryption_key(&enc_key), Ciphertext::from_ciphertext(&enc_alice_bal))
 }
 
-fn alice_epoch_init() -> (PkdAddress, u64) {
+fn alice_epoch_init() -> (EncKey, u64) {
 	let enc_key = get_alice_enc_key();
 
-	(PkdAddress::from_encryption_key(&enc_key), 0)
+	(EncKey::from_encryption_key(&enc_key), 0)
 }
 
 fn get_alice_enc_key() -> EncryptionKey<Bls12> {
