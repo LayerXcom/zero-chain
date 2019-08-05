@@ -14,7 +14,9 @@ use blake2_rfc::{
     blake2b::{Blake2b, Blake2bResult}
 };
 use pairing::io;
-use crate::constants::ELGAMAL_EXTEND_PERSONALIZATION;
+
+/// The constant personalization for elgamal extending function
+pub const ELGAMAL_EXTEND_PERSONALIZATION: &'static [u8; 16] = b"zech_elgamal_ext";
 
 #[derive(Clone, PartialEq)]
 pub struct Ciphertext<E: JubjubEngine> {
@@ -89,6 +91,7 @@ impl<E: JubjubEngine> Ciphertext<E> {
     pub fn write<W: io::Write>(&self, mut writer: W) -> io::Result<()> {
         self.left.write(&mut writer)?;
         self.right.write(&mut writer)?;
+
         Ok(())
     }
 
@@ -115,6 +118,7 @@ impl<E: JubjubEngine> Ciphertext<E> {
     pub fn add(&self, other: &Self, params: &E::Params) -> Self {
         let left = self.left.add(&other.left, params);
         let right = self.right.add(&other.right, params);
+
         Ciphertext {
             left,
             right,
@@ -125,6 +129,7 @@ impl<E: JubjubEngine> Ciphertext<E> {
     pub fn add_no_params(&self, other: &Self) -> Self {
         let left = self.left.add_no_params(&other.left);
         let right = self.right.add_no_params(&other.right);
+
         Ciphertext {
             left,
             right,
@@ -135,6 +140,7 @@ impl<E: JubjubEngine> Ciphertext<E> {
     pub fn sub(&self, other: &Self, params: &E::Params) -> Self {
         let left = self.left.add(&other.left.negate(), params);
         let right = self.right.add(&other.right.negate(), params);
+
         Ciphertext {
             left,
             right,
@@ -145,6 +151,7 @@ impl<E: JubjubEngine> Ciphertext<E> {
     pub fn sub_no_params(&self, other: &Self) -> Self {
         let left = self.left.add_no_params(&other.left.negate());
         let right = self.right.add_no_params(&other.right.negate());
+        
         Ciphertext {
             left,
             right

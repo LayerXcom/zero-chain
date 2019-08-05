@@ -14,5 +14,4 @@ mod std {
     pub use crate::alloc::borrow;
 }
 
-pub mod constants;
 pub mod elgamal;
