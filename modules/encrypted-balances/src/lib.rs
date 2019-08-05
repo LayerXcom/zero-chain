@@ -388,7 +388,6 @@ impl<T: Trait> Module<T> {
             *pending_transfer = new_pending_transfer
         });
     }
-
 }
 
 impl<T: Trait> IsDeadAccount<T::AccountId> for Module<T>

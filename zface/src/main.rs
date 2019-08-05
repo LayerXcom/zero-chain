@@ -656,8 +656,7 @@ fn subcommand_debug<R: Rng>(mut term: term::Term, matches: &ArgMatches, rng: &mu
         },
         ("balance", Some(sub_matches)) => {
             println!("Getting encrypted balance from zerochain");
-            // let url = Url::Custom("ws://0.0.0.0:9944".to_string());
-            // let api = Api::init(url);
+
             let api = Api::init(Url::Local);
             let decr_key_vec = hex::decode(sub_matches.value_of("decryption-key")
                 .expect("Decryption key parameter is required; qed"))
