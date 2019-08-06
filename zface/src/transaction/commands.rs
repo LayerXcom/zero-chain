@@ -147,7 +147,7 @@ pub fn asset_burn_tx<R: Rng>(
     let dec_key = ProofGenerationKey::<Bls12>::from_spending_key(&spending_key, &PARAMS)
         .into_decryption_key()?;
     let balance_query = BalanceQuery::get_encrypted_asset(asset_id, &dec_key, api.clone());
-    assert!(balance_query.decrypted_balance != 0, "You don't have the asset. Asset id may be inccorect.");
+    assert!(balance_query.decrypted_balance != 0, "You don't have the asset. Asset id may be incorrect.");
 
     // Get setuped parameters to compute zk proving.
     let proving_key = get_pk(PROVING_KEY_PATH)?;
@@ -222,7 +222,6 @@ fn inner_transfer_tx<R: Rng>(
     // Get setuped parameters to compute zk proving.
     let proving_key = get_pk(PROVING_KEY_PATH)?;
     let prepared_vk = get_vk(VERIFICATION_KEY_PATH)?;
-
 
     let dec_key = ProofGenerationKey::<Bls12>::from_spending_key(&spending_key, &PARAMS)
         .into_decryption_key()?;
