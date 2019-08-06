@@ -81,12 +81,13 @@ impl<E: JubjubEngine> TransferProof<E> {
         let proof = create_random_proof(instance, proving_key, rng)?;
 
         let mut public_input = [E::Fr::zero(); 18];
+        let p_g = FixedGenerators::NoteCommitmentRandomness;
 
         let cipher_val_s = Ciphertext::encrypt(
             amount,
             randomness,
             &enc_key_sender,
-            FixedGenerators::NoteCommitmentRandomness,
+            p_g,
             params
         );
 
@@ -94,7 +95,7 @@ impl<E: JubjubEngine> TransferProof<E> {
             amount,
             randomness,
             &address_recipient,
-            FixedGenerators::NoteCommitmentRandomness,
+            p_g,
             params
         );
 
@@ -102,7 +103,7 @@ impl<E: JubjubEngine> TransferProof<E> {
             fee,
             randomness,
             &enc_key_sender,
-            FixedGenerators::NoteCommitmentRandomness,
+            p_g,
             params
         );
 
@@ -148,8 +149,8 @@ impl<E: JubjubEngine> TransferProof<E> {
         }
         {
             let (x, y) = rvk.0.into_xy();
-            public_input[16] = x;
-            public_input[17] = y;
+            public_input[12] = x;
+            public_input[13] = y;
         }
 
         // This verification is just an error handling, not validate if it returns `true`,
@@ -178,7 +179,7 @@ mod tests {
     use super::*;
     use rand::{SeedableRng, XorShiftRng, Rng};
     use crate::keys::{ProofGenerationKey, EncryptionKey};
-    use scrypto::jubjub::{fs, JubjubParams, JubjubBls12};
+    use scrypto::jubjub::{fs, JubjubBls12};
     use pairing::bls12_381::Bls12;
     use std::path::Path;
     use std::fs::File;
@@ -210,7 +211,7 @@ mod tests {
     fn test_gen_proof() {
         let params = &JubjubBls12::new();
         let p_g = FixedGenerators::NoteCommitmentRandomness;
-        let mut rng = &mut XorShiftRng::from_seed([0x5dbe6259, 0x8d313d76, 0x3237db17, 0xe5bc0654]);
+        let rng = &mut XorShiftRng::from_seed([0x5dbe6259, 0x8d313d76, 0x3237db17, 0xe5bc0654]);
         let alpha = fs::Fs::rand(rng);
 
         let amount = 10 as u32;
@@ -222,14 +223,11 @@ mod tests {
         let recipient_seed: [u8; 32] = rng.gen();
 
         let proof_generation_key = ProofGenerationKey::<Bls12>::from_seed(&sender_seed, params);
+        let enc_key_recipient = EncryptionKey::<Bls12>::from_seed(&recipient_seed, params).unwrap();
 
-        let pgk_sender = ProofGenerationKey::<Bls12>::from_seed(&sender_seed, params);
-        let ek_recipient = EncryptionKey::<Bls12>::from_seed(&recipient_seed, params).unwrap();
-        let dec_key_sender = pgk_sender.into_decryption_key().unwrap();
-
-        let r_fs = fs::Fs::rand(rng);
-        let public_key = EncryptionKey(params.generator(p_g).mul(dec_key_sender.0, params));
-        let ciphertext_balance = Ciphertext::encrypt(balance, r_fs, &public_key, p_g, params);
+        let randomness = rng.gen();
+        let enc_key = EncryptionKey::from_seed(&sender_seed[..], params).unwrap();
+        let ciphertext_balance = Ciphertext::encrypt(balance, randomness, &enc_key, p_g, params);
 
         let (proving_key, prepared_vk) = get_pk_and_vk();
 
@@ -240,9 +238,9 @@ mod tests {
             &proving_key,
             &prepared_vk,
             &proof_generation_key,
-            ek_recipient,
+            enc_key_recipient,
             ciphertext_balance,
-            &mut rng,
+            rng,
             params,
             fee
         );

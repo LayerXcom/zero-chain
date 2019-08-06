@@ -13,6 +13,7 @@ use blake2_rfc::{
 };
 use std::io;
 
+/// The constant personalization for elgamal extending function
 pub const ELGAMAL_EXTEND_PERSONALIZATION: &'static [u8; 16] = b"zech_elgamal_ext";
 
 #[derive(Clone, PartialEq, Debug)]

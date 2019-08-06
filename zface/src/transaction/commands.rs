@@ -15,7 +15,7 @@ use zjubjub::{
     redjubjub::PrivateKey as zPrivateKey
     };
 use zpairing::{bls12_381::Bls12 as zBls12, PrimeField as zPrimeField, PrimeFieldRepr as zPrimeFieldRepr};
-use zprimitives::{PARAMS as ZPARAMS, Proof, Ciphertext as zCiphertext, PkdAddress, SigVerificationKey, RedjubjubSignature, SigVk};
+use zprimitives::{PARAMS as ZPARAMS, Proof, Ciphertext as zCiphertext, EncKey, SigVerificationKey, RedjubjubSignature, SigVk};
 use zerochain_runtime::{UncheckedExtrinsic, Call, EncryptedBalancesCall, EncryptedAssetsCall};
 use runtime_primitives::generic::Era;
 use parity_codec::{Compact, Encode, Decode};
@@ -142,14 +142,19 @@ pub fn asset_burn_tx<R: Rng>(
     let api = Api::init(url);
     let p_g = FixedGenerators::NoteCommitmentRandomness; // 1
 
+    // Validate the asset balance
+    let spending_key = spending_key_from_keystore(root_dir, &password[..])?;
+    let dec_key = ProofGenerationKey::<Bls12>::from_spending_key(&spending_key, &PARAMS)
+        .into_decryption_key()?;
+    let balance_query = BalanceQuery::get_encrypted_asset(asset_id, &dec_key, api.clone());
+    assert!(balance_query.decrypted_balance != 0, "You don't have the asset. Asset id may be inccorect.");
+
     // Get setuped parameters to compute zk proving.
     let proving_key = get_pk(PROVING_KEY_PATH)?;
     let prepared_vk = get_vk(VERIFICATION_KEY_PATH)?;
 
-    let spending_key = spending_key_from_keystore(root_dir, &password[..])?;
-    let issuer_address = EncryptionKey::<Bls12>::from_spending_key(&spending_key, &PARAMS)?;
-
     let amount = 0;
+    let issuer_address = EncryptionKey::<Bls12>::from_spending_key(&spending_key, &PARAMS)?;
     let enc_amount = elgamal::Ciphertext::encrypt(amount, Fs::rand(rng), &issuer_address, p_g, &PARAMS);
 
     println!("Computing zk proof...");
@@ -183,7 +188,33 @@ pub fn transfer_tx<R: Rng>(
 ) -> Result<()> {
     // user can enter password first.
     let password = prompt_password(term)?;
+    let spending_key = spending_key_from_keystore(root_dir, &password[..])?;
 
+    inner_transfer_tx(spending_key, recipient_enc_key, amount, url, rng)?;
+
+    Ok(())
+}
+
+pub fn transfer_tx_for_debug<R: Rng>(
+    seed: &[u8],
+    recipient_enc_key: &[u8],
+    amount: u32,
+    url: Url,
+    rng: &mut R,
+) -> Result<()> {
+    let spending_key = SpendingKey::from_seed(seed);
+    inner_transfer_tx(spending_key, recipient_enc_key, amount, url, rng)?;
+
+    Ok(())
+}
+
+fn inner_transfer_tx<R: Rng>(
+    spending_key: SpendingKey::<Bls12>,
+    recipient_enc_key: &[u8],
+    amount: u32,
+    url: Url,
+    rng: &mut R
+) -> Result<()> {
     println!("Preparing paramters...");
 
     let api = Api::init(url);
@@ -192,7 +223,7 @@ pub fn transfer_tx<R: Rng>(
     let proving_key = get_pk(PROVING_KEY_PATH)?;
     let prepared_vk = get_vk(VERIFICATION_KEY_PATH)?;
 
-    let spending_key = spending_key_from_keystore(root_dir, &password[..])?;
+
     let dec_key = ProofGenerationKey::<Bls12>::from_spending_key(&spending_key, &PARAMS)
         .into_decryption_key()?;
 
@@ -287,8 +318,8 @@ fn read_zk_params_with_path(path: &str) -> Result<Vec<u8>> {
 pub fn submit_confidential_transfer<R: Rng>(tx: &Transaction, api: &Api, rng: &mut R) {
     let calls = Call::EncryptedBalances(EncryptedBalancesCall::confidential_transfer(
         Proof::from_slice(&tx.proof[..]),
-        PkdAddress::from_slice(&tx.address_sender[..]),
-        PkdAddress::from_slice(&tx.address_recipient[..]),
+        EncKey::from_slice(&tx.address_sender[..]),
+        EncKey::from_slice(&tx.address_recipient[..]),
         zCiphertext::from_slice(&tx.enc_amount_sender[..]),
         zCiphertext::from_slice(&tx.enc_amount_recipient[..]),
         zCiphertext::from_slice(&tx.enc_fee[..]),
@@ -300,7 +331,7 @@ pub fn submit_confidential_transfer<R: Rng>(tx: &Transaction, api: &Api, rng: &m
 pub fn submit_asset_issue<R: Rng>(tx: &Transaction, api: &Api, rng: &mut R) {
     let calls = Call::EncryptedAssets(EncryptedAssetsCall::issue(
         Proof::from_slice(&tx.proof[..]),
-        PkdAddress::from_slice(&tx.address_recipient[..]),
+        EncKey::from_slice(&tx.address_recipient[..]),
         zCiphertext::from_slice(&tx.enc_amount_recipient[..]),
         zCiphertext::from_slice(&tx.enc_fee[..]),
         zCiphertext::from_slice(&tx.enc_balance[..])
@@ -313,8 +344,8 @@ pub fn submit_asset_transfer<R: Rng>(asset_id: u32, tx: &Transaction, api: &Api,
     let calls = Call::EncryptedAssets(EncryptedAssetsCall::confidential_transfer(
         asset_id,
         Proof::from_slice(&tx.proof[..]),
-        PkdAddress::from_slice(&tx.address_sender[..]),
-        PkdAddress::from_slice(&tx.address_recipient[..]),
+        EncKey::from_slice(&tx.address_sender[..]),
+        EncKey::from_slice(&tx.address_recipient[..]),
         zCiphertext::from_slice(&tx.enc_amount_sender[..]),
         zCiphertext::from_slice(&tx.enc_amount_recipient[..]),
         zCiphertext::from_slice(&tx.enc_fee[..]),
@@ -326,7 +357,7 @@ pub fn submit_asset_transfer<R: Rng>(asset_id: u32, tx: &Transaction, api: &Api,
 pub fn submit_asset_burn<R: Rng>(asset_id: u32, tx: &Transaction, api: &Api, rng: &mut R) {
     let calls = Call::EncryptedAssets(EncryptedAssetsCall::destroy(
         Proof::from_slice(&tx.proof[..]),
-        PkdAddress::from_slice(&tx.address_recipient[..]),
+        EncKey::from_slice(&tx.address_recipient[..]),
         asset_id,
         zCiphertext::from_slice(&tx.enc_amount_recipient[..]),
         zCiphertext::from_slice(&tx.enc_fee[..]),

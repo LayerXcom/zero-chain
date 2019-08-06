@@ -15,7 +15,7 @@ use pairing::{
 use runtime_primitives::traits::{Member, Zero, MaybeSerializeDebug};
 use jubjub::redjubjub::PublicKey;
 use zprimitives::{
-    PkdAddress,
+    EncKey,
     Proof,
     PreparedVk,
     ElgamalCiphertext,
@@ -55,8 +55,8 @@ decl_module! {
 		pub fn confidential_transfer(
             origin,
             zkproof: Proof,
-            address_sender: PkdAddress,
-            address_recipient: PkdAddress,
+            address_sender: EncKey,
+            address_recipient: EncKey,
             amount_sender: T::EncryptedBalance,
             amount_recipient: T::EncryptedBalance,
             fee_sender: T::EncryptedBalance
@@ -133,13 +133,13 @@ decl_module! {
 decl_storage! {
     trait Store for Module<T: Trait> as EncryptedBalances {
         /// An encrypted balance for each account
-        pub EncryptedBalance get(encrypted_balance) config() : map PkdAddress => Option<T::EncryptedBalance>;
+        pub EncryptedBalance get(encrypted_balance) config() : map EncKey => Option<T::EncryptedBalance>;
 
         /// A pending transfer
-        pub PendingTransfer get(pending_transfer) : map PkdAddress => Option<T::EncryptedBalance>;
+        pub PendingTransfer get(pending_transfer) : map EncKey => Option<T::EncryptedBalance>;
 
         /// A last epoch for rollover
-        pub LastRollOver get(last_rollover) config() : map PkdAddress => Option<T::BlockNumber>;
+        pub LastRollOver get(last_rollover) config() : map EncKey => Option<T::BlockNumber>;
 
         /// Global epoch length for rollover.
         /// The longer epoch length is, the longer rollover time is.
@@ -157,7 +157,7 @@ decl_storage! {
 decl_event! (
     /// An event in this module.
 	pub enum Event<T> where <T as Trait>::EncryptedBalance, <T as system::Trait>::AccountId {
-		ConfidentialTransfer(Proof, PkdAddress, PkdAddress, EncryptedBalance, EncryptedBalance, EncryptedBalance, EncryptedBalance, AccountId),
+		ConfidentialTransfer(Proof, EncKey, EncKey, EncryptedBalance, EncryptedBalance, EncryptedBalance, EncryptedBalance, AccountId),
         InvalidZkProof(),
 	}
 );
@@ -236,8 +236,8 @@ impl<T: Trait> Module<T> {
     /// Convert provided parametrs into typed ones.
     pub fn into_types(
         zkproof: &Proof,
-        address_sender: &PkdAddress,
-        address_recipient: &PkdAddress,
+        address_sender: &EncKey,
+        address_recipient: &EncKey,
         amount_sender: &T::EncryptedBalance,
         amount_recipient: &T::EncryptedBalance,
         rvk: &T::AccountId,
@@ -304,7 +304,7 @@ impl<T: Trait> Module<T> {
     /// To achieve this, we define a separate (internal) method for rolling over,
     /// and the first thing every other method does is to call this method.
     /// More details in Section 3.1: https://crypto.stanford.edu/~buenz/papers/zether.pdf
-    pub fn rollover(addr: &PkdAddress) -> result::Result<elgamal::Ciphertext<Bls12>, &'static str> {
+    pub fn rollover(addr: &EncKey) -> result::Result<elgamal::Ciphertext<Bls12>, &'static str> {
         let current_epoch = Self::get_current_epoch();
 
         let last_rollover = match Self::last_rollover(addr) {
@@ -360,7 +360,7 @@ impl<T: Trait> Module<T> {
 
     // Subtracting transferred amount and fee from encrypted balances.
     pub fn sub_enc_balance(
-        address: &PkdAddress,
+        address: &EncKey,
         typed_balance: &elgamal::Ciphertext<Bls12>,
         typed_amount: &elgamal::Ciphertext<Bls12>,
         typed_fee: &elgamal::Ciphertext<Bls12>
@@ -376,7 +376,7 @@ impl<T: Trait> Module<T> {
 
     /// Adding transferred amount to pending transfer.
     pub fn add_pending_transfer(
-        address: &PkdAddress,
+        address: &EncKey,
         typed_balance: &elgamal::Ciphertext<Bls12>,
         typed_amount: &elgamal::Ciphertext<Bls12>
     ) {
@@ -388,7 +388,6 @@ impl<T: Trait> Module<T> {
             *pending_transfer = new_pending_transfer
         });
     }
-
 }
 
 impl<T: Trait> IsDeadAccount<T::AccountId> for Module<T>
@@ -451,7 +450,7 @@ pub mod tests {
 
     type EncryptedBalances = Module<Test>;
 
-    fn alice_balance_init() -> (PkdAddress, Ciphertext) {
+    fn alice_balance_init() -> (EncKey, Ciphertext) {
         let (alice_seed, enc_key) = get_alice_seed_ek();
         let alice_amount = 100 as u32;
         let params = &JubjubBls12::new();
@@ -471,13 +470,13 @@ pub mod tests {
         let dec_alice_bal = enc_alice_bal.decrypt(&decryption_key, p_g, params).unwrap();
         assert_eq!(dec_alice_bal, alice_amount);
 
-        (PkdAddress::from_encryption_key(&enc_key), Ciphertext::from_ciphertext(&enc_alice_bal))
+        (EncKey::from_encryption_key(&enc_key), Ciphertext::from_ciphertext(&enc_alice_bal))
     }
 
-    fn alice_epoch_init() -> (PkdAddress, u64) {
+    fn alice_epoch_init() -> (EncKey, u64) {
         let (_, enc_key) = get_alice_seed_ek();
 
-        (PkdAddress::from_encryption_key(&enc_key), 0)
+        (EncKey::from_encryption_key(&enc_key), 0)
     }
 
     fn get_alice_seed_ek() -> (Vec<u8>, EncryptionKey<Bls12>) {
@@ -565,8 +564,8 @@ pub mod tests {
             assert_ok!(EncryptedBalances::confidential_transfer(
                 Origin::signed(SigVerificationKey::from_slice(&tx.rvk[..])),
                 Proof::from_slice(&tx.proof[..]),
-                PkdAddress::from_slice(&tx.address_sender[..]),
-                PkdAddress::from_slice(&tx.address_recipient[..]),
+                EncKey::from_slice(&tx.address_sender[..]),
+                EncKey::from_slice(&tx.address_recipient[..]),
                 Ciphertext::from_slice(&tx.enc_amount_sender[..]),
                 Ciphertext::from_slice(&tx.enc_amount_recipient[..]),
                 Ciphertext::from_slice(&tx.enc_fee[..]),
@@ -589,8 +588,8 @@ pub mod tests {
             assert_ok!(EncryptedBalances::confidential_transfer(
                 Origin::signed(SigVerificationKey::from_slice(&rvk[..])),
                 Proof::from_slice(&proof[..]),
-                PkdAddress::from_slice(&pkd_addr_alice),
-                PkdAddress::from_slice(&pkd_addr_bob),
+                EncKey::from_slice(&pkd_addr_alice),
+                EncKey::from_slice(&pkd_addr_bob),
                 Ciphertext::from_slice(&enc10_by_alice[..]),
                 Ciphertext::from_slice(&enc10_by_bob[..]),
                 Ciphertext::from_slice(&enc1_by_alice[..])
@@ -613,8 +612,8 @@ pub mod tests {
             assert_ok!(EncryptedBalances::confidential_transfer(
                 Origin::signed(SigVerificationKey::from_slice(&rvk[..])),
                 Proof::from_slice(&proof[..]),
-                PkdAddress::from_slice(&pkd_addr_alice),
-                PkdAddress::from_slice(&pkd_addr_bob),
+                EncKey::from_slice(&pkd_addr_alice),
+                EncKey::from_slice(&pkd_addr_bob),
                 Ciphertext::from_slice(&enc10_by_alice[..]),
                 Ciphertext::from_slice(&enc10_by_bob[..]),
                 Ciphertext::from_slice(&enc1_by_alice[..])

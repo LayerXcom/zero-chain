@@ -407,8 +407,7 @@ mod tests {
     use scrypto::jubjub::{JubjubBls12, fs, JubjubParams};
     use crate::keys::EncryptionKey;
 
-    #[test]
-    fn test_circuit_transfer() {
+    fn test_based_amount(amount: u32) {
         let params = &JubjubBls12::new();
         let rng = &mut XorShiftRng::from_seed([0x3dbe6258, 0x8d313d76, 0x3237db17, 0xe5bc0654]);
 
@@ -416,21 +415,17 @@ mod tests {
         let sk_fs_r: [u8; 32] = rng.gen();
 
         let proof_generation_key_s = ProofGenerationKey::<Bls12>::from_seed(&sk_fs_s[..], params);
-        let proof_generation_key_r = ProofGenerationKey::<Bls12>::from_seed(&sk_fs_r[..], params);
-
         let decryption_key_s = proof_generation_key_s.into_decryption_key().unwrap();
-        let decryption_key_r = proof_generation_key_r.into_decryption_key().unwrap();
 
-        let address_recipient = EncryptionKey::from_seed(&sk_fs_r, params).unwrap();
+        let enc_key_recipient = EncryptionKey::from_seed(&sk_fs_r, params).unwrap();
         let address_sender_xy = proof_generation_key_s.into_encryption_key(params).unwrap().0.into_xy();
-        let address_recipient_xy = address_recipient.0.into_xy();
+        let address_recipient_xy = enc_key_recipient.0.into_xy();
 
         let alpha: fs::Fs = rng.gen();
 
-        let amount = 10 as u32;
+        let fee = 1 as u32;
         let remaining_balance = 16 as u32;
         let current_balance = 27 as u32;
-        let fee = 1 as u32;
 
         let r_fs_b = fs::Fs::rand(rng);
         let r_fs_v = fs::Fs::rand(rng);
@@ -449,8 +444,7 @@ mod tests {
         let ciphertext_fee_sender = Ciphertext::encrypt(fee, r_fs_v, &public_key_s, p_g, params);
         let c_fee_s_left = ciphertext_fee_sender.left.into_xy();
 
-        let public_key_r = EncryptionKey(params.generator(p_g).mul(decryption_key_r.0, params));
-        let ciphertext_amount_recipient = Ciphertext::encrypt(amount, r_fs_v, &public_key_r, p_g, params);
+        let ciphertext_amount_recipient = Ciphertext::encrypt(amount, r_fs_v, &enc_key_recipient, p_g, params);
         let c_val_r_left = ciphertext_amount_recipient.left.into_xy();
 
         let rvk = proof_generation_key_s.into_rvk(alpha, params).0.into_xy();
@@ -465,7 +459,7 @@ mod tests {
             alpha: Some(&alpha),
             proof_generation_key: Some(&proof_generation_key_s),
             dec_key_sender: Some(&decryption_key_s),
-            enc_key_recipient: Some(address_recipient.clone()),
+            enc_key_recipient: Some(enc_key_recipient.clone()),
             encrypted_balance: Some(&ciphetext_balance),
             fee: Some(fee),
         };
@@ -496,6 +490,16 @@ mod tests {
         assert_eq!(cs.get_input(16, "inputize pointr/y/input variable"), c_bal_right.1);
         assert_eq!(cs.get_input(17, "rvk/x/input variable"), rvk.0);
         assert_eq!(cs.get_input(18, "rvk/y/input variable"), rvk.1);
+    }
 
+    #[test]
+    fn test_circuit_transfer_valid() {
+        test_based_amount(10);
+    }
+
+    #[test]
+    #[should_panic]
+    fn test_circuit_transfer_invalid() {
+        test_based_amount(11);
     }
 }
