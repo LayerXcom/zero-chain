@@ -142,14 +142,19 @@ pub fn asset_burn_tx<R: Rng>(
     let api = Api::init(url);
     let p_g = FixedGenerators::NoteCommitmentRandomness; // 1
 
+    // Validate the asset balance
+    let spending_key = spending_key_from_keystore(root_dir, &password[..])?;
+    let dec_key = ProofGenerationKey::<Bls12>::from_spending_key(&spending_key, &PARAMS)
+        .into_decryption_key()?;
+    let balance_query = BalanceQuery::get_encrypted_asset(asset_id, &dec_key, api.clone());
+    assert!(balance_query.decrypted_balance != 0, "You don't have the asset. Asset id may be inccorect.");
+
     // Get setuped parameters to compute zk proving.
     let proving_key = get_pk(PROVING_KEY_PATH)?;
     let prepared_vk = get_vk(VERIFICATION_KEY_PATH)?;
 
-    let spending_key = spending_key_from_keystore(root_dir, &password[..])?;
-    let issuer_address = EncryptionKey::<Bls12>::from_spending_key(&spending_key, &PARAMS)?;
-
     let amount = 0;
+    let issuer_address = EncryptionKey::<Bls12>::from_spending_key(&spending_key, &PARAMS)?;
     let enc_amount = elgamal::Ciphertext::encrypt(amount, Fs::rand(rng), &issuer_address, p_g, &PARAMS);
 
     println!("Computing zk proof...");
