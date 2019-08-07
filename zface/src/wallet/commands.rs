@@ -22,7 +22,7 @@ pub fn new_wallet<R: Rng>(
     let (wallet_dir, keystore_dir) = wallet_keystore_dirs(&root_dir)?;
 
     // 2. configure user-defined passoword
-    term.info("Set a wallet password. This is for local usage only, allows you to protect your cached private key and prevent from creating non desired transactions.\n")?;
+    term.info("Set a wallet password. This is for local use only. It allows you to protect your cached private key and prevents the creation of non-desired transactions.\n")?;
     let password = term.new_password("wallet password", "confirm wallet password", "password mismatch")?;
 
     // 3. generate the mnemonics
