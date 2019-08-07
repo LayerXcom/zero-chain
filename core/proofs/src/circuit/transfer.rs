@@ -24,6 +24,7 @@ use scrypto::circuit::{
     num::AllocatedNum,
 };
 use crate::{elgamal::Ciphertext, Assignment};
+use super::range_check::u32_into_boolean_vec_le;
 
 // An instance of the Transfer circuit.
 pub struct Transfer<'a, E: JubjubEngine> {
@@ -363,39 +364,6 @@ impl<'a, E: JubjubEngine> Circuit<E> for Transfer<'a, E> {
 
         Ok(())
     }
-}
-
-fn u32_into_boolean_vec_le<E, CS>(
-    mut cs: CS,
-    amount: Option<u32>
-) -> Result<Vec<Boolean>, SynthesisError>
-    where E: JubjubEngine, CS: ConstraintSystem<E>
-{
-    let amounts = match amount {
-        Some(ref amount) => {
-            let mut tmp = Vec::with_capacity(32);
-            for i in 0..32 {
-                tmp.push(Some(*amount >> i & 1 == 1));
-            }
-            tmp
-        },
-
-        None => {
-            vec![None; 32]
-        }
-    };
-
-    let bits = amounts.into_iter()
-            .enumerate()
-            .map(|(i, v)| {
-                Ok(boolean::Boolean::from(boolean::AllocatedBit::alloc(
-                    cs.namespace(|| format!("bit {}", i)),
-                    v
-                )?))
-            })
-            .collect::<Result<Vec<_>, SynthesisError>>()?;
-
-    Ok(bits)
 }
 
 #[cfg(test)]
