@@ -157,7 +157,7 @@ impl<E: JubjubEngine> AllocRangedNum<E> {
                 let a_bit = AllocatedBit::alloc_conditionally(
                     cs.namespace(|| format!("bit {}", i)),
                     a_bit,
-                    &last_run.as_ref().expect("char always starts with a one")
+                    &last_run.as_ref().expect("u32::MAX always starts with a one")
                 )?;
                 result.push(a_bit);
             }
@@ -165,7 +165,7 @@ impl<E: JubjubEngine> AllocRangedNum<E> {
             i += 1;
         }
 
-        // char is prime, so we'll always end on
+        // u32::MAX is prime, so we'll always end on
         // a run of zeros.
         assert_eq!(current_run.len(), 0);
 
@@ -192,5 +192,77 @@ impl<E: JubjubEngine> AllocRangedNum<E> {
 
         // Convert into booleans, and reverse for little-endian bit order
         Ok(result.into_iter().map(|b| Boolean::from(b)).rev().collect())
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use pairing::bls12_381::{Bls12, Fr};
+    use crate::circuit::TestConstraintSystem;
+
+    fn valid_range_check(num_str: &str) -> bool {
+        let num = Fr::from_str(num_str).unwrap();
+        let mut cs = TestConstraintSystem::<Bls12>::new();
+        let alloc_num = AllocRangedNum::alloc(&mut cs, || Ok(num)).unwrap();
+        alloc_num.into_bits_le_strict(&mut cs).unwrap();
+
+        cs.is_satisfied()
+    }
+
+    fn should_panic_neg_range_check(num_str: &str) {
+        let mut neg_num = Fr::from_str(num_str).unwrap();
+        neg_num.negate();
+
+        let mut cs = TestConstraintSystem::<Bls12>::new();
+        let alloc_num = AllocRangedNum::alloc(&mut cs, || Ok(neg_num)).unwrap();
+        alloc_num.into_bits_le_strict(&mut cs).unwrap();
+
+        assert!(cs.is_satisfied());
+    }
+
+    #[test]
+    fn test_range_check_valid() {
+        assert!(valid_range_check("0"));
+        assert!(valid_range_check("1"));
+        assert!(valid_range_check("12"));
+        assert!(valid_range_check("234"));
+        assert!(valid_range_check("2353649"));
+
+        let max_minus_one = std::u32::MAX - 1;
+        assert!(valid_range_check(&max_minus_one.to_string()));
+    }
+
+    #[test]
+    fn test_range_check_invalid() {
+        let max = std::u32::MAX;
+        assert!(!valid_range_check(&max.to_string()));
+    }
+
+    #[should_panic]
+    #[test]
+    fn test_panic_overflow() {
+        let max = std::u32::MAX as u64;
+        valid_range_check(&(max + 1).to_string());
+    }
+
+    #[should_panic]
+    #[test]
+    fn test_panic_neg_one() {
+        should_panic_neg_range_check(&1.to_string());
+    }
+
+    #[should_panic]
+    #[test]
+    fn test_panic_neg_max() {
+        let max = std::u32::MAX;
+        should_panic_neg_range_check(&max.to_string());
+    }
+
+    #[should_panic]
+    #[test]
+    fn test_panic_neg_max_plus_one() {
+        let max = std::u32::MAX as u64;
+        should_panic_neg_range_check(&(max + 1).to_string());
     }
 }
