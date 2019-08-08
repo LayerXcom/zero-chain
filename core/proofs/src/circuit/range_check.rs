@@ -8,7 +8,7 @@ use scrypto::circuit::boolean::{Boolean, AllocatedBit};
 use scrypto::jubjub::JubjubEngine;
 use pairing::{PrimeField, Field, BitIterator, PrimeFieldRepr};
 
-pub fn u32_into_boolean_vec_le<E, CS>(
+pub fn u32_into_bit_vec_le<E, CS>(
     mut cs: CS,
     amount: Option<u32>
 ) -> Result<Vec<Boolean>, SynthesisError>
@@ -29,13 +29,13 @@ pub fn u32_into_boolean_vec_le<E, CS>(
     ))
 }
 
-pub struct AllocRangedNum<E: JubjubEngine> {
+struct AllocRangedNum<E: JubjubEngine> {
     value: Option<E::Fr>,
     variable: Variable,
 }
 
 impl<E: JubjubEngine> AllocRangedNum<E> {
-    pub fn alloc<CS, F>(
+    fn alloc<CS, F>(
         mut cs: CS,
         value: F,
     ) -> Result<Self, SynthesisError>
@@ -63,7 +63,7 @@ impl<E: JubjubEngine> AllocRangedNum<E> {
     /// order, requiring that the representation
     /// strictly exists "in the field" (i.e., a
     /// congruency is not allowed.)
-    pub fn into_bits_le_strict<CS>(
+    fn into_bits_le_strict<CS>(
         &self,
         mut cs: CS
     ) -> Result<Vec<Boolean>, SynthesisError>
@@ -100,7 +100,9 @@ impl<E: JubjubEngine> AllocRangedNum<E> {
         // We want to ensure that the bit representation of a is
         // less than or equal to r - 1.
         let mut a = self.value.map(|e| BitIterator::new(e.into_repr()));
-        let mut b = E::Fr::char();
+        let mut b = E::Fr::from_str(&std::u32::MAX.to_string())
+            .map(|e| e.into_repr())
+            .ok_or(SynthesisError::AssignmentMissing)?;
         b.sub_noborrow(&1.into());
 
         let mut result = vec![];
