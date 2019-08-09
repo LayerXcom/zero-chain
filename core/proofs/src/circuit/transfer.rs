@@ -24,6 +24,7 @@ use scrypto::circuit::{
     num::AllocatedNum,
 };
 use crate::{elgamal::Ciphertext, Assignment};
+use super::range_check::u32_into_bit_vec_le;
 
 pub struct Transfer<'a, E: JubjubEngine> {
     pub params: &'a E::Params,
@@ -47,19 +48,19 @@ impl<'a, E: JubjubEngine> Circuit<E> for Transfer<'a, E> {
         let params = self.params;
 
         // Ensure the amount is u32.
-        let amount_bits = u32_into_boolean_vec_le(
+        let amount_bits = u32_into_bit_vec_le(
             cs.namespace(|| "range proof of amount"),
             self.amount
         )?;
 
         // Ensure the remaining balance is u32.
-        let remaining_balance_bits = u32_into_boolean_vec_le(
+        let remaining_balance_bits = u32_into_bit_vec_le(
             cs.namespace(|| "range proof of remaining_balance"),
             self.remaining_balance
         )?;
 
         // Ensure the fee is u32.
-        let fee_bits = u32_into_boolean_vec_le(
+        let fee_bits = u32_into_bit_vec_le(
             cs.namespace(|| "range proof of fee"),
             self.fee
         )?;
@@ -364,39 +365,6 @@ impl<'a, E: JubjubEngine> Circuit<E> for Transfer<'a, E> {
     }
 }
 
-fn u32_into_boolean_vec_le<E, CS>(
-    mut cs: CS,
-    amount: Option<u32>
-) -> Result<Vec<Boolean>, SynthesisError>
-    where E: JubjubEngine, CS: ConstraintSystem<E>
-{
-    let amounts = match amount {
-        Some(ref amount) => {
-            let mut tmp = Vec::with_capacity(32);
-            for i in 0..32 {
-                tmp.push(Some(*amount >> i & 1 == 1));
-            }
-            tmp
-        },
-
-        None => {
-            vec![None; 32]
-        }
-    };
-
-    let bits = amounts.into_iter()
-            .enumerate()
-            .map(|(i, v)| {
-                Ok(boolean::Boolean::from(boolean::AllocatedBit::alloc(
-                    cs.namespace(|| format!("bit {}", i)),
-                    v
-                )?))
-            })
-            .collect::<Result<Vec<_>, SynthesisError>>()?;
-
-    Ok(bits)
-}
-
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -466,8 +434,8 @@ mod tests {
         instance.synthesize(&mut cs).unwrap();
 
         assert!(cs.is_satisfied());
-        assert_eq!(cs.num_constraints(), 21687);
-        assert_eq!(cs.hash(), "006d0e0175bc1154278d7ef3f0e53514840b478ad6db2540d7910cd94a38da24");
+        assert_eq!(cs.num_constraints(), 21780);
+        assert_eq!(cs.hash(), "b366fd96155cd78aa34482f25cda91b05ee8c2f9ac68e1c1103940331b49e0fd");
 
         assert_eq!(cs.num_inputs(), 19);
         assert_eq!(cs.get_input(0, "ONE"), Fr::one());
