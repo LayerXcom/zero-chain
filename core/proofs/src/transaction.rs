@@ -51,6 +51,7 @@ impl Transaction {
 		let proof_output = ConfidentialProof::gen_proof(
 			value,
 			remaining_balance,
+			fee,
 			alpha,
 			proving_key,
 			prepared_vk,
@@ -59,37 +60,61 @@ impl Transaction {
             ciphertext_balance,
 			rng,
 			&PARAMS,
-			fee
 		).expect("Should not be faild to generate a proof.");
 
 		// Generate the re-randomized sign key
-		let rsk = spending_key.into_rsk(alpha);
 		let mut rsk_bytes = [0u8; 32];
-		rsk.write(&mut rsk_bytes[..]).map_err(|_| io::Error::InvalidData)?;
+		spending_key
+			.into_rsk(alpha)
+			.write(&mut rsk_bytes[..])
+			.map_err(|_| io::Error::InvalidData)?;
 
 		let mut rvk_bytes = [0u8; 32];
-		proof_output.rvk.write(&mut rvk_bytes[..]).map_err(|_| io::Error::InvalidData)?;
+		proof_output
+			.rvk
+			.write(&mut rvk_bytes[..])
+			.map_err(|_| io::Error::InvalidData)?;
 
 		let mut proof_bytes = [0u8; 192];
-		proof_output.proof.write(&mut proof_bytes[..]).map_err(|_| io::Error::InvalidData)?;
+		proof_output
+			.proof
+			.write(&mut proof_bytes[..])
+			.map_err(|_| io::Error::InvalidData)?;
 
 		let mut enc_key_sender = [0u8; 32];
-		proof_output.enc_key_sender.write(&mut enc_key_sender[..]).map_err(|_| io::Error::InvalidData)?;
+		proof_output
+			.enc_key_sender
+			.write(&mut enc_key_sender[..])
+			.map_err(|_| io::Error::InvalidData)?;
 
 		let mut enc_key_recipient = [0u8; 32];
-		proof_output.enc_key_recipient.write(&mut enc_key_recipient[..]).map_err(|_| io::Error::InvalidData)?;
+		proof_output
+			.enc_keys.recipient
+			.write(&mut enc_key_recipient[..])
+			.map_err(|_| io::Error::InvalidData)?;
 
 		let mut enc_amount_recipient = [0u8; 64];
-		proof_output.cipher_val_r.write(&mut enc_amount_recipient[..]).map_err(|_| io::Error::InvalidData)?;
+		proof_output
+			.multi_ciphertexts.recipient
+			.write(&mut enc_amount_recipient[..])
+			.map_err(|_| io::Error::InvalidData)?;
 
 		let mut enc_amount_sender = [0u8; 64];
-		proof_output.cipher_val_s.write(&mut enc_amount_sender[..]).map_err(|_| io::Error::InvalidData)?;
+		proof_output
+			.multi_ciphertexts.sender
+			.write(&mut enc_amount_sender[..])
+			.map_err(|_| io::Error::InvalidData)?;
 
-		let mut enc_fee_sender = [0u8; 64];
-		proof_output.cipher_fee_s.write(&mut enc_fee_sender[..]).map_err(|_| io::Error::InvalidData)?;
+		let mut enc_fee = [0u8; 64];
+		proof_output
+			.multi_ciphertexts.fee
+			.write(&mut enc_fee[..])
+			.map_err(|_| io::Error::InvalidData)?;
 
 		let mut enc_balance = [0u8; 64];
-		proof_output.cipher_balance.write(&mut enc_balance[..]).map_err(|_| io::Error::InvalidData)?;
+		proof_output.cipher_balance
+			.write(&mut enc_balance[..])
+			.map_err(|_| io::Error::InvalidData)?;
 
 		let tx = Transaction {
 			proof: proof_bytes,
@@ -99,7 +124,7 @@ impl Transaction {
 			enc_amount_recipient,
 			enc_amount_sender,
 			rsk: rsk_bytes,
-			enc_fee: enc_fee_sender,
+			enc_fee,
 			enc_balance,
 		};
 

@@ -2,7 +2,7 @@ use std::path::{PathBuf, Path};
 use std::io::{BufReader, Read};
 use std::fs::File;
 use rand::{Rng, Rand};
-use proofs::{SpendingKey, Transaction, ProofGenerationKey, EncryptionKey, PARAMS, elgamal, MultiCiphertexts, MultiEncKeys};
+use proofs::{SpendingKey, Transaction, ProofGenerationKey, EncryptionKey, PARAMS, elgamal, MultiEncKeys};
 use pairing::bls12_381::Bls12;
 use super::constants::*;
 use crate::term::Term;

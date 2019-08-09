@@ -515,7 +515,7 @@ pub mod tests {
     fn test_call_from_zface() {
         use rand::{SeedableRng, XorShiftRng};
         use test_pairing::{bls12_381::Bls12 as tBls12, Field as tField};
-        use test_proofs::{EncryptionKey as tEncryptionKey, SpendingKey as tSpendingKey, elgamal as telgamal, Transaction, PARAMS};
+        use test_proofs::{EncryptionKey as tEncryptionKey, SpendingKey as tSpendingKey, elgamal as telgamal, Transaction, PARAMS, MultiEncKeys};
         use zface::transaction::commands::{get_pk, get_vk};
         use scrypto::jubjub::{FixedGenerators as tFixedGenerators, fs::Fs as tFs};
 
@@ -553,9 +553,9 @@ pub mod tests {
                 remaining_balance,
                 &proving_key,
                 &prepared_vk,
-                &recipient_account_id,
+                &MultiEncKeys::new_for_confidential(recipient_account_id),
                 &spending_key,
-                enc_alice_bal,
+                &enc_alice_bal,
                 rng,
                 fee
                 )
@@ -564,8 +564,8 @@ pub mod tests {
             assert_ok!(EncryptedBalances::confidential_transfer(
                 Origin::signed(SigVerificationKey::from_slice(&tx.rvk[..])),
                 Proof::from_slice(&tx.proof[..]),
-                EncKey::from_slice(&tx.address_sender[..]),
-                EncKey::from_slice(&tx.address_recipient[..]),
+                EncKey::from_slice(&tx.enc_key_sender[..]),
+                EncKey::from_slice(&tx.enc_key_recipient[..]),
                 Ciphertext::from_slice(&tx.enc_amount_sender[..]),
                 Ciphertext::from_slice(&tx.enc_amount_recipient[..]),
                 Ciphertext::from_slice(&tx.enc_fee[..]),

@@ -29,10 +29,10 @@ use crate::{
 
 #[derive(Clone)]
 pub struct MultiCiphertexts<E: JubjubEngine> {
-    sender: Ciphertext<E>,
-    recipient: Ciphertext<E>,
-    decoys: Option<Vec<Ciphertext<E>>>,
-    fee: Ciphertext<E>,
+    pub sender: Ciphertext<E>,
+    pub recipient: Ciphertext<E>,
+    pub decoys: Option<Vec<Ciphertext<E>>>,
+    pub fee: Ciphertext<E>,
 }
 
 impl<E: JubjubEngine> MultiCiphertexts<E> {
@@ -93,8 +93,8 @@ pub struct AnonymousProof<E: JubjubEngine> {
     proof: Proof<E>,
     rvk: PublicKey<E>,
     enc_key_sender: EncryptionKey<E>,
-    enc_key_recipient: EncryptionKey<E>,
-    MultiCiphertexts: MultiCiphertexts<E>,
+    enc_keys: MultiEncKeys<E>,
+    multi_ciphertexts: MultiCiphertexts<E>,
     cipher_balance: Ciphertext<E>,
 }
 
@@ -123,26 +123,25 @@ pub struct ConfidentialProof<E: JubjubEngine> {
     pub proof: Proof<E>,
     pub rvk: PublicKey<E>, // re-randomization sig-verifying key
     pub enc_key_sender: EncryptionKey<E>,
-    pub enc_key_recipient: EncryptionKey<E>,
-    pub cipher_val_s: Ciphertext<E>,
-    pub cipher_val_r: Ciphertext<E>,
+    pub enc_keys: MultiEncKeys<E>,
+    pub multi_ciphertexts: MultiCiphertexts<E>,
     pub cipher_balance: Ciphertext<E>,
-    pub cipher_fee_s: Ciphertext<E>,
 }
 
 impl<E: JubjubEngine> ConfidentialProof<E> {
     pub fn gen_proof<R: Rng>(
         amount: u32,
         remaining_balance: u32,
+        fee: u32,
         alpha: E::Fs,
         proving_key: &Parameters<E>,
         prepared_vk: &PreparedVerifyingKey<E>,
         proof_generation_key: &ProofGenerationKey<E>,
         enc_keys: &MultiEncKeys<E>,
         cipher_balance: &Ciphertext<E>,
+        // nonce: Nonce<E>,
         rng: &mut R,
         params: &E::Params,
-        fee: u32,
     ) -> Result<Self, SynthesisError>
     {
         let randomness = E::Fs::rand(rng);
@@ -156,7 +155,6 @@ impl<E: JubjubEngine> ConfidentialProof<E> {
                 FixedGenerators::NoteCommitmentRandomness,
                 params,
         );
-        let enc_key_recipient = &enc_keys.recipient;
 
         let instance = Transfer {
             params: params,
@@ -166,7 +164,7 @@ impl<E: JubjubEngine> ConfidentialProof<E> {
             alpha: Some(&alpha),
             proof_generation_key: Some(&proof_generation_key),
             dec_key_sender: Some(&dec_key_sender),
-            enc_key_recipient: Some(&enc_key_recipient),
+            enc_key_recipient: Some(&enc_keys.recipient),
             encrypted_balance: Some(&cipher_balance),
             fee: Some(fee)
         };
@@ -177,7 +175,7 @@ impl<E: JubjubEngine> ConfidentialProof<E> {
         let mut public_input = [E::Fr::zero(); 18];
         let p_g = FixedGenerators::NoteCommitmentRandomness;
 
-        let cipher_val_s = Ciphertext::encrypt(
+        let cipher_sender = Ciphertext::encrypt(
             amount,
             randomness,
             &enc_key_sender,
@@ -185,15 +183,15 @@ impl<E: JubjubEngine> ConfidentialProof<E> {
             params
         );
 
-        let cipher_val_r = Ciphertext::encrypt(
+        let cipher_recipient = Ciphertext::encrypt(
             amount,
             randomness,
-            &enc_key_recipient,
+            &enc_keys.recipient,
             p_g,
             params
         );
 
-        let cipher_fee_s = Ciphertext::encrypt(
+        let cipher_fee = Ciphertext::encrypt(
             fee,
             randomness,
             &enc_key_sender,
@@ -207,27 +205,27 @@ impl<E: JubjubEngine> ConfidentialProof<E> {
             public_input[1] = y;
         }
         {
-            let (x, y) = enc_key_recipient.0.into_xy();
+            let (x, y) = enc_keys.recipient.0.into_xy();
             public_input[2] = x;
             public_input[3] = y;
         }
         {
-            let (x, y) = cipher_val_s.left.into_xy();
+            let (x, y) = cipher_sender.left.into_xy();
             public_input[4] = x;
             public_input[5] = y;
         }
         {
-            let (x, y) = cipher_val_r.left.into_xy();
+            let (x, y) = cipher_recipient.left.into_xy();
             public_input[6] = x;
             public_input[7] = y;
         }
         {
-            let (x, y) = cipher_val_s.right.into_xy();
+            let (x, y) = cipher_sender.right.into_xy();
             public_input[8] = x;
             public_input[9] = y;
         }
         {
-            let (x, y) = cipher_fee_s.left.into_xy();
+            let (x, y) = cipher_fee.left.into_xy();
             public_input[10] = x;
             public_input[11] = y;
         }
@@ -257,11 +255,9 @@ impl<E: JubjubEngine> ConfidentialProof<E> {
             proof,
             rvk,
             enc_key_sender,
-            enc_key_recipient: enc_key_recipient.clone(),
-            cipher_val_s,
-            cipher_val_r,
+            enc_keys: MultiEncKeys::new_for_confidential(enc_keys.recipient.clone()),
+            multi_ciphertexts: MultiCiphertexts::new_for_confidential(cipher_sender, cipher_recipient, cipher_fee),
             cipher_balance: cipher_balance.clone(),
-            cipher_fee_s,
         };
 
         Ok(proof)
@@ -328,15 +324,15 @@ mod tests {
         let proofs = ConfidentialProof::gen_proof(
             amount,
             remaining_balance,
+            fee,
             alpha,
             &proving_key,
             &prepared_vk,
             &proof_generation_key,
-            enc_key_recipient,
-            cipher_balance,
+            &MultiEncKeys::new_for_confidential(enc_key_recipient),
+            &cipher_balance,
             rng,
             params,
-            fee
         );
 
         assert!(proofs.is_ok());
