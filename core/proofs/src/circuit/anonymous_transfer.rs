@@ -29,7 +29,6 @@ pub struct AnonymousTransfer<'a, E: JubjubEngine> {
     enc_key_decoys: Option<Vec<EncryptionKey<E>>>,
     encrypted_balance: Option<&'a Ciphertext<E>>,
     fee: Option<u32>,
-    nonce: Option<u32>,
 }
 
 impl<'a, E: JubjubEngine> Circuit<E> for AnonymousTransfer<'a, E> {

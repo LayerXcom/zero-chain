@@ -3,7 +3,7 @@ use crate::{
 	EncryptionKey,
 	ProofGenerationKey,
 	SpendingKey,
-	prover::TransferProof,
+	prover::ConfidentialProof,
 	elgamal,
 };
 use bellman::groth16::{Parameters, PreparedVerifyingKey};
@@ -16,8 +16,8 @@ use rand::Rng;
 /// Transaction components which is needed to create a signed `UncheckedExtrinsic`.
 pub struct Transaction{
     pub proof: [u8; 192],                // 192 bytes
-    pub address_sender: [u8; 32],        // 32 bytes
-    pub address_recipient: [u8; 32],     // 32 bytes
+    pub enc_key_sender: [u8; 32],        // 32 bytes
+    pub enc_key_recipient: [u8; 32],     // 32 bytes
     pub enc_amount_recipient: [u8; 64],  // 64 bytes
 	pub enc_amount_sender: [u8; 64],     // 64 bytes
 	pub enc_fee: [u8; 64],			     // 64 bytes
@@ -32,7 +32,7 @@ impl Transaction {
         remaining_balance: u32,
         proving_key: &Parameters<Bls12>,
 		prepared_vk: &PreparedVerifyingKey<Bls12>,
-		address_recipient: &EncryptionKey<Bls12>,
+		enc_key_recipient: &EncryptionKey<Bls12>,
 		spending_key: &SpendingKey<Bls12>,
         ciphertext_balance: elgamal::Ciphertext<Bls12>,
 		rng: &mut R,
@@ -48,14 +48,14 @@ impl Transaction {
 		);
 
 		// Generate the zk proof
-		let proof_output = TransferProof::gen_proof(
+		let proof_output = ConfidentialProof::gen_proof(
 			value,
 			remaining_balance,
 			alpha,
 			proving_key,
 			prepared_vk,
 			&proof_generation_key,
-			address_recipient.clone(),
+			enc_key_recipient.clone(),
             ciphertext_balance.clone(),
 			rng,
 			&PARAMS,
@@ -73,11 +73,11 @@ impl Transaction {
 		let mut proof_bytes = [0u8; 192];
 		proof_output.proof.write(&mut proof_bytes[..]).map_err(|_| io::Error::InvalidData)?;
 
-		let mut b_address_sender = [0u8; 32];
-		proof_output.address_sender.write(&mut b_address_sender[..]).map_err(|_| io::Error::InvalidData)?;
+		let mut enc_key_sender = [0u8; 32];
+		proof_output.enc_key_sender.write(&mut enc_key_sender[..]).map_err(|_| io::Error::InvalidData)?;
 
-		let mut b_address_recipient = [0u8; 32];
-		proof_output.address_recipient.write(&mut b_address_recipient[..]).map_err(|_| io::Error::InvalidData)?;
+		let mut enc_key_recipient = [0u8; 32];
+		proof_output.enc_key_recipient.write(&mut enc_key_recipient[..]).map_err(|_| io::Error::InvalidData)?;
 
 		let mut enc_amount_recipient = [0u8; 64];
 		proof_output.cipher_val_r.write(&mut enc_amount_recipient[..]).map_err(|_| io::Error::InvalidData)?;
@@ -94,8 +94,8 @@ impl Transaction {
 		let tx = Transaction {
 			proof: proof_bytes,
 			rvk: rvk_bytes,
-			address_sender: b_address_sender,
-			address_recipient: b_address_recipient,
+			enc_key_sender,
+			enc_key_recipient,
 			enc_amount_recipient,
 			enc_amount_sender,
 			rsk: rsk_bytes,

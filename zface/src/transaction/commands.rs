@@ -317,8 +317,8 @@ fn read_zk_params_with_path(path: &str) -> Result<Vec<u8>> {
 pub fn submit_confidential_transfer<R: Rng>(tx: &Transaction, api: &Api, rng: &mut R) {
     let calls = Call::EncryptedBalances(EncryptedBalancesCall::confidential_transfer(
         Proof::from_slice(&tx.proof[..]),
-        EncKey::from_slice(&tx.address_sender[..]),
-        EncKey::from_slice(&tx.address_recipient[..]),
+        EncKey::from_slice(&tx.enc_key_sender[..]),
+        EncKey::from_slice(&tx.enc_key_recipient[..]),
         zCiphertext::from_slice(&tx.enc_amount_sender[..]),
         zCiphertext::from_slice(&tx.enc_amount_recipient[..]),
         zCiphertext::from_slice(&tx.enc_fee[..]),
@@ -330,7 +330,7 @@ pub fn submit_confidential_transfer<R: Rng>(tx: &Transaction, api: &Api, rng: &m
 pub fn submit_asset_issue<R: Rng>(tx: &Transaction, api: &Api, rng: &mut R) {
     let calls = Call::EncryptedAssets(EncryptedAssetsCall::issue(
         Proof::from_slice(&tx.proof[..]),
-        EncKey::from_slice(&tx.address_recipient[..]),
+        EncKey::from_slice(&tx.enc_key_recipient[..]),
         zCiphertext::from_slice(&tx.enc_amount_recipient[..]),
         zCiphertext::from_slice(&tx.enc_fee[..]),
         zCiphertext::from_slice(&tx.enc_balance[..])
@@ -343,8 +343,8 @@ pub fn submit_asset_transfer<R: Rng>(asset_id: u32, tx: &Transaction, api: &Api,
     let calls = Call::EncryptedAssets(EncryptedAssetsCall::confidential_transfer(
         asset_id,
         Proof::from_slice(&tx.proof[..]),
-        EncKey::from_slice(&tx.address_sender[..]),
-        EncKey::from_slice(&tx.address_recipient[..]),
+        EncKey::from_slice(&tx.enc_key_sender[..]),
+        EncKey::from_slice(&tx.enc_key_recipient[..]),
         zCiphertext::from_slice(&tx.enc_amount_sender[..]),
         zCiphertext::from_slice(&tx.enc_amount_recipient[..]),
         zCiphertext::from_slice(&tx.enc_fee[..]),
@@ -356,7 +356,7 @@ pub fn submit_asset_transfer<R: Rng>(asset_id: u32, tx: &Transaction, api: &Api,
 pub fn submit_asset_burn<R: Rng>(asset_id: u32, tx: &Transaction, api: &Api, rng: &mut R) {
     let calls = Call::EncryptedAssets(EncryptedAssetsCall::destroy(
         Proof::from_slice(&tx.proof[..]),
-        EncKey::from_slice(&tx.address_recipient[..]),
+        EncKey::from_slice(&tx.enc_key_recipient[..]),
         asset_id,
         zCiphertext::from_slice(&tx.enc_amount_recipient[..]),
         zCiphertext::from_slice(&tx.enc_fee[..]),
@@ -431,7 +431,7 @@ pub fn subscribe_event(api: Api, remaining_balance: u32) {
                                     match &enc_be {
                                         encrypted_balances::RawEvent::ConfidentialTransfer(
                                             _zkproof,
-                                            _address_sender, _address_recipient,
+                                            _enc_key_sender, _enc_key_recipient,
                                             _amount_sender, _amount_recipient,
                                             _fee_sender, _enc_balances, _sig_vk
                                         ) => println!("Submitting transaction is completed successfully. \n Remaining balance is {}", remaining_balance),
@@ -447,7 +447,7 @@ pub fn subscribe_event(api: Api, remaining_balance: u32) {
                                         ) => println!("Submitting transaction is completed successfully. \nThe total issued coin is {}. \nThe asset id is {}.", remaining_balance, asset_id),
                                         encrypted_assets::RawEvent::ConfidentialAssetTransferred(
                                             asset_id, _zkproof,
-                                            _address_sender, _address_recipient,
+                                            _enc_key_sender, _enc_key_recipient,
                                             _amount_sender, _amount_recipient,
                                             _fee_sender, _enc_balances, _sig_vk
                                         ) => println!("Submitting transaction is completed successfully. \nRemaining balance is {}. \nThe asset id is {}.", remaining_balance, asset_id),
