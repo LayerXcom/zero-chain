@@ -15,7 +15,7 @@ use scrypto::circuit::{
     ecc::{self, EdwardsPoint},
     num::AllocatedNum,
 };
-use crate::{elgamal::Ciphertext, Assignment};
+use crate::{elgamal::Ciphertext, Assignment, Nonce};
 
 pub struct AnonymousTransfer<'a, E: JubjubEngine> {
     params: &'a E::Params,
@@ -29,6 +29,7 @@ pub struct AnonymousTransfer<'a, E: JubjubEngine> {
     enc_key_decoys: Option<Vec<EncryptionKey<E>>>,
     encrypted_balance: Option<&'a Ciphertext<E>>,
     fee: Option<u32>,
+    nonce: Option<&'a Nonce<E>>,
 }
 
 impl<'a, E: JubjubEngine> Circuit<E> for AnonymousTransfer<'a, E> {

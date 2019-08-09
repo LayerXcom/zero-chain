@@ -20,16 +20,48 @@ use scrypto::{
     },
 };
 use crate::circuit::Transfer;
-use crate::keys::{
+use crate::elgamal::Ciphertext;
+use crate::{
     EncryptionKey,
     ProofGenerationKey,
+    Nonce,
 };
-use crate::elgamal::Ciphertext;
 
-pub struct Ciphertexts<E: JubjubEngine> {
+#[derive(Clone)]
+pub struct MultiCiphertexts<E: JubjubEngine> {
     sender: Ciphertext<E>,
     recipient: Ciphertext<E>,
-    decoys: Vec<Ciphertext<E>>,
+    decoys: Option<Vec<Ciphertext<E>>>,
+    fee: Ciphertext<E>,
+}
+
+impl<E: JubjubEngine> MultiCiphertexts<E> {
+    pub fn new_for_confidential(
+        sender: Ciphertext<E>,
+        recipient: Ciphertext<E>,
+        fee: Ciphertext<E>,
+    ) -> Self {
+        MultiCiphertexts {
+            sender,
+            recipient,
+            decoys: None,
+            fee,
+        }
+    }
+
+    pub fn new_for_anonymous(
+        sender: Ciphertext<E>,
+        recipient: Ciphertext<E>,
+        decoys: Vec<Ciphertext<E>>,
+        fee: Ciphertext<E>,
+    ) -> Self {
+        MultiCiphertexts {
+            sender,
+            recipient,
+            decoys: Some(decoys),
+            fee,
+        }
+    }
 }
 
 pub struct AnonymousProof<E: JubjubEngine> {
@@ -37,12 +69,8 @@ pub struct AnonymousProof<E: JubjubEngine> {
     rvk: PublicKey<E>,
     enc_key_sender: EncryptionKey<E>,
     enc_key_recipient: EncryptionKey<E>,
-    cipher_val_s: Ciphertext<E>,
-    cipher_val_r: Ciphertext<E>,
+    MultiCiphertexts: MultiCiphertexts<E>,
     cipher_balance: Ciphertext<E>,
-    cipher_fee_s: Ciphertext<E>,
-    cipher_decoy: Ciphertext<E>,
-
 }
 
 impl<E: JubjubEngine> AnonymousProof<E> {
@@ -58,6 +86,7 @@ impl<E: JubjubEngine> AnonymousProof<E> {
         rng: &mut R,
         params: &E::Params,
         fee: u32,
+        nonce: Nonce<E>,
 
     ) -> Result<Self, SynthesisError>
     {

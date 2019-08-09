@@ -42,7 +42,7 @@ decl_module! {
 
 decl_storage! {
     trait Store for Module<T: Trait> as AnonymousBalances {
-
+        // Nonce pool
     }
 }
 
@@ -59,4 +59,3 @@ mod tests {
     use super::*;
 
 }
- 
