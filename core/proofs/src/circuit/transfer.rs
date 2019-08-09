@@ -1,4 +1,4 @@
-//! This module contains a circuit implementation for confidential payment.
+//! This module contains a circuit implementation for confidential transfer.
 //! The statement is following.
 //! * Range proof of the transferred amount
 //! * Range proof of the sender's balance
@@ -25,7 +25,6 @@ use scrypto::circuit::{
 };
 use crate::{elgamal::Ciphertext, Assignment};
 
-// An instance of the Transfer circuit.
 pub struct Transfer<'a, E: JubjubEngine> {
     pub params: &'a E::Params,
     pub amount: Option<u32>,
@@ -34,7 +33,7 @@ pub struct Transfer<'a, E: JubjubEngine> {
     pub alpha: Option<&'a E::Fs>,
     pub proof_generation_key: Option<&'a ProofGenerationKey<E>>,
     pub dec_key_sender: Option<&'a DecryptionKey<E>>,
-    pub enc_key_recipient: Option< EncryptionKey<E>>,
+    pub enc_key_recipient: Option<EncryptionKey<E>>,
     pub encrypted_balance: Option<&'a Ciphertext<E>>,
     pub fee: Option<u32>,
 }

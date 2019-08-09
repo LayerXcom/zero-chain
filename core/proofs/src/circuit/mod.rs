@@ -1,4 +1,5 @@
 pub mod transfer;
+pub mod anonymous_transfer;
 pub mod test;
 
 pub use self::transfer::Transfer;

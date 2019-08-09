@@ -174,6 +174,8 @@ impl<E: JubjubEngine> TransferProof<E> {
     }
 }
 
+
+
 #[cfg(test)]
 mod tests {
     use super::*;
