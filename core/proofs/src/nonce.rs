@@ -8,3 +8,12 @@ impl<E: JubjubEngine> Nonce<E> {
         Nonce(point)
     }
 }
+
+#[derive(Clone, Debug)]
+pub struct GEpoch<E: JubjubEngine>(edwards::Point<E, PrimeOrder>);
+
+impl<E: JubjubEngine> GEpoch<E> {
+    pub fn new(point: edwards::Point<E, PrimeOrder>) -> Self {
+        GEpoch(point)
+    }
+}

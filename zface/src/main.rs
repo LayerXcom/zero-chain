@@ -38,7 +38,6 @@ use self::config::*;
 use self::wallet::commands::*;
 use self::transaction::*;
 
-
 fn main() {
     let default_root_dir = get_default_root_dir();
 

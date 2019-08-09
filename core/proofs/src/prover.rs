@@ -14,6 +14,8 @@ use scrypto::{
     jubjub::{
         JubjubEngine,
         FixedGenerators,
+        edwards,
+        PrimeOrder,
     },
     redjubjub::{
         PublicKey,
@@ -139,7 +141,7 @@ impl<E: JubjubEngine> ConfidentialProof<E> {
         proof_generation_key: &ProofGenerationKey<E>,
         enc_keys: &MultiEncKeys<E>,
         cipher_balance: &Ciphertext<E>,
-        // nonce: Nonce<E>,
+        g_epoch: &edwards::Point<E, PrimeOrder>,
         rng: &mut R,
         params: &E::Params,
     ) -> Result<Self, SynthesisError>
@@ -166,7 +168,8 @@ impl<E: JubjubEngine> ConfidentialProof<E> {
             dec_key_sender: Some(&dec_key_sender),
             enc_key_recipient: Some(&enc_keys.recipient),
             encrypted_balance: Some(&cipher_balance),
-            fee: Some(fee)
+            fee: Some(fee),
+            g_epoch: Some(g_epoch),
         };
 
         // Crate proof
@@ -321,6 +324,8 @@ mod tests {
 
         let (proving_key, prepared_vk) = get_pk_and_vk();
 
+        let g_epoch = edwards::Point::rand(rng, params).mul_by_cofactor(params);
+
         let proofs = ConfidentialProof::gen_proof(
             amount,
             remaining_balance,
@@ -331,6 +336,7 @@ mod tests {
             &proof_generation_key,
             &MultiEncKeys::new_for_confidential(enc_key_recipient),
             &cipher_balance,
+            &g_epoch,
             rng,
             params,
         );

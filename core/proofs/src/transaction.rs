@@ -10,7 +10,7 @@ use bellman::groth16::{Parameters, PreparedVerifyingKey};
 use pairing::bls12_381::Bls12;
 use pairing::Field;
 use zpairing::io;
-use scrypto::jubjub::fs;
+use scrypto::jubjub::{fs, edwards, PrimeOrder};
 use rand::Rng;
 
 /// Transaction components which is needed to create a signed `UncheckedExtrinsic`.
@@ -35,6 +35,7 @@ impl Transaction {
 		enc_keys: &MultiEncKeys<Bls12>,
 		spending_key: &SpendingKey<Bls12>,
         ciphertext_balance: &elgamal::Ciphertext<Bls12>,
+		g_epoch: &edwards::Point<Bls12, PrimeOrder>,
 		rng: &mut R,
 		fee: u32,
     ) -> Result<Self, io::Error>
@@ -58,6 +59,7 @@ impl Transaction {
 			&proof_generation_key,
 			enc_keys,
             ciphertext_balance,
+			g_epoch,
 			rng,
 			&PARAMS,
 		).expect("Should not be faild to generate a proof.");
