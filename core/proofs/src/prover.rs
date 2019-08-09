@@ -64,6 +64,31 @@ impl<E: JubjubEngine> MultiCiphertexts<E> {
     }
 }
 
+#[derive(Clone)]
+pub struct MultiEncKeys<E: JubjubEngine> {
+    pub recipient: EncryptionKey<E>,
+    pub decoys: Option<Vec<EncryptionKey<E>>>,
+}
+
+impl<E: JubjubEngine> MultiEncKeys<E> {
+    pub fn new_for_confidential(recipient: EncryptionKey<E>) -> Self {
+        MultiEncKeys {
+            recipient,
+            decoys: None,
+        }
+    }
+
+    pub fn new_for_anonymous(
+        recipient: EncryptionKey<E>,
+        decoys: Vec<EncryptionKey<E>>,
+    ) -> Self {
+        MultiEncKeys {
+            recipient,
+            decoys: Some(decoys),
+        }
+    }
+}
+
 pub struct AnonymousProof<E: JubjubEngine> {
     proof: Proof<E>,
     rvk: PublicKey<E>,
@@ -77,17 +102,16 @@ impl<E: JubjubEngine> AnonymousProof<E> {
     pub fn gen_proof<R: Rng>(
         amount: u32,
         remaining_balance: u32,
+        fee: u32,
         alpha: E::Fs,
         proving_key: &Parameters<E>,
         prepared_vk: &PreparedVerifyingKey<E>,
         proof_generation_key: &ProofGenerationKey<E>,
-        enc_key_recipient: EncryptionKey<E>,
+        enc_keys: &MultiEncKeys<E>,
         cipher_balance: Ciphertext<E>,
+        nonce: Nonce<E>,
         rng: &mut R,
         params: &E::Params,
-        fee: u32,
-        nonce: Nonce<E>,
-
     ) -> Result<Self, SynthesisError>
     {
 
@@ -114,8 +138,8 @@ impl<E: JubjubEngine> ConfidentialProof<E> {
         proving_key: &Parameters<E>,
         prepared_vk: &PreparedVerifyingKey<E>,
         proof_generation_key: &ProofGenerationKey<E>,
-        enc_key_recipient: EncryptionKey<E>,
-        cipher_balance: Ciphertext<E>,
+        enc_keys: &MultiEncKeys<E>,
+        cipher_balance: &Ciphertext<E>,
         rng: &mut R,
         params: &E::Params,
         fee: u32,
@@ -132,6 +156,7 @@ impl<E: JubjubEngine> ConfidentialProof<E> {
                 FixedGenerators::NoteCommitmentRandomness,
                 params,
         );
+        let enc_key_recipient = &enc_keys.recipient;
 
         let instance = Transfer {
             params: params,
@@ -141,7 +166,7 @@ impl<E: JubjubEngine> ConfidentialProof<E> {
             alpha: Some(&alpha),
             proof_generation_key: Some(&proof_generation_key),
             dec_key_sender: Some(&dec_key_sender),
-            enc_key_recipient: Some(enc_key_recipient.clone()),
+            enc_key_recipient: Some(&enc_key_recipient),
             encrypted_balance: Some(&cipher_balance),
             fee: Some(fee)
         };
@@ -232,18 +257,16 @@ impl<E: JubjubEngine> ConfidentialProof<E> {
             proof,
             rvk,
             enc_key_sender,
-            enc_key_recipient,
+            enc_key_recipient: enc_key_recipient.clone(),
             cipher_val_s,
             cipher_val_r,
-            cipher_balance,
+            cipher_balance: cipher_balance.clone(),
             cipher_fee_s,
         };
 
         Ok(proof)
     }
 }
-
-
 
 #[cfg(test)]
 mod tests {

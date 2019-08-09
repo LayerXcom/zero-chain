@@ -11,6 +11,7 @@ pub mod transaction;
 pub mod setup;
 pub mod nonce;
 
+pub use self::prover::*;
 pub use self::setup::setup;
 pub use self::transaction::Transaction;
 pub use self::keys::{EncryptionKey, ProofGenerationKey, SpendingKey, DecryptionKey};

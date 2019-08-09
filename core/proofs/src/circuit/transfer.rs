@@ -17,7 +17,7 @@ use scrypto::jubjub::{
     JubjubEngine,
     FixedGenerators,
 };
-use crate::keys::{ProofGenerationKey, EncryptionKey, DecryptionKey};
+use crate::{ProofGenerationKey, EncryptionKey, DecryptionKey};
 use scrypto::circuit::{
     boolean::{self, Boolean},
     ecc::{self, EdwardsPoint},
@@ -34,7 +34,7 @@ pub struct Transfer<'a, E: JubjubEngine> {
     pub alpha: Option<&'a E::Fs>,
     pub proof_generation_key: Option<&'a ProofGenerationKey<E>>,
     pub dec_key_sender: Option<&'a DecryptionKey<E>>,
-    pub enc_key_recipient: Option<EncryptionKey<E>>,
+    pub enc_key_recipient: Option<&'a EncryptionKey<E>>,
     pub encrypted_balance: Option<&'a Ciphertext<E>>,
     pub fee: Option<u32>,
 }
@@ -426,7 +426,7 @@ mod tests {
             alpha: Some(&alpha),
             proof_generation_key: Some(&proof_generation_key_s),
             dec_key_sender: Some(&decryption_key_s),
-            enc_key_recipient: Some(enc_key_recipient.clone()),
+            enc_key_recipient: Some(&enc_key_recipient),
             encrypted_balance: Some(&ciphetext_balance),
             fee: Some(fee),
         };

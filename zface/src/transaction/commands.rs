@@ -2,7 +2,7 @@ use std::path::{PathBuf, Path};
 use std::io::{BufReader, Read};
 use std::fs::File;
 use rand::{Rng, Rand};
-use proofs::{SpendingKey, Transaction, ProofGenerationKey, EncryptionKey, PARAMS, elgamal};
+use proofs::{SpendingKey, Transaction, ProofGenerationKey, EncryptionKey, PARAMS, elgamal, MultiCiphertexts, MultiEncKeys};
 use pairing::bls12_381::Bls12;
 use super::constants::*;
 use crate::term::Term;
@@ -53,9 +53,9 @@ pub fn asset_issue_tx<R: Rng>(
         0, // dummy value for remaining balance
         &proving_key,
         &prepared_vk,
-        &issuer_address,
+        &MultiEncKeys::new_for_confidential(issuer_address),
         &spending_key,
-        enc_amount,
+        &enc_amount,
         rng,
         0
         )
@@ -107,9 +107,9 @@ pub fn asset_transfer_tx<R: Rng>(
         remaining_balance,
         &proving_key,
         &prepared_vk,
-        &recipient_account_id,
+        &MultiEncKeys::new_for_confidential(recipient_account_id.clone()),
         &spending_key,
-        encrypted_balance,
+        &encrypted_balance,
         rng,
         fee
         )
@@ -163,9 +163,9 @@ pub fn asset_burn_tx<R: Rng>(
         0, // dummy value for remaining balance
         &proving_key,
         &prepared_vk,
-        &issuer_address,
+        &MultiEncKeys::new_for_confidential(issuer_address),
         &spending_key,
-        enc_amount,
+        &enc_amount,
         rng,
         0
         )
@@ -241,9 +241,9 @@ fn inner_transfer_tx<R: Rng>(
         remaining_balance,
         &proving_key,
         &prepared_vk,
-        &recipient_account_id,
+        &MultiEncKeys::new_for_confidential(recipient_account_id.clone()),
         &spending_key,
-        encrypted_balance,
+        &encrypted_balance,
         rng,
         fee
         )

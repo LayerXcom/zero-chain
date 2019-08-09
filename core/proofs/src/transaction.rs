@@ -3,7 +3,7 @@ use crate::{
 	EncryptionKey,
 	ProofGenerationKey,
 	SpendingKey,
-	prover::ConfidentialProof,
+	prover::{ConfidentialProof, MultiEncKeys},
 	elgamal,
 };
 use bellman::groth16::{Parameters, PreparedVerifyingKey};
@@ -32,9 +32,9 @@ impl Transaction {
         remaining_balance: u32,
         proving_key: &Parameters<Bls12>,
 		prepared_vk: &PreparedVerifyingKey<Bls12>,
-		enc_key_recipient: &EncryptionKey<Bls12>,
+		enc_keys: &MultiEncKeys<Bls12>,
 		spending_key: &SpendingKey<Bls12>,
-        ciphertext_balance: elgamal::Ciphertext<Bls12>,
+        ciphertext_balance: &elgamal::Ciphertext<Bls12>,
 		rng: &mut R,
 		fee: u32,
     ) -> Result<Self, io::Error>
@@ -55,8 +55,8 @@ impl Transaction {
 			proving_key,
 			prepared_vk,
 			&proof_generation_key,
-			enc_key_recipient.clone(),
-            ciphertext_balance.clone(),
+			enc_keys,
+            ciphertext_balance,
 			rng,
 			&PARAMS,
 			fee
