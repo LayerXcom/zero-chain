@@ -20,12 +20,14 @@ use zprimitives::{
     PreparedVk,
     ElgamalCiphertext,
     SigVk,
+    Nonce,
+    GEpoch,
 };
 use parity_codec::Codec;
 use keys::EncryptionKey;
 use zcrypto::elgamal;
 use system::{IsDeadAccount, ensure_signed};
-use blake2_rfc;
+use blake2_rfc::blake2s::Blake2s;
 
 pub trait Trait: system::Trait {
 	/// The overarching event type.
@@ -142,6 +144,12 @@ decl_storage! {
         /// A last epoch for rollover
         pub LastRollOver get(last_rollover) config() : map EncKey => Option<T::BlockNumber>;
 
+        /// A global last epoch which will be updated in the roll_over function.
+        pub LastEpoch get(last_epoch): T::BlockNumber;
+
+        /// An epoch based generator point
+        pub LastGEpoch get(g_epoch): GEpoch;
+
         /// Global epoch length for rollover.
         /// The longer epoch length is, the longer rollover time is.
         /// This parameter should be fixed based on trade-off between UX and security in terms of front-running attacks.
@@ -153,7 +161,9 @@ decl_storage! {
         /// A verification key of zk proofs (only readable)
         pub VerifyingKey get(verifying_key) config(): PreparedVk;
 
-        
+        /// A nonce pool. All nonces are erasured at the time of starting each epochs.
+        // Consider chainging Vec to BtreeMap
+        pub NoncePool get(nonce_pool): Vec<Nonce>;
     }
 }
 
@@ -357,8 +367,18 @@ impl<T: Trait> Module<T> {
             None => zero.clone(),
         };
 
+        // Initialize a nonce pool
+        if Self::last_epoch() < current_epoch {
+            Self::init_nonce_pool();
+        }
+
         // return actual typed balance.
         Ok(res_balance)
+    }
+
+    /// Remove all nonces in the pool
+    pub fn init_nonce_pool() {
+
     }
 
     // Subtracting transferred amount and fee from encrypted balances.
