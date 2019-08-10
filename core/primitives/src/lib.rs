@@ -24,6 +24,7 @@ pub mod ciphertext;
 pub mod proof;
 pub mod sig_vk;
 pub mod prepared_vk;
+pub mod nonce;
 
 pub use enc_key::EncKey;
 pub use signature::RedjubjubSignature;

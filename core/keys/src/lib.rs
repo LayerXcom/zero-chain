@@ -315,4 +315,3 @@ mod tests {
         assert!(addr1 == addr2);
     }
 }
-

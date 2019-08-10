@@ -25,6 +25,7 @@ use parity_codec::Codec;
 use keys::EncryptionKey;
 use zcrypto::elgamal;
 use system::{IsDeadAccount, ensure_signed};
+use blake2_rfc;
 
 pub trait Trait: system::Trait {
 	/// The overarching event type.
@@ -151,6 +152,8 @@ decl_storage! {
 
         /// A verification key of zk proofs (only readable)
         pub VerifyingKey get(verifying_key) config(): PreparedVk;
+
+        
     }
 }
 
