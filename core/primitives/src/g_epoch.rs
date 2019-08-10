@@ -80,9 +80,18 @@ impl GEpoch {
         let mut new_epoch = [0u8; 4];
         LittleEndian::write_u32(&mut new_epoch, 0);
 
-        // HASH_TO_CURVE(GEPOCH_PERSONALIZATION || 0)
+        // Hash_to_curve(GEPOCH_PERSONALIZATION || 0)
         let new_g_epoch = find_group_hash(&new_epoch, GEPOCH_PERSONALIZATION, &PARAMS);
         GEpoch::try_from(new_g_epoch)
+    }
+
+    pub fn group_hash(curr_epoch: u32) -> Result<Self, io::Error> {
+        let mut epoch = [0u8; 4];
+        LittleEndian::write_u32(&mut epoch, curr_epoch);
+
+        // Hash_to_curve(GEPOCH_PERSONALIZATION || current_epoch)
+        let g_epoch = find_group_hash(&epoch, GEPOCH_PERSONALIZATION, &PARAMS);
+        GEpoch::try_from(g_epoch)
     }
 }
 

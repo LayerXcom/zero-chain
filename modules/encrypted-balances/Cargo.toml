@@ -33,7 +33,6 @@ std = [
     'system/std',
     'serde_derive',
     'serde',
-    'blake2-rfc/std',
 ]
 
 [dev-dependencies]
@@ -86,8 +85,3 @@ version = '1.0'
 [dependencies.serde_derive]
 optional = true
 version = '1.0'
-
-[dependencies.blake2-rfc]
-git = "https://github.com/gtank/blake2-rfc"
-rev = "7a5b5fc99ae483a0043db7547fb79a6fa44b88a9"
-default-features = false

@@ -1,7 +1,7 @@
 //! A module for dealing with confidential transfer
 #![cfg_attr(not(feature = "std"), no_std)]
 
-use support::{decl_module, decl_storage, decl_event, StorageMap, dispatch::Result, Parameter};
+use support::{decl_module, decl_storage, decl_event, StorageValue, StorageMap, dispatch::Result, Parameter};
 use rstd::prelude::*;
 use rstd::result;
 use bellman_verifier::verify_proof;
@@ -12,22 +12,16 @@ use pairing::{
     },
     Field,
 };
-use runtime_primitives::traits::{Member, Zero, MaybeSerializeDebug};
+use runtime_primitives::traits::{Member, Zero, MaybeSerializeDebug, As};
 use jubjub::redjubjub::PublicKey;
 use zprimitives::{
-    EncKey,
-    Proof,
-    PreparedVk,
-    ElgamalCiphertext,
-    SigVk,
-    Nonce,
-    GEpoch,
+    EncKey, Proof, PreparedVk, ElgamalCiphertext,
+    SigVk, Nonce, GEpoch,
 };
 use parity_codec::Codec;
 use keys::EncryptionKey;
 use zcrypto::elgamal;
 use system::{IsDeadAccount, ensure_signed};
-use blake2_rfc::blake2s::Blake2s;
 
 pub trait Trait: system::Trait {
 	/// The overarching event type.
@@ -369,16 +363,23 @@ impl<T: Trait> Module<T> {
 
         // Initialize a nonce pool
         if Self::last_epoch() < current_epoch {
-            Self::init_nonce_pool();
+            Self::init_nonce_pool(current_epoch);
         }
 
         // return actual typed balance.
         Ok(res_balance)
     }
 
-    /// Remove all nonces in the pool
-    pub fn init_nonce_pool() {
+    /// Initialize global nonce-related storages
+    /// 1. Set last g_epoch to current g_epoch
+    /// 2. Remove all nonces in the pool
+    /// 3. Set last epoch to current epoch
+    pub fn init_nonce_pool(current_epoch: T::BlockNumber) {
+        let g_epoch = GEpoch::group_hash(current_epoch.as_() as u32).unwrap();
 
+        <LastGEpoch<T>>::put(g_epoch);
+        <NoncePool<T>>::kill();
+        <LastEpoch<T>>::put(current_epoch);
     }
 
     // Subtracting transferred amount and fee from encrypted balances.
