@@ -4,16 +4,15 @@
 use support::{decl_module, decl_storage, decl_event, StorageValue, StorageMap, dispatch::Result, Parameter};
 use rstd::prelude::*;
 use rstd::result;
+use rstd::convert::TryFrom;
 use bellman_verifier::verify_proof;
 use pairing::{
-    bls12_381::{
-        Bls12,
-        Fr,
-    },
+    bls12_381::{Bls12,Fr},
     Field,
 };
 use runtime_primitives::traits::{Member, Zero, MaybeSerializeDebug, As};
 use jubjub::redjubjub::PublicKey;
+use jubjub::curve::{edwards, PrimeOrder};
 use zprimitives::{
     EncKey, Proof, PreparedVk, ElgamalCiphertext,
     SigVk, Nonce, GEpoch,
@@ -29,6 +28,8 @@ pub trait Trait: system::Trait {
 
     /// The units in which we record encrypted balances.
     type EncryptedBalance: ElgamalCiphertext + Parameter + Member + Default + MaybeSerializeDebug + Codec;
+
+    type Nonce: TryFrom<edwards::Point<Bls12, PrimeOrder>> + Parameter + Member + Default + MaybeSerializeDebug + Codec;
 }
 
 pub struct TypedParams {
@@ -56,7 +57,8 @@ decl_module! {
             address_recipient: EncKey,
             amount_sender: T::EncryptedBalance,
             amount_recipient: T::EncryptedBalance,
-            fee_sender: T::EncryptedBalance
+            fee_sender: T::EncryptedBalance,
+            nonce: T::Nonce
         ) -> Result {
 			let rvk = ensure_signed(origin)?;
 
@@ -86,6 +88,9 @@ decl_module! {
             let typed_balance_recipient = Self::rollover(&address_recipient)
                 .map_err(|_| "Invalid ciphertext of recipient balance.")?;
 
+            // Veridate the provided nonce isn't included in the nonce pool.
+            assert!(Self::nonce_pool().contains(&nonce));
+
             // Verify the zk proof
             if !Self::validate_proof(
                     &typed.zkproof,
@@ -99,7 +104,10 @@ decl_module! {
                 )? {
                     Self::deposit_event(RawEvent::InvalidZkProof());
                     return Err("Invalid zkproof");
-                }
+            }
+
+            // Add a nonce into the nonce pool
+            Self::nonce_pool().push(nonce);
 
             // Subtracting transferred amount and fee from the sender's encrypted balances.
             // This function causes a storage mutation.
@@ -157,7 +165,7 @@ decl_storage! {
 
         /// A nonce pool. All nonces are erasured at the time of starting each epochs.
         // Consider chainging Vec to BtreeMap
-        pub NoncePool get(nonce_pool): Vec<Nonce>;
+        pub NoncePool get(nonce_pool): Vec<T::Nonce>;
     }
 }
 

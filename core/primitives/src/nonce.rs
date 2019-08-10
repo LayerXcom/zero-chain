@@ -8,7 +8,7 @@ use pairing::bls12_381::Bls12;
 use jubjub::curve::{edwards, PrimeOrder, Unknown};
 use pairing::io;
 use parity_codec::{Encode, Decode, Input};
-use std::convert::TryFrom;
+use core::convert::TryFrom;
 
 const SIZE: usize = 32;
 

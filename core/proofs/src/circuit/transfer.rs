@@ -378,7 +378,8 @@ impl<'a, E: JubjubEngine> Circuit<E> for Transfer<'a, E> {
                 params
             )?;
 
-            nonce.inputize(cs.namespace(|| "nonce"))?;
+            g_epoch.inputize(cs.namespace(|| "inputize g_epoch"))?;
+            nonce.inputize(cs.namespace(|| "inputize nonce"))?;
         }
 
         Ok(())
@@ -436,6 +437,7 @@ mod tests {
 
         let rvk = proof_gen_key.into_rvk(alpha, params).0.into_xy();
         let g_epoch = edwards::Point::rand(rng, params).mul_by_cofactor(params);
+        let g_epoch_xy = g_epoch.into_xy();
         let nonce = g_epoch.mul(dec_key.0, params).into_xy();
 
         let mut cs = TestConstraintSystem::<Bls12>::new();
@@ -457,10 +459,10 @@ mod tests {
         instance.synthesize(&mut cs).unwrap();
 
         assert!(cs.is_satisfied());
-        assert_eq!(cs.num_constraints(), 25051);
-        assert_eq!(cs.hash(), "d429836034d9816ffd3e157e5de055450c00ad6027e1cb0b8ecb06e390a60adc");
+        assert_eq!(cs.num_constraints(), 25053);
+        assert_eq!(cs.hash(), "fabd4cb7d2ebbdb643eefe54b21a4c2d802544ea860c485a14532b2cd1194b4f");
 
-        assert_eq!(cs.num_inputs(), 21);
+        assert_eq!(cs.num_inputs(), 23);
         assert_eq!(cs.get_input(0, "ONE"), Fr::one());
         assert_eq!(cs.get_input(1, "inputize enc_key_sender/x/input variable"), address_sender_xy.0);
         assert_eq!(cs.get_input(2, "inputize enc_key_sender/y/input variable"), address_sender_xy.1);
@@ -480,8 +482,10 @@ mod tests {
         assert_eq!(cs.get_input(16, "inputize pointr/y/input variable"), c_bal_right.1);
         assert_eq!(cs.get_input(17, "rvk/x/input variable"), rvk.0);
         assert_eq!(cs.get_input(18, "rvk/y/input variable"), rvk.1);
-        assert_eq!(cs.get_input(19, "nonce/x/input variable"), nonce.0);
-        assert_eq!(cs.get_input(20, "nonce/y/input variable"), nonce.1);
+        assert_eq!(cs.get_input(19, "inputize g_epoch/x/input variable"), g_epoch_xy.0);
+        assert_eq!(cs.get_input(20, "inputize g_epoch/y/input variable"), g_epoch_xy.1);
+        assert_eq!(cs.get_input(21, "inputize nonce/x/input variable"), nonce.0);
+        assert_eq!(cs.get_input(22, "inputize nonce/y/input variable"), nonce.1);
     }
 
     #[test]

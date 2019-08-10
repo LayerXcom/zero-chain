@@ -10,7 +10,7 @@ use pairing::bls12_381::Bls12;
 use pairing::io;
 use parity_codec::{Encode, Decode, Input};
 use byteorder::{ByteOrder, LittleEndian};
-use std::convert::TryFrom;
+use core::convert::TryFrom;
 
 const SIZE: usize = 32;
 const GEPOCH_PERSONALIZATION: &[u8; 8] = b"zcgepoch";

@@ -24,6 +24,7 @@ pub struct Transaction{
 	pub rsk: [u8; 32],                   // 32 bytes
 	pub rvk: [u8; 32],                   // 32 bytes
 	pub enc_balance: [u8; 64],           // 32 bytes
+	pub nonce: [u8; 32],
 }
 
 impl Transaction {
@@ -63,6 +64,8 @@ impl Transaction {
 			rng,
 			&PARAMS,
 		).expect("Should not be faild to generate a proof.");
+
+		// TODO: Creating bridge_convert traits between std and no_std.
 
 		// Generate the re-randomized sign key
 		let mut rsk_bytes = [0u8; 32];
@@ -118,6 +121,12 @@ impl Transaction {
 			.write(&mut enc_balance[..])
 			.map_err(|_| io::Error::InvalidData)?;
 
+		let mut nonce = [0u8; 32];
+		proof_output
+			.nonce
+			.write(&mut nonce[..])
+			.map_err(|_| io::Error::InvalidData)?;
+
 		let tx = Transaction {
 			proof: proof_bytes,
 			rvk: rvk_bytes,
@@ -128,6 +137,7 @@ impl Transaction {
 			rsk: rsk_bytes,
 			enc_fee,
 			enc_balance,
+			nonce,
 		};
 
 		Ok(tx)

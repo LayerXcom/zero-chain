@@ -128,6 +128,7 @@ pub struct ConfidentialProof<E: JubjubEngine> {
     pub enc_keys: MultiEncKeys<E>,
     pub multi_ciphertexts: MultiCiphertexts<E>,
     pub cipher_balance: Ciphertext<E>,
+    pub nonce: edwards::Point<E, PrimeOrder>,
 }
 
 impl<E: JubjubEngine> ConfidentialProof<E> {
@@ -157,6 +158,7 @@ impl<E: JubjubEngine> ConfidentialProof<E> {
                 FixedGenerators::NoteCommitmentRandomness,
                 params,
         );
+        let nonce = g_epoch.mul(dec_key_sender.0, params);
 
         let instance = Transfer {
             params: params,
@@ -175,7 +177,7 @@ impl<E: JubjubEngine> ConfidentialProof<E> {
         // Crate proof
         let proof = create_random_proof(instance, proving_key, rng)?;
 
-        let mut public_input = [E::Fr::zero(); 18];
+        let mut public_input = [E::Fr::zero(); 22];
         let p_g = FixedGenerators::NoteCommitmentRandomness;
 
         let cipher_sender = Ciphertext::encrypt(
@@ -244,8 +246,18 @@ impl<E: JubjubEngine> ConfidentialProof<E> {
         }
         {
             let (x, y) = rvk.0.into_xy();
-            public_input[12] = x;
-            public_input[13] = y;
+            public_input[16] = x;
+            public_input[17] = y;
+        }
+        {
+            let (x, y) = g_epoch.into_xy();
+            public_input[18] = x;
+            public_input[19] = y;
+        }
+        {
+            let (x, y) = nonce.into_xy();
+            public_input[20] = x;
+            public_input[21] = y;
         }
 
         // This verification is just an error handling, not validate if it returns `true`,
@@ -261,6 +273,7 @@ impl<E: JubjubEngine> ConfidentialProof<E> {
             enc_keys: MultiEncKeys::new_for_confidential(enc_keys.recipient.clone()),
             multi_ciphertexts: MultiCiphertexts::new_for_confidential(cipher_sender, cipher_recipient, cipher_fee),
             cipher_balance: cipher_balance.clone(),
+            nonce,
         };
 
         Ok(proof)

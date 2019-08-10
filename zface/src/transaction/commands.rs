@@ -15,7 +15,7 @@ use zjubjub::{
     redjubjub::PrivateKey as zPrivateKey
     };
 use zpairing::{bls12_381::Bls12 as zBls12, PrimeField as zPrimeField, PrimeFieldRepr as zPrimeFieldRepr};
-use zprimitives::{PARAMS as ZPARAMS, Proof, Ciphertext as zCiphertext, EncKey, SigVerificationKey, RedjubjubSignature, SigVk};
+use zprimitives::{PARAMS as ZPARAMS, Proof, Ciphertext as zCiphertext, EncKey, SigVerificationKey, RedjubjubSignature, SigVk, Nonce};
 use zerochain_runtime::{UncheckedExtrinsic, Call, EncryptedBalancesCall, EncryptedAssetsCall};
 use runtime_primitives::generic::Era;
 use parity_codec::{Compact, Encode, Decode};
