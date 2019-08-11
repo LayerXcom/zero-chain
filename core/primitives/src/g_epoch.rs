@@ -138,4 +138,12 @@ mod tests {
 
         assert_eq!(point1, point2);
     }
+
+    #[test]
+    fn test_group_hash() {
+        let new_g_epoch = GEpoch::try_new().unwrap();
+        let zero_g_epch = GEpoch::group_hash(0).unwrap();
+        println!("zero: {:?}", new_g_epoch);
+        assert_eq!(new_g_epoch, zero_g_epch);
+    }
 }

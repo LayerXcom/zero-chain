@@ -574,7 +574,8 @@ fn subcommand_debug<R: Rng>(mut term: term::Term, matches: &ArgMatches, rng: &mu
             let remaining_balance = balance - amount - fee;
 
             use scrypto::jubjub::edwards;
-            let dummy_g_epoch = edwards::Point::<Bls12, _>::rand(rng, &*PARAMS).mul_by_cofactor(&*PARAMS);
+            let g_epoch_vec = hex::decode("0953f47325251a2f479c25527df6d977925bebafde84423b20ae6c903411665a").unwrap();
+            let g_epoch = edwards::Point::read(&g_epoch_vec[..], &*PARAMS).unwrap().as_prime_order(&*PARAMS).unwrap();
 
             let tx = Transaction::gen_tx(
                             amount,
@@ -584,7 +585,7 @@ fn subcommand_debug<R: Rng>(mut term: term::Term, matches: &ArgMatches, rng: &mu
                             &MultiEncKeys::new_for_confidential(address_recipient.clone()),
                             &SpendingKey::<Bls12>::from_seed(&sender_seed[..]),
                             &ciphertext_balance,
-                            &dummy_g_epoch,
+                            &g_epoch,
                             rng,
                             fee
                     ).expect("fails to generate the tx");
@@ -599,6 +600,7 @@ fn subcommand_debug<R: Rng>(mut term: term::Term, matches: &ArgMatches, rng: &mu
                 \nrvk(Alice): 0x{}
                 \nrsk(Alice): 0x{}
                 \nEncrypted fee by sender: 0x{}
+                \nNonce:  0x{}
                 ",
                 HexDisplay::from(&&tx.proof[..] as &dyn AsBytesRef),
                 HexDisplay::from(&tx.enc_key_sender as &dyn AsBytesRef),
@@ -608,6 +610,7 @@ fn subcommand_debug<R: Rng>(mut term: term::Term, matches: &ArgMatches, rng: &mu
                 HexDisplay::from(&tx.rvk as &dyn AsBytesRef),
                 HexDisplay::from(&tx.rsk as &dyn AsBytesRef),
                 HexDisplay::from(&tx.enc_fee as &dyn AsBytesRef),
+                HexDisplay::from(&tx.nonce as &dyn AsBytesRef)
             );
         },
         ("balance", Some(sub_matches)) => {

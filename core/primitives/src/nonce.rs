@@ -2,6 +2,8 @@
 use serde::{Serialize, Serializer, Deserialize, Deserializer};
 #[cfg(feature = "std")]
 use substrate_primitives::bytes;
+#[cfg(feature = "std")]
+use substrate_primitives::hexdisplay::AsBytesRef;
 use crate::PARAMS;
 use fixed_hash::construct_fixed_hash;
 use pairing::bls12_381::Bls12;
@@ -69,6 +71,13 @@ impl TryFrom<Nonce> for edwards::Point<Bls12, PrimeOrder> {
         edwards::Point::<Bls12, Unknown>::read(&mut bytes, &PARAMS)?
             .as_prime_order(&PARAMS)
             .ok_or(io::Error::NotInField)
+    }
+}
+
+#[cfg(feature = "std")]
+impl AsBytesRef for Nonce {
+    fn as_bytes_ref(&self) -> &[u8] {
+        self.as_ref()
     }
 }
 
