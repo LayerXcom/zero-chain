@@ -66,7 +66,11 @@ decl_module! {
             )
             .map_err(|_| "Failed to convert into types.")?;
 
-            // TODO: roll over and update nonce pool
+            // Initialize a nonce pool
+            let current_epoch = <encrypted_balances::Module<T>>::get_current_epoch();
+            if <encrypted_balances::Module<T>>::last_epoch() < current_epoch {
+                <encrypted_balances::Module<T>>::init_nonce_pool(current_epoch);
+            }
 
             // Veridate the provided nonce isn't included in the nonce pool.
             assert!(!<encrypted_balances::Module<T>>::nonce_pool().contains(&nonce));
