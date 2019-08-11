@@ -494,7 +494,6 @@ mod tests {
     }
 
     type EncryptedAssets = Module<Test>;
-    type EncryptedBalances = encrypted_balances::Module<Test>;
     type System = system::Module<Test>;
 
     fn alice_balance_init() -> (EncKey, Ciphertext) {
@@ -553,7 +552,7 @@ mod tests {
         let _ = encrypted_balances::GenesisConfig::<Test>{
             encrypted_balance: vec![balance_init.clone()],
 			last_rollover: vec![epoch_init],
-            last_epoch: 0,
+            last_epoch: 1,
             epoch_length: 1,
             transaction_base_fee: 1,
             verifying_key: get_pvk(),

@@ -85,10 +85,10 @@ decl_module! {
             // it just rollover user's own `pending trasfer` to `encrypted balances`.
             let typed_balance_recipient = Self::rollover(&address_recipient)
                 .map_err(|_| "Invalid ciphertext of recipient balance.")?;
-runtime_io::print("@@@@@@@@@");
+
             // Veridate the provided nonce isn't included in the nonce pool.
             assert!(!Self::nonce_pool().contains(&nonce));
-runtime_io::print("@@@@@@@@@");
+
             // Verify the zk proof
             if !Self::validate_proof(
                     &typed.zkproof,
@@ -104,10 +104,10 @@ runtime_io::print("@@@@@@@@@");
                     Self::deposit_event(RawEvent::InvalidZkProof());
                     return Err("Invalid zkproof");
             }
-runtime_io::print("@@@@@@@@@");
+
             // Add a nonce into the nonce pool
             Self::nonce_pool().push(nonce);
-runtime_io::print("@@@@@@@@@");
+
             // Subtracting transferred amount and fee from the sender's encrypted balances.
             // This function causes a storage mutation.
             Self::sub_enc_balance(&address_sender, &typed_balance_sender, &typed.amount_sender, &typed.fee_sender);
@@ -115,7 +115,7 @@ runtime_io::print("@@@@@@@@@");
             // Adding transferred amount to the recipient's pending transfer.
             // This function causes a storage mutation.
             Self::add_pending_transfer(&address_recipient, &typed_balance_recipient, &typed.amount_recipient);
-runtime_io::print("@@@@@@@@@");
+
             Self::deposit_event(
                 RawEvent::ConfidentialTransfer(
                     zkproof,
@@ -548,7 +548,7 @@ pub mod tests {
         t.extend(GenesisConfig::<Test>{
             encrypted_balance: vec![alice_balance_init()],
 			last_rollover: vec![alice_epoch_init()],
-            last_epoch: 0,
+            last_epoch: 1,
             epoch_length: 1,
             transaction_base_fee: 1,
             verifying_key: get_pvk(),
