@@ -264,10 +264,15 @@ fn inner_transfer_tx<R: Rng>(
 }
 
 fn get_g_epoch(api: &Api) -> edwards::Point<Bls12, PrimeOrder> {
-    let g_epoch_str = api.get_storage("EncryptedBalances", "LastGEpoch", None)
-        .expect("should be fetched LastGEpoch from encrypted balances module.");
+    let current_height_str = api.get_latest_height()
+        .expect("should be fetched Number from system module.");
+    let epoch_length_str = api.get_storage("EncryptedBalances", "EpochLength", None)
+        .expect("should be fetched epoch length from encrypted-balances module.");
 
-    edwards::Point::<Bls12, _>::read(&mut &hexstr_to_vec(g_epoch_str)[..], &PARAMS)
+    let current_epoch = hexstr_to_u64(current_height_str) / hexstr_to_u64(epoch_length_str);
+    let g_epoch = GEpoch::group_hash(current_epoch as u32).unwrap(); // TODO
+
+    edwards::Point::<Bls12, _>::read(&mut g_epoch.as_ref(), &PARAMS)
             .unwrap() // TODO
             .as_prime_order(&PARAMS)
             .unwrap()

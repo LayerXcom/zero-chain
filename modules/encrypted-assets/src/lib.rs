@@ -37,8 +37,6 @@ struct TypedParams {
     dummy_balance: elgamal::Ciphertext<Bls12>,
 }
 
-type FeeAmount = u32;
-
 decl_module! {
     pub struct Module<T: Trait> for enum Call where origin: T::Origin {
         fn deposit_event<T>() = default;
@@ -68,7 +66,7 @@ decl_module! {
             )
             .map_err(|_| "Failed to convert into types.")?;
 
-            // TODO: roll over
+            // TODO: roll over and update nonce pool
 
             // Veridate the provided nonce isn't included in the nonce pool.
             assert!(!<encrypted_balances::Module<T>>::nonce_pool().contains(&nonce));

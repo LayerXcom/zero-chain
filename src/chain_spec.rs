@@ -136,7 +136,7 @@ fn testnet_genesis(initial_authorities: Vec<AuthorityId>, endowed_accounts: Vec<
 			encrypted_balance: vec![balance_init.clone()],
 			last_rollover: vec![epoch_init],
 			last_epoch: 0,
-			epoch_length: 3,
+			epoch_length: 5,
 			transaction_base_fee: 1,
 			verifying_key: get_pvk(),
 			nonce_pool: vec![],
