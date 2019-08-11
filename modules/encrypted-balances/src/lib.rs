@@ -595,8 +595,8 @@ pub mod tests {
                 &*PARAMS
             );
 
-            let mut g_epoch_vec: [u8; 32] = hex!("0953f47325251a2f479c25527df6d977925bebafde84423b20ae6c903411665a");
-            let g_epoch = tedwards::Point::read(&mut &g_epoch_vec[..], &*PARAMS).unwrap().as_prime_order(&*PARAMS).unwrap();
+            let g_epoch_vec: [u8; 32] = hex!("0953f47325251a2f479c25527df6d977925bebafde84423b20ae6c903411665a");
+            let g_epoch = tedwards::Point::read(&g_epoch_vec[..], &*PARAMS).unwrap().as_prime_order(&*PARAMS).unwrap();
 
             let tx = Transaction::gen_tx(
                 amount,

@@ -347,7 +347,8 @@ pub fn submit_asset_issue<R: Rng>(tx: &Transaction, api: &Api, rng: &mut R) {
         EncKey::from_slice(&tx.enc_key_recipient[..]),
         zCiphertext::from_slice(&tx.enc_amount_recipient[..]),
         zCiphertext::from_slice(&tx.enc_fee[..]),
-        zCiphertext::from_slice(&tx.enc_balance[..])
+        zCiphertext::from_slice(&tx.enc_balance[..]),
+        Nonce::from_slice(&tx.nonce[..])
     ));
 
     submit_tx(calls, tx, api, rng);
@@ -362,6 +363,7 @@ pub fn submit_asset_transfer<R: Rng>(asset_id: u32, tx: &Transaction, api: &Api,
         zCiphertext::from_slice(&tx.enc_amount_sender[..]),
         zCiphertext::from_slice(&tx.enc_amount_recipient[..]),
         zCiphertext::from_slice(&tx.enc_fee[..]),
+        Nonce::from_slice(&tx.nonce[..])
     ));
 
     submit_tx(calls, tx, api, rng);
@@ -374,7 +376,8 @@ pub fn submit_asset_burn<R: Rng>(asset_id: u32, tx: &Transaction, api: &Api, rng
         asset_id,
         zCiphertext::from_slice(&tx.enc_amount_recipient[..]),
         zCiphertext::from_slice(&tx.enc_fee[..]),
-        zCiphertext::from_slice(&tx.enc_balance[..])
+        zCiphertext::from_slice(&tx.enc_balance[..]),
+        Nonce::from_slice(&tx.nonce[..])
     ));
 
     submit_tx(calls, tx, api, rng);
