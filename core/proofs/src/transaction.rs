@@ -11,7 +11,7 @@ use pairing::bls12_381::Bls12;
 use pairing::Field;
 use zpairing::io;
 use scrypto::jubjub::{fs, edwards, PrimeOrder};
-use rand::Rng;
+use rand::{Rng, Rand};
 
 /// Transaction components which is needed to create a signed `UncheckedExtrinsic`.
 pub struct Transaction{
@@ -41,8 +41,7 @@ impl Transaction {
 		fee: u32,
     ) -> Result<Self, io::Error>
 	{
-		// let alpha = fs::Fs::rand(rng);
-    	let alpha = fs::Fs::zero(); // TODO
+		let alpha = fs::Fs::rand(rng);
 
 		let proof_generation_key = ProofGenerationKey::from_spending_key(
 			&spending_key,

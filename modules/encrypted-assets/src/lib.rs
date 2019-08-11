@@ -68,9 +68,7 @@ decl_module! {
 
             // Initialize a nonce pool
             let current_epoch = <encrypted_balances::Module<T>>::get_current_epoch();
-            if <encrypted_balances::Module<T>>::last_epoch() < current_epoch {
-                <encrypted_balances::Module<T>>::init_nonce_pool(current_epoch);
-            }
+            <encrypted_balances::Module<T>>::init_nonce_pool(current_epoch);
 
             // Veridate the provided nonce isn't included in the nonce pool.
             assert!(!<encrypted_balances::Module<T>>::nonce_pool().contains(&nonce));
@@ -218,6 +216,10 @@ decl_module! {
                 &dummy_balance
             )
             .map_err(|_| "Failed to convert into types.")?;
+
+            // Initialize a nonce pool
+            let current_epoch = <encrypted_balances::Module<T>>::get_current_epoch();
+            <encrypted_balances::Module<T>>::init_nonce_pool(current_epoch);
 
             // Veridate the provided nonce isn't included in the nonce pool.
             assert!(!<encrypted_balances::Module<T>>::nonce_pool().contains(&nonce));
@@ -391,9 +393,7 @@ impl<T: Trait> Module<T> {
         };
 
         // Initialize a nonce pool
-        if <encrypted_balances::Module<T>>::last_epoch() < current_epoch {
-            <encrypted_balances::Module<T>>::init_nonce_pool(current_epoch);
-        }
+        <encrypted_balances::Module<T>>::init_nonce_pool(current_epoch);
 
         // return actual typed balance.
         Ok(res_balance)

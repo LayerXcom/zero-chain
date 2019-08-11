@@ -111,7 +111,7 @@ impl<E: JubjubEngine> AnonymousProof<E> {
         proof_generation_key: &ProofGenerationKey<E>,
         enc_keys: &MultiEncKeys<E>,
         cipher_balance: Ciphertext<E>,
-        nonce: Nonce<E>,
+        g_epoch: &edwards::Point<E, PrimeOrder>,
         rng: &mut R,
         params: &E::Params,
     ) -> Result<Self, SynthesisError>
@@ -120,6 +120,8 @@ impl<E: JubjubEngine> AnonymousProof<E> {
         unimplemented!();
     }
 }
+
+
 
 pub struct ConfidentialProof<E: JubjubEngine> {
     pub proof: Proof<E>,

@@ -383,9 +383,7 @@ impl<T: Trait> Module<T> {
         };
 
         // Initialize a nonce pool
-        if Self::last_epoch() < current_epoch {
-            Self::init_nonce_pool(current_epoch);
-        }
+        Self::init_nonce_pool(current_epoch);
 
         // return actual typed balance.
         Ok(res_balance)
@@ -396,11 +394,13 @@ impl<T: Trait> Module<T> {
     /// 2. Remove all nonces in the pool
     /// 3. Set last epoch to current epoch
     pub fn init_nonce_pool(current_epoch: T::BlockNumber) {
-        let g_epoch = GEpoch::group_hash(current_epoch.as_() as u32).unwrap();
+        if Self::last_epoch() < current_epoch {
+            let g_epoch = GEpoch::group_hash(current_epoch.as_() as u32).unwrap();
 
-        <LastGEpoch<T>>::put(g_epoch);
-        <NoncePool<T>>::kill();
-        <LastEpoch<T>>::put(current_epoch);
+            <LastGEpoch<T>>::put(g_epoch);
+            <NoncePool<T>>::kill();
+            <LastEpoch<T>>::put(current_epoch);
+        }
     }
 
     // Subtracting transferred amount and fee from encrypted balances.

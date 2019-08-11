@@ -10,6 +10,7 @@ pub mod elgamal;
 pub mod transaction;
 pub mod setup;
 pub mod nonce;
+// pub mod traits;
 
 pub use self::prover::*;
 pub use self::setup::setup;
