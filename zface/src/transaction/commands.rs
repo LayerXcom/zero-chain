@@ -9,19 +9,18 @@ use crate::term::Term;
 use crate::wallet::{Result, DirOperations};
 use crate::wallet::commands::{wallet_keystore_dirs, get_default_keyfile_name};
 use crate::utils::print_keys::BalanceQuery; // TODO
-
 use zjubjub::{
     curve::{fs::Fs as zFs, FixedGenerators as zFixedGenerators},
     redjubjub::PrivateKey as zPrivateKey
     };
 use zpairing::{bls12_381::Bls12 as zBls12, PrimeField as zPrimeField, PrimeFieldRepr as zPrimeFieldRepr};
-use zprimitives::{PARAMS as ZPARAMS, Proof, Ciphertext as zCiphertext, EncKey, SigVerificationKey, RedjubjubSignature, SigVk, Nonce};
+use zprimitives::{PARAMS as ZPARAMS, Proof, Ciphertext as zCiphertext, EncKey, SigVerificationKey, RedjubjubSignature, SigVk, Nonce, GEpoch};
 use zerochain_runtime::{UncheckedExtrinsic, Call, EncryptedBalancesCall, EncryptedAssetsCall};
 use runtime_primitives::generic::Era;
 use parity_codec::{Compact, Encode, Decode};
 use primitives::blake2_256;
-use polkadot_rs::{Api, Url, hexstr_to_u64};
-use scrypto::jubjub::{fs::Fs, FixedGenerators};
+use polkadot_rs::{Api, Url, hexstr_to_u64, hexstr_to_vec};
+use scrypto::jubjub::{fs::Fs, FixedGenerators, edwards, PrimeOrder};
 use bellman::groth16::{Parameters, PreparedVerifyingKey};
 
 pub fn asset_issue_tx<R: Rng>(
@@ -56,6 +55,7 @@ pub fn asset_issue_tx<R: Rng>(
         &MultiEncKeys::new_for_confidential(issuer_address),
         &spending_key,
         &enc_amount,
+        &get_g_epoch(&api), // TODO
         rng,
         0
         )
@@ -110,6 +110,7 @@ pub fn asset_transfer_tx<R: Rng>(
         &MultiEncKeys::new_for_confidential(recipient_account_id.clone()),
         &spending_key,
         &encrypted_balance,
+        &get_g_epoch(&api), // TODO
         rng,
         fee
         )
@@ -166,6 +167,7 @@ pub fn asset_burn_tx<R: Rng>(
         &MultiEncKeys::new_for_confidential(issuer_address),
         &spending_key,
         &enc_amount,
+        &get_g_epoch(&api), // TODO
         rng,
         0
         )
@@ -244,6 +246,7 @@ fn inner_transfer_tx<R: Rng>(
         &MultiEncKeys::new_for_confidential(recipient_account_id.clone()),
         &spending_key,
         &encrypted_balance,
+        &get_g_epoch(&api),
         rng,
         fee
         )
@@ -260,10 +263,20 @@ fn inner_transfer_tx<R: Rng>(
     Ok(())
 }
 
+fn get_g_epoch(api: &Api) -> edwards::Point<Bls12, PrimeOrder> {
+    let g_epoch_str = api.get_storage("EncryptedBalances", "LastGEpoch", None)
+        .expect("should be fetched LastGEpoch from encrypted balances module.");
+
+    edwards::Point::<Bls12, _>::read(&mut &hexstr_to_vec(g_epoch_str)[..], &PARAMS)
+            .unwrap() // TODO
+            .as_prime_order(&PARAMS)
+            .unwrap()
+}
+
 // Get set fee amount as `TransactionBaseFee` in encrypyed-balances module.
 fn get_fee(api: &Api) -> u32 {
     let fee_str = api.get_storage("EncryptedBalances", "TransactionBaseFee", None)
-        .expect("should be fetched TransactionBaseFee from ConfTransfer module of Zerochain.");
+        .expect("should be fetched TransactionBaseFee from encrypted balances module.");
     hexstr_to_u64(fee_str) as u32
 }
 
@@ -322,6 +335,7 @@ pub fn submit_confidential_transfer<R: Rng>(tx: &Transaction, api: &Api, rng: &m
         zCiphertext::from_slice(&tx.enc_amount_sender[..]),
         zCiphertext::from_slice(&tx.enc_amount_recipient[..]),
         zCiphertext::from_slice(&tx.enc_fee[..]),
+        Nonce::from_slice(&tx.nonce[..])
     ));
 
     submit_tx(calls, tx, api, rng);
@@ -405,7 +419,6 @@ fn submit_tx<R: Rng>(calls: Call, tx: &Transaction, api: &Api, rng: &mut R) {
 pub fn subscribe_event(api: Api, remaining_balance: u32) {
     use std::sync::mpsc::channel;
     use std::thread;
-    use polkadot_rs::hexstr_to_vec;
     use zerochain_runtime::Event;
 
     let (tx, rx) = channel();

@@ -573,6 +573,9 @@ fn subcommand_debug<R: Rng>(mut term: term::Term, matches: &ArgMatches, rng: &mu
 
             let remaining_balance = balance - amount - fee;
 
+            use scrypto::jubjub::edwards;
+            let dummy_g_epoch = edwards::Point::<Bls12, _>::rand(rng, &*PARAMS).mul_by_cofactor(&*PARAMS);
+
             let tx = Transaction::gen_tx(
                             amount,
                             remaining_balance,
@@ -581,6 +584,7 @@ fn subcommand_debug<R: Rng>(mut term: term::Term, matches: &ArgMatches, rng: &mu
                             &MultiEncKeys::new_for_confidential(address_recipient.clone()),
                             &SpendingKey::<Bls12>::from_seed(&sender_seed[..]),
                             &ciphertext_balance,
+                            &dummy_g_epoch,
                             rng,
                             fee
                     ).expect("fails to generate the tx");

@@ -9,10 +9,8 @@ use rstd::result;
 use runtime_primitives::traits::{SimpleArithmetic, Zero, One};
 use system::ensure_signed;
 use zprimitives::{
-    EncKey,
-    Proof,
-    ElgamalCiphertext,
-    SigVk,
+    EncKey, Proof,
+    ElgamalCiphertext, SigVk,
 };
 use jubjub::redjubjub::PublicKey;
 use keys::EncryptionKey;
@@ -72,19 +70,19 @@ decl_module! {
             // 1. Spend authority verification
             // 2. Range proof of issued amount
             // 3. Encryption integrity
-            if !<encrypted_balances::Module<T>>::validate_proof(
-                &typed.zkproof,
-                &typed.account,
-                &typed.account,
-                &typed.total,
-                &typed.total,
-                &typed.dummy_balance,
-                &typed.rvk,
-                &typed.dummy_fee,
-            )? {
-                Self::deposit_event(RawEvent::InvalidZkProof());
-                return Err("Invalid zkproof");
-            }
+            // if !<encrypted_balances::Module<T>>::validate_proof(
+            //     &typed.zkproof,
+            //     &typed.account,
+            //     &typed.account,
+            //     &typed.total,
+            //     &typed.total,
+            //     &typed.dummy_balance,
+            //     &typed.rvk,
+            //     &typed.dummy_fee,
+            // )? {
+            //     Self::deposit_event(RawEvent::InvalidZkProof());
+            //     return Err("Invalid zkproof");
+            // }
 
             let id = Self::next_asset_id();
             <NextAssetId<T>>::mutate(|id| *id += One::one());
@@ -133,19 +131,19 @@ decl_module! {
                 .map_err(|_| "Invalid ciphertext of recipient balance.")?;
 
             // Verify the zk proof
-            if !<encrypted_balances::Module<T>>::validate_proof(
-                &typed.zkproof,
-                &typed.address_sender,
-                &typed.address_recipient,
-                &typed.amount_sender,
-                &typed.amount_recipient,
-                &typed_balance_sender,
-                &typed.rvk,
-                &typed.fee_sender,
-            )? {
-                Self::deposit_event(RawEvent::InvalidZkProof());
-                return Err("Invalid zkproof");
-            }
+            // if !<encrypted_balances::Module<T>>::validate_proof(
+            //     &typed.zkproof,
+            //     &typed.address_sender,
+            //     &typed.address_recipient,
+            //     &typed.amount_sender,
+            //     &typed.amount_recipient,
+            //     &typed_balance_sender,
+            //     &typed.rvk,
+            //     &typed.fee_sender,
+            // )? {
+            //     Self::deposit_event(RawEvent::InvalidZkProof());
+            //     return Err("Invalid zkproof");
+            // }
 
             // Subtracting transferred amount and fee from the sender's encrypted balances.
             // This function causes a storage mutation.
@@ -201,19 +199,19 @@ decl_module! {
 
             // Verify the zk proof
             // 1. Spend authority verification
-            if !<encrypted_balances::Module<T>>::validate_proof(
-                &typed.zkproof,
-                &typed.account,
-                &typed.account,
-                &typed.total,
-                &typed.total,
-                &typed.dummy_balance,
-                &typed.rvk,
-                &typed.dummy_fee,
-            )? {
-                Self::deposit_event(RawEvent::InvalidZkProof());
-                return Err("Invalid zkproof");
-            }
+            // if !<encrypted_balances::Module<T>>::validate_proof(
+            //     &typed.zkproof,
+            //     &typed.account,
+            //     &typed.account,
+            //     &typed.total,
+            //     &typed.total,
+            //     &typed.dummy_balance,
+            //     &typed.rvk,
+            //     &typed.dummy_fee,
+            // )? {
+            //     Self::deposit_event(RawEvent::InvalidZkProof());
+            //     return Err("Invalid zkproof");
+            // }
 
             let balance = <EncryptedBalance<T>>::take((id, owner.clone()))
                 .map_or(Default::default(), |e| e);

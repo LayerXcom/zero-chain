@@ -4,7 +4,7 @@
 use support::{decl_module, decl_storage, decl_event, StorageValue, StorageMap, dispatch::Result, Parameter};
 use rstd::prelude::*;
 use rstd::result;
-use rstd::convert::TryFrom;
+use rstd::convert::{TryFrom, TryInto};
 use bellman_verifier::verify_proof;
 use pairing::{
     bls12_381::{Bls12,Fr},
@@ -28,8 +28,6 @@ pub trait Trait: system::Trait {
 
     /// The units in which we record encrypted balances.
     type EncryptedBalance: ElgamalCiphertext + Parameter + Member + Default + MaybeSerializeDebug + Codec;
-
-    type Nonce: TryFrom<edwards::Point<Bls12, PrimeOrder>> + Parameter + Member + Default + MaybeSerializeDebug + Codec;
 }
 
 pub struct TypedParams {
@@ -58,7 +56,7 @@ decl_module! {
             amount_sender: T::EncryptedBalance,
             amount_recipient: T::EncryptedBalance,
             fee_sender: T::EncryptedBalance,
-            nonce: T::Nonce
+            nonce: Nonce
         ) -> Result {
 			let rvk = ensure_signed(origin)?;
 
@@ -101,6 +99,7 @@ decl_module! {
                     &typed_balance_sender,
                     &typed.rvk,
                     &typed.fee_sender,
+                    &nonce.try_into().map_err(|_| "Failed to convert from Nonce.")?
                 )? {
                     Self::deposit_event(RawEvent::InvalidZkProof());
                     return Err("Invalid zkproof");
@@ -150,7 +149,7 @@ decl_storage! {
         pub LastEpoch get(last_epoch): T::BlockNumber;
 
         /// An epoch based generator point
-        pub LastGEpoch get(g_epoch): GEpoch;
+        pub LastGEpoch get(g_epoch) build(|_| GEpoch::try_new().expect("Should init.")): GEpoch;
 
         /// Global epoch length for rollover.
         /// The longer epoch length is, the longer rollover time is.
@@ -165,7 +164,7 @@ decl_storage! {
 
         /// A nonce pool. All nonces are erasured at the time of starting each epochs.
         // Consider chainging Vec to BtreeMap
-        pub NoncePool get(nonce_pool): Vec<T::Nonce>;
+        pub NoncePool get(nonce_pool): Vec<Nonce>;
     }
 }
 
@@ -189,10 +188,11 @@ impl<T: Trait> Module<T> {
         amount_recipient: &elgamal::Ciphertext<Bls12>,
         balance_sender: &elgamal::Ciphertext<Bls12>,
         rvk: &PublicKey<Bls12>,
-        fee_sender: &elgamal::Ciphertext<Bls12>
+        fee_sender: &elgamal::Ciphertext<Bls12>,
+        nonce: &edwards::Point<Bls12, PrimeOrder>
     ) -> result::Result<bool, &'static str> {
         // Construct public input for circuit
-        let mut public_input = [Fr::zero(); 18];
+        let mut public_input = [Fr::zero(); 22];
 
         {
             let (x, y) = address_sender.0.into_xy();
@@ -238,6 +238,19 @@ impl<T: Trait> Module<T> {
             let (x, y) = rvk.0.into_xy();
             public_input[16] = x;
             public_input[17] = y;
+        }
+        {
+            let (x, y) = edwards::Point::<Bls12, PrimeOrder>::try_from(Self::g_epoch())
+                .map_err(|_| "Failed to convert from GEpoch.")?
+                .into_xy();
+
+            public_input[18] = x;
+            public_input[19] = y;
+        }
+        {
+            let (x, y) = nonce.into_xy();
+            public_input[20] = x;
+            public_input[21] = y;
         }
 
         let pvk = Self::verifying_key().into_prepared_vk()
