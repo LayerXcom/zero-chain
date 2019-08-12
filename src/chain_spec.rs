@@ -135,9 +135,11 @@ fn testnet_genesis(initial_authorities: Vec<AuthorityId>, endowed_accounts: Vec<
 		encrypted_balances: Some(EncryptedBalancesConfig {
 			encrypted_balance: vec![balance_init.clone()],
 			last_rollover: vec![epoch_init],
-			epoch_length: 1,
+			last_epoch: 0,
+			epoch_length: 5,
 			transaction_base_fee: 1,
 			verifying_key: get_pvk(),
+			nonce_pool: vec![],
 		}),
 		encrypted_assets: Some(EncryptedAssetsConfig {
 			encrypted_balance: vec![((0, balance_init.0), balance_init.1)],

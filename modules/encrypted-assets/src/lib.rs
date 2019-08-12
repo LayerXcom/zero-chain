@@ -6,13 +6,12 @@
 use support::{decl_module, decl_storage, decl_event, StorageMap, Parameter, StorageValue};
 use rstd::prelude::*;
 use rstd::result;
+use rstd::convert::TryInto;
 use runtime_primitives::traits::{SimpleArithmetic, Zero, One};
 use system::ensure_signed;
 use zprimitives::{
-    EncKey,
-    Proof,
-    ElgamalCiphertext,
-    SigVk,
+    EncKey, Proof, ElgamalCiphertext,
+    SigVk, Nonce,
 };
 use jubjub::redjubjub::PublicKey;
 use keys::EncryptionKey;
@@ -38,8 +37,6 @@ struct TypedParams {
     dummy_balance: elgamal::Ciphertext<Bls12>,
 }
 
-type FeeAmount = u32;
-
 decl_module! {
     pub struct Module<T: Trait> for enum Call where origin: T::Origin {
         fn deposit_event<T>() = default;
@@ -53,7 +50,8 @@ decl_module! {
             issuer: EncKey,
             total: T::EncryptedBalance,
             fee: T::EncryptedBalance,
-            balance: T::EncryptedBalance
+            balance: T::EncryptedBalance,
+            nonce: Nonce
         ) {
             let rvk = ensure_signed(origin)?;
 
@@ -68,6 +66,13 @@ decl_module! {
             )
             .map_err(|_| "Failed to convert into types.")?;
 
+            // Initialize a nonce pool
+            let current_epoch = <encrypted_balances::Module<T>>::get_current_epoch();
+            <encrypted_balances::Module<T>>::init_nonce_pool(current_epoch);
+
+            // Veridate the provided nonce isn't included in the nonce pool.
+            assert!(!<encrypted_balances::Module<T>>::nonce_pool().contains(&nonce));
+
             // Verify a zk proof
             // 1. Spend authority verification
             // 2. Range proof of issued amount
@@ -81,10 +86,14 @@ decl_module! {
                 &typed.dummy_balance,
                 &typed.rvk,
                 &typed.dummy_fee,
+                &nonce.try_into().map_err(|_| "Failed to convert from Nonce.")?
             )? {
                 Self::deposit_event(RawEvent::InvalidZkProof());
                 return Err("Invalid zkproof");
             }
+
+            // Add a nonce into the nonce pool
+            <encrypted_balances::Module<T>>::nonce_pool().push(nonce);
 
             let id = Self::next_asset_id();
             <NextAssetId<T>>::mutate(|id| *id += One::one());
@@ -103,7 +112,8 @@ decl_module! {
             address_recipient: EncKey,
             amount_sender: T::EncryptedBalance,
             amount_recipient: T::EncryptedBalance,
-            fee_sender: T::EncryptedBalance
+            fee_sender: T::EncryptedBalance,
+            nonce: Nonce
         ) {
             let rvk = ensure_signed(origin)?;
 
@@ -132,6 +142,9 @@ decl_module! {
             let typed_balance_recipient = Self::rollover(&address_recipient, asset_id)
                 .map_err(|_| "Invalid ciphertext of recipient balance.")?;
 
+            // Veridate the provided nonce isn't included in the nonce pool.
+            assert!(!<encrypted_balances::Module<T>>::nonce_pool().contains(&nonce));
+
             // Verify the zk proof
             if !<encrypted_balances::Module<T>>::validate_proof(
                 &typed.zkproof,
@@ -142,10 +155,14 @@ decl_module! {
                 &typed_balance_sender,
                 &typed.rvk,
                 &typed.fee_sender,
+                &nonce.try_into().map_err(|_| "Failed to convert from Nonce.")?
             )? {
                 Self::deposit_event(RawEvent::InvalidZkProof());
                 return Err("Invalid zkproof");
             }
+
+            // Add a nonce into the nonce pool
+            <encrypted_balances::Module<T>>::nonce_pool().push(nonce);
 
             // Subtracting transferred amount and fee from the sender's encrypted balances.
             // This function causes a storage mutation.
@@ -184,7 +201,8 @@ decl_module! {
             id: T::AssetId,
             dummy_amount: T::EncryptedBalance,
             dummy_fee: T::EncryptedBalance,
-            dummy_balance: T::EncryptedBalance
+            dummy_balance: T::EncryptedBalance,
+            nonce: Nonce
         ) {
             let rvk = ensure_signed(origin)?;
 
@@ -199,6 +217,13 @@ decl_module! {
             )
             .map_err(|_| "Failed to convert into types.")?;
 
+            // Initialize a nonce pool
+            let current_epoch = <encrypted_balances::Module<T>>::get_current_epoch();
+            <encrypted_balances::Module<T>>::init_nonce_pool(current_epoch);
+
+            // Veridate the provided nonce isn't included in the nonce pool.
+            assert!(!<encrypted_balances::Module<T>>::nonce_pool().contains(&nonce));
+
             // Verify the zk proof
             // 1. Spend authority verification
             if !<encrypted_balances::Module<T>>::validate_proof(
@@ -210,10 +235,14 @@ decl_module! {
                 &typed.dummy_balance,
                 &typed.rvk,
                 &typed.dummy_fee,
+                &nonce.try_into().map_err(|_| "Failed to convert from Nonce.")?
             )? {
                 Self::deposit_event(RawEvent::InvalidZkProof());
                 return Err("Invalid zkproof");
             }
+
+            // Add a nonce into the nonce pool
+            <encrypted_balances::Module<T>>::nonce_pool().push(nonce);
 
             let balance = <EncryptedBalance<T>>::take((id, owner.clone()))
                 .map_or(Default::default(), |e| e);
@@ -363,6 +392,9 @@ impl<T: Trait> Module<T> {
             None => zero.clone(),
         };
 
+        // Initialize a nonce pool
+        <encrypted_balances::Module<T>>::init_nonce_pool(current_epoch);
+
         // return actual typed balance.
         Ok(res_balance)
     }
@@ -423,9 +455,9 @@ mod tests {
     use std::io::{BufReader, Read};
     use rand::{SeedableRng, XorShiftRng};
     use test_pairing::{bls12_381::Bls12 as tBls12, Field as tField};
-    use test_proofs::{EncryptionKey as tEncryptionKey, SpendingKey as tSpendingKey, elgamal as telgamal, Transaction, PARAMS};
+    use test_proofs::{EncryptionKey as tEncryptionKey, SpendingKey as tSpendingKey, elgamal as telgamal, Transaction, PARAMS, MultiEncKeys};
     use zface::transaction::commands::{get_pk, get_vk};
-    use scrypto::jubjub::{FixedGenerators as tFixedGenerators, fs::Fs as tFs};
+    use scrypto::jubjub::{FixedGenerators as tFixedGenerators, fs::Fs as tFs, edwards as tedwards, PrimeOrder};
 
 
     impl_outer_origin! {
@@ -464,7 +496,6 @@ mod tests {
     }
 
     type EncryptedAssets = Module<Test>;
-    type EncryptedBalances = encrypted_balances::Module<Test>;
     type System = system::Module<Test>;
 
     fn alice_balance_init() -> (EncKey, Ciphertext) {
@@ -523,9 +554,11 @@ mod tests {
         let _ = encrypted_balances::GenesisConfig::<Test>{
             encrypted_balance: vec![balance_init.clone()],
 			last_rollover: vec![epoch_init],
+            last_epoch: 1,
             epoch_length: 1,
             transaction_base_fee: 1,
             verifying_key: get_pvk(),
+            nonce_pool: vec![],
         }.assimilate_storage(&mut t, &mut c);
         let _ = GenesisConfig::<Test>{
             encrypted_balance: vec![((0, balance_init.0), balance_init.1)],
@@ -534,6 +567,12 @@ mod tests {
         }.assimilate_storage(&mut t, &mut c);
 
         t.into()
+    }
+
+    fn get_g_epoch() -> tedwards::Point<tBls12, PrimeOrder> {
+        let g_epoch_vec: [u8; 32] = hex!("0953f47325251a2f479c25527df6d977925bebafde84423b20ae6c903411665a");
+        let g_epoch = tedwards::Point::read(&g_epoch_vec[..], &*PARAMS).unwrap().as_prime_order(&*PARAMS).unwrap();
+        g_epoch
     }
 
     #[test]
@@ -564,9 +603,10 @@ mod tests {
                 0, // dummy value for remaining balance
                 &proving_key,
                 &prepared_vk,
-                &enc_key,
+                &MultiEncKeys::new_for_confidential(enc_key),
                 &spending_key,
-                enc_balance,
+                &enc_balance,
+                &get_g_epoch(),
                 rng,
                 0
                 )
@@ -577,10 +617,11 @@ mod tests {
             assert_ok!(EncryptedAssets::issue(
                 Origin::signed(SigVerificationKey::from_slice(&tx.rvk[..])),
                 Proof::from_slice(&tx.proof[..]),
-                EncKey::from_slice(&tx.address_recipient[..]),
+                EncKey::from_slice(&tx.enc_key_recipient[..]),
                 Ciphertext::from_slice(&tx.enc_amount_recipient[..]),
                 Ciphertext::from_slice(&tx.enc_fee[..]),
-                Ciphertext::from_slice(&tx.enc_balance[..])
+                Ciphertext::from_slice(&tx.enc_balance[..]),
+                Nonce::from_slice(&tx.nonce[..])
             ));
         })
     }
@@ -621,9 +662,10 @@ mod tests {
                 remaining_balance,
                 &proving_key,
                 &prepared_vk,
-                &recipient_account_id,
+                &MultiEncKeys::new_for_confidential(recipient_account_id),
                 &spending_key,
-                enc_alice_bal,
+                &enc_alice_bal,
+                &get_g_epoch(),
                 rng,
                 fee
                 )
@@ -633,11 +675,12 @@ mod tests {
                 Origin::signed(SigVerificationKey::from_slice(&tx.rvk[..])),
                 0,
                 Proof::from_slice(&tx.proof[..]),
-                EncKey::from_slice(&tx.address_sender[..]),
-                EncKey::from_slice(&tx.address_recipient[..]),
+                EncKey::from_slice(&tx.enc_key_sender[..]),
+                EncKey::from_slice(&tx.enc_key_recipient[..]),
                 Ciphertext::from_slice(&tx.enc_amount_sender[..]),
                 Ciphertext::from_slice(&tx.enc_amount_recipient[..]),
                 Ciphertext::from_slice(&tx.enc_fee[..]),
+                Nonce::from_slice(&tx.nonce[..])
             ));
         })
     }
@@ -669,9 +712,10 @@ mod tests {
                 0,
                 &proving_key,
                 &prepared_vk,
-                &enc_key,
+                &MultiEncKeys::new_for_confidential(enc_key),
                 &spending_key,
-                dummy_balance,
+                &dummy_balance,
+                &get_g_epoch(),
                 rng,
                 0
                 )
@@ -680,11 +724,12 @@ mod tests {
             assert_ok!(EncryptedAssets::destroy(
                 Origin::signed(SigVerificationKey::from_slice(&tx.rvk[..])),
                 Proof::from_slice(&tx.proof[..]),
-                EncKey::from_slice(&tx.address_recipient[..]),
+                EncKey::from_slice(&tx.enc_key_recipient[..]),
                 0,
                 Ciphertext::from_slice(&tx.enc_amount_recipient[..]),
                 Ciphertext::from_slice(&tx.enc_fee[..]),
-                Ciphertext::from_slice(&tx.enc_balance[..])
+                Ciphertext::from_slice(&tx.enc_balance[..]),
+                Nonce::from_slice(&tx.nonce[..])
             ));
 
         })

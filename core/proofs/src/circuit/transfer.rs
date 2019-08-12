@@ -1,4 +1,4 @@
-//! This module contains a circuit implementation for confidential payment.
+//! This module contains a circuit implementation for confidential transfer.
 //! The statement is following.
 //! * Range proof of the transferred amount
 //! * Range proof of the sender's balance
@@ -17,16 +17,16 @@ use scrypto::jubjub::{
     JubjubEngine,
     FixedGenerators,
 };
-use crate::keys::{ProofGenerationKey, EncryptionKey, DecryptionKey};
+use crate::{ProofGenerationKey, EncryptionKey, DecryptionKey};
 use scrypto::circuit::{
     boolean::{self, Boolean},
     ecc::{self, EdwardsPoint},
     num::AllocatedNum,
 };
+use scrypto::jubjub::{edwards, PrimeOrder};
 use crate::{elgamal::Ciphertext, Assignment};
 use super::range_check::u32_into_bit_vec_le;
 
-// An instance of the Transfer circuit.
 pub struct Transfer<'a, E: JubjubEngine> {
     pub params: &'a E::Params,
     pub amount: Option<u32>,
@@ -35,9 +35,10 @@ pub struct Transfer<'a, E: JubjubEngine> {
     pub alpha: Option<&'a E::Fs>,
     pub proof_generation_key: Option<&'a ProofGenerationKey<E>>,
     pub dec_key_sender: Option<&'a DecryptionKey<E>>,
-    pub enc_key_recipient: Option< EncryptionKey<E>>,
+    pub enc_key_recipient: Option<&'a EncryptionKey<E>>,
     pub encrypted_balance: Option<&'a Ciphertext<E>>,
     pub fee: Option<u32>,
+    pub g_epoch: Option<&'a edwards::Point<E, PrimeOrder>>,
 }
 
 impl<'a, E: JubjubEngine> Circuit<E> for Transfer<'a, E> {
@@ -242,28 +243,28 @@ impl<'a, E: JubjubEngine> Circuit<E> for Transfer<'a, E> {
                 cs.namespace(|| format!("c_right mul by dec_key_sender")),
                 &dec_key_sender_bits,
                 params
-                )?;
+            )?;
 
             // Enc_sender(sender_balance).cl + dec_key_sender * (random)G
             let balance_dec_key_sender_random = pointl.add(
                 cs.namespace(|| format!("pointl add dec_key_sender_pointl")),
                 &dec_key_sender_random,
                 params
-                )?;
+            )?;
 
             // Enc_sender(sender_balance).cl + dec_key_sender * (random)G + dec_key_sender * (random)G
             let bi_left = balance_dec_key_sender_random.add(
                 cs.namespace(|| format!("pointl readd dec_key_sender_pointl")),
                 &dec_key_sender_random,
                 params
-                )?;
+            )?;
 
             // dec_key_sender * Enc_sender(sender_balance).cr
             let dec_key_sender_pointr = pointr.mul(
                 cs.namespace(|| format!("c_right_sender mul by dec_key_sender")),
                 &dec_key_sender_bits,
                 params
-                )?;
+            )?;
 
             // Compute (remaining_balance)G
             let rem_bal_g = ecc::fixed_base_multiplication(
@@ -271,21 +272,21 @@ impl<'a, E: JubjubEngine> Circuit<E> for Transfer<'a, E> {
                 FixedGenerators::NoteCommitmentRandomness,
                 &remaining_balance_bits,
                 params
-                )?;
+            )?;
 
             // Enc_sender(amount).cl + (remaining_balance)G
             let val_rem_bal = c_left_sender.add(
                 cs.namespace(|| format!("c_left_sender add rem_bal_g")),
                 &rem_bal_g,
                 params
-                )?;
+            )?;
 
             // Enc_sender(amount).cl + (remaining_balance)G + dec_key_sender * Enc_sender(sender_balance).cr
             let val_rem_bal_balr = val_rem_bal.add(
                 cs.namespace(|| format!("val_rem_bal add ")),
                 &dec_key_sender_pointr,
                 params
-                )?;
+            )?;
 
             // Enc_sender(amount).cl + (remaining_balance)G + dec_key_sender * Enc_sender(sender_balance).cr + Enc_sender(fee).cl
             let bi_right = f_left_sender.add(
@@ -362,6 +363,25 @@ impl<'a, E: JubjubEngine> Circuit<E> for Transfer<'a, E> {
 
         rvk.inputize(cs.namespace(|| "rvk"))?;
 
+        {
+            // Ensure g_epoch is on the curve.
+            let g_epoch = ecc::EdwardsPoint::witness(
+                cs.namespace(|| "g_epoch"),
+                self.g_epoch.map(|e| e.clone()),
+                params
+            )?;
+
+            // Ensure that nonce = dec_key * g_epoch
+            let nonce = g_epoch.mul(
+                cs.namespace(|| format!("g_epoch mul by dec_key")),
+                &dec_key_sender_bits,
+                params
+            )?;
+
+            g_epoch.inputize(cs.namespace(|| "inputize g_epoch"))?;
+            nonce.inputize(cs.namespace(|| "inputize nonce"))?;
+        }
+
         Ok(())
     }
 }
@@ -372,7 +392,7 @@ mod tests {
     use pairing::{bls12_381::{Bls12, Fr}, Field};
     use rand::{SeedableRng, Rng, XorShiftRng, Rand};
     use crate::circuit::TestConstraintSystem;
-    use scrypto::jubjub::{JubjubBls12, fs, JubjubParams};
+    use scrypto::jubjub::{JubjubBls12, fs};
     use crate::keys::EncryptionKey;
 
     fn test_based_amount(amount: u32) {
@@ -382,11 +402,12 @@ mod tests {
         let sk_fs_s: [u8; 32] = rng.gen();
         let sk_fs_r: [u8; 32] = rng.gen();
 
-        let proof_generation_key_s = ProofGenerationKey::<Bls12>::from_seed(&sk_fs_s[..], params);
-        let decryption_key_s = proof_generation_key_s.into_decryption_key().unwrap();
+        let proof_gen_key = ProofGenerationKey::<Bls12>::from_seed(&sk_fs_s[..], params);
+        let dec_key = proof_gen_key.into_decryption_key().unwrap();
 
+        let enc_key_sender = EncryptionKey::from_decryption_key(&dec_key, params);
         let enc_key_recipient = EncryptionKey::from_seed(&sk_fs_r, params).unwrap();
-        let address_sender_xy = proof_generation_key_s.into_encryption_key(params).unwrap().0.into_xy();
+        let address_sender_xy = enc_key_sender.0.into_xy();
         let address_recipient_xy = enc_key_recipient.0.into_xy();
 
         let alpha: fs::Fs = rng.gen();
@@ -399,23 +420,25 @@ mod tests {
         let r_fs_v = fs::Fs::rand(rng);
 
         let p_g = FixedGenerators::NoteCommitmentRandomness;
-        let public_key_s = EncryptionKey(params.generator(p_g).mul(decryption_key_s.0, params));
-        let ciphetext_balance = Ciphertext::encrypt(current_balance, r_fs_b, &public_key_s, p_g, params);
+        let ciphetext_balance = Ciphertext::encrypt(current_balance, r_fs_b, &enc_key_sender, p_g, params);
 
         let c_bal_left = ciphetext_balance.left.into_xy();
         let c_bal_right = ciphetext_balance.right.into_xy();
 
-        let ciphertext_amount_sender = Ciphertext::encrypt(amount, r_fs_v, &public_key_s, p_g, params);
+        let ciphertext_amount_sender = Ciphertext::encrypt(amount, r_fs_v, &enc_key_sender, p_g, params);
         let c_val_s_left = ciphertext_amount_sender.left.into_xy();
         let c_val_right = ciphertext_amount_sender.right.into_xy();
 
-        let ciphertext_fee_sender = Ciphertext::encrypt(fee, r_fs_v, &public_key_s, p_g, params);
+        let ciphertext_fee_sender = Ciphertext::encrypt(fee, r_fs_v, &enc_key_sender, p_g, params);
         let c_fee_s_left = ciphertext_fee_sender.left.into_xy();
 
         let ciphertext_amount_recipient = Ciphertext::encrypt(amount, r_fs_v, &enc_key_recipient, p_g, params);
         let c_val_r_left = ciphertext_amount_recipient.left.into_xy();
 
-        let rvk = proof_generation_key_s.into_rvk(alpha, params).0.into_xy();
+        let rvk = proof_gen_key.into_rvk(alpha, params).0.into_xy();
+        let g_epoch = edwards::Point::rand(rng, params).mul_by_cofactor(params);
+        let g_epoch_xy = g_epoch.into_xy();
+        let nonce = g_epoch.mul(dec_key.0, params).into_xy();
 
         let mut cs = TestConstraintSystem::<Bls12>::new();
 
@@ -425,20 +448,21 @@ mod tests {
             remaining_balance: Some(remaining_balance),
             randomness: Some(&r_fs_v),
             alpha: Some(&alpha),
-            proof_generation_key: Some(&proof_generation_key_s),
-            dec_key_sender: Some(&decryption_key_s),
-            enc_key_recipient: Some(enc_key_recipient.clone()),
+            proof_generation_key: Some(&proof_gen_key),
+            dec_key_sender: Some(&dec_key),
+            enc_key_recipient: Some(&enc_key_recipient),
             encrypted_balance: Some(&ciphetext_balance),
             fee: Some(fee),
+            g_epoch: Some(&g_epoch),
         };
 
         instance.synthesize(&mut cs).unwrap();
 
         assert!(cs.is_satisfied());
-        assert_eq!(cs.num_constraints(), 21780);
-        assert_eq!(cs.hash(), "b366fd96155cd78aa34482f25cda91b05ee8c2f9ac68e1c1103940331b49e0fd");
+        assert_eq!(cs.num_constraints(), 25053);
+        assert_eq!(cs.hash(), "fabd4cb7d2ebbdb643eefe54b21a4c2d802544ea860c485a14532b2cd1194b4f");
 
-        assert_eq!(cs.num_inputs(), 19);
+        assert_eq!(cs.num_inputs(), 23);
         assert_eq!(cs.get_input(0, "ONE"), Fr::one());
         assert_eq!(cs.get_input(1, "inputize enc_key_sender/x/input variable"), address_sender_xy.0);
         assert_eq!(cs.get_input(2, "inputize enc_key_sender/y/input variable"), address_sender_xy.1);
@@ -458,6 +482,10 @@ mod tests {
         assert_eq!(cs.get_input(16, "inputize pointr/y/input variable"), c_bal_right.1);
         assert_eq!(cs.get_input(17, "rvk/x/input variable"), rvk.0);
         assert_eq!(cs.get_input(18, "rvk/y/input variable"), rvk.1);
+        assert_eq!(cs.get_input(19, "inputize g_epoch/x/input variable"), g_epoch_xy.0);
+        assert_eq!(cs.get_input(20, "inputize g_epoch/y/input variable"), g_epoch_xy.1);
+        assert_eq!(cs.get_input(21, "inputize nonce/x/input variable"), nonce.0);
+        assert_eq!(cs.get_input(22, "inputize nonce/y/input variable"), nonce.1);
     }
 
     #[test]

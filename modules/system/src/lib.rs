@@ -316,7 +316,7 @@ decl_storage! {
 		/// Random seed of the current block.
 		RandomSeed get(random_seed) build(|_| T::Hash::default()): T::Hash;
 		/// The current block number being processed. Set by `execute_block`.
-		Number get(block_number) build(|_| T::BlockNumber::sa(1u64)): T::BlockNumber;
+		pub Number get(block_number) build(|_| T::BlockNumber::sa(1u64)): T::BlockNumber;
 		/// Hash of the previous block.
 		ParentHash get(parent_hash) build(|_| hash69()): T::Hash;
 		/// Extrinsics root of the current block, also part of the block header.

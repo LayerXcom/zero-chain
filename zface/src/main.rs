@@ -14,17 +14,15 @@ use std::io::{BufWriter, Write, BufReader, Read};
 use clap::{Arg, App, SubCommand, AppSettings, ArgMatches};
 use rand::{OsRng, Rng};
 use proofs::{
-    EncryptionKey, ProofGenerationKey, SpendingKey, DecryptionKey,
-    elgamal,
-    Transaction,
-    setup,
-    PARAMS,
+    EncryptionKey, SpendingKey, DecryptionKey,
+    elgamal, Transaction, MultiEncKeys,
+    setup, PARAMS,
     };
 use primitives::{hexdisplay::{HexDisplay, AsBytesRef}, crypto::Ss58Codec};
 use pairing::bls12_381::Bls12;
 
 use bellman::groth16::{Parameters, PreparedVerifyingKey};
-use polkadot_rs::{Api, Url, hexstr_to_u64};
+use polkadot_rs::{Api, Url};
 use bip39::{Mnemonic, Language, MnemonicType};
 
 mod utils;
@@ -39,7 +37,6 @@ use self::utils::*;
 use self::config::*;
 use self::wallet::commands::*;
 use self::transaction::*;
-
 
 fn main() {
     let default_root_dir = get_default_root_dir();
@@ -576,14 +573,19 @@ fn subcommand_debug<R: Rng>(mut term: term::Term, matches: &ArgMatches, rng: &mu
 
             let remaining_balance = balance - amount - fee;
 
+            use scrypto::jubjub::edwards;
+            let g_epoch_vec = hex::decode("0953f47325251a2f479c25527df6d977925bebafde84423b20ae6c903411665a").unwrap();
+            let g_epoch = edwards::Point::read(&g_epoch_vec[..], &*PARAMS).unwrap().as_prime_order(&*PARAMS).unwrap();
+
             let tx = Transaction::gen_tx(
                             amount,
                             remaining_balance,
                             &proving_key,
                             &prepared_vk,
-                            &address_recipient,
+                            &MultiEncKeys::new_for_confidential(address_recipient.clone()),
                             &SpendingKey::<Bls12>::from_seed(&sender_seed[..]),
-                            ciphertext_balance,
+                            &ciphertext_balance,
+                            &g_epoch,
                             rng,
                             fee
                     ).expect("fails to generate the tx");
@@ -598,15 +600,17 @@ fn subcommand_debug<R: Rng>(mut term: term::Term, matches: &ArgMatches, rng: &mu
                 \nrvk(Alice): 0x{}
                 \nrsk(Alice): 0x{}
                 \nEncrypted fee by sender: 0x{}
+                \nNonce:  0x{}
                 ",
                 HexDisplay::from(&&tx.proof[..] as &dyn AsBytesRef),
-                HexDisplay::from(&tx.address_sender as &dyn AsBytesRef),
-                HexDisplay::from(&tx.address_recipient as &dyn AsBytesRef),
+                HexDisplay::from(&tx.enc_key_sender as &dyn AsBytesRef),
+                HexDisplay::from(&tx.enc_key_recipient as &dyn AsBytesRef),
                 HexDisplay::from(&tx.enc_amount_sender as &dyn AsBytesRef),
                 HexDisplay::from(&tx.enc_amount_recipient as &dyn AsBytesRef),
                 HexDisplay::from(&tx.rvk as &dyn AsBytesRef),
                 HexDisplay::from(&tx.rsk as &dyn AsBytesRef),
                 HexDisplay::from(&tx.enc_fee as &dyn AsBytesRef),
+                HexDisplay::from(&tx.nonce as &dyn AsBytesRef)
             );
         },
         ("balance", Some(sub_matches)) => {

@@ -24,13 +24,17 @@ pub mod ciphertext;
 pub mod proof;
 pub mod sig_vk;
 pub mod prepared_vk;
+pub mod nonce;
+pub mod g_epoch;
 
-pub use enc_key::EncKey;
-pub use signature::RedjubjubSignature;
-pub use ciphertext::{Ciphertext, ElgamalCiphertext};
-pub use proof::Proof;
-pub use sig_vk::{SigVerificationKey, SigVk};
-pub use prepared_vk::PreparedVk;
+pub use self::enc_key::EncKey;
+pub use self::signature::RedjubjubSignature;
+pub use self::ciphertext::{Ciphertext, ElgamalCiphertext};
+pub use self::proof::Proof;
+pub use self::sig_vk::{SigVerificationKey, SigVk};
+pub use self::prepared_vk::PreparedVk;
+pub use self::nonce::Nonce;
+pub use self::g_epoch::GEpoch;
 
 use lazy_static::lazy_static;
 use jubjub::curve::JubjubBls12;

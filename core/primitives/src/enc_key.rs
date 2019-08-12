@@ -4,9 +4,9 @@ use keys::EncryptionKey;
 use fixed_hash::construct_fixed_hash;
 use pairing::bls12_381::Bls12;
 use crate::PARAMS;
+
 #[cfg(feature = "std")]
 use substrate_primitives::hexdisplay::AsBytesRef;
-
 #[cfg(feature = "std")]
 use substrate_primitives::bytes;
 

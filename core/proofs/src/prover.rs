@@ -14,42 +14,139 @@ use scrypto::{
     jubjub::{
         JubjubEngine,
         FixedGenerators,
+        edwards,
+        PrimeOrder,
     },
     redjubjub::{
         PublicKey,
     },
 };
 use crate::circuit::Transfer;
-use crate::keys::{
+use crate::elgamal::Ciphertext;
+use crate::{
     EncryptionKey,
     ProofGenerationKey,
+    Nonce,
 };
-use crate::elgamal::Ciphertext;
 
-pub struct TransferProof<E: JubjubEngine> {
-    pub proof: Proof<E>,
-    pub rvk: PublicKey<E>, // re-randomization sig-verifying key
-    pub address_sender: EncryptionKey<E>,
-    pub address_recipient: EncryptionKey<E>,
-    pub cipher_val_s: Ciphertext<E>,
-    pub cipher_val_r: Ciphertext<E>,
-    pub cipher_balance: Ciphertext<E>,
-    pub cipher_fee_s: Ciphertext<E>,
+#[derive(Clone)]
+pub struct MultiCiphertexts<E: JubjubEngine> {
+    pub sender: Ciphertext<E>,
+    pub recipient: Ciphertext<E>,
+    pub decoys: Option<Vec<Ciphertext<E>>>,
+    pub fee: Ciphertext<E>,
 }
 
-impl<E: JubjubEngine> TransferProof<E> {
+impl<E: JubjubEngine> MultiCiphertexts<E> {
+    pub fn new_for_confidential(
+        sender: Ciphertext<E>,
+        recipient: Ciphertext<E>,
+        fee: Ciphertext<E>,
+    ) -> Self {
+        MultiCiphertexts {
+            sender,
+            recipient,
+            decoys: None,
+            fee,
+        }
+    }
+
+    pub fn new_for_anonymous(
+        sender: Ciphertext<E>,
+        recipient: Ciphertext<E>,
+        decoys: Vec<Ciphertext<E>>,
+        fee: Ciphertext<E>,
+    ) -> Self {
+        MultiCiphertexts {
+            sender,
+            recipient,
+            decoys: Some(decoys),
+            fee,
+        }
+    }
+}
+
+#[derive(Clone)]
+pub struct MultiEncKeys<E: JubjubEngine> {
+    pub recipient: EncryptionKey<E>,
+    pub decoys: Option<Vec<EncryptionKey<E>>>,
+}
+
+impl<E: JubjubEngine> MultiEncKeys<E> {
+    pub fn new_for_confidential(recipient: EncryptionKey<E>) -> Self {
+        MultiEncKeys {
+            recipient,
+            decoys: None,
+        }
+    }
+
+    pub fn new_for_anonymous(
+        recipient: EncryptionKey<E>,
+        decoys: Vec<EncryptionKey<E>>,
+    ) -> Self {
+        MultiEncKeys {
+            recipient,
+            decoys: Some(decoys),
+        }
+    }
+}
+
+pub struct AnonymousProof<E: JubjubEngine> {
+    proof: Proof<E>,
+    rvk: PublicKey<E>,
+    enc_key_sender: EncryptionKey<E>,
+    enc_keys: MultiEncKeys<E>,
+    multi_ciphertexts: MultiCiphertexts<E>,
+    cipher_balance: Ciphertext<E>,
+}
+
+impl<E: JubjubEngine> AnonymousProof<E> {
     pub fn gen_proof<R: Rng>(
         amount: u32,
         remaining_balance: u32,
+        fee: u32,
         alpha: E::Fs,
         proving_key: &Parameters<E>,
         prepared_vk: &PreparedVerifyingKey<E>,
         proof_generation_key: &ProofGenerationKey<E>,
-        address_recipient: EncryptionKey<E>,
-        ciphertext_balance: Ciphertext<E>,
+        enc_keys: &MultiEncKeys<E>,
+        cipher_balance: Ciphertext<E>,
+        g_epoch: &edwards::Point<E, PrimeOrder>,
         rng: &mut R,
         params: &E::Params,
+    ) -> Result<Self, SynthesisError>
+    {
+
+        unimplemented!();
+    }
+}
+
+
+
+pub struct ConfidentialProof<E: JubjubEngine> {
+    pub proof: Proof<E>,
+    pub rvk: PublicKey<E>, // re-randomization sig-verifying key
+    pub enc_key_sender: EncryptionKey<E>,
+    pub enc_keys: MultiEncKeys<E>,
+    pub multi_ciphertexts: MultiCiphertexts<E>,
+    pub cipher_balance: Ciphertext<E>,
+    pub nonce: edwards::Point<E, PrimeOrder>,
+}
+
+impl<E: JubjubEngine> ConfidentialProof<E> {
+    pub fn gen_proof<R: Rng>(
+        amount: u32,
+        remaining_balance: u32,
         fee: u32,
+        alpha: E::Fs,
+        proving_key: &Parameters<E>,
+        prepared_vk: &PreparedVerifyingKey<E>,
+        proof_generation_key: &ProofGenerationKey<E>,
+        enc_keys: &MultiEncKeys<E>,
+        cipher_balance: &Ciphertext<E>,
+        g_epoch: &edwards::Point<E, PrimeOrder>,
+        rng: &mut R,
+        params: &E::Params,
     ) -> Result<Self, SynthesisError>
     {
         let randomness = E::Fs::rand(rng);
@@ -63,6 +160,7 @@ impl<E: JubjubEngine> TransferProof<E> {
                 FixedGenerators::NoteCommitmentRandomness,
                 params,
         );
+        let nonce = g_epoch.mul(dec_key_sender.0, params);
 
         let instance = Transfer {
             params: params,
@@ -72,18 +170,19 @@ impl<E: JubjubEngine> TransferProof<E> {
             alpha: Some(&alpha),
             proof_generation_key: Some(&proof_generation_key),
             dec_key_sender: Some(&dec_key_sender),
-            enc_key_recipient: Some(address_recipient.clone()),
-            encrypted_balance: Some(&ciphertext_balance),
-            fee: Some(fee)
+            enc_key_recipient: Some(&enc_keys.recipient),
+            encrypted_balance: Some(&cipher_balance),
+            fee: Some(fee),
+            g_epoch: Some(g_epoch),
         };
 
         // Crate proof
         let proof = create_random_proof(instance, proving_key, rng)?;
 
-        let mut public_input = [E::Fr::zero(); 18];
+        let mut public_input = [E::Fr::zero(); 22];
         let p_g = FixedGenerators::NoteCommitmentRandomness;
 
-        let cipher_val_s = Ciphertext::encrypt(
+        let cipher_sender = Ciphertext::encrypt(
             amount,
             randomness,
             &enc_key_sender,
@@ -91,15 +190,15 @@ impl<E: JubjubEngine> TransferProof<E> {
             params
         );
 
-        let cipher_val_r = Ciphertext::encrypt(
+        let cipher_recipient = Ciphertext::encrypt(
             amount,
             randomness,
-            &address_recipient,
+            &enc_keys.recipient,
             p_g,
             params
         );
 
-        let cipher_fee_s = Ciphertext::encrypt(
+        let cipher_fee = Ciphertext::encrypt(
             fee,
             randomness,
             &enc_key_sender,
@@ -113,44 +212,54 @@ impl<E: JubjubEngine> TransferProof<E> {
             public_input[1] = y;
         }
         {
-            let (x, y) = address_recipient.0.into_xy();
+            let (x, y) = enc_keys.recipient.0.into_xy();
             public_input[2] = x;
             public_input[3] = y;
         }
         {
-            let (x, y) = cipher_val_s.left.into_xy();
+            let (x, y) = cipher_sender.left.into_xy();
             public_input[4] = x;
             public_input[5] = y;
         }
         {
-            let (x, y) = cipher_val_r.left.into_xy();
+            let (x, y) = cipher_recipient.left.into_xy();
             public_input[6] = x;
             public_input[7] = y;
         }
         {
-            let (x, y) = cipher_val_s.right.into_xy();
+            let (x, y) = cipher_sender.right.into_xy();
             public_input[8] = x;
             public_input[9] = y;
         }
         {
-            let (x, y) = cipher_fee_s.left.into_xy();
+            let (x, y) = cipher_fee.left.into_xy();
             public_input[10] = x;
             public_input[11] = y;
         }
         {
-            let (x, y) = ciphertext_balance.left.into_xy();
+            let (x, y) = cipher_balance.left.into_xy();
             public_input[12] = x;
             public_input[13] = y;
         }
         {
-            let (x, y) = ciphertext_balance.right.into_xy();
+            let (x, y) = cipher_balance.right.into_xy();
             public_input[14] = x;
             public_input[15] = y;
         }
         {
             let (x, y) = rvk.0.into_xy();
-            public_input[12] = x;
-            public_input[13] = y;
+            public_input[16] = x;
+            public_input[17] = y;
+        }
+        {
+            let (x, y) = g_epoch.into_xy();
+            public_input[18] = x;
+            public_input[19] = y;
+        }
+        {
+            let (x, y) = nonce.into_xy();
+            public_input[20] = x;
+            public_input[21] = y;
         }
 
         // This verification is just an error handling, not validate if it returns `true`,
@@ -159,18 +268,17 @@ impl<E: JubjubEngine> TransferProof<E> {
             return Err(SynthesisError::MalformedVerifyingKey)
         }
 
-        let transfer_proof = TransferProof {
+        let proof = ConfidentialProof {
             proof,
             rvk,
-            address_sender: enc_key_sender,
-            address_recipient,
-            cipher_val_s,
-            cipher_val_r,
-            cipher_balance: ciphertext_balance,
-            cipher_fee_s,
+            enc_key_sender,
+            enc_keys: MultiEncKeys::new_for_confidential(enc_keys.recipient.clone()),
+            multi_ciphertexts: MultiCiphertexts::new_for_confidential(cipher_sender, cipher_recipient, cipher_fee),
+            cipher_balance: cipher_balance.clone(),
+            nonce,
         };
 
-        Ok(transfer_proof)
+        Ok(proof)
     }
 }
 
@@ -227,22 +335,25 @@ mod tests {
 
         let randomness = rng.gen();
         let enc_key = EncryptionKey::from_seed(&sender_seed[..], params).unwrap();
-        let ciphertext_balance = Ciphertext::encrypt(balance, randomness, &enc_key, p_g, params);
+        let cipher_balance = Ciphertext::encrypt(balance, randomness, &enc_key, p_g, params);
 
         let (proving_key, prepared_vk) = get_pk_and_vk();
 
-        let proofs = TransferProof::gen_proof(
+        let g_epoch = edwards::Point::rand(rng, params).mul_by_cofactor(params);
+
+        let proofs = ConfidentialProof::gen_proof(
             amount,
             remaining_balance,
+            fee,
             alpha,
             &proving_key,
             &prepared_vk,
             &proof_generation_key,
-            enc_key_recipient,
-            ciphertext_balance,
+            &MultiEncKeys::new_for_confidential(enc_key_recipient),
+            &cipher_balance,
+            &g_epoch,
             rng,
             params,
-            fee
         );
 
         assert!(proofs.is_ok());

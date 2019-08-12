@@ -2,26 +2,25 @@ use std::path::{PathBuf, Path};
 use std::io::{BufReader, Read};
 use std::fs::File;
 use rand::{Rng, Rand};
-use proofs::{SpendingKey, Transaction, ProofGenerationKey, EncryptionKey, PARAMS, elgamal};
+use proofs::{SpendingKey, Transaction, ProofGenerationKey, EncryptionKey, PARAMS, elgamal, MultiEncKeys};
 use pairing::bls12_381::Bls12;
 use super::constants::*;
 use crate::term::Term;
 use crate::wallet::{Result, DirOperations};
 use crate::wallet::commands::{wallet_keystore_dirs, get_default_keyfile_name};
 use crate::utils::print_keys::BalanceQuery; // TODO
-
 use zjubjub::{
     curve::{fs::Fs as zFs, FixedGenerators as zFixedGenerators},
     redjubjub::PrivateKey as zPrivateKey
     };
 use zpairing::{bls12_381::Bls12 as zBls12, PrimeField as zPrimeField, PrimeFieldRepr as zPrimeFieldRepr};
-use zprimitives::{PARAMS as ZPARAMS, Proof, Ciphertext as zCiphertext, EncKey, SigVerificationKey, RedjubjubSignature, SigVk};
+use zprimitives::{PARAMS as ZPARAMS, Proof, Ciphertext as zCiphertext, EncKey, SigVerificationKey, RedjubjubSignature, SigVk, Nonce, GEpoch};
 use zerochain_runtime::{UncheckedExtrinsic, Call, EncryptedBalancesCall, EncryptedAssetsCall};
 use runtime_primitives::generic::Era;
 use parity_codec::{Compact, Encode, Decode};
 use primitives::blake2_256;
-use polkadot_rs::{Api, Url, hexstr_to_u64};
-use scrypto::jubjub::{fs::Fs, FixedGenerators};
+use polkadot_rs::{Api, Url, hexstr_to_u64, hexstr_to_vec};
+use scrypto::jubjub::{fs::Fs, FixedGenerators, edwards, PrimeOrder};
 use bellman::groth16::{Parameters, PreparedVerifyingKey};
 
 pub fn asset_issue_tx<R: Rng>(
@@ -53,9 +52,10 @@ pub fn asset_issue_tx<R: Rng>(
         0, // dummy value for remaining balance
         &proving_key,
         &prepared_vk,
-        &issuer_address,
+        &MultiEncKeys::new_for_confidential(issuer_address),
         &spending_key,
-        enc_amount,
+        &enc_amount,
+        &get_g_epoch(&api), // TODO
         rng,
         0
         )
@@ -107,9 +107,10 @@ pub fn asset_transfer_tx<R: Rng>(
         remaining_balance,
         &proving_key,
         &prepared_vk,
-        &recipient_account_id,
+        &MultiEncKeys::new_for_confidential(recipient_account_id.clone()),
         &spending_key,
-        encrypted_balance,
+        &encrypted_balance,
+        &get_g_epoch(&api), // TODO
         rng,
         fee
         )
@@ -163,9 +164,10 @@ pub fn asset_burn_tx<R: Rng>(
         0, // dummy value for remaining balance
         &proving_key,
         &prepared_vk,
-        &issuer_address,
+        &MultiEncKeys::new_for_confidential(issuer_address),
         &spending_key,
-        enc_amount,
+        &enc_amount,
+        &get_g_epoch(&api), // TODO
         rng,
         0
         )
@@ -241,9 +243,10 @@ fn inner_transfer_tx<R: Rng>(
         remaining_balance,
         &proving_key,
         &prepared_vk,
-        &recipient_account_id,
+        &MultiEncKeys::new_for_confidential(recipient_account_id.clone()),
         &spending_key,
-        encrypted_balance,
+        &encrypted_balance,
+        &get_g_epoch(&api),
         rng,
         fee
         )
@@ -260,10 +263,25 @@ fn inner_transfer_tx<R: Rng>(
     Ok(())
 }
 
+fn get_g_epoch(api: &Api) -> edwards::Point<Bls12, PrimeOrder> {
+    let current_height_str = api.get_latest_height()
+        .expect("should be fetched Number from system module.");
+    let epoch_length_str = api.get_storage("EncryptedBalances", "EpochLength", None)
+        .expect("should be fetched epoch length from encrypted-balances module.");
+
+    let current_epoch = hexstr_to_u64(current_height_str) / hexstr_to_u64(epoch_length_str);
+    let g_epoch = GEpoch::group_hash(current_epoch as u32).unwrap(); // TODO
+
+    edwards::Point::<Bls12, _>::read(&mut g_epoch.as_ref(), &PARAMS)
+            .unwrap() // TODO
+            .as_prime_order(&PARAMS)
+            .unwrap()
+}
+
 // Get set fee amount as `TransactionBaseFee` in encrypyed-balances module.
 fn get_fee(api: &Api) -> u32 {
     let fee_str = api.get_storage("EncryptedBalances", "TransactionBaseFee", None)
-        .expect("should be fetched TransactionBaseFee from ConfTransfer module of Zerochain.");
+        .expect("should be fetched TransactionBaseFee from encrypted balances module.");
     hexstr_to_u64(fee_str) as u32
 }
 
@@ -317,11 +335,12 @@ fn read_zk_params_with_path(path: &str) -> Result<Vec<u8>> {
 pub fn submit_confidential_transfer<R: Rng>(tx: &Transaction, api: &Api, rng: &mut R) {
     let calls = Call::EncryptedBalances(EncryptedBalancesCall::confidential_transfer(
         Proof::from_slice(&tx.proof[..]),
-        EncKey::from_slice(&tx.address_sender[..]),
-        EncKey::from_slice(&tx.address_recipient[..]),
+        EncKey::from_slice(&tx.enc_key_sender[..]),
+        EncKey::from_slice(&tx.enc_key_recipient[..]),
         zCiphertext::from_slice(&tx.enc_amount_sender[..]),
         zCiphertext::from_slice(&tx.enc_amount_recipient[..]),
         zCiphertext::from_slice(&tx.enc_fee[..]),
+        Nonce::from_slice(&tx.nonce[..])
     ));
 
     submit_tx(calls, tx, api, rng);
@@ -330,10 +349,11 @@ pub fn submit_confidential_transfer<R: Rng>(tx: &Transaction, api: &Api, rng: &m
 pub fn submit_asset_issue<R: Rng>(tx: &Transaction, api: &Api, rng: &mut R) {
     let calls = Call::EncryptedAssets(EncryptedAssetsCall::issue(
         Proof::from_slice(&tx.proof[..]),
-        EncKey::from_slice(&tx.address_recipient[..]),
+        EncKey::from_slice(&tx.enc_key_recipient[..]),
         zCiphertext::from_slice(&tx.enc_amount_recipient[..]),
         zCiphertext::from_slice(&tx.enc_fee[..]),
-        zCiphertext::from_slice(&tx.enc_balance[..])
+        zCiphertext::from_slice(&tx.enc_balance[..]),
+        Nonce::from_slice(&tx.nonce[..])
     ));
 
     submit_tx(calls, tx, api, rng);
@@ -343,11 +363,12 @@ pub fn submit_asset_transfer<R: Rng>(asset_id: u32, tx: &Transaction, api: &Api,
     let calls = Call::EncryptedAssets(EncryptedAssetsCall::confidential_transfer(
         asset_id,
         Proof::from_slice(&tx.proof[..]),
-        EncKey::from_slice(&tx.address_sender[..]),
-        EncKey::from_slice(&tx.address_recipient[..]),
+        EncKey::from_slice(&tx.enc_key_sender[..]),
+        EncKey::from_slice(&tx.enc_key_recipient[..]),
         zCiphertext::from_slice(&tx.enc_amount_sender[..]),
         zCiphertext::from_slice(&tx.enc_amount_recipient[..]),
         zCiphertext::from_slice(&tx.enc_fee[..]),
+        Nonce::from_slice(&tx.nonce[..])
     ));
 
     submit_tx(calls, tx, api, rng);
@@ -356,11 +377,12 @@ pub fn submit_asset_transfer<R: Rng>(asset_id: u32, tx: &Transaction, api: &Api,
 pub fn submit_asset_burn<R: Rng>(asset_id: u32, tx: &Transaction, api: &Api, rng: &mut R) {
     let calls = Call::EncryptedAssets(EncryptedAssetsCall::destroy(
         Proof::from_slice(&tx.proof[..]),
-        EncKey::from_slice(&tx.address_recipient[..]),
+        EncKey::from_slice(&tx.enc_key_recipient[..]),
         asset_id,
         zCiphertext::from_slice(&tx.enc_amount_recipient[..]),
         zCiphertext::from_slice(&tx.enc_fee[..]),
-        zCiphertext::from_slice(&tx.enc_balance[..])
+        zCiphertext::from_slice(&tx.enc_balance[..]),
+        Nonce::from_slice(&tx.nonce[..])
     ));
 
     submit_tx(calls, tx, api, rng);
@@ -405,7 +427,6 @@ fn submit_tx<R: Rng>(calls: Call, tx: &Transaction, api: &Api, rng: &mut R) {
 pub fn subscribe_event(api: Api, remaining_balance: u32) {
     use std::sync::mpsc::channel;
     use std::thread;
-    use polkadot_rs::hexstr_to_vec;
     use zerochain_runtime::Event;
 
     let (tx, rx) = channel();
@@ -431,7 +452,7 @@ pub fn subscribe_event(api: Api, remaining_balance: u32) {
                                     match &enc_be {
                                         encrypted_balances::RawEvent::ConfidentialTransfer(
                                             _zkproof,
-                                            _address_sender, _address_recipient,
+                                            _enc_key_sender, _enc_key_recipient,
                                             _amount_sender, _amount_recipient,
                                             _fee_sender, _enc_balances, _sig_vk
                                         ) => println!("Submitting transaction is completed successfully. \n Remaining balance is {}", remaining_balance),
@@ -447,7 +468,7 @@ pub fn subscribe_event(api: Api, remaining_balance: u32) {
                                         ) => println!("Submitting transaction is completed successfully. \nThe total issued coin is {}. \nThe asset id is {}.", remaining_balance, asset_id),
                                         encrypted_assets::RawEvent::ConfidentialAssetTransferred(
                                             asset_id, _zkproof,
-                                            _address_sender, _address_recipient,
+                                            _enc_key_sender, _enc_key_recipient,
                                             _amount_sender, _amount_recipient,
                                             _fee_sender, _enc_balances, _sig_vk
                                         ) => println!("Submitting transaction is completed successfully. \nRemaining balance is {}. \nThe asset id is {}.", remaining_balance, asset_id),

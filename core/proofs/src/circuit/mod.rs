@@ -1,4 +1,5 @@
 pub mod transfer;
+pub mod anonymous_transfer;
 pub mod range_check;
 pub mod test;
 
