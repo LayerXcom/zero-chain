@@ -41,6 +41,24 @@ pub struct Transfer<'a, E: JubjubEngine> {
     pub g_epoch: Option<&'a edwards::Point<E, PrimeOrder>>,
 }
 
+impl<'a, E: JubjubEngine> Transfer<'a, E> {
+    pub fn new(params: &'a E::Params) -> Self {
+        Transfer {
+            params,
+            amount: None,
+            remaining_balance: None,
+            randomness: None,
+            alpha: None,
+            proof_generation_key: None,
+            dec_key_sender: None,
+            enc_key_recipient: None,
+            encrypted_balance: None,
+            fee: None,
+            g_epoch: None
+        }
+    }
+}
+
 impl<'a, E: JubjubEngine> Circuit<E> for Transfer<'a, E> {
     fn synthesize<CS: ConstraintSystem<E>>(
         self,
@@ -393,7 +411,7 @@ mod tests {
     use rand::{SeedableRng, Rng, XorShiftRng, Rand};
     use crate::circuit::TestConstraintSystem;
     use scrypto::jubjub::{JubjubBls12, fs};
-    use crate::keys::EncryptionKey;
+    use crate::EncryptionKey;
 
     fn test_based_amount(amount: u32) {
         let params = &JubjubBls12::new();

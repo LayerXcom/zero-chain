@@ -14,7 +14,7 @@ use scrypto::jubjub::{fs, edwards, PrimeOrder};
 use rand::{Rng, Rand};
 
 /// Transaction components which is needed to create a signed `UncheckedExtrinsic`.
-pub struct Transaction{
+pub struct ConfidentialXt{
     pub proof: [u8; 192],                // 192 bytes
     pub enc_key_sender: [u8; 32],        // 32 bytes
     pub enc_key_recipient: [u8; 32],     // 32 bytes
@@ -27,7 +27,7 @@ pub struct Transaction{
 	pub nonce: [u8; 32],
 }
 
-impl Transaction {
+impl ConfidentialXt {
     pub fn gen_tx<R: Rng>(
         value: u32,
         remaining_balance: u32,
@@ -126,7 +126,7 @@ impl Transaction {
 			.write(&mut nonce[..])
 			.map_err(|_| io::Error::InvalidData)?;
 
-		let tx = Transaction {
+		let tx = ConfidentialXt {
 			proof: proof_bytes,
 			rvk: rvk_bytes,
 			enc_key_sender,

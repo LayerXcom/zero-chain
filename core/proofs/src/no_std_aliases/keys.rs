@@ -4,7 +4,6 @@ use pairing::{
     PrimeField,
     PrimeFieldRepr,
 };
-
 use scrypto::{
         jubjub::{
             JubjubEngine,

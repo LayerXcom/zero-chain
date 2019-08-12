@@ -7,7 +7,7 @@ use scrypto::jubjub::{
         PrimeOrder,
         FixedGenerators,
 };
-use crate::keys::{EncryptionKey, DecryptionKey};
+use super::keys::{EncryptionKey, DecryptionKey};
 use blake2_rfc::{
     blake2b::{Blake2b, Blake2bResult}
 };
@@ -148,7 +148,7 @@ mod tests {
     use rand::{SeedableRng, XorShiftRng, Rand};
     use scrypto::jubjub::{JubjubBls12, fs::Fs};
     use pairing::bls12_381::Bls12;
-    use crate::keys::{ProofGenerationKey, EncryptionKey};
+    use crate::{ProofGenerationKey, EncryptionKey};
 
     #[test]
     fn test_elgamal_enc_dec() {
