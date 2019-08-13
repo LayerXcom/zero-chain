@@ -14,7 +14,6 @@ use rand::{Rand, Rng};
 use scrypto::{
     jubjub::{
         JubjubEngine,
-        JubjubParams,
         FixedGenerators,
         edwards,
         PrimeOrder,
@@ -24,6 +23,13 @@ use scrypto::{
     },
 };
 use polkadot_rs::Api;
+use zerochain_runtime::{UncheckedExtrinsic, Call, EncryptedBalancesCall, EncryptedAssetsCall};
+use zprimitives::{
+    EncKey as zEncKey,
+    Ciphertext as zCiphertext,
+    Nonce as zNonce,
+    Proof as zProof
+};
 use crate::circuit::Transfer;
 use crate::elgamal::Ciphertext;
 use crate::{
@@ -34,7 +40,7 @@ use crate::{
 };
 use crate::{MultiEncKeys, MultiCiphertexts, Confidential, CiphertextTrait};
 use std::{
-    io::{self, Write},
+    io::{self, Write, BufReader, BufWriter, Read},
     path::Path,
     fs::File,
     marker::PhantomData,
@@ -75,6 +81,16 @@ impl<E: JubjubEngine> KeyContext<E> {
             prepared_vk,
         }
     }
+
+    fn inner_read<P: AsRef<Path>>(path: P) -> io::Result<Vec<u8>> {
+        let file = File::open(&path)?;
+
+        let mut reader = BufReader::new(file);
+        let mut buffer = vec![];
+        reader.read_to_end(&mut buffer)?;
+
+        Ok(buffer)
+    }
 }
 
 impl<E: JubjubEngine> ProofBuilder<E> for KeyContext<E> {
@@ -89,8 +105,8 @@ impl<E: JubjubEngine> ProofBuilder<E> for KeyContext<E> {
         let pk_file = File::create(&pk_path)?;
         let vk_file = File::create(&vk_path)?;
 
-        let mut bw_pk = io::BufWriter::new(pk_file);
-        let mut bw_vk = io::BufWriter::new(vk_file);
+        let mut bw_pk = BufWriter::new(pk_file);
+        let mut bw_vk = BufWriter::new(vk_file);
 
         let mut v_pk = vec![];
         let mut v_vk = vec![];
@@ -108,7 +124,13 @@ impl<E: JubjubEngine> ProofBuilder<E> for KeyContext<E> {
     }
 
     fn read_from_path<P: AsRef<Path>>(pk_path: P, vk_path: P) -> io::Result<Self>{
-        unimplemented!();
+        let pk_buf = Self::inner_read(pk_path)?;
+        let vk_buf = Self::inner_read(vk_path)?;
+
+        let pk = Parameters::read(&pk_buf[..], true)?;
+        let vk = PreparedVerifyingKey::read(&vk_buf[..])?;
+
+        Ok(KeyContext::new(pk, vk))
     }
 
     fn gen_proof<R: Rng>(
@@ -398,7 +420,7 @@ impl<E: JubjubEngine> ConfidentialProofContext<E, Checked> {
 }
 
 pub trait Submitter {
-    fn submit<R: Rng>(&self, asset_id: Option<u32>, api: &Api, rng: &mut R);
+    fn submit<R: Rng>(&self, call: Call, api: &Api, rng: &mut R);
 }
 
 /// Transaction components which is needed to create a signed `UncheckedExtrinsic`.
@@ -416,8 +438,104 @@ pub struct ConfidentialXt{
 }
 
 impl Submitter for ConfidentialXt {
-    fn submit<R: Rng>(&self, asset_id: Option<u32>, api: &Api, rng: &mut R) {
-        unimplemented!();
+    fn submit<R: Rng>(&self, call: Call, api: &Api, rng: &mut R) {
+        use zjubjub::{
+            curve::{fs::Fs as zFs, FixedGenerators as zFixedGenerators},
+            redjubjub::PrivateKey as zPrivateKey
+        };
+        use zpairing::{
+            bls12_381::Bls12 as zBls12,
+            PrimeField as zPrimeField,
+            PrimeFieldRepr as zPrimeFieldRepr
+        };
+        use parity_codec::{Compact, Encode};
+        use primitives::blake2_256;
+        use runtime_primitives::generic::Era;
+        use zprimitives::{PARAMS as ZPARAMS, SigVerificationKey, RedjubjubSignature, SigVk};
+
+        let p_g = zFixedGenerators::Diversifier; // 1
+
+        let mut rsk_repr = zFs::default().into_repr();
+        rsk_repr.read_le(&mut &self.rsk[..])
+            .expect("should be casted to Fs's repr type.");
+        let rsk = zFs::from_repr(rsk_repr)
+            .expect("should be casted to Fs type from repr type.");
+
+        let sig_sk = zPrivateKey::<zBls12>(rsk);
+        let sig_vk = SigVerificationKey::from_slice(&self.rvk[..]);
+
+        let era = Era::Immortal;
+        let index = api.get_nonce(&sig_vk).expect("Nonce must be got.");
+        let checkpoint = api.get_genesis_blockhash()
+            .expect("should be fetched the genesis block hash from zerochain node.");
+
+        let raw_payload = (Compact(index), call, era, checkpoint);
+
+        let sig = raw_payload.using_encoded(|payload| {
+            let msg = blake2_256(payload);
+            let sig = sig_sk.sign(&msg[..], rng, p_g, &*ZPARAMS);
+
+            let sig_vk = sig_vk.into_verification_key()
+                .expect("should be casted to redjubjub::PublicKey<Bls12> type.");
+            assert!(sig_vk.verify(&msg, &sig, p_g, &*ZPARAMS));
+
+            sig
+        });
+
+        let sig_repr = RedjubjubSignature::from_signature(&sig);
+        let uxt = UncheckedExtrinsic::new_signed(index, raw_payload.1, sig_vk.into(), sig_repr, era);
+        let _tx_hash = api.submit_extrinsic(&uxt)
+            .expect("Faild to submit a extrinsic to zerochain node.");
+    }
+}
+
+impl ConfidentialXt {
+    pub fn call_transfer(&self) -> Call {
+        Call::EncryptedBalances(EncryptedBalancesCall::confidential_transfer(
+            zProof::from_slice(&self.proof[..]),
+            zEncKey::from_slice(&self.enc_key_sender[..]),
+            zEncKey::from_slice(&self.enc_key_recipient[..]),
+            zCiphertext::from_slice(&self.enc_amount_sender[..]),
+            zCiphertext::from_slice(&self.enc_amount_recipient[..]),
+            zCiphertext::from_slice(&self.enc_fee[..]),
+            zNonce::from_slice(&self.nonce[..])
+        ))
+    }
+
+    pub fn call_asset_issue(&self) -> Call {
+        Call::EncryptedAssets(EncryptedAssetsCall::issue(
+            zProof::from_slice(&self.proof[..]),
+            zEncKey::from_slice(&self.enc_key_recipient[..]),
+            zCiphertext::from_slice(&self.enc_amount_recipient[..]),
+            zCiphertext::from_slice(&self.enc_fee[..]),
+            zCiphertext::from_slice(&self.enc_balance[..]),
+            zNonce::from_slice(&self.nonce[..])
+        ))
+    }
+
+    pub fn call_asset_transfer(&self, asset_id: u32) -> Call {
+        Call::EncryptedAssets(EncryptedAssetsCall::confidential_transfer(
+            asset_id,
+            zProof::from_slice(&self.proof[..]),
+            zEncKey::from_slice(&self.enc_key_sender[..]),
+            zEncKey::from_slice(&self.enc_key_recipient[..]),
+            zCiphertext::from_slice(&self.enc_amount_sender[..]),
+            zCiphertext::from_slice(&self.enc_amount_recipient[..]),
+            zCiphertext::from_slice(&self.enc_fee[..]),
+            zNonce::from_slice(&self.nonce[..])
+        ))
+    }
+
+    pub fn call_asset_burn(&self, asset_id: u32) -> Call {
+        Call::EncryptedAssets(EncryptedAssetsCall::destroy(
+            zProof::from_slice(&self.proof[..]),
+            zEncKey::from_slice(&self.enc_key_recipient[..]),
+            asset_id,
+            zCiphertext::from_slice(&self.enc_amount_recipient[..]),
+            zCiphertext::from_slice(&self.enc_fee[..]),
+            zCiphertext::from_slice(&self.enc_balance[..]),
+            zNonce::from_slice(&self.nonce[..])
+        ))
     }
 }
 
