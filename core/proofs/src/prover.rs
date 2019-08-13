@@ -68,45 +68,20 @@ pub struct KeyContext<E: JubjubEngine> {
     prepared_vk: PreparedVerifyingKey<E>,
 }
 
+impl<E: JubjubEngine> KeyContext<E> {
+    pub fn new(proving_key: Parameters<E>, prepared_vk: PreparedVerifyingKey<E>) -> Self {
+        KeyContext {
+            proving_key,
+            prepared_vk,
+        }
+    }
+}
+
 impl<E: JubjubEngine> ProofBuilder<E> for KeyContext<E> {
     type Submitter = ConfidentialXt;
 
-    fn setup<R: Rng>(rng: &mut R) -> Self {
-        use crate::PARAMS;
-        use pairing::bls12_381::Bls12;
-        use bellman::groth16::{
-            generate_random_parameters,
-            prepare_verifying_key,
-        };
-
-        // // Create parameters for the confidential transfer circuit
-        // let proving_key = {
-        //     let c = Transfer::<E>::new(&*PARAMS);
-        //     //     params: &<E as JubjubEngine>::Params,
-        //     //     amount: None,
-        //     //     remaining_balance: None,
-        //     //     randomness: None,
-        //     //     alpha: None,
-        //     //     proof_generation_key: None,
-        //     //     dec_key_sender: None,
-        //     //     enc_key_recipient: None,
-        //     //     encrypted_balance: None,
-        //     //     fee: None,
-        //     //     g_epoch: None,
-        //     // };
-
-        //     generate_random_parameters::<E, _, _>(c, rng).unwrap()
-        // };
-
-        // let prepared_vk = prepare_verifying_key::<E>(&proving_key.vk);
-        // let mut v = vec![];
-        // prepared_vk.write(&mut &mut v).unwrap();
-        // println!("pvk: {:?}", v.len());
-
-        // KeyContext::<E> {
-        //     proving_key,
-        //     prepared_vk,
-        // }
+    // TODO:
+    fn setup<R: Rng>(_rng: &mut R) -> Self {
         unimplemented!();
     }
 
@@ -155,7 +130,7 @@ impl<E: JubjubEngine> ProofBuilder<E> for KeyContext<E> {
         let dec_key_sender = proof_generation_key.into_decryption_key()?;
         let enc_key_sender = proof_generation_key.into_encryption_key(params)?;
 
-        let rvk = PublicKey(proof_generation_key.0.into())
+        let rvk = PublicKey(proof_generation_key.0.clone().into())
             .randomize(
                 alpha,
                 FixedGenerators::NoteCommitmentRandomness,
@@ -193,9 +168,9 @@ impl<E: JubjubEngine> ProofBuilder<E> for KeyContext<E> {
             proof,
             rvk,
             enc_key_sender,
-            *enc_keys,
+            enc_keys.clone(),   // TODO
             multi_ciphertexts,
-            *encrypted_balance,
+            encrypted_balance.clone(), // TODO
             g_epoch,
             nonce
         )
@@ -209,6 +184,7 @@ impl<E: JubjubEngine> ProofBuilder<E> for KeyContext<E> {
 enum Unchecked { }
 enum Checked { }
 
+#[derive(Clone)]
 struct ConfidentialProofContext<E: JubjubEngine, IsChecked> {
     proof: Proof<E>,
     rvk: PublicKey<E>, // re-randomization sig-verifying key
@@ -223,19 +199,19 @@ struct ConfidentialProofContext<E: JubjubEngine, IsChecked> {
 
 
 impl<E: JubjubEngine, IsChecked> ConfidentialProofContext<E, IsChecked> {
-    fn enc_amount_sender(&self) -> Ciphertext<E> {
+    fn enc_amount_sender(&self) -> &Ciphertext<E> {
         self.multi_ciphertexts.get_sender()
     }
 
-    fn enc_amount_recipient(&self) -> Ciphertext<E> {
+    fn enc_amount_recipient(&self) -> &Ciphertext<E> {
         self.multi_ciphertexts.get_recipient()
     }
 
-    fn enc_fee(&self) -> Ciphertext<E> {
+    fn enc_fee(&self) -> &Ciphertext<E> {
         self.multi_ciphertexts.get_fee()
     }
 
-    fn recipient(&self) -> EncryptionKey<E> {
+    fn recipient(&self) -> &EncryptionKey<E> {
         self.enc_keys.get_recipient()
     }
 }
@@ -265,7 +241,7 @@ impl<E: JubjubEngine> ConfidentialProofContext<E, Unchecked> {
     }
 
     fn check_proof(
-        &self,
+        self,
         prepared_vk: &PreparedVerifyingKey<E>
     ) -> Result<ConfidentialProofContext<E, Checked>, SynthesisError> {
         let mut public_input = [E::Fr::zero(); 22];
@@ -332,11 +308,11 @@ impl<E: JubjubEngine> ConfidentialProofContext<E, Unchecked> {
             return Err(SynthesisError::MalformedVerifyingKey)
         }
 
-        Ok(convert_to_checked::<E, Unchecked, Checked>(&self))
+        Ok(convert_to_checked::<E, Unchecked, Checked>(self))
     }
 }
 
-fn convert_to_checked<E: JubjubEngine, C1, C2>(from: &ConfidentialProofContext<E, C1>) -> ConfidentialProofContext<E, C2> {
+fn convert_to_checked<E: JubjubEngine, C1, C2>(from: ConfidentialProofContext<E, C1>) -> ConfidentialProofContext<E, C2> {
     ConfidentialProofContext {
         proof: from.proof,
         rvk: from.rvk,
@@ -444,155 +420,6 @@ impl Submitter for ConfidentialXt {
         unimplemented!();
     }
 }
-
-// impl<E: JubjubEngine> ConfidentialProofContext<E> {
-//     pub fn gen_proof<R: Rng>(
-//         amount: u32,
-//         remaining_balance: u32,
-//         fee: u32,
-//         alpha: E::Fs,
-//         proving_key: &Parameters<E>,
-//         prepared_vk: &PreparedVerifyingKey<E>,
-//         proof_generation_key: &ProofGenerationKey<E>,
-//         enc_keys: &MultiEncKeys<E>,
-//         cipher_balance: &Ciphertext<E>,
-//         g_epoch: &edwards::Point<E, PrimeOrder>,
-//         rng: &mut R,
-//         params: &E::Params,
-//     ) -> Result<Self, SynthesisError>
-//     {
-//         let randomness = E::Fs::rand(rng);
-
-//         let dec_key_sender = proof_generation_key.into_decryption_key()?;
-//         let enc_key_sender = proof_generation_key.into_encryption_key(params)?;
-
-//         let rvk = PublicKey(proof_generation_key.0.clone().into())
-//             .randomize(
-//                 alpha,
-//                 FixedGenerators::NoteCommitmentRandomness,
-//                 params,
-//         );
-//         let nonce = g_epoch.mul(dec_key_sender.0, params);
-
-//         let instance = Transfer {
-//             params: params,
-//             amount: Some(amount),
-//             remaining_balance: Some(remaining_balance),
-//             randomness: Some(&randomness),
-//             alpha: Some(&alpha),
-//             proof_generation_key: Some(&proof_generation_key),
-//             dec_key_sender: Some(&dec_key_sender),
-//             enc_key_recipient: Some(&enc_keys.get_recipient()),
-//             encrypted_balance: Some(&cipher_balance),
-//             fee: Some(fee),
-//             g_epoch: Some(g_epoch),
-//         };
-
-//         // Crate proof
-//         let proof = create_random_proof(instance, proving_key, rng)?;
-
-//         let mut public_input = [E::Fr::zero(); 22];
-//         let p_g = FixedGenerators::NoteCommitmentRandomness;
-
-//         let cipher_sender = Ciphertext::encrypt(
-//             amount,
-//             randomness,
-//             &enc_key_sender,
-//             p_g,
-//             params
-//         );
-
-//         let cipher_recipient = Ciphertext::encrypt(
-//             amount,
-//             randomness,
-//             &enc_keys.get_recipient(),
-//             p_g,
-//             params
-//         );
-
-//         let cipher_fee = Ciphertext::encrypt(
-//             fee,
-//             randomness,
-//             &enc_key_sender,
-//             p_g,
-//             params
-//         );
-
-//         {
-//             let (x, y) = enc_key_sender.0.into_xy();
-//             public_input[0] = x;
-//             public_input[1] = y;
-//         }
-//         {
-//             let (x, y) = enc_keys.get_recipient().0.into_xy();
-//             public_input[2] = x;
-//             public_input[3] = y;
-//         }
-//         {
-//             let (x, y) = cipher_sender.left.into_xy();
-//             public_input[4] = x;
-//             public_input[5] = y;
-//         }
-//         {
-//             let (x, y) = cipher_recipient.left.into_xy();
-//             public_input[6] = x;
-//             public_input[7] = y;
-//         }
-//         {
-//             let (x, y) = cipher_sender.right.into_xy();
-//             public_input[8] = x;
-//             public_input[9] = y;
-//         }
-//         {
-//             let (x, y) = cipher_fee.left.into_xy();
-//             public_input[10] = x;
-//             public_input[11] = y;
-//         }
-//         {
-//             let (x, y) = cipher_balance.left.into_xy();
-//             public_input[12] = x;
-//             public_input[13] = y;
-//         }
-//         {
-//             let (x, y) = cipher_balance.right.into_xy();
-//             public_input[14] = x;
-//             public_input[15] = y;
-//         }
-//         {
-//             let (x, y) = rvk.0.into_xy();
-//             public_input[16] = x;
-//             public_input[17] = y;
-//         }
-//         {
-//             let (x, y) = g_epoch.into_xy();
-//             public_input[18] = x;
-//             public_input[19] = y;
-//         }
-//         {
-//             let (x, y) = nonce.into_xy();
-//             public_input[20] = x;
-//             public_input[21] = y;
-//         }
-
-//         // This verification is just an error handling, not validate if it returns `true`,
-//         // because public input of encrypted balance needs to be updated on-chain.
-//         if let Err(_) = verify_proof(prepared_vk, &proof, &public_input[..]) {
-//             return Err(SynthesisError::MalformedVerifyingKey)
-//         }
-
-//         let proof = ConfidentialProof {
-//             proof,
-//             rvk,
-//             enc_key_sender,
-//             enc_keys: MultiEncKeys::new_for_confidential(enc_keys.get_recipient().clone()),
-//             multi_ciphertexts: MultiCiphertexts::new_for_confidential(cipher_sender, cipher_recipient, cipher_fee),
-//             cipher_balance: cipher_balance.clone(),
-//             nonce,
-//         };
-
-//         Ok(proof)
-//     }
-// }
 
 // pub struct AnonymousProof<E: JubjubEngine> {
 //     proof: Proof<E>,

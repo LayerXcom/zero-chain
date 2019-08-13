@@ -438,19 +438,19 @@ mod tests {
         let r_fs_v = fs::Fs::rand(rng);
 
         let p_g = FixedGenerators::NoteCommitmentRandomness;
-        let ciphetext_balance = Ciphertext::encrypt(current_balance, r_fs_b, &enc_key_sender, p_g, params);
+        let ciphetext_balance = Ciphertext::encrypt(current_balance, &r_fs_b, &enc_key_sender, p_g, params);
 
         let c_bal_left = ciphetext_balance.left.into_xy();
         let c_bal_right = ciphetext_balance.right.into_xy();
 
-        let ciphertext_amount_sender = Ciphertext::encrypt(amount, r_fs_v, &enc_key_sender, p_g, params);
+        let ciphertext_amount_sender = Ciphertext::encrypt(amount, &r_fs_v, &enc_key_sender, p_g, params);
         let c_val_s_left = ciphertext_amount_sender.left.into_xy();
         let c_val_right = ciphertext_amount_sender.right.into_xy();
 
-        let ciphertext_fee_sender = Ciphertext::encrypt(fee, r_fs_v, &enc_key_sender, p_g, params);
+        let ciphertext_fee_sender = Ciphertext::encrypt(fee, &r_fs_v, &enc_key_sender, p_g, params);
         let c_fee_s_left = ciphertext_fee_sender.left.into_xy();
 
-        let ciphertext_amount_recipient = Ciphertext::encrypt(amount, r_fs_v, &enc_key_recipient, p_g, params);
+        let ciphertext_amount_recipient = Ciphertext::encrypt(amount, &r_fs_v, &enc_key_recipient, p_g, params);
         let c_val_r_left = ciphertext_amount_recipient.left.into_xy();
 
         let rvk = proof_gen_key.into_rvk(alpha, params).0.into_xy();

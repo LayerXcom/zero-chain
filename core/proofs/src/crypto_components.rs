@@ -3,6 +3,7 @@ use crate::elgamal::Ciphertext;
 use crate::EncryptionKey;
 use std::marker::PhantomData;
 
+#[derive(Clone)]
 pub enum Confidential { }
 pub enum Anonymous { }
 
@@ -16,16 +17,16 @@ pub struct MultiCiphertexts<E: JubjubEngine, CA> {
 }
 
 impl<E: JubjubEngine, CA> MultiCiphertexts<E, CA> {
-    pub fn get_sender(&self) -> Ciphertext<E> {
-        self.sender
+    pub fn get_sender(&self) -> &Ciphertext<E> {
+        &self.sender
     }
 
-    pub fn get_recipient(&self) -> Ciphertext<E> {
-        self.recipient
+    pub fn get_recipient(&self) -> &Ciphertext<E> {
+        &self.recipient
     }
 
-    pub fn get_fee(&self) -> Ciphertext<E> {
-        self.fee
+    pub fn get_fee(&self) -> &Ciphertext<E> {
+        &self.fee
     }
 }
 
@@ -140,7 +141,7 @@ impl<E: JubjubEngine> MultiEncKeys<E> {
         }
     }
 
-    pub fn get_recipient(&self) -> EncryptionKey<E> {
-        self.recipient
+    pub fn get_recipient(&self) -> &EncryptionKey<E> {
+        &self.recipient
     }
 }

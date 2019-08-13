@@ -5,13 +5,12 @@ use bellman::groth16::{
     Parameters,
     PreparedVerifyingKey,
 };
-use rand::OsRng;
+use rand::Rng;
 use crate::circuit::Transfer;
 use crate::PARAMS;
+use crate::prover::KeyContext;
 
-pub fn setup() -> (Parameters<Bls12>, PreparedVerifyingKey<Bls12>) {
-    let rng = &mut OsRng::new().expect("should be able to construct RNG");
-
+pub fn setup<R: Rng>(rng: &mut R) -> KeyContext<Bls12> {
     // Create parameters for the confidential transfer circuit
     let proving_key = {
         let c = Transfer::<Bls12> {
@@ -36,7 +35,7 @@ pub fn setup() -> (Parameters<Bls12>, PreparedVerifyingKey<Bls12>) {
     prepared_vk.write(&mut &mut v).unwrap();
     println!("pvk: {:?}", v.len());
 
-    (proving_key, prepared_vk)
+    KeyContext::new(proving_key, prepared_vk)
 }
 
 #[cfg(test)]

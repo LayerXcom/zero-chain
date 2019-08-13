@@ -6,7 +6,6 @@ use bellman::SynthesisError;
 pub mod circuit;
 pub mod prover;
 pub mod no_std_aliases;
-pub mod transaction;
 pub mod setup;
 pub mod nonce;
 pub mod crypto_components;
