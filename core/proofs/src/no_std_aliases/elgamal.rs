@@ -43,15 +43,15 @@ impl<E: JubjubEngine> Ciphertext<E> {
 
     pub fn encrypt(
         value: u32, // 32-bits restriction for the decryption.
-        randomness: E::Fs,
+        randomness: &E::Fs,
         public_key: &EncryptionKey<E>,
         p_g: FixedGenerators,
         params: &E::Params
     ) -> Self
     {
-        let right = params.generator(p_g).mul(randomness, params).into();
+        let right = params.generator(p_g).mul(*randomness, params).into();
         let v_point: edwards::Point<E, PrimeOrder> = params.generator(p_g).mul(value as u64, params).into();
-        let r_point = public_key.0.mul(randomness, params);
+        let r_point = public_key.0.mul(*randomness, params);
         let left = v_point.add(&r_point, params);
 
         Ciphertext {
@@ -162,7 +162,7 @@ mod tests {
 
         let public_key = EncryptionKey(params.generator(p_g).mul(sk_fs, params));
 
-        let ciphetext = Ciphertext::encrypt(value, r_fs, &public_key, p_g, params);
+        let ciphetext = Ciphertext::encrypt(value, &r_fs, &public_key, p_g, params);
         let decrypted_value = ciphetext.decrypt(&DecryptionKey(sk_fs), p_g, params).unwrap();
 
         assert_eq!(value, decrypted_value);
@@ -180,7 +180,7 @@ mod tests {
         let r_fs = Fs::rand(rng);
 
         let address = EncryptionKey::<Bls12>::from_seed(alice_seed, params).unwrap();
-	    let enc_alice_val = Ciphertext::encrypt(alice_value, r_fs, &address, p_g, params);
+	    let enc_alice_val = Ciphertext::encrypt(alice_value, &r_fs, &address, p_g, params);
 
         let bdk = ProofGenerationKey::<Bls12>::from_seed(alice_seed, params).into_decryption_key().unwrap();
 
@@ -202,8 +202,8 @@ mod tests {
         let value13: u32 = 13 as u32;
         let value7: u32 = 7 as u32;
 
-        let ciphetext20 = Ciphertext::encrypt(value20, r_fs1, &public_key, p_g, params);
-        let ciphetext13 = Ciphertext::encrypt(value13, r_fs2, &public_key, p_g, params);
+        let ciphetext20 = Ciphertext::encrypt(value20, &r_fs1, &public_key, p_g, params);
+        let ciphetext13 = Ciphertext::encrypt(value13, &r_fs2, &public_key, p_g, params);
 
         let homo_ciphetext7 = ciphetext20.sub(&ciphetext13, params);
 
@@ -229,8 +229,8 @@ mod tests {
         let value13: u32 = 13 as u32;
         let value7: u32 = 7 as u32;
 
-        let ciphetext20 = Ciphertext::encrypt(value20, r_fs1, &public_key1, p_g, params);
-        let ciphetext13 = Ciphertext::encrypt(value13, r_fs2, &public_key2, p_g, params);
+        let ciphetext20 = Ciphertext::encrypt(value20, &r_fs1, &public_key1, p_g, params);
+        let ciphetext13 = Ciphertext::encrypt(value13, &r_fs2, &public_key2, p_g, params);
 
         let homo_ciphetext7 = ciphetext20.sub(&ciphetext13, params);
 
@@ -250,7 +250,7 @@ mod tests {
         let public_key = EncryptionKey(params.generator(p_g).mul(sk_fs, params));
         let value: u32 = 6 as u32;
 
-        let ciphetext1 = Ciphertext::encrypt(value, r_fs, &public_key, p_g, params);
+        let ciphetext1 = Ciphertext::encrypt(value, &r_fs, &public_key, p_g, params);
 
         let mut v = vec![];
         ciphetext1.write(&mut v).unwrap();
