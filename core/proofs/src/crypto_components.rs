@@ -13,15 +13,15 @@ impl PrivacyConfing for Confidential { }
 impl PrivacyConfing for Anonymous { }
 
 #[derive(Clone)]
-pub struct MultiCiphertexts<E: JubjubEngine, CA: PrivacyConfing> {
+pub struct MultiCiphertexts<E: JubjubEngine, PC: PrivacyConfing> {
     sender: Ciphertext<E>,
     recipient: Ciphertext<E>,
     decoys: Option<Vec<Ciphertext<E>>>,
     fee: Ciphertext<E>,
-    _marker: PhantomData<CA>,
+    _marker: PhantomData<PC>,
 }
 
-impl<E: JubjubEngine, CA: PrivacyConfing> MultiCiphertexts<E, CA> {
+impl<E: JubjubEngine, PC: PrivacyConfing> MultiCiphertexts<E, PC> {
     pub fn get_sender(&self) -> &Ciphertext<E> {
         &self.sender
     }
@@ -36,26 +36,26 @@ impl<E: JubjubEngine, CA: PrivacyConfing> MultiCiphertexts<E, CA> {
 }
 
 pub trait CiphertextTrait<E: JubjubEngine> {
-    type CA: PrivacyConfing;
+    type PC: PrivacyConfing;
 
     fn encrypt(
         amount: u32,
         fee: u32,
         enc_key_sender: &EncryptionKey<E>,
-        enc_keys: &MultiEncKeys<E, Self::CA>,
+        enc_keys: &MultiEncKeys<E, Self::PC>,
         randomness: &E::Fs,
         params: &E::Params,
     ) -> Self;
 }
 
 impl<E: JubjubEngine> CiphertextTrait<E> for MultiCiphertexts<E, Confidential> {
-    type CA = Confidential;
+    type PC = Confidential;
 
     fn encrypt(
         amount: u32,
         fee: u32,
         enc_key_sender: &EncryptionKey<E>,
-        enc_keys: &MultiEncKeys<E, Self::CA>,
+        enc_keys: &MultiEncKeys<E, Self::PC>,
         randomness: &E::Fs,
         params: &E::Params,
     ) -> Self {
@@ -85,7 +85,7 @@ impl<E: JubjubEngine> CiphertextTrait<E> for MultiCiphertexts<E, Confidential> {
             params
         );
 
-        MultiCiphertexts::<E, Self::CA>::new(
+        MultiCiphertexts::<E, Self::PC>::new(
             cipher_sender,
             cipher_recipient,
             cipher_fee
@@ -127,13 +127,13 @@ impl<E: JubjubEngine> MultiCiphertexts<E, Anonymous> {
 }
 
 #[derive(Clone)]
-pub struct MultiEncKeys<E: JubjubEngine, CA> {
+pub struct MultiEncKeys<E: JubjubEngine, PC> {
     recipient: EncryptionKey<E>,
     decoys: Option<Vec<EncryptionKey<E>>>,
-    _marker: PhantomData<CA>
+    _marker: PhantomData<PC>
 }
 
-impl<E: JubjubEngine, CA> MultiEncKeys<E, CA> {
+impl<E: JubjubEngine, PC> MultiEncKeys<E, PC> {
     pub fn get_recipient(&self) -> &EncryptionKey<E> {
         &self.recipient
     }

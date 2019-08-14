@@ -2,13 +2,11 @@ use pairing::bls12_381::Bls12;
 use bellman::groth16::{
     generate_random_parameters,
     prepare_verifying_key,
-    Parameters,
-    PreparedVerifyingKey,
 };
 use rand::Rng;
 use crate::circuit::Transfer;
 use crate::PARAMS;
-use crate::prover::KeyContext;
+use crate::confidential::KeyContext;
 
 pub fn setup<R: Rng>(rng: &mut R) -> KeyContext<Bls12> {
     // Create parameters for the confidential transfer circuit
@@ -42,6 +40,7 @@ pub fn setup<R: Rng>(rng: &mut R) -> KeyContext<Bls12> {
 mod tests {
     use super::*;
     use rand::{SeedableRng, XorShiftRng};
+    use bellman::groth16::PreparedVerifyingKey;
 
     #[test]
     fn test_preparedvk_rw() {

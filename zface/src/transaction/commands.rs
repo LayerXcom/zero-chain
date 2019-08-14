@@ -2,7 +2,7 @@ use std::path::PathBuf;
 use rand::{Rng, Rand};
 use proofs::{SpendingKey, ProofGenerationKey, EncryptionKey, PARAMS, elgamal};
 use proofs::crypto_components::{MultiEncKeys, Confidential};
-use proofs::prover::{ProofBuilder, KeyContext, Calls, Submitter};
+use proofs::confidential::{ProofBuilder, KeyContext, Calls, Submitter};
 use pairing::bls12_381::Bls12;
 use zprimitives::GEpoch;
 use parity_codec::Decode;

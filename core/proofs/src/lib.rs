@@ -4,7 +4,7 @@ extern crate lazy_static;
 use scrypto::jubjub::JubjubBls12;
 use bellman::SynthesisError;
 pub mod circuit;
-pub mod prover;
+pub mod confidential;
 pub mod no_std_aliases;
 pub mod setup;
 pub mod nonce;
@@ -19,7 +19,7 @@ pub use self::no_std_aliases::keys::{
 pub use self::no_std_aliases::elgamal;
 pub use self::nonce::Nonce;
 pub use self::crypto_components::{MultiEncKeys, Confidential};
-pub use self::prover::{KeyContext, ProofBuilder};
+pub use self::confidential::{KeyContext, ProofBuilder};
 
 lazy_static! {
     pub static ref PARAMS: JubjubBls12 = { JubjubBls12::new() };

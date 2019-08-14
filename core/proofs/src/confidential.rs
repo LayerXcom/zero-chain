@@ -47,7 +47,7 @@ use std::{
 
 pub trait ProofBuilder<E: JubjubEngine>: Sized {
     type Submitter: Submitter;
-    type CA: PrivacyConfing;
+    type PC: PrivacyConfing;
 
     fn setup<R: Rng>(rng: &mut R) -> Self;
 
@@ -61,7 +61,7 @@ pub trait ProofBuilder<E: JubjubEngine>: Sized {
         fee: u32,
         remaining_balance: u32,
         spending_key: &SpendingKey<E>,
-        enc_keys: MultiEncKeys<E, Self::CA>,
+        enc_keys: MultiEncKeys<E, Self::PC>,
         encrypted_balance: &Ciphertext<E>,
         g_epoch: edwards::Point<E, PrimeOrder>,
         rng: &mut R,
@@ -103,7 +103,7 @@ impl<E: JubjubEngine> KeyContext<E> {
 
 impl<E: JubjubEngine> ProofBuilder<E> for KeyContext<E> {
     type Submitter = ConfidentialXt;
-    type CA = Confidential;
+    type PC = Confidential;
 
     // TODO:
     fn setup<R: Rng>(_rng: &mut R) -> Self {
@@ -148,7 +148,7 @@ impl<E: JubjubEngine> ProofBuilder<E> for KeyContext<E> {
         fee: u32,
         remaining_balance: u32,
         spending_key: &SpendingKey<E>,
-        enc_keys: MultiEncKeys<E, Self::CA>,
+        enc_keys: MultiEncKeys<E, Self::PC>,
         encrypted_balance: &Ciphertext<E>,
         g_epoch: edwards::Point<E, PrimeOrder>,
         rng: &mut R,
@@ -219,12 +219,12 @@ impl ProofChecking for Unchecked { }
 impl ProofChecking for Checked { }
 
 #[derive(Clone)]
-struct ConfidentialProofContext<E: JubjubEngine, IsChecked, CA: PrivacyConfing> {
+struct ConfidentialProofContext<E: JubjubEngine, IsChecked, PC: PrivacyConfing> {
     proof: Proof<E>,
     rvk: PublicKey<E>, // re-randomization sig-verifying key
     enc_key_sender: EncryptionKey<E>,
-    enc_keys: MultiEncKeys<E, CA>,
-    multi_ciphertexts: MultiCiphertexts<E, CA>,
+    enc_keys: MultiEncKeys<E, PC>,
+    multi_ciphertexts: MultiCiphertexts<E, PC>,
     encrypted_balance: Ciphertext<E>,
     g_epoch: edwards::Point<E, PrimeOrder>,
     nonce: edwards::Point<E, PrimeOrder>,
@@ -232,7 +232,7 @@ struct ConfidentialProofContext<E: JubjubEngine, IsChecked, CA: PrivacyConfing> 
 }
 
 
-impl<E: JubjubEngine, IsChecked, CA: PrivacyConfing> ConfidentialProofContext<E, IsChecked, CA> {
+impl<E: JubjubEngine, IsChecked, PC: PrivacyConfing> ConfidentialProofContext<E, IsChecked, PC> {
     fn enc_amount_sender(&self) -> &Ciphertext<E> {
         self.multi_ciphertexts.get_sender()
     }
@@ -250,13 +250,13 @@ impl<E: JubjubEngine, IsChecked, CA: PrivacyConfing> ConfidentialProofContext<E,
     }
 }
 
-impl<E: JubjubEngine, CA: PrivacyConfing> ConfidentialProofContext<E, Unchecked, CA> {
+impl<E: JubjubEngine, PC: PrivacyConfing> ConfidentialProofContext<E, Unchecked, PC> {
     fn new(
         proof: Proof<E>,
         rvk: PublicKey<E>,
         enc_key_sender: EncryptionKey<E>,
-        enc_keys: MultiEncKeys<E, CA>,
-        multi_ciphertexts: MultiCiphertexts<E, CA>,
+        enc_keys: MultiEncKeys<E, PC>,
+        multi_ciphertexts: MultiCiphertexts<E, PC>,
         encrypted_balance: Ciphertext<E>,
         g_epoch: edwards::Point<E, PrimeOrder>,
         nonce: edwards::Point<E, PrimeOrder>,
@@ -277,7 +277,7 @@ impl<E: JubjubEngine, CA: PrivacyConfing> ConfidentialProofContext<E, Unchecked,
     fn check_proof(
         self,
         prepared_vk: &PreparedVerifyingKey<E>
-    ) -> Result<ConfidentialProofContext<E, Checked, CA>, SynthesisError> {
+    ) -> Result<ConfidentialProofContext<E, Checked, PC>, SynthesisError> {
         let mut public_input = [E::Fr::zero(); 22];
 
         {
@@ -342,11 +342,11 @@ impl<E: JubjubEngine, CA: PrivacyConfing> ConfidentialProofContext<E, Unchecked,
             return Err(SynthesisError::MalformedVerifyingKey)
         }
 
-        Ok(convert_to_checked::<E, Unchecked, Checked, CA>(self))
+        Ok(convert_to_checked::<E, Unchecked, Checked, PC>(self))
     }
 }
 
-fn convert_to_checked<E: JubjubEngine, C1, C2, CA: PrivacyConfing>(from: ConfidentialProofContext<E, C1, CA>) -> ConfidentialProofContext<E, C2, CA> {
+fn convert_to_checked<E: JubjubEngine, C1, C2, PC: PrivacyConfing>(from: ConfidentialProofContext<E, C1, PC>) -> ConfidentialProofContext<E, C2, PC> {
     ConfidentialProofContext {
         proof: from.proof,
         rvk: from.rvk,
@@ -360,7 +360,7 @@ fn convert_to_checked<E: JubjubEngine, C1, C2, CA: PrivacyConfing>(from: Confide
     }
 }
 
-impl<E: JubjubEngine, CA: PrivacyConfing> ConfidentialProofContext<E, Checked, CA> {
+impl<E: JubjubEngine, PC: PrivacyConfing> ConfidentialProofContext<E, Checked, PC> {
     fn gen_xt(&self, spending_key: &SpendingKey<E>, alpha: E::Fs) -> io::Result<ConfidentialXt> {
 
         // Generate the re-randomized sign key
@@ -563,36 +563,6 @@ impl ConfidentialXt {
     }
 }
 
-// pub struct AnonymousProof<E: JubjubEngine> {
-//     proof: Proof<E>,
-//     rvk: PublicKey<E>,
-//     enc_key_sender: EncryptionKey<E>,
-//     enc_keys: MultiEncKeys<E>,
-//     multi_ciphertexts: MultiCiphertexts<E>,
-//     cipher_balance: Ciphertext<E>,
-// }
-
-// impl<E: JubjubEngine> AnonymousProof<E> {
-//     pub fn gen_proof<R: Rng>(
-//         amount: u32,
-//         remaining_balance: u32,
-//         fee: u32,
-//         alpha: E::Fs,
-//         proving_key: &Parameters<E>,
-//         prepared_vk: &PreparedVerifyingKey<E>,
-//         proof_generation_key: &ProofGenerationKey<E>,
-//         enc_keys: &MultiEncKeys<E>,
-//         cipher_balance: Ciphertext<E>,
-//         g_epoch: &edwards::Point<E, PrimeOrder>,
-//         rng: &mut R,
-//         params: &E::Params,
-//     ) -> Result<Self, SynthesisError>
-//     {
-
-//         unimplemented!();
-//     }
-// }
-
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -603,28 +573,6 @@ mod tests {
     use std::path::Path;
     use std::fs::File;
     use std::io::{BufReader, Read};
-
-    fn get_pk_and_vk() -> (Parameters<Bls12>, PreparedVerifyingKey<Bls12>) {
-        let pk_path = Path::new("../../zface/proving.params");
-        let vk_path = Path::new("../../zface/verification.params");
-
-        let pk_file = File::open(&pk_path).unwrap();
-        let vk_file = File::open(&vk_path).unwrap();
-
-        let mut pk_reader = BufReader::new(pk_file);
-        let mut vk_reader = BufReader::new(vk_file);
-
-        let mut buf_pk = vec![];
-        pk_reader.read_to_end(&mut buf_pk).unwrap();
-
-        let mut buf_vk = vec![];
-        vk_reader.read_to_end(&mut buf_vk).unwrap();
-
-        let proving_key = Parameters::<Bls12>::read(&mut &buf_pk[..], true).unwrap();
-        let prepared_vk = PreparedVerifyingKey::<Bls12>::read(&mut &buf_vk[..]).unwrap();
-
-        (proving_key, prepared_vk)
-    }
 
     #[test]
     fn test_gen_proof() {
@@ -648,8 +596,6 @@ mod tests {
         let randomness = rng.gen();
         let enc_key = EncryptionKey::from_seed(&sender_seed[..], params).unwrap();
         let encrypted_balance = Ciphertext::encrypt(balance, &randomness, &enc_key, p_g, params);
-
-        let (proving_key, prepared_vk) = get_pk_and_vk();
 
         let g_epoch = edwards::Point::rand(rng, params).mul_by_cofactor(params);
 
