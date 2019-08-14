@@ -2,16 +2,13 @@ use pairing::bls12_381::Bls12;
 use bellman::groth16::{
     generate_random_parameters,
     prepare_verifying_key,
-    Parameters,
-    PreparedVerifyingKey,
 };
-use rand::OsRng;
+use rand::Rng;
 use crate::circuit::Transfer;
 use crate::PARAMS;
+use crate::confidential::KeyContext;
 
-pub fn setup() -> (Parameters<Bls12>, PreparedVerifyingKey<Bls12>) {
-    let rng = &mut OsRng::new().expect("should be able to construct RNG");
-
+pub fn setup<R: Rng>(rng: &mut R) -> KeyContext<Bls12> {
     // Create parameters for the confidential transfer circuit
     let proving_key = {
         let c = Transfer::<Bls12> {
@@ -36,18 +33,22 @@ pub fn setup() -> (Parameters<Bls12>, PreparedVerifyingKey<Bls12>) {
     prepared_vk.write(&mut &mut v).unwrap();
     println!("pvk: {:?}", v.len());
 
-    (proving_key, prepared_vk)
+    KeyContext::new(proving_key, prepared_vk)
 }
 
 #[cfg(test)]
 mod tests {
     use super::*;
+    use rand::{SeedableRng, XorShiftRng};
+    use bellman::groth16::PreparedVerifyingKey;
 
     #[test]
     fn test_preparedvk_rw() {
-        let (_, vk) = setup();
+        let rng = &mut XorShiftRng::from_seed([0x5dbe6259, 0x8d313d76, 0x3237db17, 0xe5bc0654]);
+
+        let key_context = setup(rng);
         let mut v = vec![];
-        vk.write(&mut &mut v).unwrap();
+        key_context.vk().write(&mut &mut v).unwrap();
 
         let prepared_vk_a = PreparedVerifyingKey::<Bls12>::read(&mut &v[..]).unwrap();
 

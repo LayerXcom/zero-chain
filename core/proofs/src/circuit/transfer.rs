@@ -41,6 +41,24 @@ pub struct Transfer<'a, E: JubjubEngine> {
     pub g_epoch: Option<&'a edwards::Point<E, PrimeOrder>>,
 }
 
+impl<'a, E: JubjubEngine> Transfer<'a, E> {
+    pub fn new(params: &'a E::Params) -> Self {
+        Transfer {
+            params,
+            amount: None,
+            remaining_balance: None,
+            randomness: None,
+            alpha: None,
+            proof_generation_key: None,
+            dec_key_sender: None,
+            enc_key_recipient: None,
+            encrypted_balance: None,
+            fee: None,
+            g_epoch: None
+        }
+    }
+}
+
 impl<'a, E: JubjubEngine> Circuit<E> for Transfer<'a, E> {
     fn synthesize<CS: ConstraintSystem<E>>(
         self,
@@ -393,7 +411,7 @@ mod tests {
     use rand::{SeedableRng, Rng, XorShiftRng, Rand};
     use crate::circuit::TestConstraintSystem;
     use scrypto::jubjub::{JubjubBls12, fs};
-    use crate::keys::EncryptionKey;
+    use crate::EncryptionKey;
 
     fn test_based_amount(amount: u32) {
         let params = &JubjubBls12::new();
@@ -420,19 +438,19 @@ mod tests {
         let r_fs_v = fs::Fs::rand(rng);
 
         let p_g = FixedGenerators::NoteCommitmentRandomness;
-        let ciphetext_balance = Ciphertext::encrypt(current_balance, r_fs_b, &enc_key_sender, p_g, params);
+        let ciphetext_balance = Ciphertext::encrypt(current_balance, &r_fs_b, &enc_key_sender, p_g, params);
 
         let c_bal_left = ciphetext_balance.left.into_xy();
         let c_bal_right = ciphetext_balance.right.into_xy();
 
-        let ciphertext_amount_sender = Ciphertext::encrypt(amount, r_fs_v, &enc_key_sender, p_g, params);
+        let ciphertext_amount_sender = Ciphertext::encrypt(amount, &r_fs_v, &enc_key_sender, p_g, params);
         let c_val_s_left = ciphertext_amount_sender.left.into_xy();
         let c_val_right = ciphertext_amount_sender.right.into_xy();
 
-        let ciphertext_fee_sender = Ciphertext::encrypt(fee, r_fs_v, &enc_key_sender, p_g, params);
+        let ciphertext_fee_sender = Ciphertext::encrypt(fee, &r_fs_v, &enc_key_sender, p_g, params);
         let c_fee_s_left = ciphertext_fee_sender.left.into_xy();
 
-        let ciphertext_amount_recipient = Ciphertext::encrypt(amount, r_fs_v, &enc_key_recipient, p_g, params);
+        let ciphertext_amount_recipient = Ciphertext::encrypt(amount, &r_fs_v, &enc_key_recipient, p_g, params);
         let c_val_r_left = ciphertext_amount_recipient.left.into_xy();
 
         let rvk = proof_gen_key.into_rvk(alpha, params).0.into_xy();

@@ -1,9 +1,11 @@
 use parity_codec::{Encode, Decode};
 use primitives::crypto::{Ss58Codec, Derive, DeriveJunction};
-use crate::derive::ExtendedSpendingKey;
 use proofs::{EncryptionKey, PARAMS};
-use std::io;
-use std::convert::TryFrom;
+use std::{
+    convert::TryFrom,
+    io,
+};
+use crate::derive::ExtendedSpendingKey;
 
 /// Byte format of encryption key to implement SS58 trait.
 #[derive(PartialEq, Eq, PartialOrd, Ord, Clone, Encode, Decode, Default)]

@@ -1,8 +1,8 @@
 //! Implementation of file disk operations to store keyfiles.
 
+use crate::error::{Result, KeystoreError};
 use super::DirOperations;
 use super::keyfile::{KeyFile, IndexFile};
-use super::error::{Result, KeystoreError};
 use super::config::*;
 use std::path::{PathBuf, Path};
 use std::fs;

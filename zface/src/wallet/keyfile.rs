@@ -8,8 +8,8 @@ use proofs::{SpendingKey, ProofGenerationKey, DecryptionKey, PARAMS};
 use pairing::bls12_381::Bls12;
 use std::convert::TryInto;
 use std::collections::HashMap;
-use super::error::{KeystoreError, Result};
 use super::SerdeBytes;
+use crate::error::{KeystoreError, Result};
 use crate::derive::{ExtendedSpendingKey, Derivation, ChildIndex};
 
 #[derive(Debug, PartialEq, Eq, Serialize, Deserialize, Clone)]

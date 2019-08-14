@@ -4,11 +4,10 @@ use smallvec::SmallVec;
 pub mod commands;
 mod config;
 mod keyfile;
-mod error;
 mod disk;
 pub use self::keyfile::KeyFile;
-pub use self::error::{Result, KeystoreError};
 pub use self::disk::{KeystoreDirectory, WalletDirectory};
+use crate::error::Result;
 
 /// Operations in a keystore directory
 pub trait DirOperations {

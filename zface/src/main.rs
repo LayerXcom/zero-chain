@@ -8,20 +8,17 @@ extern crate serde_derive;
 #[macro_use]
 extern crate matches;
 
-use std::fs::File;
-use std::path::{Path, PathBuf};
-use std::io::{BufWriter, Write, BufReader, Read};
+use std::path::PathBuf;
 use clap::{Arg, App, SubCommand, AppSettings, ArgMatches};
 use rand::{OsRng, Rng};
 use proofs::{
     EncryptionKey, SpendingKey, DecryptionKey,
-    elgamal, Transaction, MultiEncKeys,
-    setup, PARAMS,
+    elgamal, MultiEncKeys,
+    setup, PARAMS, KeyContext, ProofBuilder,
+    Confidential,
     };
 use primitives::{hexdisplay::{HexDisplay, AsBytesRef}, crypto::Ss58Codec};
 use pairing::bls12_381::Bls12;
-
-use bellman::groth16::{Parameters, PreparedVerifyingKey};
 use polkadot_rs::{Api, Url};
 use bip39::{Mnemonic, Language, MnemonicType};
 
@@ -32,6 +29,7 @@ mod transaction;
 pub mod derive;
 pub mod term;
 pub mod ss58;
+pub mod error;
 use self::ss58::EncryptionKeyBytes;
 use self::utils::*;
 use self::config::*;
@@ -61,7 +59,7 @@ fn main() {
     let rng = &mut OsRng::new().expect("should be able to construct RNG");
 
     match matches.subcommand() {
-        (SNARK_COMMAND, Some(matches)) => subcommand_snark(term, matches),
+        (SNARK_COMMAND, Some(matches)) => subcommand_snark(term, matches, rng),
         (WALLET_COMMAND, Some(matches)) => subcommand_wallet(term, root_dir, matches, rng),
         (TX_COMMAND, Some(matches)) => subcommand_tx(term, root_dir, matches, rng),
         (DEBUG_COMMAND, Some(matches)) => subcommand_debug(term, matches, rng),
@@ -78,40 +76,16 @@ fn main() {
 
 const SNARK_COMMAND: &'static str = "snark";
 
-fn subcommand_snark(mut term: term::Term, matches: &ArgMatches) {
+fn subcommand_snark<R: Rng>(mut term: term::Term, matches: &ArgMatches, rng: &mut R) {
     match matches.subcommand() {
         ("setup", Some(matches)) => {
             println!("Performing setup...");
+            let pk_path = matches.value_of("proving-key-path").unwrap();
+            let vk_path = matches.value_of("verification-key-path").unwrap();
 
-            let pk_path = Path::new(matches.value_of("proving-key-path").unwrap());
-            let vk_path = Path::new(matches.value_of("verification-key-path").unwrap());
-
-            let pk_file = File::create(&pk_path)
-                .map_err(|why| format!("couldn't create {}: {}", pk_path.display(), why)).unwrap();
-            let vk_file = File::create(&vk_path)
-                .map_err(|why| format!("couldn't create {}: {}", vk_path.display(), why)).unwrap();
-
-            let mut bw_pk = BufWriter::new(pk_file);
-            let mut bw_vk = BufWriter::new(vk_file);
-
-            let (proving_key, prepared_vk) = setup();
-            let mut v_pk = vec![];
-            let mut v_vk = vec![];
-
-            proving_key.write(&mut &mut v_pk).unwrap();
-            prepared_vk.write(&mut &mut v_vk).unwrap();
-
-            bw_pk.write(&v_pk[..])
-                .map_err(|_| "Unable to write proving key data to file.".to_string()).unwrap();
-
-            bw_vk.write(&v_vk[..])
-                .map_err(|_| "Unable to write verification key data to file.".to_string()).unwrap();
-
-            bw_pk.flush()
-                .map_err(|_| "Unable to flush proving key buffer.".to_string()).unwrap();
-
-            bw_vk.flush()
-                .map_err(|_| "Unable to flush verification key buffer.".to_string()).unwrap();
+            setup(rng)
+                .write_to_file(pk_path, vk_path)
+                .unwrap();
 
             println!("Success! Output >> 'proving.params' and 'verification.params'");
         },
@@ -198,7 +172,8 @@ fn subcommand_wallet<R: Rng>(mut term: term::Term, root_dir: PathBuf, matches: &
             let dec_key = load_dec_key(&mut term, root_dir)
                 .expect("loading decrption key failed.");
 
-            let balance_query = BalanceQuery::get_encrypted_balance(&dec_key, api);
+            let balance_query = getter::BalanceQuery::get_encrypted_balance(&dec_key, api)
+                .expect("Falid to get balance data.");
 
             println!("Decrypted balance: {}", balance_query.decrypted_balance);
             println!("Encrypted balance: {}", balance_query.encrypted_balance_str);
@@ -211,7 +186,8 @@ fn subcommand_wallet<R: Rng>(mut term: term::Term, root_dir: PathBuf, matches: &
                 .expect("loading decrption key failed.");
             let asset_id = wallet_arg_id_match(&sub_matches);
 
-            let balance_query = BalanceQuery::get_encrypted_asset(asset_id, &dec_key, api);
+            let balance_query = getter::BalanceQuery::get_encrypted_asset(asset_id, &dec_key, api)
+                .expect("Falid to get balance data.");;
 
             println!("Decrypted balance: {}", balance_query.decrypted_balance);
             println!("Encrypted balance: {}", balance_query.encrypted_balance_str);
@@ -516,8 +492,8 @@ fn subcommand_debug<R: Rng>(mut term: term::Term, matches: &ArgMatches, rng: &mu
             let sender_seed = hex::decode(sub_matches.value_of("sender-privatekey").unwrap()).unwrap();
             let recipient_seed  = hex::decode(sub_matches.value_of("recipient-privatekey").unwrap()).unwrap();
 
-            let sender_address = get_address(&sender_seed[..]).unwrap();
-            let recipient_address = get_address(&recipient_seed[..]).unwrap();
+            let sender_address = getter::address(&sender_seed[..]).unwrap();
+            let recipient_address = getter::address(&recipient_seed[..]).unwrap();
 
             println!("Private Key(Sender): 0x{}\nAddress(Sender): 0x{}\n",
                 HexDisplay::from(&sender_seed),
@@ -529,41 +505,17 @@ fn subcommand_debug<R: Rng>(mut term: term::Term, matches: &ArgMatches, rng: &mu
                 HexDisplay::from(&recipient_address),
             );
 
-            let pk_path = Path::new(sub_matches.value_of("proving-key-path").unwrap());
-            let vk_path = Path::new(sub_matches.value_of("verification-key-path").unwrap());
-
-            let pk_file = File::open(&pk_path)
-                .map_err(|why| format!("couldn't open {}: {}", pk_path.display(), why)).unwrap();
-            let vk_file = File::open(&vk_path)
-                .map_err(|why| format!("couldn't open {}: {}", vk_path.display(), why)).unwrap();
-
-            let mut reader_pk = BufReader::new(pk_file);
-            let mut reader_vk = BufReader::new(vk_file);
-
-            let mut buf_pk = vec![];
-            reader_pk.read_to_end(&mut buf_pk)
-                .map_err(|why| format!("couldn't read {}: {}", pk_path.display(), why)).unwrap();
-
-            let mut buf_vk = vec![];
-            reader_vk.read_to_end(&mut buf_vk)
-                .map_err(|why| format!("couldn't read {}: {}", vk_path.display(), why)).unwrap();
-
+            let pk_path = sub_matches.value_of("proving-key-path").unwrap();
+            let vk_path = sub_matches.value_of("verification-key-path").unwrap();
 
             let amount_str = sub_matches.value_of("amount").unwrap();
             let amount: u32 = amount_str.parse().unwrap();
-            // let fee_str = sub_matches.value_of("fee").unwrap();
-            // let fee: u32 = fee_str.parse().unwrap();
             let fee = 1 as u32;
 
             let balance_str = sub_matches.value_of("balance").unwrap();
             let balance: u32 = balance_str.parse().unwrap();
 
             println!("Transaction >>");
-
-            let rng = &mut OsRng::new().expect("should be able to construct RNG");
-
-            let proving_key = Parameters::<Bls12>::read(&mut &buf_pk[..], true).unwrap();
-            let prepared_vk = PreparedVerifyingKey::<Bls12>::read(&mut &buf_vk[..]).unwrap();
 
             let address_recipient = EncryptionKey::<Bls12>::from_seed(&recipient_seed[..], &PARAMS).unwrap();
 
@@ -577,18 +529,19 @@ fn subcommand_debug<R: Rng>(mut term: term::Term, matches: &ArgMatches, rng: &mu
             let g_epoch_vec = hex::decode("0953f47325251a2f479c25527df6d977925bebafde84423b20ae6c903411665a").unwrap();
             let g_epoch = edwards::Point::read(&g_epoch_vec[..], &*PARAMS).unwrap().as_prime_order(&*PARAMS).unwrap();
 
-            let tx = Transaction::gen_tx(
-                            amount,
-                            remaining_balance,
-                            &proving_key,
-                            &prepared_vk,
-                            &MultiEncKeys::new_for_confidential(address_recipient.clone()),
-                            &SpendingKey::<Bls12>::from_seed(&sender_seed[..]),
-                            &ciphertext_balance,
-                            &g_epoch,
-                            rng,
-                            fee
-                    ).expect("fails to generate the tx");
+            let tx = KeyContext::read_from_path(pk_path, vk_path)
+                .unwrap()
+                .gen_proof(
+                    amount,
+                    fee,
+                    remaining_balance,
+                    &SpendingKey::<Bls12>::from_seed(&sender_seed[..]),
+                    MultiEncKeys::<Bls12, Confidential>::new(address_recipient.clone()),
+                    &ciphertext_balance,
+                    g_epoch,
+                    rng,
+                    &*PARAMS
+                ).expect("fails to generate the tx");
 
             println!(
                 "
@@ -624,7 +577,8 @@ fn subcommand_debug<R: Rng>(mut term: term::Term, matches: &ArgMatches, rng: &mu
             let dec_key = DecryptionKey::read(&mut &decr_key_vec[..])
                 .expect("Reading decryption key faild.");
 
-            let balance_query = BalanceQuery::get_encrypted_balance(&dec_key, api);
+            let balance_query = getter::BalanceQuery::get_encrypted_balance(&dec_key, api)
+                .expect("Falid to get balance data.");
 
             println!("Decrypted balance: {}", balance_query.decrypted_balance);
             println!("Encrypted balance: {}", balance_query.encrypted_balance_str);

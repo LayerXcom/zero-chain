@@ -83,7 +83,7 @@ mod tests {
         let enc_key = EncryptionKey::from_seed(&seed[..], params).unwrap();
         let amount: u32 = 5 as u32;
 
-        elgamal::Ciphertext::encrypt(amount, randomness, &enc_key, p_g, params)
+        elgamal::Ciphertext::encrypt(amount, &randomness, &enc_key, p_g, params)
     }
 
     #[test]

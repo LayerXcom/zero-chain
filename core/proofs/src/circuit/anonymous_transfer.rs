@@ -9,7 +9,7 @@ use scrypto::jubjub::{
     JubjubEngine,
     FixedGenerators,
 };
-use crate::keys::{ProofGenerationKey, EncryptionKey, DecryptionKey};
+use crate::{ProofGenerationKey, EncryptionKey, DecryptionKey};
 use scrypto::circuit::{
     boolean::{self, Boolean},
     ecc::{self, EdwardsPoint},

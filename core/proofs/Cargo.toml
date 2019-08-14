@@ -12,14 +12,22 @@ rand = "0.4"
 byteorder = "1"
 bellman-verifier = { path = "../bellman-verifier" }
 zpairing = { package = "zerochain-pairing", path = "../pairing"}
+zprimitives = { package = "zerochain-primitives", path = "../primitives" }
+polkadot-rs = { git = "https://github.com/LayerXcom/polkadot.rs" }
 hex-literal = '0.1'
 keys = { path = "../keys"}
 zjubjub = { package = "jubjub", path = "../jubjub" }
+zerochain-runtime = { path = "../../runtime" }
 lazy_static = "1.3.0"
 
 [dependencies.primitives]
 git = 'https://github.com/osuketh/substrate.git'
 package = 'substrate-primitives'
+branch = "patch-zerochain"
+
+[dependencies.runtime-primitives]
+git = 'https://github.com/osuketh/substrate.git'
+package = 'sr-primitives'
 branch = "patch-zerochain"
 
 [dependencies.blake2-rfc]
