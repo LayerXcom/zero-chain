@@ -2,7 +2,7 @@
 // //! It is respected to ZIP32 specification defined here https://github.com/zcash/zips/blob/master/zip-0032.rst.
 
 use blake2_rfc::blake2b::Blake2b;
-use proofs::keys::{ProofGenerationKey, SpendingKey, prf_expand_vec, prf_expand};
+use proofs::{ProofGenerationKey, SpendingKey, prf_expand_vec, prf_expand};
 use scrypto::jubjub::{fs::Fs, ToUniform};
 use pairing::{bls12_381::Bls12, Field};
 use byteorder::{ByteOrder, LittleEndian, ReadBytesExt, WriteBytesExt};

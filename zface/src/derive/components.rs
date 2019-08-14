@@ -1,6 +1,6 @@
 use blake2_rfc::blake2b::Blake2b;
 use super::constants::*;
-use proofs::keys::ProofGenerationKey;
+use proofs::ProofGenerationKey;
 use scrypto::jubjub::JubjubEngine;
 use std::convert::TryFrom;
 use std::io;

@@ -2,7 +2,9 @@ use std::path::{PathBuf, Path};
 use std::io::{BufReader, Read};
 use std::fs::File;
 use rand::{Rng, Rand};
-use proofs::{SpendingKey, Transaction, ProofGenerationKey, EncryptionKey, PARAMS, elgamal, MultiEncKeys};
+use proofs::{SpendingKey, ProofGenerationKey, EncryptionKey, PARAMS, elgamal};
+use proofs::crypto_components::{MultiEncKeys, Confidential};
+use proofs::prover::{ProofBuilder, KeyContext, ConfidentialXt, Calls, Submitter};
 use pairing::bls12_381::Bls12;
 use super::constants::*;
 use crate::term::Term;
@@ -37,14 +39,10 @@ pub fn asset_issue_tx<R: Rng>(
     let api = Api::init(url);
     let p_g = FixedGenerators::NoteCommitmentRandomness; // 1
 
-    // Get setuped parameters to compute zk proving.
-    let proving_key = get_pk(PROVING_KEY_PATH)?;
-    let prepared_vk = get_vk(VERIFICATION_KEY_PATH)?;
-
     let spending_key = spending_key_from_keystore(root_dir, &password[..])?;
     let issuer_address = EncryptionKey::<Bls12>::from_spending_key(&spending_key, &PARAMS)?;
 
-    let enc_amount = elgamal::Ciphertext::encrypt(amount, Fs::rand(rng), &issuer_address, p_g, &PARAMS);
+    let enc_amount = elgamal::Ciphertext::encrypt(amount, &Fs::rand(rng), &issuer_address, p_g, &PARAMS);
 
     println!("Computing zk proof...");
     let tx = Transaction::gen_tx(
@@ -84,10 +82,6 @@ pub fn asset_transfer_tx<R: Rng>(
 
     let api = Api::init(url);
 
-    // Get setuped parameters to compute zk proving.
-    let proving_key = get_pk(PROVING_KEY_PATH)?;
-    let prepared_vk = get_vk(VERIFICATION_KEY_PATH)?;
-
     let spending_key = spending_key_from_keystore(root_dir, &password[..])?;
     let dec_key = ProofGenerationKey::<Bls12>::from_spending_key(&spending_key, &PARAMS)
         .into_decryption_key()?;
@@ -102,6 +96,9 @@ pub fn asset_transfer_tx<R: Rng>(
     let encrypted_balance = elgamal::Ciphertext::read(&mut &balance_query.encrypted_balance[..], &*PARAMS)?;
 
     println!("Computing zk proof...");
+    let xt = KeyContext::read_from_path(PROVING_KEY_PATH, VERIFICATION_KEY_PATH)?
+        .gen_proof(amount, fee, , spending_key: &SpendingKey<E>, enc_keys: &MultiEncKeys<E>, &encrypted_balance, g_epoch: edwards::Point<E, PrimeOrder>, rng: &mut R, params: &E::Params)
+
     let tx = Transaction::gen_tx(
         amount,
         remaining_balance,
@@ -150,13 +147,9 @@ pub fn asset_burn_tx<R: Rng>(
     let balance_query = BalanceQuery::get_encrypted_asset(asset_id, &dec_key, api.clone());
     assert!(balance_query.decrypted_balance != 0, "You don't have the asset. Asset id may be incorrect.");
 
-    // Get setuped parameters to compute zk proving.
-    let proving_key = get_pk(PROVING_KEY_PATH)?;
-    let prepared_vk = get_vk(VERIFICATION_KEY_PATH)?;
-
     let amount = 0;
     let issuer_address = EncryptionKey::<Bls12>::from_spending_key(&spending_key, &PARAMS)?;
-    let enc_amount = elgamal::Ciphertext::encrypt(amount, Fs::rand(rng), &issuer_address, p_g, &PARAMS);
+    let enc_amount = elgamal::Ciphertext::encrypt(amount, &Fs::rand(rng), &issuer_address, p_g, &PARAMS);
 
     println!("Computing zk proof...");
     let tx = Transaction::gen_tx(
@@ -221,13 +214,8 @@ fn inner_transfer_tx<R: Rng>(
 
     let api = Api::init(url);
 
-    // Get setuped parameters to compute zk proving.
-    let proving_key = get_pk(PROVING_KEY_PATH)?;
-    let prepared_vk = get_vk(VERIFICATION_KEY_PATH)?;
-
     let dec_key = ProofGenerationKey::<Bls12>::from_spending_key(&spending_key, &PARAMS)
         .into_decryption_key()?;
-
     let fee = get_fee(&api);
 
     let balance_query = BalanceQuery::get_encrypted_balance(&dec_key, api.clone());
@@ -236,29 +224,29 @@ fn inner_transfer_tx<R: Rng>(
 
     let recipient_account_id = EncryptionKey::<Bls12>::read(&mut &recipient_enc_key[..], &PARAMS)?;
     let encrypted_balance = elgamal::Ciphertext::read(&mut &balance_query.encrypted_balance[..], &*PARAMS)?;
+    let multi_keys = MultiEncKeys::<Bls12, Confidential>::new(recipient_account_id.clone());
 
     println!("Computing zk proof...");
-    let tx = Transaction::gen_tx(
-        amount,
-        remaining_balance,
-        &proving_key,
-        &prepared_vk,
-        &MultiEncKeys::new_for_confidential(recipient_account_id.clone()),
-        &spending_key,
-        &encrypted_balance,
-        &get_g_epoch(&api),
-        rng,
-        fee
-        )
-    .expect("fails to generate the tx");
-
-    println!("Start submitting a transaction to Zerochain...");
     if recipient_account_id == EncryptionKey::from_decryption_key(&dec_key, &*PARAMS) {
         subscribe_event(api.clone(), remaining_balance + amount);
     } else {
         subscribe_event(api.clone(), remaining_balance);
     }
-    submit_confidential_transfer(&tx, &api, rng);
+
+    println!("Start submitting a transaction to Zerochain...");
+    let xt = KeyContext::read_from_path(PROVING_KEY_PATH, VERIFICATION_KEY_PATH)?
+        .gen_proof(
+            amount,
+            fee,
+            remaining_balance,
+            &spending_key,
+            multi_keys,
+            &encrypted_balance,
+            get_g_epoch(&api),
+            rng,
+            &PARAMS
+        )?
+        .submit();
 
     Ok(())
 }
@@ -307,122 +295,98 @@ pub fn prompt_password(term: &mut Term) -> Result<Vec<u8>> {
     Ok(password)
 }
 
-pub fn get_pk(path: &str) -> Result<Parameters::<Bls12>> {
-    let buf_pk = read_zk_params_with_path(path)?;
-    let proving_key = Parameters::<Bls12>::read(&mut &buf_pk[..], true)?;
 
-    Ok(proving_key)
-}
+// pub fn submit_confidential_transfer<R: Rng>(tx: &Transaction, api: &Api, rng: &mut R) {
+//     let calls = Call::EncryptedBalances(EncryptedBalancesCall::confidential_transfer(
+//         Proof::from_slice(&tx.proof[..]),
+//         EncKey::from_slice(&tx.enc_key_sender[..]),
+//         EncKey::from_slice(&tx.enc_key_recipient[..]),
+//         zCiphertext::from_slice(&tx.enc_amount_sender[..]),
+//         zCiphertext::from_slice(&tx.enc_amount_recipient[..]),
+//         zCiphertext::from_slice(&tx.enc_fee[..]),
+//         Nonce::from_slice(&tx.nonce[..])
+//     ));
 
-pub fn get_vk(path: &str) -> Result<PreparedVerifyingKey::<Bls12>> {
-    let buf_vk = read_zk_params_with_path(path)?;
-    let prepared_vk = PreparedVerifyingKey::<Bls12>::read(&mut &buf_vk[..])?;
+//     submit_tx(calls, tx, api, rng);
+// }
 
-    Ok(prepared_vk)
-}
+// pub fn submit_asset_issue<R: Rng>(tx: &Transaction, api: &Api, rng: &mut R) {
+//     let calls = Call::EncryptedAssets(EncryptedAssetsCall::issue(
+//         Proof::from_slice(&tx.proof[..]),
+//         EncKey::from_slice(&tx.enc_key_recipient[..]),
+//         zCiphertext::from_slice(&tx.enc_amount_recipient[..]),
+//         zCiphertext::from_slice(&tx.enc_fee[..]),
+//         zCiphertext::from_slice(&tx.enc_balance[..]),
+//         Nonce::from_slice(&tx.nonce[..])
+//     ));
 
-fn read_zk_params_with_path(path: &str) -> Result<Vec<u8>> {
-    let params_path = Path::new(path);
-    let file = File::open(&params_path)?;
+//     submit_tx(calls, tx, api, rng);
+// }
 
-    let mut params_reader = BufReader::new(file);
-    let mut params_buf = vec![];
-    params_reader.read_to_end(&mut params_buf)?;
+// pub fn submit_asset_transfer<R: Rng>(asset_id: u32, tx: &Transaction, api: &Api, rng: &mut R) {
+//     let calls = Call::EncryptedAssets(EncryptedAssetsCall::confidential_transfer(
+//         asset_id,
+//         Proof::from_slice(&tx.proof[..]),
+//         EncKey::from_slice(&tx.enc_key_sender[..]),
+//         EncKey::from_slice(&tx.enc_key_recipient[..]),
+//         zCiphertext::from_slice(&tx.enc_amount_sender[..]),
+//         zCiphertext::from_slice(&tx.enc_amount_recipient[..]),
+//         zCiphertext::from_slice(&tx.enc_fee[..]),
+//         Nonce::from_slice(&tx.nonce[..])
+//     ));
 
-    Ok(params_buf)
-}
+//     submit_tx(calls, tx, api, rng);
+// }
 
-pub fn submit_confidential_transfer<R: Rng>(tx: &Transaction, api: &Api, rng: &mut R) {
-    let calls = Call::EncryptedBalances(EncryptedBalancesCall::confidential_transfer(
-        Proof::from_slice(&tx.proof[..]),
-        EncKey::from_slice(&tx.enc_key_sender[..]),
-        EncKey::from_slice(&tx.enc_key_recipient[..]),
-        zCiphertext::from_slice(&tx.enc_amount_sender[..]),
-        zCiphertext::from_slice(&tx.enc_amount_recipient[..]),
-        zCiphertext::from_slice(&tx.enc_fee[..]),
-        Nonce::from_slice(&tx.nonce[..])
-    ));
+// pub fn submit_asset_burn<R: Rng>(asset_id: u32, tx: &Transaction, api: &Api, rng: &mut R) {
+//     let calls = Call::EncryptedAssets(EncryptedAssetsCall::destroy(
+//         Proof::from_slice(&tx.proof[..]),
+//         EncKey::from_slice(&tx.enc_key_recipient[..]),
+//         asset_id,
+//         zCiphertext::from_slice(&tx.enc_amount_recipient[..]),
+//         zCiphertext::from_slice(&tx.enc_fee[..]),
+//         zCiphertext::from_slice(&tx.enc_balance[..]),
+//         Nonce::from_slice(&tx.nonce[..])
+//     ));
 
-    submit_tx(calls, tx, api, rng);
-}
+//     submit_tx(calls, tx, api, rng);
+// }
 
-pub fn submit_asset_issue<R: Rng>(tx: &Transaction, api: &Api, rng: &mut R) {
-    let calls = Call::EncryptedAssets(EncryptedAssetsCall::issue(
-        Proof::from_slice(&tx.proof[..]),
-        EncKey::from_slice(&tx.enc_key_recipient[..]),
-        zCiphertext::from_slice(&tx.enc_amount_recipient[..]),
-        zCiphertext::from_slice(&tx.enc_fee[..]),
-        zCiphertext::from_slice(&tx.enc_balance[..]),
-        Nonce::from_slice(&tx.nonce[..])
-    ));
+// fn submit_tx<R: Rng>(calls: Call, tx: &Transaction, api: &Api, rng: &mut R) {
+//     let p_g = zFixedGenerators::Diversifier; // 1
 
-    submit_tx(calls, tx, api, rng);
-}
+//     let mut rsk_repr = zFs::default().into_repr();
+//     rsk_repr.read_le(&mut &tx.rsk[..])
+//         .expect("should be casted to Fs's repr type.");
+//     let rsk = zFs::from_repr(rsk_repr)
+//         .expect("should be casted to Fs type from repr type.");
 
-pub fn submit_asset_transfer<R: Rng>(asset_id: u32, tx: &Transaction, api: &Api, rng: &mut R) {
-    let calls = Call::EncryptedAssets(EncryptedAssetsCall::confidential_transfer(
-        asset_id,
-        Proof::from_slice(&tx.proof[..]),
-        EncKey::from_slice(&tx.enc_key_sender[..]),
-        EncKey::from_slice(&tx.enc_key_recipient[..]),
-        zCiphertext::from_slice(&tx.enc_amount_sender[..]),
-        zCiphertext::from_slice(&tx.enc_amount_recipient[..]),
-        zCiphertext::from_slice(&tx.enc_fee[..]),
-        Nonce::from_slice(&tx.nonce[..])
-    ));
+//     let sig_sk = zPrivateKey::<zBls12>(rsk);
+//     let sig_vk = SigVerificationKey::from_slice(&tx.rvk[..]);
 
-    submit_tx(calls, tx, api, rng);
-}
+//     let era = Era::Immortal;
+//     let index = api.get_nonce(&sig_vk).expect("Nonce must be got.");
+//     let checkpoint = api.get_genesis_blockhash()
+//         .expect("should be fetched the genesis block hash from zerochain node.");
 
-pub fn submit_asset_burn<R: Rng>(asset_id: u32, tx: &Transaction, api: &Api, rng: &mut R) {
-    let calls = Call::EncryptedAssets(EncryptedAssetsCall::destroy(
-        Proof::from_slice(&tx.proof[..]),
-        EncKey::from_slice(&tx.enc_key_recipient[..]),
-        asset_id,
-        zCiphertext::from_slice(&tx.enc_amount_recipient[..]),
-        zCiphertext::from_slice(&tx.enc_fee[..]),
-        zCiphertext::from_slice(&tx.enc_balance[..]),
-        Nonce::from_slice(&tx.nonce[..])
-    ));
+//     let raw_payload = (Compact(index), calls, era, checkpoint);
 
-    submit_tx(calls, tx, api, rng);
-}
+//     let sig = raw_payload.using_encoded(|payload| {
+//         let msg = blake2_256(payload);
+//         let sig = sig_sk.sign(&msg[..], rng, p_g, &*ZPARAMS);
 
-fn submit_tx<R: Rng>(calls: Call, tx: &Transaction, api: &Api, rng: &mut R) {
-    let p_g = zFixedGenerators::Diversifier; // 1
+//         let sig_vk = sig_vk.into_verification_key()
+//             .expect("should be casted to redjubjub::PublicKey<Bls12> type.");
+//         assert!(sig_vk.verify(&msg, &sig, p_g, &*ZPARAMS));
 
-    let mut rsk_repr = zFs::default().into_repr();
-    rsk_repr.read_le(&mut &tx.rsk[..])
-        .expect("should be casted to Fs's repr type.");
-    let rsk = zFs::from_repr(rsk_repr)
-        .expect("should be casted to Fs type from repr type.");
+//         sig
+//     });
 
-    let sig_sk = zPrivateKey::<zBls12>(rsk);
-    let sig_vk = SigVerificationKey::from_slice(&tx.rvk[..]);
-
-    let era = Era::Immortal;
-    let index = api.get_nonce(&sig_vk).expect("Nonce must be got.");
-    let checkpoint = api.get_genesis_blockhash()
-        .expect("should be fetched the genesis block hash from zerochain node.");
-
-    let raw_payload = (Compact(index), calls, era, checkpoint);
-
-    let sig = raw_payload.using_encoded(|payload| {
-        let msg = blake2_256(payload);
-        let sig = sig_sk.sign(&msg[..], rng, p_g, &*ZPARAMS);
-
-        let sig_vk = sig_vk.into_verification_key()
-            .expect("should be casted to redjubjub::PublicKey<Bls12> type.");
-        assert!(sig_vk.verify(&msg, &sig, p_g, &*ZPARAMS));
-
-        sig
-    });
-
-    let sig_repr = RedjubjubSignature::from_signature(&sig);
-    let uxt = UncheckedExtrinsic::new_signed(index, raw_payload.1, sig_vk.into(), sig_repr, era);
-    let _tx_hash = api.submit_extrinsic(&uxt)
-        .expect("Faild to submit a extrinsic to zerochain node.");
-}
+//     let sig_repr = RedjubjubSignature::from_signature(&sig);
+//     let uxt = UncheckedExtrinsic::new_signed(index, raw_payload.1, sig_vk.into(), sig_repr, era);
+//     let _tx_hash = api.submit_extrinsic(&uxt)
+//         .expect("Faild to submit a extrinsic to zerochain node.");
+// }
 
 pub fn subscribe_event(api: Api, remaining_balance: u32) {
     use std::sync::mpsc::channel;

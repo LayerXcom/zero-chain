@@ -1,7 +1,7 @@
-use std::{error::Error, fmt, io};
+// use ;
 use parity_crypto as crypto;
 use serde_json;
-use std::convert;
+use std::{error::Error, fmt, io, convert};
 
 /// Defined keystore errors
 #[derive(Debug)]
@@ -14,6 +14,7 @@ pub enum KeystoreError {
     CryptoError(crypto::Error),
     SerdeError(serde_json::Error),
     InfallibleError(convert::Infallible),
+    SynthesisError(bellman::SynthesisError),
 }
 
 impl From<io::Error> for KeystoreError {
@@ -40,6 +41,12 @@ impl From<convert::Infallible> for KeystoreError {
     }
 }
 
+impl From<bellman::SynthesisError> for KeystoreError {
+    fn from(e: bellman::SynthesisError) -> Self {
+        KeystoreError::SynthesisError(e)
+    }
+}
+
 impl fmt::Display for KeystoreError {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         match *self {
@@ -51,6 +58,7 @@ impl fmt::Display for KeystoreError {
             KeystoreError::CryptoError(ref err) => write!(f, "crypto error: {}", err),
             KeystoreError::SerdeError(ref err) => write!(f, "serde error: {}", err),
             KeystoreError::InfallibleError(ref err) => write!(f, "infallible: {}", err),
+            KeystoreError::SynthesisError(ref err) => write!(f, "synthesis error: {}", err),
         }
     }
 }
@@ -66,6 +74,7 @@ impl Error for KeystoreError {
             KeystoreError::CryptoError(ref err) => err.description(),
             KeystoreError::SerdeError(ref err) => err.description(),
             KeystoreError::InfallibleError(ref err) => err.description(),
+            KeystoreError::SynthesisError(ref err) => err.description(),
         }
     }
 }

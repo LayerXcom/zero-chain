@@ -36,9 +36,8 @@ use crate::{
     EncryptionKey,
     ProofGenerationKey,
     SpendingKey,
-    Nonce,
 };
-use crate::{MultiEncKeys, MultiCiphertexts, Confidential, CiphertextTrait};
+use crate::crypto_components::{MultiEncKeys, MultiCiphertexts, Confidential, CiphertextTrait, PrivacyConfing};
 use std::{
     io::{self, Write, BufReader, BufWriter, Read},
     path::Path,
@@ -48,6 +47,7 @@ use std::{
 
 pub trait ProofBuilder<E: JubjubEngine>: Sized {
     type Submitter: Submitter;
+    type CA: PrivacyConfing;
 
     fn setup<R: Rng>(rng: &mut R) -> Self;
 
@@ -61,7 +61,7 @@ pub trait ProofBuilder<E: JubjubEngine>: Sized {
         fee: u32,
         remaining_balance: u32,
         spending_key: &SpendingKey<E>,
-        enc_keys: &MultiEncKeys<E>,
+        enc_keys: MultiEncKeys<E, Self::CA>,
         encrypted_balance: &Ciphertext<E>,
         g_epoch: edwards::Point<E, PrimeOrder>,
         rng: &mut R,
@@ -95,6 +95,7 @@ impl<E: JubjubEngine> KeyContext<E> {
 
 impl<E: JubjubEngine> ProofBuilder<E> for KeyContext<E> {
     type Submitter = ConfidentialXt;
+    type CA = Confidential;
 
     // TODO:
     fn setup<R: Rng>(_rng: &mut R) -> Self {
@@ -139,7 +140,7 @@ impl<E: JubjubEngine> ProofBuilder<E> for KeyContext<E> {
         fee: u32,
         remaining_balance: u32,
         spending_key: &SpendingKey<E>,
-        enc_keys: &MultiEncKeys<E>,
+        enc_keys: MultiEncKeys<E, Self::CA>,
         encrypted_balance: &Ciphertext<E>,
         g_epoch: edwards::Point<E, PrimeOrder>,
         rng: &mut R,
@@ -181,7 +182,7 @@ impl<E: JubjubEngine> ProofBuilder<E> for KeyContext<E> {
             amount,
             fee,
             &enc_key_sender,
-            enc_keys,
+            &enc_keys,
             &randomness,
             params
         );
@@ -190,7 +191,7 @@ impl<E: JubjubEngine> ProofBuilder<E> for KeyContext<E> {
             proof,
             rvk,
             enc_key_sender,
-            enc_keys.clone(),   // TODO
+            enc_keys,   // TODO
             multi_ciphertexts,
             encrypted_balance.clone(), // TODO
             g_epoch,
@@ -203,16 +204,19 @@ impl<E: JubjubEngine> ProofBuilder<E> for KeyContext<E> {
 
 }
 
-enum Unchecked { }
-enum Checked { }
+struct Unchecked;
+struct Checked;
+trait ProofChecking { }
+impl ProofChecking for Unchecked { }
+impl ProofChecking for Checked { }
 
 #[derive(Clone)]
-struct ConfidentialProofContext<E: JubjubEngine, IsChecked> {
+struct ConfidentialProofContext<E: JubjubEngine, IsChecked, CA: PrivacyConfing> {
     proof: Proof<E>,
     rvk: PublicKey<E>, // re-randomization sig-verifying key
     enc_key_sender: EncryptionKey<E>,
-    enc_keys: MultiEncKeys<E>,
-    multi_ciphertexts: MultiCiphertexts<E, Confidential>,
+    enc_keys: MultiEncKeys<E, CA>,
+    multi_ciphertexts: MultiCiphertexts<E, CA>,
     encrypted_balance: Ciphertext<E>,
     g_epoch: edwards::Point<E, PrimeOrder>,
     nonce: edwards::Point<E, PrimeOrder>,
@@ -220,7 +224,7 @@ struct ConfidentialProofContext<E: JubjubEngine, IsChecked> {
 }
 
 
-impl<E: JubjubEngine, IsChecked> ConfidentialProofContext<E, IsChecked> {
+impl<E: JubjubEngine, IsChecked, CA: PrivacyConfing> ConfidentialProofContext<E, IsChecked, CA> {
     fn enc_amount_sender(&self) -> &Ciphertext<E> {
         self.multi_ciphertexts.get_sender()
     }
@@ -238,13 +242,13 @@ impl<E: JubjubEngine, IsChecked> ConfidentialProofContext<E, IsChecked> {
     }
 }
 
-impl<E: JubjubEngine> ConfidentialProofContext<E, Unchecked> {
+impl<E: JubjubEngine, CA: PrivacyConfing> ConfidentialProofContext<E, Unchecked, CA> {
     fn new(
         proof: Proof<E>,
         rvk: PublicKey<E>,
         enc_key_sender: EncryptionKey<E>,
-        enc_keys: MultiEncKeys<E>,
-        multi_ciphertexts: MultiCiphertexts<E, Confidential>,
+        enc_keys: MultiEncKeys<E, CA>,
+        multi_ciphertexts: MultiCiphertexts<E, CA>,
         encrypted_balance: Ciphertext<E>,
         g_epoch: edwards::Point<E, PrimeOrder>,
         nonce: edwards::Point<E, PrimeOrder>,
@@ -265,7 +269,7 @@ impl<E: JubjubEngine> ConfidentialProofContext<E, Unchecked> {
     fn check_proof(
         self,
         prepared_vk: &PreparedVerifyingKey<E>
-    ) -> Result<ConfidentialProofContext<E, Checked>, SynthesisError> {
+    ) -> Result<ConfidentialProofContext<E, Checked, CA>, SynthesisError> {
         let mut public_input = [E::Fr::zero(); 22];
 
         {
@@ -330,11 +334,11 @@ impl<E: JubjubEngine> ConfidentialProofContext<E, Unchecked> {
             return Err(SynthesisError::MalformedVerifyingKey)
         }
 
-        Ok(convert_to_checked::<E, Unchecked, Checked>(self))
+        Ok(convert_to_checked::<E, Unchecked, Checked, CA>(self))
     }
 }
 
-fn convert_to_checked<E: JubjubEngine, C1, C2>(from: ConfidentialProofContext<E, C1>) -> ConfidentialProofContext<E, C2> {
+fn convert_to_checked<E: JubjubEngine, C1, C2, CA: PrivacyConfing>(from: ConfidentialProofContext<E, C1, CA>) -> ConfidentialProofContext<E, C2, CA> {
     ConfidentialProofContext {
         proof: from.proof,
         rvk: from.rvk,
@@ -348,7 +352,7 @@ fn convert_to_checked<E: JubjubEngine, C1, C2>(from: ConfidentialProofContext<E,
     }
 }
 
-impl<E: JubjubEngine> ConfidentialProofContext<E, Checked> {
+impl<E: JubjubEngine, CA: PrivacyConfing> ConfidentialProofContext<E, Checked, CA> {
     fn gen_xt(&self, spending_key: &SpendingKey<E>, alpha: E::Fs) -> io::Result<ConfidentialXt> {
 
         // Generate the re-randomized sign key
@@ -420,7 +424,7 @@ impl<E: JubjubEngine> ConfidentialProofContext<E, Checked> {
 }
 
 pub trait Submitter {
-    fn submit<R: Rng>(&self, call: Call, api: &Api, rng: &mut R);
+    fn submit<R: Rng>(&self, calls: Calls, api: &Api, rng: &mut R);
 }
 
 /// Transaction components which is needed to create a signed `UncheckedExtrinsic`.
@@ -438,7 +442,7 @@ pub struct ConfidentialXt{
 }
 
 impl Submitter for ConfidentialXt {
-    fn submit<R: Rng>(&self, call: Call, api: &Api, rng: &mut R) {
+    fn submit<R: Rng>(&self, calls: Calls, api: &Api, rng: &mut R) {
         use zjubjub::{
             curve::{fs::Fs as zFs, FixedGenerators as zFixedGenerators},
             redjubjub::PrivateKey as zPrivateKey
@@ -469,7 +473,12 @@ impl Submitter for ConfidentialXt {
         let checkpoint = api.get_genesis_blockhash()
             .expect("should be fetched the genesis block hash from zerochain node.");
 
-        let raw_payload = (Compact(index), call, era, checkpoint);
+        let raw_payload = match calls {
+            Calls::BalanceTransfer(call) => (Compact(index), call, era, checkpoint),
+            Calls::AssetIssue(call) => (Compact(index), call, era, checkpoint),
+            Calls::AssetTransfer(call) => (Compact(index), call, era, checkpoint),
+            Calls::AssetBurn(call) => (Compact(index), call, era, checkpoint),
+        };
 
         let sig = raw_payload.using_encoded(|payload| {
             let msg = blake2_256(payload);
@@ -487,6 +496,13 @@ impl Submitter for ConfidentialXt {
         let _tx_hash = api.submit_extrinsic(&uxt)
             .expect("Faild to submit a extrinsic to zerochain node.");
     }
+}
+
+pub enum Calls {
+    BalanceTransfer(Call),
+    AssetIssue(Call),
+    AssetTransfer(Call),
+    AssetBurn(Call),
 }
 
 impl ConfidentialXt {
