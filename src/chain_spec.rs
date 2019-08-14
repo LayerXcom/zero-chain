@@ -166,7 +166,7 @@ fn alice_balance_init() -> (EncKey, Ciphertext) {
 	let p_g = FixedGenerators::Diversifier; // 1 same as NoteCommitmentRandomness;
 
 	// The default balance is not encrypted with randomness.
-	let enc_alice_bal = elgamal::Ciphertext::encrypt(alice_value, fs::Fs::one(), &enc_key, p_g, &PARAMS);
+	let enc_alice_bal = elgamal::Ciphertext::encrypt(alice_value, &fs::Fs::one(), &enc_key, p_g, &PARAMS);
 
 	(EncKey::from_encryption_key(&enc_key), Ciphertext::from_ciphertext(&enc_alice_bal))
 }

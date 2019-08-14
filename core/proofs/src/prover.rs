@@ -474,10 +474,10 @@ impl Submitter for ConfidentialXt {
             .expect("should be fetched the genesis block hash from zerochain node.");
 
         let raw_payload = match calls {
-            Calls::BalanceTransfer(call) => (Compact(index), call, era, checkpoint),
-            Calls::AssetIssue(call) => (Compact(index), call, era, checkpoint),
-            Calls::AssetTransfer(call) => (Compact(index), call, era, checkpoint),
-            Calls::AssetBurn(call) => (Compact(index), call, era, checkpoint),
+            Calls::BalanceTransfer => (Compact(index), self.call_transfer(), era, checkpoint),
+            Calls::AssetIssue => (Compact(index), self.call_asset_issue(), era, checkpoint),
+            Calls::AssetTransfer(asset_id) => (Compact(index), self.call_asset_transfer(asset_id), era, checkpoint),
+            Calls::AssetBurn(asset_id) => (Compact(index), self.call_asset_burn(asset_id), era, checkpoint),
         };
 
         let sig = raw_payload.using_encoded(|payload| {
@@ -499,10 +499,10 @@ impl Submitter for ConfidentialXt {
 }
 
 pub enum Calls {
-    BalanceTransfer(Call),
-    AssetIssue(Call),
-    AssetTransfer(Call),
-    AssetBurn(Call),
+    BalanceTransfer,
+    AssetIssue,
+    AssetTransfer(u32),
+    AssetBurn(u32),
 }
 
 impl ConfidentialXt {
