@@ -3,8 +3,9 @@ use crate::elgamal::Ciphertext;
 use crate::EncryptionKey;
 use std::marker::PhantomData;
 
-#[derive(Clone)]
+#[derive(Clone, Debug)]
 pub struct Confidential;
+#[derive(Clone, Debug)]
 pub struct Anonymous;
 
 pub trait PrivacyConfing { }
@@ -12,7 +13,7 @@ pub trait PrivacyConfing { }
 impl PrivacyConfing for Confidential { }
 impl PrivacyConfing for Anonymous { }
 
-#[derive(Clone)]
+#[derive(Clone, Debug)]
 pub struct MultiCiphertexts<E: JubjubEngine, PC: PrivacyConfing> {
     sender: Ciphertext<E>,
     recipient: Ciphertext<E>,
@@ -126,7 +127,7 @@ impl<E: JubjubEngine> MultiCiphertexts<E, Anonymous> {
     }
 }
 
-#[derive(Clone)]
+#[derive(Clone, Debug)]
 pub struct MultiEncKeys<E: JubjubEngine, PC> {
     recipient: EncryptionKey<E>,
     decoys: Option<Vec<EncryptionKey<E>>>,

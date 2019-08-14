@@ -9,7 +9,6 @@ use bellman::{
         SynthesisError,
 };
 use pairing::Field;
-use zpairing;
 use rand::{Rand, Rng};
 use scrypto::{
     jubjub::{
@@ -18,9 +17,7 @@ use scrypto::{
         edwards,
         PrimeOrder,
     },
-    redjubjub::{
-        PublicKey,
-    },
+    redjubjub::PublicKey,
 };
 use polkadot_rs::Api;
 use zerochain_runtime::{UncheckedExtrinsic, Call, EncryptedBalancesCall, EncryptedAssetsCall};
@@ -37,7 +34,13 @@ use crate::{
     ProofGenerationKey,
     SpendingKey,
 };
-use crate::crypto_components::{MultiEncKeys, MultiCiphertexts, Confidential, CiphertextTrait, PrivacyConfing};
+use crate::crypto_components::{
+    MultiEncKeys,
+    MultiCiphertexts,
+    Confidential,
+    CiphertextTrait,
+    PrivacyConfing
+};
 use std::{
     io::{self, Write, BufReader, BufWriter, Read},
     path::Path,
@@ -185,7 +188,6 @@ impl<E: JubjubEngine> ProofBuilder<E> for KeyContext<E> {
 
         // Crate proof
         let proof = create_random_proof(instance, &self.proving_key, rng)?;
-
         let multi_ciphertexts = MultiCiphertexts::<E, Confidential>::encrypt(
             amount,
             fee,
@@ -199,7 +201,7 @@ impl<E: JubjubEngine> ProofBuilder<E> for KeyContext<E> {
             proof,
             rvk,
             enc_key_sender,
-            enc_keys,   // TODO
+            enc_keys,
             multi_ciphertexts,
             encrypted_balance.clone(), // TODO
             g_epoch,
@@ -209,7 +211,6 @@ impl<E: JubjubEngine> ProofBuilder<E> for KeyContext<E> {
         .gen_xt(&spending_key, alpha)
         .map_err(|e| SynthesisError::IoError(e))
     }
-
 }
 
 struct Unchecked;
@@ -231,7 +232,6 @@ struct ConfidentialProofContext<E: JubjubEngine, IsChecked, PC: PrivacyConfing> 
     nonce: edwards::Point<E, PrimeOrder>,
     _marker: PhantomData<IsChecked>,
 }
-
 
 impl<E: JubjubEngine, IsChecked, PC: PrivacyConfing> ConfidentialProofContext<E, IsChecked, PC> {
     fn enc_amount_sender(&self) -> &Ciphertext<E> {
