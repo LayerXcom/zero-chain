@@ -1,29 +1,18 @@
-use std::path::{PathBuf, Path};
-use std::io::{BufReader, Read};
-use std::fs::File;
+use std::path::PathBuf;
 use rand::{Rng, Rand};
 use proofs::{SpendingKey, ProofGenerationKey, EncryptionKey, PARAMS, elgamal};
 use proofs::crypto_components::{MultiEncKeys, Confidential};
-use proofs::prover::{ProofBuilder, KeyContext, ConfidentialXt, Calls, Submitter};
+use proofs::prover::{ProofBuilder, KeyContext, Calls, Submitter};
 use pairing::bls12_381::Bls12;
+use zprimitives::GEpoch;
+use parity_codec::Decode;
+use polkadot_rs::{Api, Url, hexstr_to_u64, hexstr_to_vec};
+use scrypto::jubjub::{fs::Fs, FixedGenerators, edwards, PrimeOrder};
 use super::constants::*;
 use crate::term::Term;
 use crate::wallet::{Result, DirOperations};
 use crate::wallet::commands::{wallet_keystore_dirs, get_default_keyfile_name};
 use crate::utils::print_keys::BalanceQuery; // TODO
-use zjubjub::{
-    curve::{fs::Fs as zFs, FixedGenerators as zFixedGenerators},
-    redjubjub::PrivateKey as zPrivateKey
-    };
-use zpairing::{bls12_381::Bls12 as zBls12, PrimeField as zPrimeField, PrimeFieldRepr as zPrimeFieldRepr};
-use zprimitives::{PARAMS as ZPARAMS, Proof, Ciphertext as zCiphertext, EncKey, SigVerificationKey, RedjubjubSignature, SigVk, Nonce, GEpoch};
-use zerochain_runtime::{UncheckedExtrinsic, Call, EncryptedBalancesCall, EncryptedAssetsCall};
-use runtime_primitives::generic::Era;
-use parity_codec::{Compact, Encode, Decode};
-use primitives::blake2_256;
-use polkadot_rs::{Api, Url, hexstr_to_u64, hexstr_to_vec};
-use scrypto::jubjub::{fs::Fs, FixedGenerators, edwards, PrimeOrder};
-use bellman::groth16::{Parameters, PreparedVerifyingKey};
 
 pub fn asset_issue_tx<R: Rng>(
     term: &mut Term,

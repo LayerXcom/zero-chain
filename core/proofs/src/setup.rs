@@ -44,6 +44,7 @@ mod tests {
 
     #[test]
     fn test_preparedvk_rw() {
+        
         let (_, vk) = setup();
         let mut v = vec![];
         vk.write(&mut &mut v).unwrap();
