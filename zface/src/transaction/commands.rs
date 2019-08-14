@@ -1,8 +1,10 @@
 use std::path::PathBuf;
 use rand::{Rng, Rand};
-use proofs::{SpendingKey, ProofGenerationKey, EncryptionKey, PARAMS, elgamal};
-use proofs::crypto_components::{MultiEncKeys, Confidential};
-use proofs::confidential::{ProofBuilder, KeyContext, Calls, Submitter};
+use proofs::{
+    SpendingKey, ProofGenerationKey, EncryptionKey, PARAMS, elgamal,
+    crypto_components::{MultiEncKeys, Confidential},
+    confidential::{ProofBuilder, KeyContext, Calls, Submitter},
+};
 use pairing::bls12_381::Bls12;
 use parity_codec::Decode;
 use polkadot_rs::{Api, Url, hexstr_to_vec};

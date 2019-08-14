@@ -10,7 +10,7 @@ use zjubjub::curve::FixedGenerators as zFixedGenerators;
 use proofs::{EncryptionKey, DecryptionKey};
 use zpairing::bls12_381::Bls12 as zBls12;
 use scrypto::jubjub::{edwards, PrimeOrder};
-use crate::error::{Result, KeystoreError};
+use crate::error::Result;
 
 pub struct BalanceQuery {
     pub decrypted_balance: u32,

@@ -29,6 +29,7 @@ mod transaction;
 pub mod derive;
 pub mod term;
 pub mod ss58;
+pub mod error;
 use self::ss58::EncryptionKeyBytes;
 use self::utils::*;
 use self::config::*;
@@ -171,7 +172,8 @@ fn subcommand_wallet<R: Rng>(mut term: term::Term, root_dir: PathBuf, matches: &
             let dec_key = load_dec_key(&mut term, root_dir)
                 .expect("loading decrption key failed.");
 
-            let balance_query = getter::BalanceQuery::get_encrypted_balance(&dec_key, api);
+            let balance_query = getter::BalanceQuery::get_encrypted_balance(&dec_key, api)
+                .expect("Falid to get balance data.");
 
             println!("Decrypted balance: {}", balance_query.decrypted_balance);
             println!("Encrypted balance: {}", balance_query.encrypted_balance_str);
@@ -184,7 +186,8 @@ fn subcommand_wallet<R: Rng>(mut term: term::Term, root_dir: PathBuf, matches: &
                 .expect("loading decrption key failed.");
             let asset_id = wallet_arg_id_match(&sub_matches);
 
-            let balance_query = getter::BalanceQuery::get_encrypted_asset(asset_id, &dec_key, api);
+            let balance_query = getter::BalanceQuery::get_encrypted_asset(asset_id, &dec_key, api)
+                .expect("Falid to get balance data.");;
 
             println!("Decrypted balance: {}", balance_query.decrypted_balance);
             println!("Encrypted balance: {}", balance_query.encrypted_balance_str);
@@ -574,7 +577,8 @@ fn subcommand_debug<R: Rng>(mut term: term::Term, matches: &ArgMatches, rng: &mu
             let dec_key = DecryptionKey::read(&mut &decr_key_vec[..])
                 .expect("Reading decryption key faild.");
 
-            let balance_query = getter::BalanceQuery::get_encrypted_balance(&dec_key, api);
+            let balance_query = getter::BalanceQuery::get_encrypted_balance(&dec_key, api)
+                .expect("Falid to get balance data.");
 
             println!("Decrypted balance: {}", balance_query.decrypted_balance);
             println!("Encrypted balance: {}", balance_query.encrypted_balance_str);
