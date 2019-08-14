@@ -31,6 +31,43 @@ pub enum Error {
 	IoError(::std::io::Error),
 }
 
+#[cfg(feature = "std")]
+impl From<::std::io::Error> for Error {
+    fn from(e: ::std::io::Error) -> Error {
+        Error::IoError(e)
+    }
+}
+
+#[cfg(feature = "std")]
+impl std::error::Error for Error {
+    fn description(&self) -> &str {
+        match *self {
+            Error::TrailingData => "Some unexpected data left in the buffer after reading all data.",
+            Error::UnexpectedEof => "Unexpected End-Of-File",
+            Error::InvalidData => "Invalid data is encountered.",
+            Error::WriteZero => "Failed to write whole buffer.",
+            Error::PointInfinity => "point at infinity for reading the elliptic curve points",
+            Error::IoError(_) => "encountered an I/O error",
+            Error::NotOnCurve => "not on curve",
+            Error::NotInField => "not in field"
+        }
+    }
+}
+
+#[cfg(feature = "std")]
+impl std::fmt::Display for Error {
+    fn fmt(&self, f: &mut std::fmt::Formatter) -> std::fmt::Result<> {
+		use std::error::Error;
+
+        if let &self::Error::IoError(ref e) = self {
+            write!(f, "I/O error: ")?;
+            e.fmt(f)
+        } else {
+            write!(f, "{}", self.description())
+        }
+    }
+}
+
 /// IO specific Result.
 pub type Result<T> = ::std::result::Result<T, Error>;
 
@@ -137,7 +174,7 @@ impl<T: ::std::io::Read> Read for T {
 
  #[cfg(feature = "std")]
 impl<T: ::std::io::Write> Write for T {
-	fn write(&mut self, buf: &[u8]) -> Result<()> {				
+	fn write(&mut self, buf: &[u8]) -> Result<()> {
 		self.write_all(buf).map_err(Error::IoError)
 	}
 }
