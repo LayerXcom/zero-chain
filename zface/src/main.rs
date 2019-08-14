@@ -8,9 +8,7 @@ extern crate serde_derive;
 #[macro_use]
 extern crate matches;
 
-use std::fs::File;
-use std::path::{Path, PathBuf};
-use std::io::{BufWriter, Write, BufReader, Read};
+use std::path::PathBuf;
 use clap::{Arg, App, SubCommand, AppSettings, ArgMatches};
 use rand::{OsRng, Rng};
 use proofs::{
@@ -21,7 +19,6 @@ use proofs::{
     };
 use primitives::{hexdisplay::{HexDisplay, AsBytesRef}, crypto::Ss58Codec};
 use pairing::bls12_381::Bls12;
-use bellman::groth16::{Parameters, PreparedVerifyingKey};
 use polkadot_rs::{Api, Url};
 use bip39::{Mnemonic, Language, MnemonicType};
 
@@ -174,7 +171,7 @@ fn subcommand_wallet<R: Rng>(mut term: term::Term, root_dir: PathBuf, matches: &
             let dec_key = load_dec_key(&mut term, root_dir)
                 .expect("loading decrption key failed.");
 
-            let balance_query = BalanceQuery::get_encrypted_balance(&dec_key, api);
+            let balance_query = getter::BalanceQuery::get_encrypted_balance(&dec_key, api);
 
             println!("Decrypted balance: {}", balance_query.decrypted_balance);
             println!("Encrypted balance: {}", balance_query.encrypted_balance_str);
@@ -187,7 +184,7 @@ fn subcommand_wallet<R: Rng>(mut term: term::Term, root_dir: PathBuf, matches: &
                 .expect("loading decrption key failed.");
             let asset_id = wallet_arg_id_match(&sub_matches);
 
-            let balance_query = BalanceQuery::get_encrypted_asset(asset_id, &dec_key, api);
+            let balance_query = getter::BalanceQuery::get_encrypted_asset(asset_id, &dec_key, api);
 
             println!("Decrypted balance: {}", balance_query.decrypted_balance);
             println!("Encrypted balance: {}", balance_query.encrypted_balance_str);
@@ -492,8 +489,8 @@ fn subcommand_debug<R: Rng>(mut term: term::Term, matches: &ArgMatches, rng: &mu
             let sender_seed = hex::decode(sub_matches.value_of("sender-privatekey").unwrap()).unwrap();
             let recipient_seed  = hex::decode(sub_matches.value_of("recipient-privatekey").unwrap()).unwrap();
 
-            let sender_address = get_address(&sender_seed[..]).unwrap();
-            let recipient_address = get_address(&recipient_seed[..]).unwrap();
+            let sender_address = getter::address(&sender_seed[..]).unwrap();
+            let recipient_address = getter::address(&recipient_seed[..]).unwrap();
 
             println!("Private Key(Sender): 0x{}\nAddress(Sender): 0x{}\n",
                 HexDisplay::from(&sender_seed),
@@ -577,7 +574,7 @@ fn subcommand_debug<R: Rng>(mut term: term::Term, matches: &ArgMatches, rng: &mu
             let dec_key = DecryptionKey::read(&mut &decr_key_vec[..])
                 .expect("Reading decryption key faild.");
 
-            let balance_query = BalanceQuery::get_encrypted_balance(&dec_key, api);
+            let balance_query = getter::BalanceQuery::get_encrypted_balance(&dec_key, api);
 
             println!("Decrypted balance: {}", balance_query.decrypted_balance);
             println!("Encrypted balance: {}", balance_query.encrypted_balance_str);

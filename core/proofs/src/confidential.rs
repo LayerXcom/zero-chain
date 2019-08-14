@@ -215,6 +215,7 @@ impl<E: JubjubEngine> ProofBuilder<E> for KeyContext<E> {
 struct Unchecked;
 struct Checked;
 trait ProofChecking { }
+
 impl ProofChecking for Unchecked { }
 impl ProofChecking for Checked { }
 
@@ -567,8 +568,8 @@ impl ConfidentialXt {
 mod tests {
     use super::*;
     use rand::{SeedableRng, XorShiftRng, Rng};
-    use crate::{ProofGenerationKey, EncryptionKey};
-    use scrypto::jubjub::{fs, JubjubBls12};
+    use crate::EncryptionKey;
+    use scrypto::jubjub::JubjubBls12;
     use pairing::bls12_381::Bls12;
     use std::path::Path;
     use std::fs::File;
@@ -579,7 +580,6 @@ mod tests {
         let params = &JubjubBls12::new();
         let p_g = FixedGenerators::NoteCommitmentRandomness;
         let rng = &mut XorShiftRng::from_seed([0x5dbe6259, 0x8d313d76, 0x3237db17, 0xe5bc0654]);
-        let alpha = fs::Fs::rand(rng);
 
         let amount = 10 as u32;
         let remaining_balance = 89 as u32;
@@ -590,7 +590,6 @@ mod tests {
         let recipient_seed: [u8; 32] = rng.gen();
 
         let spending_key = SpendingKey::<Bls12>::from_seed(&sender_seed);
-        let proof_generation_key = ProofGenerationKey::<Bls12>::from_seed(&sender_seed, params);
         let enc_key_recipient = EncryptionKey::<Bls12>::from_seed(&recipient_seed, params).unwrap();
 
         let randomness = rng.gen();

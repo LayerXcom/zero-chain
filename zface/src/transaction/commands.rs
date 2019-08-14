@@ -4,15 +4,15 @@ use proofs::{SpendingKey, ProofGenerationKey, EncryptionKey, PARAMS, elgamal};
 use proofs::crypto_components::{MultiEncKeys, Confidential};
 use proofs::confidential::{ProofBuilder, KeyContext, Calls, Submitter};
 use pairing::bls12_381::Bls12;
-use zprimitives::GEpoch;
 use parity_codec::Decode;
-use polkadot_rs::{Api, Url, hexstr_to_u64, hexstr_to_vec};
-use scrypto::jubjub::{fs::Fs, FixedGenerators, edwards, PrimeOrder};
+use polkadot_rs::{Api, Url, hexstr_to_vec};
+use scrypto::jubjub::{fs::Fs, FixedGenerators};
 use super::constants::*;
+use crate::error::Result;
 use crate::term::Term;
-use crate::wallet::{Result, DirOperations};
+use crate::wallet::DirOperations;
 use crate::wallet::commands::{wallet_keystore_dirs, get_default_keyfile_name};
-use crate::utils::print_keys::BalanceQuery; // TODO
+use crate::getter::{self, BalanceQuery};
 
 pub fn asset_issue_tx<R: Rng>(
     term: &mut Term,
@@ -46,7 +46,7 @@ pub fn asset_issue_tx<R: Rng>(
             &spending_key,
             multi_keys,
             &enc_amount,
-            get_g_epoch(&api),
+            getter::g_epoch(&api),
             rng,
             &PARAMS
         )?
@@ -79,7 +79,7 @@ pub fn asset_transfer_tx<R: Rng>(
     let dec_key = ProofGenerationKey::<Bls12>::from_spending_key(&spending_key, &PARAMS)
         .into_decryption_key()?;
 
-    let fee = get_fee(&api);
+    let fee = getter::fee(&api);
 
     let balance_query = BalanceQuery::get_encrypted_asset(asset_id, &dec_key, api.clone());
     let remaining_balance = balance_query.decrypted_balance - amount - fee;
@@ -105,7 +105,7 @@ pub fn asset_transfer_tx<R: Rng>(
             &spending_key,
             multi_keys,
             &encrypted_balance,
-            get_g_epoch(&api),
+            getter::g_epoch(&api),
             rng,
             &PARAMS
         )?
@@ -156,7 +156,7 @@ pub fn asset_burn_tx<R: Rng>(
             &spending_key,
             multi_keys,
             &enc_amount,
-            get_g_epoch(&api),
+            getter::g_epoch(&api),
             rng,
             &PARAMS
         )?
@@ -212,7 +212,7 @@ fn inner_transfer_tx<R: Rng>(
 
     let dec_key = ProofGenerationKey::<Bls12>::from_spending_key(&spending_key, &PARAMS)
         .into_decryption_key()?;
-    let fee = get_fee(&api);
+    let fee = getter::fee(&api);
 
     let balance_query = BalanceQuery::get_encrypted_balance(&dec_key, api.clone());
     let remaining_balance = balance_query.decrypted_balance - amount - fee;
@@ -238,7 +238,7 @@ fn inner_transfer_tx<R: Rng>(
             &spending_key,
             multi_keys,
             &encrypted_balance,
-            get_g_epoch(&api),
+            getter::g_epoch(&api),
             rng,
             &PARAMS
         )?
@@ -249,28 +249,6 @@ fn inner_transfer_tx<R: Rng>(
         );
 
     Ok(())
-}
-
-fn get_g_epoch(api: &Api) -> edwards::Point<Bls12, PrimeOrder> {
-    let current_height_str = api.get_latest_height()
-        .expect("should be fetched Number from system module.");
-    let epoch_length_str = api.get_storage("EncryptedBalances", "EpochLength", None)
-        .expect("should be fetched epoch length from encrypted-balances module.");
-
-    let current_epoch = hexstr_to_u64(current_height_str) / hexstr_to_u64(epoch_length_str);
-    let g_epoch = GEpoch::group_hash(current_epoch as u32).unwrap(); // TODO
-
-    edwards::Point::<Bls12, _>::read(&mut g_epoch.as_ref(), &PARAMS)
-            .unwrap() // TODO
-            .as_prime_order(&PARAMS)
-            .unwrap()
-}
-
-// Get set fee amount as `TransactionBaseFee` in encrypyed-balances module.
-fn get_fee(api: &Api) -> u32 {
-    let fee_str = api.get_storage("EncryptedBalances", "TransactionBaseFee", None)
-        .expect("should be fetched TransactionBaseFee from encrypted balances module.");
-    hexstr_to_u64(fee_str) as u32
 }
 
 pub fn spending_key_from_keystore(

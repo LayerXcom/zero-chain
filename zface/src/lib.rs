@@ -4,6 +4,7 @@ pub mod wallet;
 pub mod term;
 pub mod utils;
 pub mod transaction;
+pub mod error;
 
 #[macro_use]
 extern crate serde_derive;
@@ -12,3 +13,5 @@ extern crate log;
 #[cfg(test)]
 #[macro_use]
 extern crate matches;
+
+pub use self::utils::getter;
