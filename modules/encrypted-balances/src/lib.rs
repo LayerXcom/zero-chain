@@ -463,6 +463,9 @@ pub mod tests {
     use std::fs::File;
     use std::io::{BufReader, Read};
 
+    const PK_PATH: &str = "../../zface/tests/proving.dat";
+    const VK_PATH: &str = "../../zface/tests/verification.dat";
+
     impl_outer_origin! {
         pub enum Origin for Test {}
     }
@@ -504,7 +507,7 @@ pub mod tests {
         // The default balance is not encrypted with randomness.
         let enc_alice_bal = elgamal::Ciphertext::encrypt(
             alice_amount,
-            fs::Fs::one(),
+            &fs::Fs::one(),
             &enc_key,
             p_g,
             params
@@ -562,8 +565,9 @@ pub mod tests {
     fn test_call_from_zface() {
         use rand::{SeedableRng, XorShiftRng};
         use test_pairing::{bls12_381::Bls12 as tBls12, Field as tField};
-        use test_proofs::{EncryptionKey as tEncryptionKey, SpendingKey as tSpendingKey, elgamal as telgamal, Transaction, PARAMS, MultiEncKeys};
-        use zface::transaction::commands::{get_pk, get_vk};
+        use test_proofs::{EncryptionKey as tEncryptionKey, SpendingKey as tSpendingKey,
+            elgamal as telgamal, PARAMS, MultiEncKeys, KeyContext, ProofBuilder, Confidential,
+        };
         use scrypto::jubjub::{FixedGenerators as tFixedGenerators, fs::Fs as tFs, edwards as tedwards};
 
         with_externalities(&mut new_test_ext(), || {
@@ -571,10 +575,6 @@ pub mod tests {
             let rng = &mut XorShiftRng::from_seed([0x3dbe6259, 0x8d313d76, 0x3237db17, 0xe5bc0654]);
             let bob_addr: [u8; 32] = hex!("45e66da531088b55dcb3b273ca825454d79d2d1d5c4fa2ba4a12c1fa1ccd6389");
             let recipient_account_id = tEncryptionKey::<tBls12>::read(&mut &bob_addr[..], &PARAMS).unwrap();
-
-            // Get setuped parameters to compute zk proving.
-            let proving_key = get_pk("../../zface/tests/proving.dat").unwrap();
-            let prepared_vk = get_vk("../../zface/tests/verification.dat").unwrap();
 
             let spending_key = tSpendingKey::<tBls12>::from_seed(&alice_seed);
 
@@ -589,7 +589,7 @@ pub mod tests {
             // The default balance is not encrypted with randomness.
             let enc_alice_bal = telgamal::Ciphertext::encrypt(
                 current_balance,
-                tFs::one(),
+                &tFs::one(),
                 &enc_key,
                 p_g,
                 &*PARAMS
@@ -598,19 +598,19 @@ pub mod tests {
             let g_epoch_vec: [u8; 32] = hex!("0953f47325251a2f479c25527df6d977925bebafde84423b20ae6c903411665a");
             let g_epoch = tedwards::Point::read(&g_epoch_vec[..], &*PARAMS).unwrap().as_prime_order(&*PARAMS).unwrap();
 
-            let tx = Transaction::gen_tx(
-                amount,
-                remaining_balance,
-                &proving_key,
-                &prepared_vk,
-                &MultiEncKeys::new_for_confidential(recipient_account_id),
-                &spending_key,
-                &enc_alice_bal,
-                &g_epoch,
-                rng,
-                fee
-                )
-            .expect("fails to generate the tx");
+            let tx = KeyContext::read_from_path(PK_PATH, VK_PATH)
+                .unwrap()
+                .gen_proof(
+                    amount,
+                    fee,
+                    remaining_balance,
+                    &spending_key,
+                    MultiEncKeys::<tBls12, Confidential>::new(recipient_account_id),
+                    &enc_alice_bal,
+                    g_epoch,
+                    rng,
+                    &*PARAMS
+                ).unwrap();
 
             assert_ok!(EncryptedBalances::confidential_transfer(
                 Origin::signed(SigVerificationKey::from_slice(&tx.rvk[..])),

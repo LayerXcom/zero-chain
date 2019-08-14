@@ -82,6 +82,14 @@ impl<E: JubjubEngine> KeyContext<E> {
         }
     }
 
+    pub fn pk(&self) -> &Parameters<E> {
+        &self.proving_key
+    }
+
+    pub fn vk(&self) -> &PreparedVerifyingKey<E> {
+        &self.prepared_vk
+    }
+
     fn inner_read<P: AsRef<Path>>(path: P) -> io::Result<Vec<u8>> {
         let file = File::open(&path)?;
 
@@ -633,31 +641,26 @@ mod tests {
         let sender_seed: [u8; 32] = rng.gen();
         let recipient_seed: [u8; 32] = rng.gen();
 
+        let spending_key = SpendingKey::<Bls12>::from_seed(&sender_seed);
         let proof_generation_key = ProofGenerationKey::<Bls12>::from_seed(&sender_seed, params);
         let enc_key_recipient = EncryptionKey::<Bls12>::from_seed(&recipient_seed, params).unwrap();
 
         let randomness = rng.gen();
         let enc_key = EncryptionKey::from_seed(&sender_seed[..], params).unwrap();
-        let cipher_balance = Ciphertext::encrypt(balance, randomness, &enc_key, p_g, params);
+        let encrypted_balance = Ciphertext::encrypt(balance, &randomness, &enc_key, p_g, params);
 
         let (proving_key, prepared_vk) = get_pk_and_vk();
 
         let g_epoch = edwards::Point::rand(rng, params).mul_by_cofactor(params);
 
-        let proofs = ConfidentialProof::gen_proof(
-            amount,
-            remaining_balance,
-            fee,
-            alpha,
-            &proving_key,
-            &prepared_vk,
-            &proof_generation_key,
-            &MultiEncKeys::new_for_confidential(enc_key_recipient),
-            &cipher_balance,
-            &g_epoch,
-            rng,
-            params,
-        );
+        let proofs = KeyContext::read_from_path("../../zface/proving.params", "../../zface/verification.params")
+            .unwrap()
+            .gen_proof(
+                amount, fee, remaining_balance, &spending_key,
+                MultiEncKeys::<Bls12, Confidential>::new(enc_key_recipient),
+                &encrypted_balance, g_epoch,
+                rng, params
+            );
 
         assert!(proofs.is_ok());
     }

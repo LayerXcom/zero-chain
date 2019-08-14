@@ -18,6 +18,8 @@ pub use self::no_std_aliases::keys::{
 };
 pub use self::no_std_aliases::elgamal;
 pub use self::nonce::Nonce;
+pub use self::crypto_components::{MultiEncKeys, Confidential};
+pub use self::prover::{KeyContext, ProofBuilder};
 
 lazy_static! {
     pub static ref PARAMS: JubjubBls12 = { JubjubBls12::new() };

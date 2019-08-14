@@ -41,13 +41,15 @@ pub fn setup<R: Rng>(rng: &mut R) -> KeyContext<Bls12> {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use rand::{SeedableRng, XorShiftRng};
 
     #[test]
     fn test_preparedvk_rw() {
-        
-        let (_, vk) = setup();
+        let rng = &mut XorShiftRng::from_seed([0x5dbe6259, 0x8d313d76, 0x3237db17, 0xe5bc0654]);
+
+        let key_context = setup(rng);
         let mut v = vec![];
-        vk.write(&mut &mut v).unwrap();
+        key_context.vk().write(&mut &mut v).unwrap();
 
         let prepared_vk_a = PreparedVerifyingKey::<Bls12>::read(&mut &v[..]).unwrap();
 
