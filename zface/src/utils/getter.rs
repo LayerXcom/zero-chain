@@ -80,7 +80,7 @@ impl BalanceQuery {
 
             let encrypted_balance = hexstr_to_vec(encrypted_balance_str.clone());
             ciphertext = Some(zelgamal::Ciphertext::<zBls12>::read(&mut &encrypted_balance[..], &ZPARAMS)?);
-            decrypted_balance = ciphertext.clone().unwrap().decrypt(&no_std(&dec_key), p_g, &ZPARAMS)?;
+            decrypted_balance = ciphertext.clone().unwrap().decrypt(&no_std(&dec_key)?, p_g, &ZPARAMS).unwrap();
         } else {
             decrypted_balance = 0;
         }
@@ -93,7 +93,7 @@ impl BalanceQuery {
 
             let pending_transfer = hexstr_to_vec(pending_transfer_str.clone());
             p_ciphertext = Some(zelgamal::Ciphertext::<zBls12>::read(&mut &pending_transfer[..], &ZPARAMS)?);
-            p_decrypted_balance = p_ciphertext.clone().unwrap().decrypt(&no_std(&dec_key), p_g, &ZPARAMS)?;
+            p_decrypted_balance = p_ciphertext.clone().unwrap().decrypt(&no_std(&dec_key)?, p_g, &ZPARAMS).unwrap();
         } else {
             p_decrypted_balance = 0;
         }
@@ -128,9 +128,11 @@ pub fn g_epoch(api: &Api) -> Result<edwards::Point<Bls12, PrimeOrder>> {
     let current_epoch = hexstr_to_u64(current_height_str) / hexstr_to_u64(epoch_length_str);
     let g_epoch = GEpoch::group_hash(current_epoch as u32)?; // TODO
 
-    edwards::Point::<Bls12, _>::read(&mut g_epoch.as_ref(), &PARAMS)?
+    let point = edwards::Point::<Bls12, _>::read(&mut g_epoch.as_ref(), &PARAMS)?
             .as_prime_order(&PARAMS)
-            .ok_or(KeystoreError::SynthesisError)
+            .unwrap();
+
+    Ok(point)
 }
 
 // Get set fee amount as `TransactionBaseFee` in encrypyed-balances module.
@@ -142,5 +144,7 @@ pub fn fee(api: &Api) -> Result<u32> {
 fn no_std(dec_key: &DecryptionKey<Bls12>) -> Result<keys::DecryptionKey<zBls12>> {
     let mut dec_key_vec = vec![];
     dec_key.write(&mut dec_key_vec)?;
-    keys::DecryptionKey::read(&mut &dec_key_vec[..])
+    let key = keys::DecryptionKey::read(&mut &dec_key_vec[..])?;
+
+    Ok(key)
 }

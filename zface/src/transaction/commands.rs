@@ -46,7 +46,7 @@ pub fn asset_issue_tx<R: Rng>(
             &spending_key,
             multi_keys,
             &enc_amount,
-            getter::g_epoch(&api),
+            getter::g_epoch(&api)?,
             rng,
             &PARAMS
         )?
@@ -79,9 +79,9 @@ pub fn asset_transfer_tx<R: Rng>(
     let dec_key = ProofGenerationKey::<Bls12>::from_spending_key(&spending_key, &PARAMS)
         .into_decryption_key()?;
 
-    let fee = getter::fee(&api);
+    let fee = getter::fee(&api)?;
 
-    let balance_query = BalanceQuery::get_encrypted_asset(asset_id, &dec_key, api.clone());
+    let balance_query = BalanceQuery::get_encrypted_asset(asset_id, &dec_key, api.clone())?;
     let remaining_balance = balance_query.decrypted_balance - amount - fee;
     assert!(balance_query.decrypted_balance >= amount + fee, "Not enough balance you have");
 
@@ -105,7 +105,7 @@ pub fn asset_transfer_tx<R: Rng>(
             &spending_key,
             multi_keys,
             &encrypted_balance,
-            getter::g_epoch(&api),
+            getter::g_epoch(&api)?,
             rng,
             &PARAMS
         )?
@@ -136,7 +136,7 @@ pub fn asset_burn_tx<R: Rng>(
     let spending_key = spending_key_from_keystore(root_dir, &password[..])?;
     let dec_key = ProofGenerationKey::<Bls12>::from_spending_key(&spending_key, &PARAMS)
         .into_decryption_key()?;
-    let balance_query = BalanceQuery::get_encrypted_asset(asset_id, &dec_key, api.clone());
+    let balance_query = BalanceQuery::get_encrypted_asset(asset_id, &dec_key, api.clone())?;
     assert!(balance_query.decrypted_balance != 0, "You don't have the asset. Asset id may be incorrect.");
 
     let amount = 0;
@@ -156,7 +156,7 @@ pub fn asset_burn_tx<R: Rng>(
             &spending_key,
             multi_keys,
             &enc_amount,
-            getter::g_epoch(&api),
+            getter::g_epoch(&api)?,
             rng,
             &PARAMS
         )?
@@ -212,9 +212,9 @@ fn inner_transfer_tx<R: Rng>(
 
     let dec_key = ProofGenerationKey::<Bls12>::from_spending_key(&spending_key, &PARAMS)
         .into_decryption_key()?;
-    let fee = getter::fee(&api);
+    let fee = getter::fee(&api)?;
 
-    let balance_query = BalanceQuery::get_encrypted_balance(&dec_key, api.clone());
+    let balance_query = BalanceQuery::get_encrypted_balance(&dec_key, api.clone())?;
     let remaining_balance = balance_query.decrypted_balance - amount - fee;
     assert!(balance_query.decrypted_balance >= amount + fee, "Not enough balance you have");
 
@@ -238,7 +238,7 @@ fn inner_transfer_tx<R: Rng>(
             &spending_key,
             multi_keys,
             &encrypted_balance,
-            getter::g_epoch(&api),
+            getter::g_epoch(&api)?,
             rng,
             &PARAMS
         )?
