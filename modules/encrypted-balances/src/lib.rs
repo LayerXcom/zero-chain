@@ -376,6 +376,8 @@ pub mod tests {
         type EncryptedBalance = Ciphertext;
     }
 
+    impl zk_system::Trait for Test { }
+
     type EncryptedBalances = Module<Test>;
 
     fn alice_balance_init() -> (EncKey, Ciphertext) {
