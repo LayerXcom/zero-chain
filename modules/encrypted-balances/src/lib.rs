@@ -9,7 +9,7 @@ use pairing::bls12_381::Bls12;
 use runtime_primitives::traits::{Member, Zero, MaybeSerializeDebug};
 use jubjub::redjubjub::PublicKey;
 use zprimitives::{
-    EncKey, Proof, ElgamalCiphertext, SigVk, Nonce,
+    EncKey, Proof, ElgamalCiphertext, SigVk, Nonce, RightCiphertext, LeftCiphertext, Ciphertext,
 };
 use parity_codec::Codec;
 use keys::EncryptionKey;
@@ -19,19 +19,16 @@ use system::{IsDeadAccount, ensure_signed};
 pub trait Trait: system::Trait + zk_system::Trait {
 	/// The overarching event type.
 	type Event: From<Event<Self>> + Into<<Self as system::Trait>::Event>;
-
-    /// The units in which we record encrypted balances.
-    type EncryptedBalance: ElgamalCiphertext + Parameter + Member + Default + MaybeSerializeDebug + Codec;
 }
 
 pub struct TypedParams {
     pub zkproof: bellman_verifier::Proof<Bls12>,
     pub address_sender: EncryptionKey<Bls12>,
     pub address_recipient: EncryptionKey<Bls12>,
-    pub amount_sender: elgamal::Ciphertext<Bls12>,
-    pub amount_recipient: elgamal::Ciphertext<Bls12>,
+    pub enc_amount_sender: elgamal::Ciphertext<Bls12>,
+    pub enc_amount_recipient: elgamal::Ciphertext<Bls12>,
+    pub enc_fee: elgamal::Ciphertext<Bls12>,
     pub rvk: PublicKey<Bls12>,
-    pub fee_sender: elgamal::Ciphertext<Bls12>,
 }
 
 type FeeAmount = u32;
@@ -47,9 +44,10 @@ decl_module! {
             zkproof: Proof,
             address_sender: EncKey,
             address_recipient: EncKey,
-            amount_sender: T::EncryptedBalance,
-            amount_recipient: T::EncryptedBalance,
-            fee_sender: T::EncryptedBalance,
+            amount_sender: LeftCiphertext,
+            amount_recipient: LeftCiphertext,
+            fee_sender: LeftCiphertext,
+            randomness: RightCiphertext,
             nonce: Nonce
         ) -> Result {
 			let rvk = ensure_signed(origin)?;
@@ -61,8 +59,9 @@ decl_module! {
                 &address_recipient,
                 &amount_sender,
                 &amount_recipient,
-                &rvk,
                 &fee_sender,
+                &rvk,
+                &randomness
             )
             .map_err(|_| "Failed to convert into types.")?;
 
@@ -88,11 +87,11 @@ decl_module! {
                     &typed.zkproof,
                     &typed.address_sender,
                     &typed.address_recipient,
-                    &typed.amount_sender,
-                    &typed.amount_recipient,
+                    &typed.enc_amount_sender,
+                    &typed.enc_amount_recipient,
                     &typed_balance_sender,
                     &typed.rvk,
-                    &typed.fee_sender,
+                    &typed.enc_fee,
                     &nonce.try_into().map_err(|_| "Failed to convert from Nonce.")?
                 )? {
                     Self::deposit_event(RawEvent::InvalidZkProof());
@@ -104,11 +103,11 @@ decl_module! {
 
             // Subtracting transferred amount and fee from the sender's encrypted balances.
             // This function causes a storage mutation.
-            Self::sub_enc_balance(&address_sender, &typed_balance_sender, &typed.amount_sender, &typed.fee_sender);
+            Self::sub_enc_balance(&address_sender, &typed_balance_sender, &typed.enc_amount_sender, &typed.enc_fee);
 
             // Adding transferred amount to the recipient's pending transfer.
             // This function causes a storage mutation.
-            Self::add_pending_transfer(&address_recipient, &typed_balance_recipient, &typed.amount_recipient);
+            Self::add_pending_transfer(&address_recipient, &typed_balance_recipient, &typed.enc_amount_recipient);
 
             Self::deposit_event(
                 RawEvent::ConfidentialTransfer(
@@ -118,7 +117,8 @@ decl_module! {
                     amount_sender,
                     amount_recipient,
                     fee_sender,
-                    T::EncryptedBalance::from_ciphertext(&typed_balance_sender),
+                    randomness,
+                    Ciphertext::from_ciphertext(&typed_balance_sender),
                     rvk
                 )
             );
@@ -131,10 +131,10 @@ decl_module! {
 decl_storage! {
     trait Store for Module<T: Trait> as EncryptedBalances {
         /// An encrypted balance for each account
-        pub EncryptedBalance get(encrypted_balance) config() : map EncKey => Option<T::EncryptedBalance>;
+        pub EncryptedBalance get(encrypted_balance) config() : map EncKey => Option<Ciphertext>;
 
         /// A pending transfer
-        pub PendingTransfer get(pending_transfer) : map EncKey => Option<T::EncryptedBalance>;
+        pub PendingTransfer get(pending_transfer) : map EncKey => Option<Ciphertext>;
 
         /// A last epoch for rollover
         pub LastRollOver get(last_rollover) config() : map EncKey => Option<T::BlockNumber>;
@@ -146,8 +146,8 @@ decl_storage! {
 
 decl_event! (
     /// An event in this module.
-	pub enum Event<T> where <T as Trait>::EncryptedBalance, <T as system::Trait>::AccountId {
-		ConfidentialTransfer(Proof, EncKey, EncKey, EncryptedBalance, EncryptedBalance, EncryptedBalance, EncryptedBalance, AccountId),
+	pub enum Event<T> where <T as system::Trait>::AccountId {
+		ConfidentialTransfer(Proof, EncKey, EncKey, LeftCiphertext, LeftCiphertext, LeftCiphertext, RightCiphertext, Ciphertext, AccountId),
         InvalidZkProof(),
 	}
 );
@@ -160,10 +160,11 @@ impl<T: Trait> Module<T> {
         zkproof: &Proof,
         address_sender: &EncKey,
         address_recipient: &EncKey,
-        amount_sender: &T::EncryptedBalance,
-        amount_recipient: &T::EncryptedBalance,
+        amount_sender: &LeftCiphertext,
+        amount_recipient: &LeftCiphertext,
+        fee_sender: &LeftCiphertext,
         rvk: &T::AccountId,
-        fee_sender: &T::EncryptedBalance,
+        randomness: &RightCiphertext
     ) -> result::Result<TypedParams, &'static str>
     {
         // Get zkproofs with the type
@@ -181,20 +182,23 @@ impl<T: Trait> Module<T> {
             .into_encryption_key()
             .ok_or("Invalid address_recipient")?;
 
-        // Get amount_sender with the type
-        let typed_amount_sender = amount_sender
-            .into_ciphertext()
-            .ok_or("Invalid amount_sender")?;
+        // Get encrypted amount_sender with the type
+        let enc_amount_sender = elgamal::Ciphertext::<Bls12>::new(
+            amount_sender.try_into().map_err(|_| "Failed to read amount_sender.")?,
+            randomness.try_into().map_err(|_| "Failed to read randomness.")?,
+            );
 
-        // Get amount_recipient with the type
-        let typed_amount_recipient = amount_recipient
-            .into_ciphertext()
-            .ok_or("Invalid amount_recipient")?;
+        // Get encrypted amount_recipient with the type
+        let enc_amount_recipient = elgamal::Ciphertext::new(
+            amount_recipient.try_into().map_err(|_| "Failed to read amount_recipient.")?,
+            randomness.try_into().map_err(|_| "Failed to read randomness.")?,
+            );
 
-        // Get fee_sender with the type
-        let typed_fee_sender = fee_sender
-            .into_ciphertext()
-            .ok_or("Invalid fee_sender")?;
+        // Get encrypted fee with the type
+        let enc_fee = elgamal::Ciphertext::new(
+            amount_recipient.try_into().map_err(|_| "Failed to read enc_fee.")?,
+            randomness.try_into().map_err(|_| "Failed to read randomness.")?,
+            );
 
         // Get rvk with the type
         let typed_rvk = rvk
@@ -205,10 +209,10 @@ impl<T: Trait> Module<T> {
             zkproof: typed_zkproof,
             address_sender: typed_addr_sender,
             address_recipient: typed_addr_recipient,
-            amount_sender: typed_amount_sender ,
-            amount_recipient: typed_amount_recipient,
+            enc_amount_sender,
+            enc_amount_recipient,
+            enc_fee,
             rvk:typed_rvk,
-            fee_sender: typed_fee_sender,
         })
     }
 
@@ -253,7 +257,7 @@ impl<T: Trait> Module<T> {
             <EncryptedBalance<T>>::mutate(addr, |balance| {
                 let new_balance = balance.clone().map_or(
                     pending_transfer,
-                    |_| Some(T::EncryptedBalance::from_ciphertext(&typed_balance.add_no_params(&typed_pending_transfer)))
+                    |_| Some(Ciphertext::from_ciphertext(&typed_balance.add_no_params(&typed_pending_transfer)))
                 );
                 *balance = new_balance
             });
@@ -288,7 +292,7 @@ impl<T: Trait> Module<T> {
 
         <EncryptedBalance<T>>::mutate(address, |balance| {
             let new_balance = balance.clone().map(
-                |_| T::EncryptedBalance::from_ciphertext(&typed_balance.sub_no_params(&amount_plus_fee)));
+                |_| Ciphertext::from_ciphertext(&typed_balance.sub_no_params(&amount_plus_fee)));
             *balance = new_balance
         });
     }
@@ -301,8 +305,8 @@ impl<T: Trait> Module<T> {
     ) {
         <PendingTransfer<T>>::mutate(address, |pending_transfer| {
             let new_pending_transfer = pending_transfer.clone().map_or(
-                Some(T::EncryptedBalance::from_ciphertext(&typed_amount)),
-                |_| Some(T::EncryptedBalance::from_ciphertext(&typed_balance.add_no_params(&typed_amount)))
+                Some(Ciphertext::from_ciphertext(&typed_amount)),
+                |_| Some(Ciphertext::from_ciphertext(&typed_balance.add_no_params(&typed_amount)))
             );
             *pending_transfer = new_pending_transfer
         });
@@ -310,8 +314,6 @@ impl<T: Trait> Module<T> {
 }
 
 impl<T: Trait> IsDeadAccount<T::AccountId> for Module<T>
-where
-    T::EncryptedBalance: MaybeSerializeDebug
 {
     fn is_dead_account(who: &T::AccountId) -> bool {
         unimplemented!();

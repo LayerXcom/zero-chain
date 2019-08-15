@@ -37,6 +37,8 @@ pub use self::sig_vk::{SigVerificationKey, SigVk};
 pub use self::prepared_vk::PreparedVk;
 pub use self::nonce::Nonce;
 pub use self::g_epoch::GEpoch;
+pub use self::right_ciphertext::RightCiphertext;
+pub use self::left_ciphertext::LeftCiphertext;
 
 use lazy_static::lazy_static;
 use jubjub::curve::JubjubBls12;

@@ -75,6 +75,18 @@ impl TryFrom<RightCiphertext> for edwards::Point<Bls12, PrimeOrder> {
     }
 }
 
+impl TryFrom<&RightCiphertext> for edwards::Point<Bls12, PrimeOrder> {
+    type Error = io::Error;
+
+    fn try_from(right_ciphertext: &RightCiphertext) -> Result<Self, io::Error> {
+        let mut bytes = right_ciphertext.as_bytes();
+
+        edwards::Point::<Bls12, Unknown>::read(&mut bytes, &PARAMS)?
+            .as_prime_order(&PARAMS)
+            .ok_or(io::Error::NotInField)
+    }
+}
+
 #[cfg(feature = "std")]
 impl AsBytesRef for RightCiphertext {
     fn as_bytes_ref(&self) -> &[u8] {
