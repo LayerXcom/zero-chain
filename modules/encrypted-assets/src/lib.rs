@@ -11,7 +11,7 @@ use runtime_primitives::traits::{SimpleArithmetic, Zero, One};
 use system::ensure_signed;
 use zprimitives::{
     EncKey, Proof, ElgamalCiphertext,
-    SigVk, Nonce,
+    SigVk, Nonce, Ciphertext, LeftCiphertext, RightCiphertext,
 };
 use jubjub::redjubjub::PublicKey;
 use keys::EncryptionKey;
@@ -48,9 +48,10 @@ decl_module! {
             origin,
             zkproof: Proof,
             issuer: EncKey,
-            total: T::EncryptedBalance,
-            fee: T::EncryptedBalance,
-            balance: T::EncryptedBalance,
+            total: LeftCiphertext,
+            fee: LeftCiphertext,
+            balance: LeftCiphertext,
+            randomness: RightCiphertext,
             nonce: Nonce
         ) {
             let rvk = ensure_signed(origin)?;
@@ -60,9 +61,10 @@ decl_module! {
                 &zkproof,
                 &issuer,
                 &total,
-                &rvk,
                 &fee,
-                &balance
+                &randomness,
+                &balance,
+                &rvk,
             )
             .map_err(|_| "Failed to convert into types.")?;
 
@@ -97,10 +99,13 @@ decl_module! {
 
             let id = Self::next_asset_id();
             <NextAssetId<T>>::mutate(|id| *id += One::one());
-            <EncryptedBalance<T>>::insert((id, issuer.clone()), total.clone());
-            <TotalSupply<T>>::insert(id, total.clone());
 
-            Self::deposit_event(RawEvent::Issued(id, issuer, total));
+            let total_ciphertext = Ciphertext::from_left_right(total, randomness)
+                .map_err(|_| "Faild to create ciphertext from left and right.")?;
+            <EncryptedBalance<T>>::insert((id, issuer.clone()), total_ciphertext.clone());
+            <TotalSupply<T>>::insert(id, total_ciphertext.clone());
+
+            Self::deposit_event(RawEvent::Issued(id, issuer, total_ciphertext));
         }
 
         /// Move some encrypted assets from one holder to another.
@@ -110,9 +115,10 @@ decl_module! {
             zkproof: Proof,
             address_sender: EncKey,
             address_recipient: EncKey,
-            amount_sender: T::EncryptedBalance,
-            amount_recipient: T::EncryptedBalance,
-            fee_sender: T::EncryptedBalance,
+            amount_sender: LeftCiphertext,
+            amount_recipient: LeftCiphertext,
+            fee_sender: LeftCiphertext,
+            randomness: RightCiphertext,
             nonce: Nonce
         ) {
             let rvk = ensure_signed(origin)?;
@@ -123,8 +129,9 @@ decl_module! {
                 &address_recipient,
                 &amount_sender,
                 &amount_recipient,
-                &rvk,
                 &fee_sender,
+                &rvk,
+                &randomness,
             )
             .map_err(|_| "Failed to convert into types.")?;
 
@@ -150,11 +157,11 @@ decl_module! {
                 &typed.zkproof,
                 &typed.address_sender,
                 &typed.address_recipient,
-                &typed.amount_sender,
-                &typed.amount_recipient,
+                &typed.enc_amount_sender,
+                &typed.enc_amount_recipient,
                 &typed_balance_sender,
                 &typed.rvk,
-                &typed.fee_sender,
+                &typed.enc_fee,
                 &nonce.try_into().map_err(|_| "Failed to convert from Nonce.")?
             )? {
                 Self::deposit_event(RawEvent::InvalidZkProof());
@@ -170,8 +177,8 @@ decl_module! {
                 &address_sender,
                 asset_id,
                 &typed_balance_sender,
-                &typed.amount_sender,
-                &typed.fee_sender
+                &typed.enc_amount_sender,
+                &typed.enc_fee
             );
 
             // Adding transferred amount to the recipient's pending transfer.
@@ -180,14 +187,14 @@ decl_module! {
                 &address_recipient,
                 asset_id,
                 &typed_balance_recipient,
-                &typed.amount_recipient
+                &typed.enc_amount_recipient
             );
 
             Self::deposit_event(
                 RawEvent::ConfidentialAssetTransferred(
                     asset_id, zkproof, address_sender, address_recipient,
-                    amount_sender, amount_recipient, fee_sender,
-                    T::EncryptedBalance::from_ciphertext(&typed_balance_sender),
+                    amount_sender, amount_recipient, fee_sender, randomness,
+                    Ciphertext::from_ciphertext(&typed_balance_sender),
                     rvk
                 )
             );
@@ -199,9 +206,10 @@ decl_module! {
             zkproof: Proof,
             owner: EncKey,
             id: T::AssetId,
-            dummy_amount: T::EncryptedBalance,
-            dummy_fee: T::EncryptedBalance,
-            dummy_balance: T::EncryptedBalance,
+            dummy_amount: LeftCiphertext,
+            dummy_fee: LeftCiphertext,
+            dummy_balance: LeftCiphertext,
+            randomness: RightCiphertext,
             nonce: Nonce
         ) {
             let rvk = ensure_signed(origin)?;
@@ -211,9 +219,10 @@ decl_module! {
                 &zkproof,
                 &owner,
                 &dummy_amount,
-                &rvk,
                 &dummy_fee,
-                &dummy_balance
+                &randomness,
+                &dummy_balance,
+                &rvk,
             )
             .map_err(|_| "Failed to convert into types.")?;
 
@@ -259,18 +268,17 @@ decl_event!(
     pub enum Event<T>
     where
         <T as Trait>::AssetId,
-        <T as encrypted_balances::Trait>::EncryptedBalance,
         <T as system::Trait>::AccountId
     {
         /// Some encrypted assets were issued.
-        Issued(AssetId, EncKey, EncryptedBalance),
+        Issued(AssetId, EncKey, Ciphertext),
         /// Some encrypted assets were transferred.
         ConfidentialAssetTransferred(
-            AssetId, Proof, EncKey, EncKey, EncryptedBalance,
-            EncryptedBalance, EncryptedBalance, EncryptedBalance, AccountId
+            AssetId, Proof, EncKey, EncKey, LeftCiphertext,
+            LeftCiphertext, LeftCiphertext, RightCiphertext, Ciphertext, AccountId
         ),
         /// Some encrypted assets were destroyed.
-        Destroyed(AssetId, EncKey, EncryptedBalance, EncryptedBalance),
+        Destroyed(AssetId, EncKey, Ciphertext, Ciphertext),
         InvalidZkProof(),
     }
 );
@@ -278,10 +286,10 @@ decl_event!(
 decl_storage! {
     trait Store for Module<T: Trait> as EncryptedAssets {
         /// An encrypted balance for each account
-        pub EncryptedBalance get(encrypted_balance) config() : map (T::AssetId, EncKey) => Option<T::EncryptedBalance>;
+        pub EncryptedBalance get(encrypted_balance) config() : map (T::AssetId, EncKey) => Option<Ciphertext>;
 
         /// A pending transfer
-        pub PendingTransfer get(pending_transfer) : map (T::AssetId, EncKey) => Option<T::EncryptedBalance>;
+        pub PendingTransfer get(pending_transfer) : map (T::AssetId, EncKey) => Option<Ciphertext>;
 
         /// A last epoch for rollover
         pub LastRollOver get(last_rollover) config() : map (T::AssetId, EncKey) => Option<T::BlockNumber>;
@@ -290,7 +298,7 @@ decl_storage! {
         pub NextAssetId get(next_asset_id): T::AssetId;
 
         /// The total unit supply of an asset.
-        pub TotalSupply: map T::AssetId => T::EncryptedBalance;
+        pub TotalSupply: map T::AssetId => Ciphertext;
     }
 }
 
@@ -300,10 +308,11 @@ impl<T: Trait> Module<T> {
     fn into_types(
         zkproof: &Proof,
         account: &EncKey,
-        total: &T::EncryptedBalance,
+        total: &LeftCiphertext,
+        fee: &LeftCiphertext,
+        randomness: &RightCiphertext,
+        balance: &LeftCiphertext,
         rvk: &T::AccountId,
-        fee: &T::EncryptedBalance,
-        balance: &T::EncryptedBalance
     ) -> result::Result<TypedParams, &'static str>
     {
         // Get zkproofs with the type
@@ -315,21 +324,25 @@ impl<T: Trait> Module<T> {
             .into_encryption_key()
             .ok_or("Invalid account")?;
 
-        let typed_total = total
-            .into_ciphertext()
-            .ok_or("Invalid total")?;
+        let typed_total = elgamal::Ciphertext::new(
+            total.try_into().map_err(|_| "Faild to read total.")?,
+            randomness.try_into().map_err(|_| "Failed to read randomness.")?,
+            );
+
+
+        let typed_fee = elgamal::Ciphertext::new(
+            fee.try_into().map_err(|_| "Faild to read fee.")?,
+            randomness.try_into().map_err(|_| "Failed to read randomness.")?,
+            );
 
         let typed_rvk = rvk
             .into_verification_key()
             .ok_or("Invalid rvk")?;
 
-        let typed_fee = fee
-            .into_ciphertext()
-            .ok_or("Invalid fee")?;
-
-        let typed_balance = balance
-            .into_ciphertext()
-            .ok_or("Invalid balance")?;
+        let typed_balance = elgamal::Ciphertext::new(
+            balance.try_into().map_err(|_| "Faild to read balance.")?,
+            randomness.try_into().map_err(|_| "Failed to read randomness.")?,
+            );
 
         Ok(TypedParams {
             zkproof: typed_zkproof,
@@ -375,7 +388,7 @@ impl<T: Trait> Module<T> {
             <EncryptedBalance<T>>::mutate(addr_id, |balance| {
                 let new_balance = balance.clone().map_or(
                     pending_transfer,
-                    |_| Some(T::EncryptedBalance::from_ciphertext(&typed_balance.add_no_params(&typed_pending_transfer)))
+                    |_| Some(Ciphertext::from_ciphertext(&typed_balance.add_no_params(&typed_pending_transfer)))
                 );
                 *balance = new_balance
             });
@@ -411,7 +424,7 @@ impl<T: Trait> Module<T> {
 
         <EncryptedBalance<T>>::mutate((asset_id, *address), |balance| {
             let new_balance = balance.clone().map(
-                |_| T::EncryptedBalance::from_ciphertext(&typed_balance.sub_no_params(&amount_plus_fee)));
+                |_| Ciphertext::from_ciphertext(&typed_balance.sub_no_params(&amount_plus_fee)));
             *balance = new_balance
         });
     }
@@ -425,8 +438,8 @@ impl<T: Trait> Module<T> {
     ) {
         <PendingTransfer<T>>::mutate((asset_id, *address), |pending_transfer| {
             let new_pending_transfer = pending_transfer.clone().map_or(
-                Some(T::EncryptedBalance::from_ciphertext(&typed_amount)),
-                |_| Some(T::EncryptedBalance::from_ciphertext(&typed_balance.add_no_params(&typed_amount)))
+                Some(Ciphertext::from_ciphertext(&typed_amount)),
+                |_| Some(Ciphertext::from_ciphertext(&typed_balance.add_no_params(&typed_amount)))
             );
             *pending_transfer = new_pending_transfer
         });

@@ -1,16 +1,17 @@
 use crate::PARAMS;
 use zcrypto::elgamal;
 use pairing::bls12_381::Bls12;
+use pairing::io;
 use jubjub::curve::JubjubBls12;
-
 #[cfg(feature = "std")]
 use ::std::{vec::Vec, fmt, write};
 #[cfg(not(feature = "std"))]
 use crate::std::vec::Vec;
-
 use parity_codec::{Encode, Decode};
 #[cfg(feature = "std")]
 use substrate_primitives::hexdisplay::AsBytesRef;
+use crate::{LeftCiphertext, RightCiphertext};
+use core::convert::TryInto;
 
 #[derive(Eq, PartialEq, Clone, Default, Encode, Decode)]
 #[cfg_attr(feature = "std", derive(Debug, Serialize, Deserialize))]
@@ -36,6 +37,15 @@ impl ElgamalCiphertext for Ciphertext {
 impl Ciphertext {
     pub fn from_slice(slice: &[u8]) -> Self {
         Ciphertext(slice.to_vec())
+    }
+
+    pub fn from_left_right(left: LeftCiphertext, right: RightCiphertext) -> Result<Self, io::Error> {
+        let ct = elgamal::Ciphertext::new(
+            left.try_into()?,
+            right.try_into()?
+        );
+
+        Ok(Self::from_ciphertext(&ct))
     }
 }
 

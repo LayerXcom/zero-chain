@@ -183,7 +183,7 @@ impl<T: Trait> Module<T> {
             .ok_or("Invalid address_recipient")?;
 
         // Get encrypted amount_sender with the type
-        let enc_amount_sender = elgamal::Ciphertext::<Bls12>::new(
+        let enc_amount_sender = elgamal::Ciphertext::new(
             amount_sender.try_into().map_err(|_| "Failed to read amount_sender.")?,
             randomness.try_into().map_err(|_| "Failed to read randomness.")?,
             );
