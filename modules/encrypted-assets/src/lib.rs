@@ -501,7 +501,6 @@ mod tests {
     }
 
     type EncryptedAssets = Module<Test>;
-    type System = system::Module<Test>;
 
     fn alice_balance_init() -> (EncKey, Ciphertext) {
         let (alice_seed, enc_key) = get_alice_seed_ek();
@@ -566,6 +565,7 @@ mod tests {
             encrypted_balance: vec![balance_init.clone()],
 			last_rollover: vec![epoch_init],
             transaction_base_fee: 1,
+            _genesis_phantom_data: Default::default()
         }.assimilate_storage(&mut t, &mut c);
         let _ = GenesisConfig::<Test>{
             encrypted_balance: vec![((0, balance_init.0), balance_init.1)],

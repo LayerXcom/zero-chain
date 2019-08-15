@@ -1,21 +1,15 @@
 //! A module for dealing with confidential transfer
 #![cfg_attr(not(feature = "std"), no_std)]
 
-use support::{decl_module, decl_storage, decl_event, StorageValue, StorageMap, dispatch::Result, Parameter};
+use support::{decl_module, decl_storage, decl_event, StorageMap, dispatch::Result, Parameter};
 use rstd::prelude::*;
 use rstd::result;
-use rstd::convert::{TryFrom, TryInto};
-use bellman_verifier::verify_proof;
-use pairing::{
-    bls12_381::{Bls12,Fr},
-    Field,
-};
-use runtime_primitives::traits::{Member, Zero, MaybeSerializeDebug, As};
+use rstd::convert::TryInto;
+use pairing::bls12_381::Bls12;
+use runtime_primitives::traits::{Member, Zero, MaybeSerializeDebug};
 use jubjub::redjubjub::PublicKey;
-use jubjub::curve::{edwards, PrimeOrder};
 use zprimitives::{
-    EncKey, Proof, PreparedVk, ElgamalCiphertext,
-    SigVk, Nonce, GEpoch,
+    EncKey, Proof, ElgamalCiphertext, SigVk, Nonce,
 };
 use parity_codec::Codec;
 use keys::EncryptionKey;
@@ -335,9 +329,10 @@ pub mod tests {
         BuildStorage, traits::{BlakeTwo256, IdentityLookup},
         testing::{Digest, DigestItem, Header}
     };
-    use zprimitives::{Ciphertext, SigVerificationKey};
+    use zprimitives::{Ciphertext, SigVerificationKey, PreparedVk};
     use keys::{ProofGenerationKey, EncryptionKey};
     use jubjub::{curve::{JubjubBls12, FixedGenerators, fs}};
+    use pairing::Field;
     use hex_literal::{hex, hex_impl};
     use std::path::Path;
     use std::fs::File;
@@ -437,10 +432,11 @@ pub mod tests {
             nonce_pool: vec![],
         }.assimilate_storage(&mut t, &mut c);
 
-        let _ = encrypted_balances::GenesisConfig::<Test>{
+        let _ = GenesisConfig::<Test>{
             encrypted_balance: vec![alice_balance_init()],
 			last_rollover: vec![alice_epoch_init()],
             transaction_base_fee: 1,
+            _genesis_phantom_data: Default::default()
         }.assimilate_storage(&mut t, &mut c);
 
         t.into()
