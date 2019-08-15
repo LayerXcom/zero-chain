@@ -20,7 +20,7 @@ use pairing::bls12_381::Bls12;
 use encrypted_balances;
 
 /// The module configuration trait.
-pub trait Trait: system::Trait + encrypted_balances::Trait {
+pub trait Trait: system::Trait + encrypted_balances::Trait + zk_system::Trait {
     /// The overarching event type.
     type Event: From<Event<Self>> + Into<<Self as system::Trait>::Event>;
 
@@ -67,17 +67,17 @@ decl_module! {
             .map_err(|_| "Failed to convert into types.")?;
 
             // Initialize a nonce pool
-            let current_epoch = <encrypted_balances::Module<T>>::get_current_epoch();
-            <encrypted_balances::Module<T>>::init_nonce_pool(current_epoch);
+            let current_epoch = <zk_system::Module<T>>::get_current_epoch();
+            <zk_system::Module<T>>::init_nonce_pool(current_epoch);
 
             // Veridate the provided nonce isn't included in the nonce pool.
-            assert!(!<encrypted_balances::Module<T>>::nonce_pool().contains(&nonce));
+            assert!(!<zk_system::Module<T>>::nonce_pool().contains(&nonce));
 
             // Verify a zk proof
             // 1. Spend authority verification
             // 2. Range proof of issued amount
             // 3. Encryption integrity
-            if !<encrypted_balances::Module<T>>::validate_proof(
+            if !<zk_system::Module<T>>::validate_confidential_proof(
                 &typed.zkproof,
                 &typed.account,
                 &typed.account,
@@ -93,7 +93,7 @@ decl_module! {
             }
 
             // Add a nonce into the nonce pool
-            <encrypted_balances::Module<T>>::nonce_pool().push(nonce);
+            <zk_system::Module<T>>::nonce_pool().push(nonce);
 
             let id = Self::next_asset_id();
             <NextAssetId<T>>::mutate(|id| *id += One::one());
@@ -143,10 +143,10 @@ decl_module! {
                 .map_err(|_| "Invalid ciphertext of recipient balance.")?;
 
             // Veridate the provided nonce isn't included in the nonce pool.
-            assert!(!<encrypted_balances::Module<T>>::nonce_pool().contains(&nonce));
+            assert!(!<zk_system::Module<T>>::nonce_pool().contains(&nonce));
 
             // Verify the zk proof
-            if !<encrypted_balances::Module<T>>::validate_proof(
+            if !<zk_system::Module<T>>::validate_confidential_proof(
                 &typed.zkproof,
                 &typed.address_sender,
                 &typed.address_recipient,
@@ -162,7 +162,7 @@ decl_module! {
             }
 
             // Add a nonce into the nonce pool
-            <encrypted_balances::Module<T>>::nonce_pool().push(nonce);
+            <zk_system::Module<T>>::nonce_pool().push(nonce);
 
             // Subtracting transferred amount and fee from the sender's encrypted balances.
             // This function causes a storage mutation.
@@ -218,15 +218,15 @@ decl_module! {
             .map_err(|_| "Failed to convert into types.")?;
 
             // Initialize a nonce pool
-            let current_epoch = <encrypted_balances::Module<T>>::get_current_epoch();
-            <encrypted_balances::Module<T>>::init_nonce_pool(current_epoch);
+            let current_epoch = <zk_system::Module<T>>::get_current_epoch();
+            <zk_system::Module<T>>::init_nonce_pool(current_epoch);
 
             // Veridate the provided nonce isn't included in the nonce pool.
-            assert!(!<encrypted_balances::Module<T>>::nonce_pool().contains(&nonce));
+            assert!(!<zk_system::Module<T>>::nonce_pool().contains(&nonce));
 
             // Verify the zk proof
             // 1. Spend authority verification
-            if !<encrypted_balances::Module<T>>::validate_proof(
+            if !<zk_system::Module<T>>::validate_confidential_proof(
                 &typed.zkproof,
                 &typed.account,
                 &typed.account,
@@ -242,7 +242,7 @@ decl_module! {
             }
 
             // Add a nonce into the nonce pool
-            <encrypted_balances::Module<T>>::nonce_pool().push(nonce);
+            <zk_system::Module<T>>::nonce_pool().push(nonce);
 
             let balance = <EncryptedBalance<T>>::take((id, owner.clone()))
                 .map_or(Default::default(), |e| e);
@@ -344,7 +344,7 @@ impl<T: Trait> Module<T> {
     // PUBLIC MUTABLES
 
     pub fn rollover(addr: &EncKey, asset_id: T::AssetId) -> result::Result<elgamal::Ciphertext<Bls12>, &'static str> {
-        let current_epoch = <encrypted_balances::Module<T>>::get_current_epoch();
+        let current_epoch = <zk_system::Module<T>>::get_current_epoch();
         let addr_id = (asset_id, *addr);
         let zero = elgamal::Ciphertext::zero();
 
@@ -393,7 +393,7 @@ impl<T: Trait> Module<T> {
         };
 
         // Initialize a nonce pool
-        <encrypted_balances::Module<T>>::init_nonce_pool(current_epoch);
+        <zk_system::Module<T>>::init_nonce_pool(current_epoch);
 
         // return actual typed balance.
         Ok(res_balance)
@@ -493,13 +493,14 @@ mod tests {
         type EncryptedBalance = Ciphertext;
     }
 
+    impl zk_system::Trait for Test { }
+
     impl Trait for Test {
         type Event = ();
         type AssetId = u64;
     }
 
     type EncryptedAssets = Module<Test>;
-    type System = system::Module<Test>;
 
     fn alice_balance_init() -> (EncKey, Ciphertext) {
         let (alice_seed, enc_key) = get_alice_seed_ek();
@@ -554,14 +555,17 @@ mod tests {
         let epoch_init = alice_epoch_init();
 
         let (mut t, mut c) = system::GenesisConfig::<Test>::default().build_storage().unwrap();
+        let _ = zk_system::GenesisConfig::<Test>{
+            last_epoch: 1,
+            epoch_length: 1,
+            verifying_key: get_pvk(),
+            nonce_pool: vec![],
+        }.assimilate_storage(&mut t, &mut c);
         let _ = encrypted_balances::GenesisConfig::<Test>{
             encrypted_balance: vec![balance_init.clone()],
 			last_rollover: vec![epoch_init],
-            last_epoch: 1,
-            epoch_length: 1,
             transaction_base_fee: 1,
-            verifying_key: get_pvk(),
-            nonce_pool: vec![],
+            _genesis_phantom_data: Default::default()
         }.assimilate_storage(&mut t, &mut c);
         let _ = GenesisConfig::<Test>{
             encrypted_balance: vec![((0, balance_init.0), balance_init.1)],

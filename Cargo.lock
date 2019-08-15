@@ -874,6 +874,7 @@ dependencies = [
  "zerochain-primitives 0.1.0",
  "zerochain-proofs 0.1.0",
  "zface 0.1.0",
+ "zk-system 0.1.0",
 ]
 
 [[package]]
@@ -901,6 +902,7 @@ dependencies = [
  "zerochain-primitives 0.1.0",
  "zerochain-proofs 0.1.0",
  "zface 0.1.0",
+ "zk-system 0.1.0",
 ]
 
 [[package]]
@@ -5425,6 +5427,7 @@ dependencies = [
  "zerochain-crypto 0.1.0",
  "zerochain-pairing 0.14.2",
  "zerochain-primitives 0.1.0",
+ "zk-system 0.1.0",
 ]
 
 [[package]]
@@ -5505,6 +5508,27 @@ dependencies = [
  "zerochain-primitives 0.1.0",
  "zerochain-proofs 0.1.0",
  "zerochain-runtime 1.0.0",
+]
+
+[[package]]
+name = "zk-system"
+version = "0.1.0"
+dependencies = [
+ "bellman-verifier 0.1.0",
+ "jubjub 0.1.0",
+ "keys 0.1.0",
+ "parity-codec 3.5.4 (registry+https://github.com/rust-lang/crates.io-index)",
+ "serde 1.0.98 (registry+https://github.com/rust-lang/crates.io-index)",
+ "serde_derive 1.0.98 (registry+https://github.com/rust-lang/crates.io-index)",
+ "sr-io 1.0.0 (git+https://github.com/osuketh/substrate.git?branch=patch-zerochain)",
+ "sr-primitives 1.0.0 (git+https://github.com/osuketh/substrate.git?branch=patch-zerochain)",
+ "sr-std 1.0.0 (git+https://github.com/osuketh/substrate.git?branch=patch-zerochain)",
+ "srml-support 1.0.0 (git+https://github.com/osuketh/substrate.git?branch=patch-zerochain)",
+ "srml-system 1.0.0",
+ "substrate-primitives 1.0.0 (git+https://github.com/osuketh/substrate.git?branch=patch-zerochain)",
+ "zerochain-crypto 0.1.0",
+ "zerochain-pairing 0.14.2",
+ "zerochain-primitives 0.1.0",
 ]
 
 [metadata]

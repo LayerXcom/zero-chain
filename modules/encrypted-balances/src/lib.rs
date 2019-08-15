@@ -1,28 +1,22 @@
 //! A module for dealing with confidential transfer
 #![cfg_attr(not(feature = "std"), no_std)]
 
-use support::{decl_module, decl_storage, decl_event, StorageValue, StorageMap, dispatch::Result, Parameter};
+use support::{decl_module, decl_storage, decl_event, StorageMap, dispatch::Result, Parameter};
 use rstd::prelude::*;
 use rstd::result;
-use rstd::convert::{TryFrom, TryInto};
-use bellman_verifier::verify_proof;
-use pairing::{
-    bls12_381::{Bls12,Fr},
-    Field,
-};
-use runtime_primitives::traits::{Member, Zero, MaybeSerializeDebug, As};
+use rstd::convert::TryInto;
+use pairing::bls12_381::Bls12;
+use runtime_primitives::traits::{Member, Zero, MaybeSerializeDebug};
 use jubjub::redjubjub::PublicKey;
-use jubjub::curve::{edwards, PrimeOrder};
 use zprimitives::{
-    EncKey, Proof, PreparedVk, ElgamalCiphertext,
-    SigVk, Nonce, GEpoch,
+    EncKey, Proof, ElgamalCiphertext, SigVk, Nonce,
 };
 use parity_codec::Codec;
 use keys::EncryptionKey;
 use zcrypto::elgamal;
 use system::{IsDeadAccount, ensure_signed};
 
-pub trait Trait: system::Trait {
+pub trait Trait: system::Trait + zk_system::Trait {
 	/// The overarching event type.
 	type Event: From<Event<Self>> + Into<<Self as system::Trait>::Event>;
 
@@ -87,10 +81,10 @@ decl_module! {
                 .map_err(|_| "Invalid ciphertext of recipient balance.")?;
 
             // Veridate the provided nonce isn't included in the nonce pool.
-            assert!(!Self::nonce_pool().contains(&nonce));
+            assert!(!<zk_system::Module<T>>::nonce_pool().contains(&nonce));
 
             // Verify the zk proof
-            if !Self::validate_proof(
+            if !<zk_system::Module<T>>::validate_confidential_proof(
                     &typed.zkproof,
                     &typed.address_sender,
                     &typed.address_recipient,
@@ -106,7 +100,7 @@ decl_module! {
             }
 
             // Add a nonce into the nonce pool
-            Self::nonce_pool().push(nonce);
+            <zk_system::Module<T>>::nonce_pool().push(nonce);
 
             // Subtracting transferred amount and fee from the sender's encrypted balances.
             // This function causes a storage mutation.
@@ -145,26 +139,8 @@ decl_storage! {
         /// A last epoch for rollover
         pub LastRollOver get(last_rollover) config() : map EncKey => Option<T::BlockNumber>;
 
-        /// A global last epoch which will be updated in the roll_over function.
-        pub LastEpoch get(last_epoch) config() : T::BlockNumber;
-
-        /// An epoch based generator point
-        pub LastGEpoch get(g_epoch) build(|_| GEpoch::try_new().expect("Should init.")) : GEpoch;
-
-        /// Global epoch length for rollover.
-        /// The longer epoch length is, the longer rollover time is.
-        /// This parameter should be fixed based on trade-off between UX and security in terms of front-running attacks.
-        pub EpochLength get(epoch_length) config() : T::BlockNumber;
-
         /// A fee to be paid for making a transaction; the base.
         pub TransactionBaseFee get(transaction_base_fee) config(): FeeAmount;
-
-        /// A verification key of zk proofs (only readable)
-        pub VerifyingKey get(verifying_key) config(): PreparedVk;
-
-        /// A nonce pool. All nonces are erasured at the time of starting each epochs.
-        // Consider chainging Vec to BtreeMap
-        pub NoncePool get(nonce_pool) config() : Vec<Nonce>;
     }
 }
 
@@ -178,88 +154,6 @@ decl_event! (
 
 impl<T: Trait> Module<T> {
     // PUBLIC IMMUTABLES
-
-    /// Validate zk proofs
-	pub fn validate_proof (
-        zkproof: &bellman_verifier::Proof<Bls12>,
-        address_sender: &EncryptionKey<Bls12>,
-        address_recipient: &EncryptionKey<Bls12>,
-        amount_sender: &elgamal::Ciphertext<Bls12>,
-        amount_recipient: &elgamal::Ciphertext<Bls12>,
-        balance_sender: &elgamal::Ciphertext<Bls12>,
-        rvk: &PublicKey<Bls12>,
-        fee_sender: &elgamal::Ciphertext<Bls12>,
-        nonce: &edwards::Point<Bls12, PrimeOrder>
-    ) -> result::Result<bool, &'static str> {
-        // Construct public input for circuit
-        let mut public_input = [Fr::zero(); 22];
-
-        {
-            let (x, y) = address_sender.0.into_xy();
-            public_input[0] = x;
-            public_input[1] = y;
-        }
-        {
-            let (x, y) = address_recipient.0.into_xy();
-            public_input[2] = x;
-            public_input[3] = y;
-        }
-        {
-            let (x, y) = amount_sender.left.into_xy();
-            public_input[4] = x;
-            public_input[5] = y;
-        }
-        {
-            let (x, y) = amount_recipient.left.into_xy();
-            public_input[6] = x;
-            public_input[7] = y;
-        }
-        {
-            let (x, y) = amount_sender.right.into_xy();
-            public_input[8] = x;
-            public_input[9] = y;
-        }
-        {
-            let (x, y) = fee_sender.left.into_xy();
-            public_input[10] = x;
-            public_input[11] = y;
-        }
-        {
-            let (x, y) = balance_sender.left.into_xy();
-            public_input[12] = x;
-            public_input[13] = y;
-        }
-        {
-            let (x, y) = balance_sender.right.into_xy();
-            public_input[14] = x;
-            public_input[15] = y;
-        }
-        {
-            let (x, y) = rvk.0.into_xy();
-            public_input[16] = x;
-            public_input[17] = y;
-        }
-        {
-            let (x, y) = edwards::Point::<Bls12, PrimeOrder>::try_from(Self::g_epoch())
-                .map_err(|_| "Failed to convert from GEpoch.")?
-                .into_xy();
-
-            public_input[18] = x;
-            public_input[19] = y;
-        }
-        {
-            let (x, y) = nonce.into_xy();
-            public_input[20] = x;
-            public_input[21] = y;
-        }
-
-        let pvk = Self::verifying_key().into_prepared_vk()
-            .ok_or("Invalid verifying key.")?;
-
-        // Verify the provided proof
-        verify_proof(&pvk, &zkproof, &public_input[..])
-            .map_err(|_| "Invalid proof.")
-    }
 
     /// Convert provided parametrs into typed ones.
     pub fn into_types(
@@ -318,12 +212,6 @@ impl<T: Trait> Module<T> {
         })
     }
 
-    /// Get current epoch based on current block height.
-    pub fn get_current_epoch() -> T::BlockNumber {
-        let current_height = <system::Module<T>>::block_number();
-        current_height / Self::epoch_length()
-    }
-
     // PUBLIC MUTABLES
 
     /// Rolling over allows us to send transactions asynchronously and protect from front-running attacks.
@@ -333,7 +221,7 @@ impl<T: Trait> Module<T> {
     /// and the first thing every other method does is to call this method.
     /// More details in Section 3.1: https://crypto.stanford.edu/~buenz/papers/zether.pdf
     pub fn rollover(addr: &EncKey) -> result::Result<elgamal::Ciphertext<Bls12>, &'static str> {
-        let current_epoch = Self::get_current_epoch();
+        let current_epoch = <zk_system::Module<T>>::get_current_epoch();
 
         let last_rollover = match Self::last_rollover(addr) {
             Some(l) => l,
@@ -383,24 +271,10 @@ impl<T: Trait> Module<T> {
         };
 
         // Initialize a nonce pool
-        Self::init_nonce_pool(current_epoch);
+        <zk_system::Module<T>>::init_nonce_pool(current_epoch);
 
         // return actual typed balance.
         Ok(res_balance)
-    }
-
-    /// Initialize global nonce-related storages
-    /// 1. Set last g_epoch to current g_epoch
-    /// 2. Remove all nonces in the pool
-    /// 3. Set last epoch to current epoch
-    pub fn init_nonce_pool(current_epoch: T::BlockNumber) {
-        if Self::last_epoch() < current_epoch {
-            let g_epoch = GEpoch::group_hash(current_epoch.as_() as u32).unwrap();
-
-            <LastGEpoch<T>>::put(g_epoch);
-            <NoncePool<T>>::kill();
-            <LastEpoch<T>>::put(current_epoch);
-        }
     }
 
     // Subtracting transferred amount and fee from encrypted balances.
@@ -455,9 +329,10 @@ pub mod tests {
         BuildStorage, traits::{BlakeTwo256, IdentityLookup},
         testing::{Digest, DigestItem, Header}
     };
-    use zprimitives::{Ciphertext, SigVerificationKey};
+    use zprimitives::{Ciphertext, SigVerificationKey, PreparedVk};
     use keys::{ProofGenerationKey, EncryptionKey};
     use jubjub::{curve::{JubjubBls12, FixedGenerators, fs}};
+    use pairing::Field;
     use hex_literal::{hex, hex_impl};
     use std::path::Path;
     use std::fs::File;
@@ -495,6 +370,8 @@ pub mod tests {
         type Event = ();
         type EncryptedBalance = Ciphertext;
     }
+
+    impl zk_system::Trait for Test { }
 
     type EncryptedBalances = Module<Test>;
 
@@ -547,16 +424,20 @@ pub mod tests {
     }
 
     fn new_test_ext() -> runtime_io::TestExternalities<Blake2Hasher> {
-        let mut t = system::GenesisConfig::<Test>::default().build_storage().unwrap().0;
-        t.extend(GenesisConfig::<Test>{
-            encrypted_balance: vec![alice_balance_init()],
-			last_rollover: vec![alice_epoch_init()],
+        let (mut t, mut c) = system::GenesisConfig::<Test>::default().build_storage().unwrap();
+        let _ = zk_system::GenesisConfig::<Test>{
             last_epoch: 1,
             epoch_length: 1,
-            transaction_base_fee: 1,
             verifying_key: get_pvk(),
             nonce_pool: vec![],
-        }.build_storage().unwrap().0);
+        }.assimilate_storage(&mut t, &mut c);
+
+        let _ = GenesisConfig::<Test>{
+            encrypted_balance: vec![alice_balance_init()],
+			last_rollover: vec![alice_epoch_init()],
+            transaction_base_fee: 1,
+            _genesis_phantom_data: Default::default()
+        }.assimilate_storage(&mut t, &mut c);
 
         t.into()
     }
