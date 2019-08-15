@@ -874,6 +874,7 @@ dependencies = [
  "zerochain-primitives 0.1.0",
  "zerochain-proofs 0.1.0",
  "zface 0.1.0",
+ "zk-system 0.1.0",
 ]
 
 [[package]]
@@ -901,6 +902,7 @@ dependencies = [
  "zerochain-primitives 0.1.0",
  "zerochain-proofs 0.1.0",
  "zface 0.1.0",
+ "zk-system 0.1.0",
 ]
 
 [[package]]
