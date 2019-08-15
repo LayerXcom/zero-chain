@@ -37,6 +37,12 @@ pub trait Trait: system::Trait {
 decl_module! {
     pub struct Module<T: Trait> for enum Call where origin: T::Origin {
 
+        // pub fn anonymous_transfer(
+        //     origin,
+        //     zkproof: Proof,
+        //     enc_keys: Vec<EncKey>,
+
+        // )
     }
 }
 

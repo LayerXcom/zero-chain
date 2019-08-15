@@ -26,6 +26,8 @@ pub mod sig_vk;
 pub mod prepared_vk;
 pub mod nonce;
 pub mod g_epoch;
+pub mod right_ciphertext;
+pub mod left_ciphertext;
 
 pub use self::enc_key::EncKey;
 pub use self::signature::RedjubjubSignature;
