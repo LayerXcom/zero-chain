@@ -50,7 +50,7 @@ decl_module! {
             issuer: EncKey,
             total: LeftCiphertext,
             fee: LeftCiphertext,
-            balance: LeftCiphertext,
+            balance: Ciphertext,
             randomness: RightCiphertext,
             nonce: Nonce
         ) {
@@ -208,7 +208,7 @@ decl_module! {
             id: T::AssetId,
             dummy_amount: LeftCiphertext,
             dummy_fee: LeftCiphertext,
-            dummy_balance: LeftCiphertext,
+            dummy_balance: Ciphertext,
             randomness: RightCiphertext,
             nonce: Nonce
         ) {
@@ -311,7 +311,7 @@ impl<T: Trait> Module<T> {
         total: &LeftCiphertext,
         fee: &LeftCiphertext,
         randomness: &RightCiphertext,
-        balance: &LeftCiphertext,
+        balance: &Ciphertext,
         rvk: &T::AccountId,
     ) -> result::Result<TypedParams, &'static str>
     {
@@ -339,10 +339,9 @@ impl<T: Trait> Module<T> {
             .into_verification_key()
             .ok_or("Invalid rvk")?;
 
-        let typed_balance = elgamal::Ciphertext::new(
-            balance.try_into().map_err(|_| "Faild to read balance.")?,
-            randomness.try_into().map_err(|_| "Failed to read randomness.")?,
-            );
+        let typed_balance = balance
+            .into_ciphertext()
+            .ok_or("Invalid balance")?;
 
         Ok(TypedParams {
             zkproof: typed_zkproof,
