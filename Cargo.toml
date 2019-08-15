@@ -129,6 +129,7 @@ members = [
     "modules/encrypted-balances",
     "modules/encrypted-assets",
     "modules/anonymous-balances",
+    "modules/zk-system",
 ]
 exclude = [
     "runtime/wasm",
