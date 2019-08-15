@@ -124,8 +124,6 @@ pub fn address(seed: &[u8]) -> Result<Vec<u8>> {
 pub fn g_epoch(api: &Api) -> Result<edwards::Point<Bls12, PrimeOrder>> {
     let current_height_str = api.get_latest_height()?;
     let epoch_length_str = api.get_storage("ZkSystem", "EpochLength", None)?;
-println!("height {:?}", current_height_str);
-println!("epoch_length_str {:?}", epoch_length_str);
     let current_epoch = hexstr_to_u64(current_height_str) / hexstr_to_u64(epoch_length_str);
     let g_epoch = GEpoch::group_hash(current_epoch as u32)?; // TODO
 
