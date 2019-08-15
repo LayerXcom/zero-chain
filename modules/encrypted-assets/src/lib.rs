@@ -554,14 +554,16 @@ mod tests {
         let epoch_init = alice_epoch_init();
 
         let (mut t, mut c) = system::GenesisConfig::<Test>::default().build_storage().unwrap();
+        let _ = zk_system::GenesisConfig::<Test>{
+            last_epoch: 1,
+            epoch_length: 1,
+            verifying_key: get_pvk(),
+            nonce_pool: vec![],
+        }.assimilate_storage(&mut t, &mut c);
         let _ = encrypted_balances::GenesisConfig::<Test>{
             encrypted_balance: vec![balance_init.clone()],
 			last_rollover: vec![epoch_init],
-            last_epoch: 1,
-            epoch_length: 1,
             transaction_base_fee: 1,
-            verifying_key: get_pvk(),
-            nonce_pool: vec![],
         }.assimilate_storage(&mut t, &mut c);
         let _ = GenesisConfig::<Test>{
             encrypted_balance: vec![((0, balance_init.0), balance_init.1)],

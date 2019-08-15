@@ -204,6 +204,8 @@ impl encrypted_assets::Trait for Runtime {
 	type AssetId = u32;
 }
 
+impl zk_system::Trait for Runtime { }
+
 construct_runtime!(
 	pub enum Runtime with Log(InternalLog: DigestItem<Hash, AuthorityId, AuthoritySignature>) where
 		Block = Block,
@@ -212,6 +214,7 @@ construct_runtime!(
 	{
 		EncryptedBalances: encrypted_balances::{Module, Call, Storage, Event<T>, Config<T>},
 		EncryptedAssets: encrypted_assets::{Module, Call, Storage, Event<T>, Config<T>},
+		ZkSystem: zk_system::{Module, Call, Storage, Config<T>},
 		System: system::{default, Log(ChangesTrieRoot)},
 		Timestamp: timestamp::{Module, Call, Storage, Config<T>, Inherent},
 		Consensus: consensus::{Module, Call, Storage, Config<T>, Log(AuthoritiesChange), Inherent},

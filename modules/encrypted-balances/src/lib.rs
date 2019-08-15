@@ -427,16 +427,19 @@ pub mod tests {
     }
 
     fn new_test_ext() -> runtime_io::TestExternalities<Blake2Hasher> {
-        let mut t = system::GenesisConfig::<Test>::default().build_storage().unwrap().0;
-        t.extend(GenesisConfig::<Test>{
-            encrypted_balance: vec![alice_balance_init()],
-			last_rollover: vec![alice_epoch_init()],
+        let (mut t, mut c) = system::GenesisConfig::<Test>::default().build_storage().unwrap();
+        let _ = zk_system::GenesisConfig::<Test>{
             last_epoch: 1,
             epoch_length: 1,
-            transaction_base_fee: 1,
             verifying_key: get_pvk(),
             nonce_pool: vec![],
-        }.build_storage().unwrap().0);
+        }.assimilate_storage(&mut t, &mut c);
+
+        let _ = encrypted_balances::GenesisConfig::<Test>{
+            encrypted_balance: vec![alice_balance_init()],
+			last_rollover: vec![alice_epoch_init()],
+            transaction_base_fee: 1,
+        }.assimilate_storage(&mut t, &mut c);
 
         t.into()
     }

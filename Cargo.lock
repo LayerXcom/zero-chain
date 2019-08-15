@@ -5427,6 +5427,7 @@ dependencies = [
  "zerochain-crypto 0.1.0",
  "zerochain-pairing 0.14.2",
  "zerochain-primitives 0.1.0",
+ "zk-system 0.1.0",
 ]
 
 [[package]]
