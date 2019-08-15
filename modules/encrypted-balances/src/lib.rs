@@ -1,17 +1,16 @@
 //! A module for dealing with confidential transfer
 #![cfg_attr(not(feature = "std"), no_std)]
 
-use support::{decl_module, decl_storage, decl_event, StorageMap, dispatch::Result, Parameter};
+use support::{decl_module, decl_storage, decl_event, StorageMap, dispatch::Result};
 use rstd::prelude::*;
 use rstd::result;
 use rstd::convert::TryInto;
 use pairing::bls12_381::Bls12;
-use runtime_primitives::traits::{Member, Zero, MaybeSerializeDebug};
+use runtime_primitives::traits::Zero;
 use jubjub::redjubjub::PublicKey;
 use zprimitives::{
     EncKey, Proof, ElgamalCiphertext, SigVk, Nonce, RightCiphertext, LeftCiphertext, Ciphertext,
 };
-use parity_codec::Codec;
 use keys::EncryptionKey;
 use zcrypto::elgamal;
 use system::{IsDeadAccount, ensure_signed};
@@ -370,7 +369,6 @@ pub mod tests {
 
     impl Trait for Test {
         type Event = ();
-        type EncryptedBalance = Ciphertext;
     }
 
     impl zk_system::Trait for Test { }
@@ -500,9 +498,10 @@ pub mod tests {
                 Proof::from_slice(&tx.proof[..]),
                 EncKey::from_slice(&tx.enc_key_sender[..]),
                 EncKey::from_slice(&tx.enc_key_recipient[..]),
-                Ciphertext::from_slice(&tx.enc_amount_sender[..]),
-                Ciphertext::from_slice(&tx.enc_amount_recipient[..]),
-                Ciphertext::from_slice(&tx.enc_fee[..]),
+                LeftCiphertext::from_slice(&tx.left_amount_sender[..]),
+                LeftCiphertext::from_slice(&tx.left_amount_recipient[..]),
+                LeftCiphertext::from_slice(&tx.left_fee[..]),
+                RightCiphertext::from_slice(&tx.right_randomness[..]),
                 Nonce::from_slice(&tx.nonce[..])
             ));
         })
@@ -512,13 +511,14 @@ pub mod tests {
     fn test_call_function() {
         with_externalities(&mut new_test_ext(), || {
             // Needed to be updated manually once snark paramters are pre-processed.
-            let proof: [u8; 192] = hex!("884522462f65dd2e99a38f1d836d065a452f16cfe08b45cd22d272a622c3ab954180a3fa8bf08053058062ad2ced8e3cae1a7a331dab872730261b0c86dba8fdb1bddab2c157450a39bd7362f57ff4018e24024441d48932e4a6a2a2b21a3db2027ce48f611651a394c8ee4f0a822705daa68048ef909b9b4860c9fe94c59cdfaed7ad3ee6c8c9e24340f35cd3d2376a8d98e54c755de29d05e87a0478908dcd697c8a9f78e0b6fa868b35ae618d138e55df4ec04e0a56fdb92eac927ca71d54");
+            let proof: [u8; 192] = hex!("b8a16f1610fccca19fc5264d337aa699473e2786e8fa47c3b63e7417885d2ad52f9a3d0999e09d25ef49164dd46f23f7b5cbfb28f0924d60fc29e855609a4d2400f9a2945de73d42d4c15e8e1eef7b81283144b947c20df217efd9aec230571307d92007b6dbfe3656ddae3fdd49cda3f5e31493085ea00ef845329e893efaaa8734f91adc38a8324e5dd52143b954ac93129a629592e681dea7399e48543594a3e94f7ea9dbaa88ed62dcd7b56d0916a396daa9ee2756dae581066ed9074521");
             let pkd_addr_alice: [u8; 32] = hex!("fd0c0c0183770c99559bf64df4fe23f77ced9b8b4d02826a282bcd125117dcc2");
             let pkd_addr_bob: [u8; 32] = hex!("45e66da531088b55dcb3b273ca825454d79d2d1d5c4fa2ba4a12c1fa1ccd6389");
-            let enc10_by_alice: [u8; 64] = hex!("1cddb561acaccaecb08c8ac6e2e8f5ce5538eb3fab99aa4795286534faf7e381942d999c2e7ffd124a09e78c6ec5b97219f7b06903aff6e121fe4b0cc97ccc6b");
-            let enc10_by_bob: [u8; 64] = hex!("614e76c8f3795c38bfcbf8e5b9531aaa3d1f7f419d0066f218f10ae5a27e8b1b942d999c2e7ffd124a09e78c6ec5b97219f7b06903aff6e121fe4b0cc97ccc6b");
-            let enc1_by_alice: [u8; 64] = hex!("0e282adf4d7c0dabd034a6e93479c314941d1ac3f52434d651b9dc64404abcbc942d999c2e7ffd124a09e78c6ec5b97219f7b06903aff6e121fe4b0cc97ccc6b");
-            let rvk: [u8; 32] = hex!("f539db3c0075f6394ff8698c95ca47921669c77bb2b23b366f42a39b05a88c96");
+            let enc10_by_alice: [u8; 32] = hex!("7a161216ec4a4102a09c81c69a09641c4fbd5e5907307dd59550eb1a636a2dcb");
+            let enc10_by_bob: [u8; 32] = hex!("4b45499ed39b8e26fc3b41a6d2c0a0fd63a596844d9dc9312dd7f86d0499ae14");
+            let enc1_by_alice: [u8; 32] = hex!("01570bd52d375bb97984bd92ffd3f18685d022f11f4e9b85ff815940f37ad637");
+            let randomness: [u8; 32] = hex!("5f5261b09d5faf1775052226d539a18045592ccf711c0292e104a4ea5bd5c4eb");
+            let rvk: [u8; 32] = hex!("fa8e6fbf6d2116ef083670d6859da118c662b97c4fabe6eacf7c6dc0b2953346");
             let nonce: [u8; 32] = hex!("c3427a3e3e9f19ff730d45c7c7daa1ee3c96b10a86085d11647fe27d923d654e");
 
             assert_ok!(EncryptedBalances::confidential_transfer(
@@ -526,9 +526,10 @@ pub mod tests {
                 Proof::from_slice(&proof[..]),
                 EncKey::from_slice(&pkd_addr_alice),
                 EncKey::from_slice(&pkd_addr_bob),
-                Ciphertext::from_slice(&enc10_by_alice[..]),
-                Ciphertext::from_slice(&enc10_by_bob[..]),
-                Ciphertext::from_slice(&enc1_by_alice[..]),
+                LeftCiphertext::from_slice(&enc10_by_alice[..]),
+                LeftCiphertext::from_slice(&enc10_by_bob[..]),
+                LeftCiphertext::from_slice(&enc1_by_alice[..]),
+                RightCiphertext::from_slice(&randomness[..]),
                 Nonce::from_slice(&nonce[..])
             ));
         })
@@ -538,13 +539,14 @@ pub mod tests {
     #[should_panic]
     fn test_call_with_worng_proof() {
         with_externalities(&mut new_test_ext(), || {
-            let proof: [u8; 192] = hex!("b127994f62fefa882271cbe9fd1fffd16bcf3ebb3cd219c04be4333118f33115e4c70e8d199e43e956b8761e1e69bff48ff156d14e7d083a09e341da114b05a5c2eff9bd6aa9881c7ca282fbb554245d2e65360fa72f1de6b538b79a672cdf86072eeb911b1dadbfef2091629cf9ee76cf80ff7ec085258b102caa62f5a2a00b48dce27c91d59c2cdfa23b456c0f616ea1e9061b5e91ec080f1c3c66cf2e13ecca7b7e1530addd2977a123d6ebbea11e9f8c3b1989fc830a309254e663315dcb");
+            let proof: [u8; 192] = hex!("c8a16f1610fccca19fc5264d337aa699473e2786e8fa47c3b63e7417885d2ad52f9a3d0999e09d25ef49164dd46f23f7b5cbfb28f0924d60fc29e855609a4d2400f9a2945de73d42d4c15e8e1eef7b81283144b947c20df217efd9aec230571307d92007b6dbfe3656ddae3fdd49cda3f5e31493085ea00ef845329e893efaaa8734f91adc38a8324e5dd52143b954ac93129a629592e681dea7399e48543594a3e94f7ea9dbaa88ed62dcd7b56d0916a396daa9ee2756dae581066ed9074521");
             let pkd_addr_alice: [u8; 32] = hex!("fd0c0c0183770c99559bf64df4fe23f77ced9b8b4d02826a282bcd125117dcc2");
             let pkd_addr_bob: [u8; 32] = hex!("45e66da531088b55dcb3b273ca825454d79d2d1d5c4fa2ba4a12c1fa1ccd6389");
-            let enc10_by_alice: [u8; 64] = hex!("29f38e21e264fb8fa61edc76f79ca2889228d36e40b63f3697102010404ae1d0b8b965029e45bd78aabe14c66458dd03f138aa8b58490974f23aabb53d9bce99");
-            let enc10_by_bob: [u8; 64] = hex!("4c6bda3db6977c29a115fbc5aba03b9c37b767c09ffe6c622fcec42bbb732fc7b8b965029e45bd78aabe14c66458dd03f138aa8b58490974f23aabb53d9bce99");
-            let enc1_by_alice: [u8; 64] = hex!("ed19f1820c3f09da976f727e8531aa83a483d262e4abb1e9e67a1eba843b4034b8b965029e45bd78aabe14c66458dd03f138aa8b58490974f23aabb53d9bce99");
-            let rvk: [u8; 32] = hex!("f539db3c0075f6394ff8698c95ca47921669c77bb2b23b366f42a39b05a88c96");
+            let enc10_by_alice: [u8; 32] = hex!("7a161216ec4a4102a09c81c69a09641c4fbd5e5907307dd59550eb1a636a2dcb");
+            let enc10_by_bob: [u8; 32] = hex!("4b45499ed39b8e26fc3b41a6d2c0a0fd63a596844d9dc9312dd7f86d0499ae14");
+            let enc1_by_alice: [u8; 32] = hex!("01570bd52d375bb97984bd92ffd3f18685d022f11f4e9b85ff815940f37ad637");
+            let randomness: [u8; 32] = hex!("5f5261b09d5faf1775052226d539a18045592ccf711c0292e104a4ea5bd5c4eb");
+            let rvk: [u8; 32] = hex!("fa8e6fbf6d2116ef083670d6859da118c662b97c4fabe6eacf7c6dc0b2953346");
             let nonce: [u8; 32] = hex!("c3427a3e3e9f19ff730d45c7c7daa1ee3c96b10a86085d11647fe27d923d654e");
 
             assert_ok!(EncryptedBalances::confidential_transfer(
@@ -552,9 +554,10 @@ pub mod tests {
                 Proof::from_slice(&proof[..]),
                 EncKey::from_slice(&pkd_addr_alice),
                 EncKey::from_slice(&pkd_addr_bob),
-                Ciphertext::from_slice(&enc10_by_alice[..]),
-                Ciphertext::from_slice(&enc10_by_bob[..]),
-                Ciphertext::from_slice(&enc1_by_alice[..]),
+                LeftCiphertext::from_slice(&enc10_by_alice[..]),
+                LeftCiphertext::from_slice(&enc10_by_bob[..]),
+                LeftCiphertext::from_slice(&enc1_by_alice[..]),
+                RightCiphertext::from_slice(&randomness[..]),
                 Nonce::from_slice(&nonce[..])
             ));
         })

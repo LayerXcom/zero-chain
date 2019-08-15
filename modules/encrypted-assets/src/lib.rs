@@ -502,7 +502,6 @@ mod tests {
 
     impl encrypted_balances::Trait for Test {
         type Event = ();
-        type EncryptedBalance = Ciphertext;
     }
 
     impl zk_system::Trait for Test { }
@@ -633,9 +632,10 @@ mod tests {
                 Origin::signed(SigVerificationKey::from_slice(&tx.rvk[..])),
                 Proof::from_slice(&tx.proof[..]),
                 EncKey::from_slice(&tx.enc_key_recipient[..]),
-                Ciphertext::from_slice(&tx.enc_amount_recipient[..]),
-                Ciphertext::from_slice(&tx.enc_fee[..]),
+                LeftCiphertext::from_slice(&tx.left_amount_recipient[..]),
+                LeftCiphertext::from_slice(&tx.left_fee[..]),
                 Ciphertext::from_slice(&tx.enc_balance[..]),
+                RightCiphertext::from_slice(&tx.right_randomness[..]),
                 Nonce::from_slice(&tx.nonce[..])
             ));
         })
@@ -688,9 +688,10 @@ mod tests {
                 Proof::from_slice(&tx.proof[..]),
                 EncKey::from_slice(&tx.enc_key_sender[..]),
                 EncKey::from_slice(&tx.enc_key_recipient[..]),
-                Ciphertext::from_slice(&tx.enc_amount_sender[..]),
-                Ciphertext::from_slice(&tx.enc_amount_recipient[..]),
-                Ciphertext::from_slice(&tx.enc_fee[..]),
+                LeftCiphertext::from_slice(&tx.left_amount_sender[..]),
+                LeftCiphertext::from_slice(&tx.left_amount_recipient[..]),
+                LeftCiphertext::from_slice(&tx.left_fee[..]),
+                RightCiphertext::from_slice(&tx.right_randomness[..]),
                 Nonce::from_slice(&tx.nonce[..])
             ));
         })
@@ -733,9 +734,10 @@ mod tests {
                 Proof::from_slice(&tx.proof[..]),
                 EncKey::from_slice(&tx.enc_key_recipient[..]),
                 0,
-                Ciphertext::from_slice(&tx.enc_amount_recipient[..]),
-                Ciphertext::from_slice(&tx.enc_fee[..]),
+                LeftCiphertext::from_slice(&tx.left_amount_recipient[..]),
+                LeftCiphertext::from_slice(&tx.left_fee[..]),
                 Ciphertext::from_slice(&tx.enc_balance[..]),
+                RightCiphertext::from_slice(&tx.right_randomness[..]),
                 Nonce::from_slice(&tx.nonce[..])
             ));
 
