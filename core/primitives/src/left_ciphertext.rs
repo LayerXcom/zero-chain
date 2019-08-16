@@ -6,7 +6,7 @@ use substrate_primitives::bytes;
 use substrate_primitives::hexdisplay::AsBytesRef;
 use crate::PARAMS;
 use fixed_hash::construct_fixed_hash;
-use pairing::bls12_381::Bls12;
+use pairing::bls12_381::{Bls12, Fr};
 use jubjub::curve::{edwards, PrimeOrder, Unknown};
 use zcrypto::elgamal;
 use pairing::io;
@@ -91,6 +91,15 @@ impl TryFrom<&LeftCiphertext> for edwards::Point<Bls12, PrimeOrder> {
 impl AsBytesRef for LeftCiphertext {
     fn as_bytes_ref(&self) -> &[u8] {
         self.as_ref()
+    }
+}
+
+impl LeftCiphertext {
+    pub fn into_xy(&self) -> Result<(Fr, Fr), io::Error> {
+        let point = edwards::Point::<Bls12, PrimeOrder>::try_from(self)?
+            .into_xy();
+
+        Ok(point)
     }
 }
 

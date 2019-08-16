@@ -13,7 +13,7 @@ use pairing::{
 use runtime_primitives::traits::As;
 use jubjub::redjubjub::PublicKey;
 use jubjub::curve::{edwards, PrimeOrder};
-use zprimitives::{PreparedVk, Nonce, GEpoch};
+use zprimitives::{PreparedVk, Nonce, GEpoch, Proof, Ciphertext, LeftCiphertext, RightCiphertext};
 use keys::EncryptionKey;
 use zcrypto::elgamal;
 
@@ -52,7 +52,7 @@ impl<T: Trait> Module<T> {
 
     /// Validate zk proofs of confidential transfers
 	pub fn validate_confidential_proof (
-        zkproof: &bellman_verifier::Proof<Bls12>,
+        zkproof: &
         address_sender: &EncryptionKey<Bls12>,
         address_recipient: &EncryptionKey<Bls12>,
         amount_sender: &elgamal::Ciphertext<Bls12>,

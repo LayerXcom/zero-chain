@@ -10,14 +10,13 @@ use rstd::convert::TryInto;
 use runtime_primitives::traits::{SimpleArithmetic, Zero, One};
 use system::ensure_signed;
 use zprimitives::{
-    EncKey, Proof, ElgamalCiphertext,
+    EncKey, Proof,
     SigVk, Nonce, Ciphertext, LeftCiphertext, RightCiphertext,
 };
 use jubjub::redjubjub::PublicKey;
 use keys::EncryptionKey;
 use zcrypto::elgamal;
 use pairing::bls12_381::Bls12;
-use encrypted_balances;
 
 /// The module configuration trait.
 pub trait Trait: system::Trait + encrypted_balances::Trait + zk_system::Trait {

@@ -31,7 +31,7 @@ pub mod left_ciphertext;
 
 pub use self::enc_key::EncKey;
 pub use self::signature::RedjubjubSignature;
-pub use self::ciphertext::{Ciphertext, ElgamalCiphertext};
+pub use self::ciphertext::Ciphertext;
 pub use self::proof::Proof;
 pub use self::sig_vk::{SigVerificationKey, SigVk};
 pub use self::prepared_vk::PreparedVk;

@@ -4,12 +4,12 @@
 use support::{decl_module, decl_storage, decl_event, StorageMap, dispatch::Result};
 use rstd::prelude::*;
 use rstd::result;
-use rstd::convert::TryInto;
+use rstd::convert::{TryInto, TryFrom};
 use pairing::bls12_381::Bls12;
 use runtime_primitives::traits::Zero;
 use jubjub::redjubjub::PublicKey;
 use zprimitives::{
-    EncKey, Proof, ElgamalCiphertext, SigVk, Nonce, RightCiphertext, LeftCiphertext, Ciphertext,
+    EncKey, Proof, SigVk, Nonce, RightCiphertext, LeftCiphertext, Ciphertext,
 };
 use keys::EncryptionKey;
 use zcrypto::elgamal;
@@ -50,6 +50,12 @@ decl_module! {
             nonce: Nonce
         ) -> Result {
 			let rvk = ensure_signed(origin)?;
+
+            let amount_sender = Ciphertext::from_left_right(amount_sender, randomness)
+                .map_err(|_| "Faild to generate ciphertext from amount_sender.")?;
+            let amount_recipient = Ciphertext::from_left_right(amount_sender, randomness)
+                .map_err(|_| "Faild to generate ciphertext from amount_sender.")?;
+
 
             // Convert provided parametrs into typed ones.
             let typed = Self::into_types(
@@ -102,7 +108,7 @@ decl_module! {
 
             // Subtracting transferred amount and fee from the sender's encrypted balances.
             // This function causes a storage mutation.
-            Self::sub_enc_balance(&address_sender, &typed_balance_sender, &typed.enc_amount_sender, &typed.enc_fee);
+            Self::sub_enc_balance(&address_sender, &typed.enc_amount_sender, &typed.enc_fee);
 
             // Adding transferred amount to the recipient's pending transfer.
             // This function causes a storage mutation.
@@ -117,7 +123,7 @@ decl_module! {
                     amount_recipient,
                     fee_sender,
                     randomness,
-                    Ciphertext::from_ciphertext(&typed_balance_sender),
+                    typed_balance_sender.try_into().map_err(|_| "Faild to read balance_sender.")?,
                     rvk
                 )
             );
@@ -238,13 +244,13 @@ impl<T: Trait> Module<T> {
 
         // Get balance with the type
         let typed_balance = match Self::encrypted_balance(addr) {
-            Some(b) => b.into_ciphertext().ok_or("Invalid balance ciphertext")?,
+            Some(b) => b.try_into().map_err(|_| "Invalid balance ciphertext")?,
             None => zero.clone(),
         };
 
         // Get balance with the type
         let typed_pending_transfer = match pending_transfer.clone() {
-            Some(b) => b.into_ciphertext().ok_or("Invalid pending_transfer ciphertext")?,
+            Some(b) => b.try_into().map_err(|_| "Invalid pending_transfer ciphertext")?,
             // If pending_transfer is `None`, just return zero value ciphertext.
             None => zero.clone(),
         };
@@ -256,8 +262,11 @@ impl<T: Trait> Module<T> {
             <EncryptedBalance<T>>::mutate(addr, |balance| {
                 let new_balance = balance.clone().map_or(
                     pending_transfer,
-                    |_| Some(Ciphertext::from_ciphertext(&typed_balance.add_no_params(&typed_pending_transfer)))
+                    |_| Ciphertext::try_from(
+                        &typed_balance.add_no_params(&typed_pending_transfer)
+                    ).ok()
                 );
+
                 *balance = new_balance
             });
 
@@ -269,7 +278,7 @@ impl<T: Trait> Module<T> {
         }
 
         let res_balance = match Self::encrypted_balance(addr) {
-            Some(b) => b.into_ciphertext().ok_or("Invalid balance ciphertext")?,
+            Some(b) => b.try_into().map_err(|_| "Invalid balance ciphertext")?,
             None => zero.clone(),
         };
 
@@ -283,29 +292,32 @@ impl<T: Trait> Module<T> {
     // Subtracting transferred amount and fee from encrypted balances.
     pub fn sub_enc_balance(
         address: &EncKey,
-        typed_balance: &elgamal::Ciphertext<Bls12>,
-        typed_amount: &elgamal::Ciphertext<Bls12>,
-        typed_fee: &elgamal::Ciphertext<Bls12>
-    ) {
-        let amount_plus_fee = typed_amount.add_no_params(&typed_fee);
+        amount: &Ciphertext,
+        fee: &Ciphertext
+    ) -> result::Result<(), &'static str> {
+        let amount_plus_fee = amount.add(&fee).map_err(|_| "Failed to add fee to amount")?;
 
         <EncryptedBalance<T>>::mutate(address, |balance| {
             let new_balance = balance.clone().map(
-                |_| Ciphertext::from_ciphertext(&typed_balance.sub_no_params(&amount_plus_fee)));
+                |b| b.sub(&amount_plus_fee).unwrap()
+                    // .map_err(|_| "Faild to subtract amount_plus_fee from balance.")
+            );
             *balance = new_balance
         });
+
+        Ok(())
     }
 
     /// Adding transferred amount to pending transfer.
     pub fn add_pending_transfer(
         address: &EncKey,
-        typed_balance: &elgamal::Ciphertext<Bls12>,
-        typed_amount: &elgamal::Ciphertext<Bls12>
+        balance: &Ciphertext,
+        amount: &Ciphertext
     ) {
         <PendingTransfer<T>>::mutate(address, |pending_transfer| {
             let new_pending_transfer = pending_transfer.clone().map_or(
-                Some(Ciphertext::from_ciphertext(&typed_amount)),
-                |_| Some(Ciphertext::from_ciphertext(&typed_balance.add_no_params(&typed_amount)))
+                Some(Ciphertext::try_from(amount)),
+                |_| Some(Ciphertext::try_from(&balance.add_no_params(amount)))
             );
             *pending_transfer = new_pending_transfer
         });
