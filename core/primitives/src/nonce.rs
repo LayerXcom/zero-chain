@@ -6,7 +6,7 @@ use substrate_primitives::bytes;
 use substrate_primitives::hexdisplay::AsBytesRef;
 use crate::PARAMS;
 use fixed_hash::construct_fixed_hash;
-use pairing::bls12_381::Bls12;
+use pairing::bls12_381::{Bls12, Fr};
 use jubjub::curve::{edwards, PrimeOrder, Unknown};
 use pairing::io;
 use parity_codec::{Encode, Decode, Input};
@@ -74,10 +74,31 @@ impl TryFrom<Nonce> for edwards::Point<Bls12, PrimeOrder> {
     }
 }
 
+impl TryFrom<&Nonce> for edwards::Point<Bls12, PrimeOrder> {
+    type Error = io::Error;
+
+    fn try_from(nonce: &Nonce) -> Result<Self, io::Error> {
+        let mut bytes = nonce.as_bytes();
+
+        edwards::Point::<Bls12, Unknown>::read(&mut bytes, &PARAMS)?
+            .as_prime_order(&PARAMS)
+            .ok_or(io::Error::NotInField)
+    }
+}
+
 #[cfg(feature = "std")]
 impl AsBytesRef for Nonce {
     fn as_bytes_ref(&self) -> &[u8] {
         self.as_ref()
+    }
+}
+
+impl Nonce {
+    pub fn into_xy(&self) -> Result<(Fr, Fr), io::Error> {
+        let point = edwards::Point::<Bls12, PrimeOrder>::try_from(self)?
+            .into_xy();
+
+        Ok(point)
     }
 }
 

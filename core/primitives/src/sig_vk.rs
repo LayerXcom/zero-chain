@@ -5,9 +5,12 @@ use substrate_primitives::bytes;
 #[cfg(feature = "std")]
 use substrate_primitives::hexdisplay::AsBytesRef;
 use fixed_hash::construct_fixed_hash;
+use parity_codec::{Encode, Decode, Input};
 use jubjub::redjubjub;
-use pairing::bls12_381::Bls12;
-use pairing::io;
+use pairing::{
+    bls12_381::{Bls12, Fr},
+    io
+};
 use crate::PARAMS;
 use core::convert::TryFrom;
 
@@ -19,7 +22,8 @@ construct_fixed_hash! {
 
 pub type SigVerificationKey = H256;
 
-use parity_codec::{Encode, Decode, Input};
+pub trait SigVk { }
+impl SigVk for SigVerificationKey { }
 
 #[cfg(feature = "std")]
 impl Serialize for SigVerificationKey {
@@ -83,6 +87,18 @@ impl TryFrom<&SigVerificationKey> for redjubjub::PublicKey<Bls12> {
 impl AsBytesRef for SigVerificationKey {
     fn as_bytes_ref(&self) -> &[u8] {
         self.as_ref()
+    }
+}
+
+impl SigVerificationKey {
+    pub fn into_xy(&self) -> Result<(Fr, Fr), io::Error> {
+        let point = redjubjub::PublicKey::<Bls12>::try_from(self)?
+            .0
+            .as_prime_order(&*PARAMS) // TODO: Consider cofactor
+            .ok_or(io::Error::NotInField)?
+            .into_xy();
+
+        Ok(point)
     }
 }
 

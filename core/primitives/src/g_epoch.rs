@@ -6,8 +6,10 @@ use crate::PARAMS;
 use fixed_hash::construct_fixed_hash;
 use jubjub::curve::{JubjubBls12, edwards, PrimeOrder, Unknown};
 use jubjub::group_hash::group_hash;
-use pairing::bls12_381::Bls12;
-use pairing::io;
+use pairing::{
+    bls12_381::{Bls12, Fr},
+    io
+};
 use parity_codec::{Encode, Decode, Input};
 use byteorder::{ByteOrder, LittleEndian};
 use core::convert::TryFrom;
@@ -75,6 +77,18 @@ impl TryFrom<GEpoch> for edwards::Point<Bls12, PrimeOrder> {
     }
 }
 
+impl TryFrom<&GEpoch> for edwards::Point<Bls12, PrimeOrder> {
+    type Error = io::Error;
+
+    fn try_from(g_epoch: &GEpoch) -> Result<Self, io::Error> {
+        let mut bytes = g_epoch.as_bytes();
+
+        edwards::Point::<Bls12, Unknown>::read(&mut bytes, &PARAMS)?
+            .as_prime_order(&PARAMS)
+            .ok_or(io::Error::NotInField)
+    }
+}
+
 impl GEpoch {
     pub fn try_new() -> Result<Self, io::Error> {
         let mut new_epoch = [0u8; 4];
@@ -92,6 +106,13 @@ impl GEpoch {
         // Hash_to_curve(GEPOCH_PERSONALIZATION || current_epoch)
         let g_epoch = find_group_hash(&epoch, GEPOCH_PERSONALIZATION, &PARAMS);
         GEpoch::try_from(g_epoch)
+    }
+
+    pub fn into_xy(&self) -> Result<(Fr, Fr), io::Error> {
+        let point = edwards::Point::<Bls12, PrimeOrder>::try_from(self)?
+            .into_xy();
+
+        Ok(point)
     }
 }
 

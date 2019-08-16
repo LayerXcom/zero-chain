@@ -1,15 +1,17 @@
-use crate::PARAMS;
-use zcrypto::elgamal;
-use pairing::bls12_381::Bls12;
-use pairing::io;
 #[cfg(feature = "std")]
 use ::std::{vec::Vec, fmt, write};
-#[cfg(not(feature = "std"))]
-use crate::std::vec::Vec;
-use parity_codec::{Encode, Decode};
 #[cfg(feature = "std")]
 use substrate_primitives::hexdisplay::AsBytesRef;
+#[cfg(not(feature = "std"))]
+use crate::std::vec::Vec;
+use crate::PARAMS;
 use crate::{LeftCiphertext, RightCiphertext};
+use zcrypto::elgamal;
+use pairing::{
+    bls12_381::{Bls12, Fr},
+    io
+};
+use parity_codec::{Encode, Decode};
 use core::convert::{TryInto, TryFrom};
 
 #[derive(Eq, PartialEq, Clone, Default, Encode, Decode)]
@@ -96,6 +98,22 @@ impl fmt::Display for Ciphertext {
 impl AsBytesRef for Ciphertext {
     fn as_bytes_ref(&self) -> &[u8] {
         self.0.as_slice()
+    }
+}
+
+impl Ciphertext {
+    pub fn into_xy_left(&self) -> Result<(Fr, Fr), io::Error> {
+        let left_point = elgamal::Ciphertext::<Bls12>::try_from(self)?
+            .left.into_xy();
+
+        Ok(left_point)
+    }
+
+    pub fn into_xy_right(&self) -> Result<(Fr, Fr), io::Error> {
+        let right_point = elgamal::Ciphertext::<Bls12>::try_from(self)?
+            .right.into_xy();
+
+        Ok(right_point)
     }
 }
 
