@@ -11,7 +11,10 @@ use pairing::{
     Field,
 };
 use runtime_primitives::traits::As;
-use zprimitives::{PreparedVk, Nonce, GEpoch, Proof, Ciphertext, LeftCiphertext, RightCiphertext, EncKey, SigVerificationKey};
+use zprimitives::{
+    PreparedVk, Nonce, GEpoch, Proof, Ciphertext,
+    LeftCiphertext, RightCiphertext, EncKey, SigVerificationKey, SigVk
+};
 
 pub trait Trait: system::Trait {
 	// The overarching event type.
@@ -53,7 +56,7 @@ impl<T: Trait> Module<T> {
         amount_sender: &LeftCiphertext,
         amount_recipient: &LeftCiphertext,
         balance_sender: &Ciphertext,
-        rvk: &SigVerificationKey,
+        rvk: &T::AccountId,
         fee_sender: &LeftCiphertext,
         randomness: &RightCiphertext,
         nonce: &Nonce

@@ -115,6 +115,12 @@ impl Ciphertext {
 
         Ok(right_point)
     }
+
+    // TODO: Make constant
+    pub fn zero() ->Self {
+        elgamal::Ciphertext::zero().try_into()
+            .expect("Should valid point.")
+    }
 }
 
 #[cfg(test)]
