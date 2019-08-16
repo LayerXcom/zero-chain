@@ -128,4 +128,20 @@ mod tests {
 
         assert_eq!(ciphertext_a, ciphertext_b);
     }
+
+    #[test]
+    fn test_from_left_right() {
+        let ciphertext = gen_ciphertext();
+
+        let mut buf = [0u8; 64];
+        ciphertext.write(&mut &mut buf[..]).unwrap();
+
+        let left = LeftCiphertext::from_slice(&buf[..32]);
+        let right = RightCiphertext::from_slice(&buf[32..]);
+
+        let ciphertext_from = Ciphertext::from_left_right(left, right).unwrap();
+        let ciphertext2 = ciphertext_from.into_ciphertext().unwrap();
+
+        assert!(ciphertext == ciphertext2);
+    }
 }

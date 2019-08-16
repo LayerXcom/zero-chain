@@ -195,7 +195,7 @@ impl<T: Trait> Module<T> {
 
         // Get encrypted fee with the type
         let enc_fee = elgamal::Ciphertext::new(
-            amount_recipient.try_into().map_err(|_| "Failed to read enc_fee.")?,
+            fee_sender.try_into().map_err(|_| "Failed to read enc_fee.")?,
             randomness.try_into().map_err(|_| "Failed to read randomness.")?,
             );
 
@@ -476,6 +476,7 @@ pub mod tests {
                 &*PARAMS
             );
 
+            // G_epoch of block height one.
             let g_epoch_vec: [u8; 32] = hex!("0953f47325251a2f479c25527df6d977925bebafde84423b20ae6c903411665a");
             let g_epoch = tedwards::Point::read(&g_epoch_vec[..], &*PARAMS).unwrap().as_prime_order(&*PARAMS).unwrap();
 
