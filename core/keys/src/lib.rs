@@ -292,6 +292,10 @@ impl<E: JubjubEngine> EncryptionKey<E> {
 
         Ok(res)
     }
+
+    pub fn into_xy(&self) -> (E::Fr, E::Fr) {
+        self.0.into_xy()
+    }
 }
 
 #[cfg(test)]

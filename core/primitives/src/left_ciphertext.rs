@@ -7,9 +7,9 @@ use substrate_primitives::hexdisplay::AsBytesRef;
 use crate::PARAMS;
 use fixed_hash::construct_fixed_hash;
 use pairing::bls12_381::{Bls12, Fr};
+use pairing::io;
 use jubjub::curve::{edwards, PrimeOrder, Unknown};
 use zcrypto::elgamal;
-use pairing::io;
 use parity_codec::{Encode, Decode, Input};
 use core::convert::TryFrom;
 

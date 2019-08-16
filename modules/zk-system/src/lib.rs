@@ -13,7 +13,7 @@ use pairing::{
 use runtime_primitives::traits::As;
 use jubjub::redjubjub::PublicKey;
 use jubjub::curve::{edwards, PrimeOrder};
-use zprimitives::{PreparedVk, Nonce, GEpoch, Proof, Ciphertext, LeftCiphertext, RightCiphertext};
+use zprimitives::{PreparedVk, Nonce, GEpoch, Proof, Ciphertext, LeftCiphertext, RightCiphertext, EncKey};
 use keys::EncryptionKey;
 use zcrypto::elgamal;
 

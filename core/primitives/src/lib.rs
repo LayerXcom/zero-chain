@@ -33,7 +33,7 @@ pub use self::enc_key::EncKey;
 pub use self::signature::RedjubjubSignature;
 pub use self::ciphertext::Ciphertext;
 pub use self::proof::Proof;
-pub use self::sig_vk::{SigVerificationKey, SigVk};
+pub use self::sig_vk::SigVerificationKey;
 pub use self::prepared_vk::PreparedVk;
 pub use self::nonce::Nonce;
 pub use self::g_epoch::GEpoch;
