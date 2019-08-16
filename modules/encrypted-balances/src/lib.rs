@@ -139,15 +139,8 @@ impl<T: Trait> Module<T> {
         let last_rollover = Self::last_rollover(addr)
             .map_or(T::BlockNumber::zero(), |e| e);
 
-        // Get current pending transfer
-        let pending_transfer = Self::pending_transfer(addr);
-
-        // // Get balance with the type
-        // let enc_balance = Self::encrypted_balance(addr)
-        //     .map_or(zero.clone(), |e| e);
-
         // Get balance with the type
-        let enc_pending_transfer = pending_transfer
+        let enc_pending_transfer = Self::pending_transfer(addr)
             .map_or(Ciphertext::zero(), |e| e);
 
         // Checks if the last roll over was in an older epoch.
@@ -186,7 +179,6 @@ impl<T: Trait> Module<T> {
             .map_err(|_| "Faild to create amount ciphertext.")?;
         let enc_fee = Ciphertext::from_left_right(*fee, *randomness)
             .map_err(|_| "Faild to create fee ciphertext.")?;
-
         let amount_plus_fee = enc_amount.add(&enc_fee)
             .map_err(|_| "Failed to add fee to amount")?;
 
@@ -246,11 +238,13 @@ pub mod tests {
     use zprimitives::{Ciphertext, SigVerificationKey, PreparedVk};
     use keys::{ProofGenerationKey, EncryptionKey};
     use jubjub::{curve::{JubjubBls12, FixedGenerators, fs}};
-    use pairing::Field;
+    use pairing::{Field, bls12_381::Bls12};
+    use zcrypto::elgamal;
     use hex_literal::{hex, hex_impl};
     use std::path::Path;
     use std::fs::File;
     use std::io::{BufReader, Read};
+    use std::convert::TryFrom;
 
     const PK_PATH: &str = "../../zface/tests/proving.dat";
     const VK_PATH: &str = "../../zface/tests/verification.dat";
@@ -308,13 +302,13 @@ pub mod tests {
         let dec_alice_bal = enc_alice_bal.decrypt(&decryption_key, p_g, params).unwrap();
         assert_eq!(dec_alice_bal, alice_amount);
 
-        (EncKey::from_encryption_key(&enc_key), Ciphertext::from_ciphertext(&enc_alice_bal))
+        (EncKey::try_from(enc_key).unwrap(), Ciphertext::try_from(enc_alice_bal).unwrap())
     }
 
     fn alice_epoch_init() -> (EncKey, u64) {
         let (_, enc_key) = get_alice_seed_ek();
 
-        (EncKey::from_encryption_key(&enc_key), 0)
+        (EncKey::try_from(enc_key).unwrap(), 0)
     }
 
     fn get_alice_seed_ek() -> (Vec<u8>, EncryptionKey<Bls12>) {

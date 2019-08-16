@@ -6,17 +6,13 @@
 use support::{decl_module, decl_storage, decl_event, StorageMap, Parameter, StorageValue};
 use rstd::prelude::*;
 use rstd::result;
-use rstd::convert::TryInto;
 use runtime_primitives::traits::{SimpleArithmetic, Zero, One};
 use system::ensure_signed;
 use zprimitives::{
     EncKey, Proof,
-    SigVk, Nonce, Ciphertext, LeftCiphertext, RightCiphertext,
+    Nonce, Ciphertext, LeftCiphertext, RightCiphertext,
 };
-use jubjub::redjubjub::PublicKey;
-use keys::EncryptionKey;
-use zcrypto::elgamal;
-use pairing::bls12_381::Bls12;
+
 
 /// The module configuration trait.
 pub trait Trait: system::Trait + encrypted_balances::Trait + zk_system::Trait {
@@ -25,15 +21,6 @@ pub trait Trait: system::Trait + encrypted_balances::Trait + zk_system::Trait {
 
     /// The arithmetic type of asset identifier.
     type AssetId: Parameter + SimpleArithmetic + Default + Copy;
-}
-
-struct TypedParams {
-    zkproof: bellman_verifier::Proof<Bls12>,
-    account: EncryptionKey<Bls12>,
-    total: elgamal::Ciphertext<Bls12>,
-    rvk: PublicKey<Bls12>,
-    dummy_fee: elgamal::Ciphertext<Bls12>,
-    dummy_balance: elgamal::Ciphertext<Bls12>,
 }
 
 decl_module! {
@@ -55,18 +42,6 @@ decl_module! {
         ) {
             let rvk = ensure_signed(origin)?;
 
-            // Convert provided parametrs into typed ones.
-            let typed = Self::into_types(
-                &zkproof,
-                &issuer,
-                &total,
-                &fee,
-                &randomness,
-                &balance,
-                &rvk,
-            )
-            .map_err(|_| "Failed to convert into types.")?;
-
             // Initialize a nonce pool
             let current_epoch = <zk_system::Module<T>>::get_current_epoch();
             <zk_system::Module<T>>::init_nonce_pool(current_epoch);
@@ -79,15 +54,16 @@ decl_module! {
             // 2. Range proof of issued amount
             // 3. Encryption integrity
             if !<zk_system::Module<T>>::validate_confidential_proof(
-                &typed.zkproof,
-                &typed.account,
-                &typed.account,
-                &typed.total,
-                &typed.total,
-                &typed.dummy_balance,
-                &typed.rvk,
-                &typed.dummy_fee,
-                &nonce.try_into().map_err(|_| "Failed to convert from Nonce.")?
+                &zkproof,
+                &issuer,
+                &issuer,
+                &total,
+                &total,
+                &balance,
+                &rvk,
+                &fee,
+                &randomness,
+                &nonce
             )? {
                 Self::deposit_event(RawEvent::InvalidZkProof());
                 return Err("Invalid zkproof");
@@ -122,46 +98,33 @@ decl_module! {
         ) {
             let rvk = ensure_signed(origin)?;
 
-            let typed = <encrypted_balances::Module<T>>::into_types(
-                &zkproof,
-                &address_sender,
-                &address_recipient,
-                &amount_sender,
-                &amount_recipient,
-                &fee_sender,
-                &rvk,
-                &randomness,
-            )
-            .map_err(|_| "Failed to convert into types.")?;
-
             // Rollover and get sender's balance.
             // This function causes a storage mutation, but it's needed before `verify_proof` function is called.
             // No problem if errors occur after this function because
             // it just rollover user's own `pending trasfer` to `encrypted balances`.
-            let typed_balance_sender = Self::rollover(&address_sender, asset_id)
-                .map_err(|_| "Invalid ciphertext of sender balance.")?;
+            Self::rollover(&address_sender, asset_id);
 
             // Rollover and get recipient's balance
             // This function causes a storage mutation, but it's needed before `verify_proof` function is called.
             // No problem if errors occur after this function because
             // it just rollover user's own `pending trasfer` to `encrypted balances`.
-            let typed_balance_recipient = Self::rollover(&address_recipient, asset_id)
-                .map_err(|_| "Invalid ciphertext of recipient balance.")?;
+            Self::rollover(&address_recipient, asset_id);
 
             // Veridate the provided nonce isn't included in the nonce pool.
             assert!(!<zk_system::Module<T>>::nonce_pool().contains(&nonce));
 
             // Verify the zk proof
             if !<zk_system::Module<T>>::validate_confidential_proof(
-                &typed.zkproof,
-                &typed.address_sender,
-                &typed.address_recipient,
-                &typed.enc_amount_sender,
-                &typed.enc_amount_recipient,
-                &typed_balance_sender,
-                &typed.rvk,
-                &typed.enc_fee,
-                &nonce.try_into().map_err(|_| "Failed to convert from Nonce.")?
+                &zkproof,
+                &address_sender,
+                &address_recipient,
+                &amount_sender,
+                &amount_recipient,
+                &Self::encrypted_balance((asset_id, address_sender)).map_or(Ciphertext::zero(), |e| e),
+                &rvk,
+                &fee_sender,
+                &randomness,
+                &nonce
             )? {
                 Self::deposit_event(RawEvent::InvalidZkProof());
                 return Err("Invalid zkproof");
@@ -175,25 +138,27 @@ decl_module! {
             Self::sub_enc_balance(
                 &address_sender,
                 asset_id,
-                &typed_balance_sender,
-                &typed.enc_amount_sender,
-                &typed.enc_fee
-            );
+                &amount_sender,
+                &fee_sender,
+                &randomness
+            )
+            .map_err(|_| "Faild to subtract amount from sender's balance.")?;
 
             // Adding transferred amount to the recipient's pending transfer.
             // This function causes a storage mutation.
             Self::add_pending_transfer(
                 &address_recipient,
                 asset_id,
-                &typed_balance_recipient,
-                &typed.enc_amount_recipient
-            );
+                &amount_recipient,
+                &randomness
+            )
+            .map_err(|_| "Faild to add amount to recipient's pending_transfer.")?;
 
             Self::deposit_event(
                 RawEvent::ConfidentialAssetTransferred(
                     asset_id, zkproof, address_sender, address_recipient,
                     amount_sender, amount_recipient, fee_sender, randomness,
-                    Ciphertext::from_ciphertext(&typed_balance_sender),
+                    Self::encrypted_balance((asset_id, address_sender)).map_or(Ciphertext::zero(), |e| e),
                     rvk
                 )
             );
@@ -213,18 +178,6 @@ decl_module! {
         ) {
             let rvk = ensure_signed(origin)?;
 
-            // Convert provided parametrs into typed ones.
-            let typed = Self::into_types(
-                &zkproof,
-                &owner,
-                &dummy_amount,
-                &dummy_fee,
-                &randomness,
-                &dummy_balance,
-                &rvk,
-            )
-            .map_err(|_| "Failed to convert into types.")?;
-
             // Initialize a nonce pool
             let current_epoch = <zk_system::Module<T>>::get_current_epoch();
             <zk_system::Module<T>>::init_nonce_pool(current_epoch);
@@ -235,15 +188,16 @@ decl_module! {
             // Verify the zk proof
             // 1. Spend authority verification
             if !<zk_system::Module<T>>::validate_confidential_proof(
-                &typed.zkproof,
-                &typed.account,
-                &typed.account,
-                &typed.total,
-                &typed.total,
-                &typed.dummy_balance,
-                &typed.rvk,
-                &typed.dummy_fee,
-                &nonce.try_into().map_err(|_| "Failed to convert from Nonce.")?
+                &zkproof,
+                &owner,
+                &owner,
+                &dummy_amount,
+                &dummy_amount,
+                &dummy_balance,
+                &rvk,
+                &dummy_fee,
+                &randomness,
+                &nonce
             )? {
                 Self::deposit_event(RawEvent::InvalidZkProof());
                 return Err("Invalid zkproof");
@@ -302,92 +256,36 @@ decl_storage! {
 }
 
 impl<T: Trait> Module<T> {
-    // PRIVATE IMMUTABLES
-
-    fn into_types(
-        zkproof: &Proof,
-        account: &EncKey,
-        total: &LeftCiphertext,
-        fee: &LeftCiphertext,
-        randomness: &RightCiphertext,
-        balance: &Ciphertext,
-        rvk: &T::AccountId,
-    ) -> result::Result<TypedParams, &'static str>
-    {
-        // Get zkproofs with the type
-        let typed_zkproof = zkproof
-            .into_proof()
-            .ok_or("Invalid zkproof")?;
-
-        let typed_account = account
-            .into_encryption_key()
-            .ok_or("Invalid account")?;
-
-        let typed_total = elgamal::Ciphertext::new(
-            total.try_into().map_err(|_| "Faild to read total.")?,
-            randomness.try_into().map_err(|_| "Failed to read randomness.")?,
-            );
-
-
-        let typed_fee = elgamal::Ciphertext::new(
-            fee.try_into().map_err(|_| "Faild to read fee.")?,
-            randomness.try_into().map_err(|_| "Failed to read randomness.")?,
-            );
-
-        let typed_rvk = rvk
-            .into_verification_key()
-            .ok_or("Invalid rvk")?;
-
-        let typed_balance = balance
-            .into_ciphertext()
-            .ok_or("Invalid balance")?;
-
-        Ok(TypedParams {
-            zkproof: typed_zkproof,
-            account: typed_account,
-            total: typed_total,
-            rvk: typed_rvk,
-            dummy_fee: typed_fee,
-            dummy_balance: typed_balance,
-        })
-    }
-
     // PUBLIC MUTABLES
 
-    pub fn rollover(addr: &EncKey, asset_id: T::AssetId) -> result::Result<elgamal::Ciphertext<Bls12>, &'static str> {
+    /// Rolling over allows us to send transactions asynchronously and protect from front-running attacks.
+    /// We rollover an account in an epoch when the first message from this account is received;
+    /// so, one message rolls over only one account.
+    /// To achieve this, we define a separate (internal) method for rolling over,
+    /// and the first thing every other method does is to call this method.
+    /// More details in Section 3.1: https://crypto.stanford.edu/~buenz/papers/zether.pdf
+    pub fn rollover(addr: &EncKey, asset_id: T::AssetId) {
         let current_epoch = <zk_system::Module<T>>::get_current_epoch();
         let addr_id = (asset_id, *addr);
-        let zero = elgamal::Ciphertext::zero();
 
-        let last_rollover = match Self::last_rollover(addr_id) {
-            Some(l) => l,
-            None => T::BlockNumber::zero(),
-        };
+        let last_rollover = Self::last_rollover(addr_id)
+            .map_or(T::BlockNumber::zero(), |e| e);
 
-        let pending_transfer = Self::pending_transfer(addr_id);
-
-        // Get balance with the type
-        let typed_balance = match Self::encrypted_balance(addr_id) {
-            Some(b) => b.into_ciphertext().ok_or("Invalid balance ciphertext")?,
-            None => zero.clone(),
-        };
-
-        // Get balance with the type
-        let typed_pending_transfer = match pending_transfer.clone() {
-            Some(b) => b.into_ciphertext().ok_or("Invalid pending_transfer ciphertext")?,
-            // If pending_transfer is `None`, just return zero value ciphertext.
-            None => zero.clone(),
-        };
+        // Get current pending transfer
+        let enc_pending_transfer = Self::pending_transfer(addr_id)
+            .map_or(Ciphertext::zero(), |e| e);
 
         // Checks if the last roll over was in an older epoch.
         // If so, some storage changes are happend here.
         if last_rollover < current_epoch {
             // transfer balance from pending_transfer to actual balance
             <EncryptedBalance<T>>::mutate(addr_id, |balance| {
-                let new_balance = balance.clone().map_or(
-                    pending_transfer,
-                    |_| Some(Ciphertext::from_ciphertext(&typed_balance.add_no_params(&typed_pending_transfer)))
-                );
+                let new_balance = balance.clone()
+                    .map_or(Some(enc_pending_transfer.clone()), |b| Some(b))
+                    .and_then(|b| {
+                        b.add(&enc_pending_transfer).ok()
+                    });
+
                 *balance = new_balance
             });
 
@@ -398,49 +296,58 @@ impl<T: Trait> Module<T> {
             <LastRollOver<T>>::insert(addr_id, current_epoch);
         }
 
-        let res_balance = match Self::encrypted_balance(addr_id) {
-            Some(b) => b.into_ciphertext().ok_or("Invalid balance ciphertext")?,
-            None => zero.clone(),
-        };
-
         // Initialize a nonce pool
         <zk_system::Module<T>>::init_nonce_pool(current_epoch);
-
-        // return actual typed balance.
-        Ok(res_balance)
     }
 
     // Subtracting transferred amount and fee from encrypted balances.
     pub fn sub_enc_balance(
         address: &EncKey,
         asset_id: T::AssetId,
-        typed_balance: &elgamal::Ciphertext<Bls12>,
-        typed_amount: &elgamal::Ciphertext<Bls12>,
-        typed_fee: &elgamal::Ciphertext<Bls12>
-    ) {
-        let amount_plus_fee = typed_amount.add_no_params(&typed_fee);
+        amount: &LeftCiphertext,
+        fee: &LeftCiphertext,
+        randomness: &RightCiphertext
+    ) -> result::Result<(), &'static str> {
+        let enc_amount = Ciphertext::from_left_right(*amount, *randomness)
+            .map_err(|_| "Faild to create amount ciphertext.")?;
+        let enc_fee = Ciphertext::from_left_right(*fee, *randomness)
+            .map_err(|_| "Faild to create fee ciphertext.")?;
+        let amount_plus_fee = enc_amount.add(&enc_fee)
+            .map_err(|_| "Failed to add fee to amount")?;
 
         <EncryptedBalance<T>>::mutate((asset_id, *address), |balance| {
-            let new_balance = balance.clone().map(
-                |_| Ciphertext::from_ciphertext(&typed_balance.sub_no_params(&amount_plus_fee)));
+            let new_balance = balance.clone()
+                .and_then(
+                |b| b.sub(&amount_plus_fee).ok()
+            );
+
             *balance = new_balance
         });
+
+        Ok(())
     }
 
     /// Adding transferred amount to pending transfer.
     pub fn add_pending_transfer(
         address: &EncKey,
         asset_id: T::AssetId,
-        typed_balance: &elgamal::Ciphertext<Bls12>,
-        typed_amount: &elgamal::Ciphertext<Bls12>
-    ) {
+        amount: &LeftCiphertext,
+        randomness: &RightCiphertext
+    ) -> result::Result<(), &'static str> {
+        let enc_amount = Ciphertext::from_left_right(*amount, *randomness)
+            .map_err(|_| "Faild to create amount ciphertext.")?;
+
         <PendingTransfer<T>>::mutate((asset_id, *address), |pending_transfer| {
-            let new_pending_transfer = pending_transfer.clone().map_or(
-                Some(Ciphertext::from_ciphertext(&typed_amount)),
-                |_| Some(Ciphertext::from_ciphertext(&typed_balance.add_no_params(&typed_amount)))
-            );
+            let new_pending_transfer = pending_transfer.clone()
+                .map_or(Some(enc_amount.clone()), |p| Some(p))
+                .and_then(|p| {
+                    p.add(&enc_amount).ok()
+                });
+
             *pending_transfer = new_pending_transfer
         });
+
+        Ok(())
     }
 
 }
