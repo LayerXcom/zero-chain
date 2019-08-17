@@ -5,6 +5,7 @@ use substrate_primitives::bytes;
 #[cfg(feature = "std")]
 use substrate_primitives::hexdisplay::AsBytesRef;
 use crate::PARAMS;
+use crate::IntoXY;
 use fixed_hash::construct_fixed_hash;
 use pairing::bls12_381::{Bls12, Fr};
 use jubjub::curve::{edwards, PrimeOrder, Unknown};
@@ -93,8 +94,8 @@ impl AsBytesRef for Nonce {
     }
 }
 
-impl Nonce {
-    pub fn into_xy(&self) -> Result<(Fr, Fr), io::Error> {
+impl IntoXY<Bls12> for Nonce {
+    fn into_xy(&self) -> Result<(Fr, Fr), io::Error> {
         let point = edwards::Point::<Bls12, PrimeOrder>::try_from(self)?
             .into_xy();
 

@@ -13,7 +13,7 @@ use pairing::{
 use runtime_primitives::traits::As;
 use zprimitives::{
     PreparedVk, Nonce, GEpoch, Proof, Ciphertext,
-    LeftCiphertext, RightCiphertext, EncKey, SigVerificationKey, SigVk
+    LeftCiphertext, RightCiphertext, EncKey, SigVk, IntoXY,
 };
 
 pub trait Trait: system::Trait {

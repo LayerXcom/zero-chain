@@ -15,8 +15,16 @@ use scrypto::circuit::{
     ecc::{self, EdwardsPoint},
     num::AllocatedNum,
 };
+use scrypto::jubjub::{edwards, PrimeOrder};
 use crate::{elgamal::Ciphertext, Assignment, Nonce};
+use super::range_check::u32_into_bit_vec_le;
 
+
+// Non-decoy-index is defined over 00 to 99 to represent which enc_keys are not decoys.
+// First digit is for sender's index in the list of encryption keys and
+// second one is for recipient's.
+// The range is enough for representing non-decoys-index because
+// the entire set of encryption keys are limited with 10.
 pub struct AnonymousTransfer<'a, E: JubjubEngine> {
     params: &'a E::Params,
     amount: Option<u32>,
@@ -29,7 +37,8 @@ pub struct AnonymousTransfer<'a, E: JubjubEngine> {
     enc_key_decoys: Option<Vec<EncryptionKey<E>>>,
     encrypted_balance: Option<&'a Ciphertext<E>>,
     fee: Option<u32>,
-    nonce: Option<&'a Nonce<E>>,
+    g_epoch: Option<&'a edwards::Point<E, PrimeOrder>>,
+    // non_decoy_index: Option<u32>,
 }
 
 impl<'a, E: JubjubEngine> Circuit<E> for AnonymousTransfer<'a, E> {
@@ -39,6 +48,8 @@ impl<'a, E: JubjubEngine> Circuit<E> for AnonymousTransfer<'a, E> {
     ) -> Result<(), SynthesisError>
     {
         let params = self.params;
+
+
 
         Ok(())
     }

@@ -2,8 +2,10 @@
 #![cfg_attr(not(feature = "std"), no_std)]
 
 use support::{decl_module, decl_storage, decl_event, StorageMap, dispatch::Result};
-use rstd::prelude::*;
-use rstd::result;
+use rstd::{
+    prelude::*,
+    result,
+};
 use runtime_primitives::traits::Zero;
 use zprimitives::{
     EncKey, Proof, Nonce, RightCiphertext, LeftCiphertext, Ciphertext,

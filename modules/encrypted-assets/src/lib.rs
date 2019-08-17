@@ -13,7 +13,6 @@ use zprimitives::{
     Nonce, Ciphertext, LeftCiphertext, RightCiphertext,
 };
 
-
 /// The module configuration trait.
 pub trait Trait: system::Trait + encrypted_balances::Trait + zk_system::Trait {
     /// The overarching event type.
@@ -366,7 +365,7 @@ mod tests {
     use zprimitives::{Ciphertext, SigVerificationKey, PreparedVk};
     use keys::{ProofGenerationKey, EncryptionKey};
     use jubjub::{curve::{JubjubBls12, FixedGenerators, fs}};
-    use pairing::Field;
+    use pairing::{Field, bls12_381::Bls12};
     use hex_literal::{hex, hex_impl};
     use std::path::Path;
     use std::fs::File;
@@ -377,6 +376,8 @@ mod tests {
         elgamal as telgamal, PARAMS, MultiEncKeys, KeyContext, ProofBuilder, Confidential,
     };
     use scrypto::jubjub::{FixedGenerators as tFixedGenerators, fs::Fs as tFs, edwards as tedwards, PrimeOrder};
+    use zcrypto::elgamal;
+    use std::convert::TryFrom;
 
     const PK_PATH: &str = "../../zface/tests/proving.dat";
     const VK_PATH: &str = "../../zface/tests/verification.dat";
@@ -439,13 +440,13 @@ mod tests {
         let dec_alice_bal = enc_alice_bal.decrypt(&decryption_key, p_g, params).unwrap();
         assert_eq!(dec_alice_bal, alice_amount);
 
-        (EncKey::from_encryption_key(&enc_key), Ciphertext::from_ciphertext(&enc_alice_bal))
+        (EncKey::try_from(enc_key).unwrap(), Ciphertext::try_from(enc_alice_bal).unwrap())
     }
 
     fn alice_epoch_init() -> (EncKey, u64) {
         let (_, enc_key) = get_alice_seed_ek();
 
-        (EncKey::from_encryption_key(&enc_key), 0)
+        (EncKey::try_from(enc_key).unwrap(), 0)
     }
 
     fn get_alice_seed_ek() -> (Vec<u8>, EncryptionKey<Bls12>) {

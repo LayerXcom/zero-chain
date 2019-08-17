@@ -2,7 +2,7 @@
 use serde::{Serialize, Serializer, Deserialize, Deserializer};
 #[cfg(feature = "std")]
 use substrate_primitives::bytes;
-use crate::PARAMS;
+use crate::{PARAMS, IntoXY};
 use fixed_hash::construct_fixed_hash;
 use jubjub::curve::{JubjubBls12, edwards, PrimeOrder, Unknown};
 use jubjub::group_hash::group_hash;
@@ -107,8 +107,10 @@ impl GEpoch {
         let g_epoch = find_group_hash(&epoch, GEPOCH_PERSONALIZATION, &PARAMS);
         GEpoch::try_from(g_epoch)
     }
+}
 
-    pub fn into_xy(&self) -> Result<(Fr, Fr), io::Error> {
+impl IntoXY<Bls12> for GEpoch {
+    fn into_xy(&self) -> Result<(Fr, Fr), io::Error> {
         let point = edwards::Point::<Bls12, PrimeOrder>::try_from(self)?
             .into_xy();
 

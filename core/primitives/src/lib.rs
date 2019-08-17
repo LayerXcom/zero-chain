@@ -41,8 +41,13 @@ pub use self::right_ciphertext::RightCiphertext;
 pub use self::left_ciphertext::LeftCiphertext;
 
 use lazy_static::lazy_static;
-use jubjub::curve::JubjubBls12;
+use jubjub::curve::{JubjubBls12, JubjubEngine};
+use pairing::io;
 
 lazy_static! {
     pub static ref PARAMS: JubjubBls12 = { JubjubBls12::new() };
+}
+
+pub trait IntoXY<E: JubjubEngine> {
+    fn into_xy(&self) -> Result<(E::Fr, E::Fr), io::Error>;
 }

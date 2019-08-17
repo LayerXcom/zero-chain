@@ -9,7 +9,7 @@ use fixed_hash::construct_fixed_hash;
 use pairing::bls12_381::{Bls12, Fr};
 use pairing::io;
 use parity_codec::{Encode, Decode, Input};
-use crate::PARAMS;
+use crate::{PARAMS, IntoXY};
 use core::convert::TryFrom;
 
 const SIZE: usize = 32;
@@ -85,8 +85,8 @@ impl AsBytesRef for EncKey {
     }
 }
 
-impl EncKey {
-    pub fn into_xy(&self) -> Result<(Fr, Fr), io::Error> {
+impl IntoXY<Bls12> for  EncKey {
+    fn into_xy(&self) -> Result<(Fr, Fr), io::Error> {
         let point = EncryptionKey::<Bls12>::try_from(self)?
             .into_xy();
 

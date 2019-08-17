@@ -18,7 +18,6 @@ use zprimitives::{
     EncKey,
     Proof,
     PreparedVk,
-    ElgamalCiphertext,
     SigVk,
 };
 use parity_codec::Codec;
@@ -27,11 +26,8 @@ use zcrypto::elgamal;
 use system::{IsDeadAccount, ensure_signed};
 
 pub trait Trait: system::Trait {
-    /// The overarching event type.
-	type Event: From<Event<Self>> + Into<<Self as system::Trait>::Event>;
-
-    /// The units in which we record encrypted balances.
-    type AnonymousBalance: ElgamalCiphertext + Parameter + Member + Default + MaybeSerializeDebug + Codec;
+    // The overarching event type.
+	// type Event: From<Event<Self>> + Into<<Self as system::Trait>::Event>;
 }
 
 decl_module! {
@@ -52,12 +48,12 @@ decl_storage! {
     }
 }
 
-decl_event! (
-    /// An event in this module.
-    pub enum Event<T> where <T as Trait>::AnonymousBalance {
-        AnonymousTransfer(AnonymousBalance),
-    }
-);
+// decl_event! (
+//     /// An event in this module.
+//     pub enum Event<T> where <T as Trait>::AnonymousBalance {
+//         AnonymousTransfer(AnonymousBalance),
+//     }
+// );
 
 #[cfg(feature = "std")]
 #[cfg(test)]

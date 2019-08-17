@@ -4,8 +4,7 @@ use ::std::{vec::Vec, fmt, write};
 use substrate_primitives::hexdisplay::AsBytesRef;
 #[cfg(not(feature = "std"))]
 use crate::std::vec::Vec;
-use crate::PARAMS;
-use crate::{LeftCiphertext, RightCiphertext};
+use crate::{PARAMS, LeftCiphertext, RightCiphertext};
 use zcrypto::elgamal;
 use pairing::{
     bls12_381::{Bls12, Fr},
@@ -53,6 +52,26 @@ impl TryFrom<&Ciphertext> for elgamal::Ciphertext<Bls12> {
 
     fn try_from(ct: &Ciphertext) -> Result<Self, io::Error> {
         elgamal::Ciphertext::read(&mut &ct.0[..], &*PARAMS)
+    }
+}
+
+impl TryFrom<Ciphertext> for LeftCiphertext {
+    type Error = io::Error;
+
+    fn try_from(ct: Ciphertext) -> Result<LeftCiphertext, io::Error> {
+        elgamal::Ciphertext::<Bls12>::try_from(ct)?
+            .left
+            .try_into()
+    }
+}
+
+impl TryFrom<Ciphertext> for RightCiphertext {
+    type Error = io::Error;
+
+    fn try_from(ct: Ciphertext) -> Result<RightCiphertext, io::Error> {
+        elgamal::Ciphertext::<Bls12>::try_from(ct)?
+            .right
+            .try_into()
     }
 }
 

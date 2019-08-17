@@ -11,7 +11,7 @@ use pairing::{
     bls12_381::{Bls12, Fr},
     io
 };
-use crate::PARAMS;
+use crate::{PARAMS, IntoXY};
 use core::convert::TryFrom;
 
 const SIZE: usize = 32;
@@ -22,11 +22,10 @@ construct_fixed_hash! {
 
 pub type SigVerificationKey = H256;
 
-pub trait SigVk {
-    fn into_xy(&self) -> Result<(Fr, Fr), io::Error>;
-}
+pub trait SigVk { }
+impl SigVk for SigVerificationKey { }
 
-impl SigVk for SigVerificationKey {
+impl IntoXY<Bls12> for SigVerificationKey {
     fn into_xy(&self) -> Result<(Fr, Fr), io::Error> {
         let point = redjubjub::PublicKey::<Bls12>::try_from(self)?
             .0
