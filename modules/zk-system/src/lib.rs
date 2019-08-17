@@ -13,8 +13,10 @@ use pairing::{
 use runtime_primitives::traits::As;
 use zprimitives::{
     PreparedVk, Nonce, GEpoch, Proof, Ciphertext,
-    LeftCiphertext, RightCiphertext, EncKey, SigVk, IntoXY,
+    LeftCiphertext, RightCiphertext, EncKey, IntoXY,
 };
+
+mod input_builder;
 
 pub trait Trait: system::Trait {
 	// The overarching event type.
