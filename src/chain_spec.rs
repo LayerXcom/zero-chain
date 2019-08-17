@@ -10,7 +10,6 @@ use zprimitives::{
 	EncKey,
 	Ciphertext,
 	SigVerificationKey,
-	ElgamalCiphertext,
 };
 use keys::EncryptionKey;
 use zjubjub::{curve::{FixedGenerators, fs}};
@@ -20,6 +19,7 @@ use zprimitives::PARAMS;
 use std::path::Path;
 use std::fs::File;
 use std::io::{BufReader, Read};
+use std::convert::TryFrom;
 
 // Note this is the URL for the telemetry server
 //const STAGING_TELEMETRY_URL: &str = "wss://telemetry.polkadot.io/submit/";
@@ -171,13 +171,13 @@ fn alice_balance_init() -> (EncKey, Ciphertext) {
 	// The default balance is not encrypted with randomness.
 	let enc_alice_bal = elgamal::Ciphertext::encrypt(alice_value, &fs::Fs::one(), &enc_key, p_g, &PARAMS);
 
-	(EncKey::from_encryption_key(&enc_key), Ciphertext::from_ciphertext(&enc_alice_bal))
+	(EncKey::try_from(enc_key).unwrap(), Ciphertext::try_from(enc_alice_bal).unwrap())
 }
 
 fn alice_epoch_init() -> (EncKey, u64) {
 	let enc_key = get_alice_enc_key();
 
-	(EncKey::from_encryption_key(&enc_key), 0)
+	(EncKey::try_from(enc_key).unwrap(), 0)
 }
 
 fn get_alice_enc_key() -> EncryptionKey<Bls12> {
