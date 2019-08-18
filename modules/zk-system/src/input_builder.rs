@@ -1,6 +1,7 @@
 use jubjub::curve::JubjubEngine;
 use zprimitives::IntoXY;
 use pairing::io;
+use rstd::prelude::*;
 
 // TODO: make compatible with smallvec
 pub struct PublicInputBuilder<E: JubjubEngine>(Vec<E::Fr>);

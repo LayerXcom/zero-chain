@@ -70,10 +70,6 @@ impl<E: JubjubEngine> EncKeySet<E> {
         enc_keys: Vec<EdwardsPoint<E>>,
         params: &E::Params
     ) -> Self {
-        enc_keys.into_iter().map(|enc_key| {
-
-        })
-
         unimplemented!();
     }
 

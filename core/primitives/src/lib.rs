@@ -51,3 +51,10 @@ lazy_static! {
 pub trait IntoXY<E: JubjubEngine> {
     fn into_xy(&self) -> Result<(E::Fr, E::Fr), io::Error>;
 }
+
+// just for test utility
+impl<E: JubjubEngine> IntoXY<E> for u64 {
+    fn into_xy(&self) -> Result<(E::Fr, E::Fr), io::Error> {
+        unimplemented!();
+    }
+}

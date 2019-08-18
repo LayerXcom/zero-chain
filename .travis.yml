@@ -3,33 +3,41 @@
 sudo: true
 language: rust
 
-rust:
-  - stable
-  - nightly
-
 cache: cargo
 
 branches:
   only:
   - master
 
-env:
-  - RUST_BACKTRACE=1
-
-matrix:
+jobs:
   include:
-    - rust: stable
-      env: TARGET=native
-    - rust: nightly
-      env: TARGET=wasm
+      - stage: wasm
+        script: ./ci/script.sh
+        env: TARGET=wasm RUST_BACKTRACE=1
+        rust: nightly
+      - stage: compile
+        script: ./ci/script.sh
+        env: TARGET=native RUST_BACKTRACE=1
+        rust: stable
+      - stage: test
+        script: cargo test --release --all
+        env: RUST_BACKTRACE=1
+        rust: stable
+
+# matrix:
+#   include:
+#     - rust: stable
+#       env: TARGET=native RUST_BACKTRACE=1
+#     - rust: nightly
+#       env: TARGET=wasm RUST_BACKTRACE=1
 
 before_install:
   - chmod +x ./ci/script.sh
   # Check how much space we've got on this machine.
   - df -h
 
-script:
-  - ./ci/script.sh
+# script:
+#   - ./ci/script.sh
 
 after_script:
   # Check how much free disk space left after the build
