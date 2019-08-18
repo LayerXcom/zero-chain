@@ -12,7 +12,7 @@ jobs:
       - stage: wasm
         script: ./ci/script.sh
         env: TARGET=wasm RUST_BACKTRACE=1
-        rust: 1.38.0
+        rust: nightly-2019-07-16
       - stage: compile
         script: ./ci/script.sh
         env: TARGET=native RUST_BACKTRACE=1

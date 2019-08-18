@@ -42,13 +42,13 @@ decl_module! {
             // This function causes a storage mutation, but it's needed before `verify_proof` function is called.
             // No problem if errors occur after this function because
             // it just rollover user's own `pending trasfer` to `encrypted balances`.
-            Self::rollover(&address_sender);
+            Self::rollover(&address_sender)?;
 
             // Rollover and get recipient's balance
             // This function causes a storage mutation, but it's needed before `verify_proof` function is called.
             // No problem if errors occur after this function because
             // it just rollover user's own `pending trasfer` to `encrypted balances`.
-            Self::rollover(&address_recipient);
+            Self::rollover(&address_recipient)?;
 
             // Veridate the provided nonce isn't included in the nonce pool.
             assert!(!<zk_system::Module<T>>::nonce_pool().contains(&nonce));
@@ -135,7 +135,7 @@ impl<T: Trait> Module<T> {
     /// To achieve this, we define a separate (internal) method for rolling over,
     /// and the first thing every other method does is to call this method.
     /// More details in Section 3.1: https://crypto.stanford.edu/~buenz/papers/zether.pdf
-    pub fn rollover(addr: &EncKey) {
+    pub fn rollover(addr: &EncKey) -> result::Result<(), &'static str> {
         let current_epoch = <zk_system::Module<T>>::get_current_epoch();
 
         let last_rollover = Self::last_rollover(addr)
@@ -150,24 +150,28 @@ impl<T: Trait> Module<T> {
         if last_rollover < current_epoch {
             // transfer balance from pending_transfer to actual balance
             <EncryptedBalance<T>>::mutate(addr, |balance| {
-                let new_balance = balance.clone()
-                    .map_or(Some(enc_pending_transfer.clone()), |b| Some(b))
-                    .and_then(|b| {
-                        b.add(&enc_pending_transfer).ok()
-                    });
+                let new_balance = match balance.clone() {
+                    Some(b) => b.add(&enc_pending_transfer),
+                    None => Ok(enc_pending_transfer),
+                };
 
-                *balance = new_balance
-            });
+                match new_balance {
+                    Ok(nb) => *balance = Some(nb),
+                    Err(_) => return Err("Faild to mutate encrypted balance."),
+                }
+
+                Ok(())
+            })?;
 
             // Reset pending_transfer.
             <PendingTransfer<T>>::remove(addr);
-
             // Set last rollover to current epoch.
             <LastRollOver<T>>::insert(addr, current_epoch);
         }
-
         // Initialize a nonce pool
         <zk_system::Module<T>>::init_nonce_pool(current_epoch);
+
+        Ok(())
     }
 
     // Subtracting transferred amount and fee from encrypted balances.
@@ -206,14 +210,18 @@ impl<T: Trait> Module<T> {
             .map_err(|_| "Faild to create amount ciphertext.")?;
 
         <PendingTransfer<T>>::mutate(address, |pending_transfer| {
-            let new_pending_transfer = pending_transfer.clone()
-                .map_or(Some(enc_amount.clone()), |p| Some(p))
-                .and_then(|p| {
-                    p.add(&enc_amount).ok()
-                });
+            let new_pending_transfer = match pending_transfer.clone() {
+                Some(p) => p.add(&enc_amount),
+                None => Ok(enc_amount),
+            };
 
-            *pending_transfer = new_pending_transfer
-        });
+            match new_pending_transfer {
+                Ok(np) => *pending_transfer = Some(np),
+                Err(_) => return Err("Faild to mutate pending transfer.")
+            }
+
+            Ok(())
+        })?;
 
         Ok(())
     }
