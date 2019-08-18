@@ -1,5 +1,3 @@
-# Request an environment that provides sudo (that goes with larger containers)
-# and a minimal language environment.
 sudo: true
 language: rust
 
@@ -14,7 +12,7 @@ jobs:
       - stage: wasm
         script: ./ci/script.sh
         env: TARGET=wasm RUST_BACKTRACE=1
-        rust: nightly
+        rust: 1.38.0
       - stage: compile
         script: ./ci/script.sh
         env: TARGET=native RUST_BACKTRACE=1
@@ -24,20 +22,10 @@ jobs:
         env: RUST_BACKTRACE=1
         rust: stable
 
-# matrix:
-#   include:
-#     - rust: stable
-#       env: TARGET=native RUST_BACKTRACE=1
-#     - rust: nightly
-#       env: TARGET=wasm RUST_BACKTRACE=1
-
 before_install:
   - chmod +x ./ci/script.sh
   # Check how much space we've got on this machine.
   - df -h
-
-# script:
-#   - ./ci/script.sh
 
 after_script:
   # Check how much free disk space left after the build
