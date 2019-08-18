@@ -1,7 +1,11 @@
 # Request an environment that provides sudo (that goes with larger containers)
 # and a minimal language environment.
 sudo: true
-language: minimal
+language: rust
+
+rust:
+  - stable
+  - nightly
 
 cache: cargo
 
@@ -10,11 +14,14 @@ branches:
   - master
 
 env:
-  global:
-    - RUST_BACKTRACE=1
-  matrix:
-    - RUST_TOOLCHAIN=nightly TARGET=wasm
-    - RUST_TOOLCHAIN=stable TARGET=native
+  - RUST_BACKTRACE=1
+
+matrix:
+  include:
+    - rust: stable
+      env: TARGET=native
+    - rust: nightly
+      env: TARGET=wasm
 
 before_install:
   - chmod +x ./ci/script.sh

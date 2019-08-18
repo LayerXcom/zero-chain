@@ -6,10 +6,10 @@ set -eux
 export RUSTFLAGS=" -W unused-extern-crates"
 
 # Install rustup and the specified rust toolchain.
-curl https://sh.rustup.rs -sSf | sh -s -- --default-toolchain=$RUST_TOOLCHAIN -y
+# curl https://sh.rustup.rs -sSf | sh -s -- --default-toolchain=$RUST_TOOLCHAIN -y
 
 # Load cargo environment. Specifically, put cargo into PATH.
-source ~/.cargo/env
+# source ~/.cargo/env
 
 rustc --version
 rustup --version
@@ -20,7 +20,7 @@ case $TARGET in
 		sudo apt-get -y update
 		sudo apt-get install -y cmake pkg-config libssl-dev
 
-		cargo test --release --all 
+		cargo test --release --all
 		;;
 
 	"wasm")
