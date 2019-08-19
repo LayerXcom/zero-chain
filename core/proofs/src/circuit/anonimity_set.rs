@@ -69,7 +69,7 @@ impl<E: JubjubEngine> EncKeySet<E> {
         mut cs: CS,
         enc_keys: Vec<EdwardsPoint<E>>,
         params: &E::Params
-    ) -> Self {
+    ) -> Result<Self, SynthesisError> {
         unimplemented!();
     }
 
@@ -81,11 +81,23 @@ impl<E: JubjubEngine> EncKeySet<E> {
 pub struct ShuffledEncKeySet<E: JubjubEngine>(Vec<EdwardsPoint<E>>);
 
 impl<E: JubjubEngine> ShuffledEncKeySet<E> {
-    pub fn inputize(&self) {
+    pub fn inputize(&self) -> Result<(), SynthesisError> {
         unimplemented!();
     }
 }
 
-pub struct LeftCiphertextSet<E: Engine>(Vec<EdwardsPoint<E>>);
+pub struct LeftCiphertextSet<E: JubjubEngine>(Vec<EdwardsPoint<E>>);
 
+impl<E: JubjubEngine> LeftCiphertextSet<E> {
+    pub fn from_enc_keys(
+        enc_keys: ShuffledEncKeySet<E>,
+        amount_g: EdwardsPoint<E>,
+        randomness_bits: EdwardsPoint<E>
+    ) -> Result<Self, SynthesisError> {
+        unimplemented!();
+    }
 
+    pub fn inputize(&self) -> Result<(), SynthesisError> {
+        unimplemented!();
+    }
+}
