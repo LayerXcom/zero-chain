@@ -1,5 +1,7 @@
+# Request an environment that provides sudo (that goes with larger containers)
+# and a minimal language environment.
 sudo: true
-language: rust
+language: minimal
 
 cache: cargo
 
@@ -11,16 +13,13 @@ jobs:
   include:
       - stage: wasm
         script: ./ci/script.sh
-        env: TARGET=wasm RUST_BACKTRACE=1
-        rust: nightly-2019-07-16
+        env: TARGET=wasm RUST_BACKTRACE=1 RUST_TOOLCHAIN=nightly
       - stage: compile
         script: ./ci/script.sh
-        env: TARGET=native RUST_BACKTRACE=1
-        rust: stable
+        env: TARGET=native RUST_BACKTRACE=1 RUST_TOOLCHAIN=stable
       - stage: test
         script: cargo test --release --all
         env: RUST_BACKTRACE=1
-        rust: stable
 
 before_install:
   - chmod +x ./ci/script.sh

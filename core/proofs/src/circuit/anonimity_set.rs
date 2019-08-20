@@ -105,15 +105,59 @@ impl<E: JubjubEngine> ShuffledEncKeySet<E> {
 pub struct LeftCiphertextSet<E: JubjubEngine>(Vec<EdwardsPoint<E>>);
 
 impl<E: JubjubEngine> LeftCiphertextSet<E> {
-    pub fn from_enc_keys(
-        enc_keys: ShuffledEncKeySet<E>,
-        amount_g: EdwardsPoint<E>,
-        randomness_bits: EdwardsPoint<E>
-    ) -> Result<Self, SynthesisError> {
-        unimplemented!();
+    pub fn new(capacity: usize) -> Self {
+        LeftCiphertextSet(Vec::with_capacity(capacity))
     }
 
-    pub fn inputize(&self) -> Result<(), SynthesisError> {
-        unimplemented!();
+    pub fn from_enc_keys<CS: ConstraintSystem<E>>(
+        &mut self,
+        mut cs: CS,
+        enc_keys: ShuffledEncKeySet<E>,
+        amount_bits: Vec<Boolean>,
+        randomness: Option<&E::Fs>,
+        params: &E::Params
+    ) -> Result<(), SynthesisError> {
+        // Generate the randomness for elgamal encryption into the circuit
+        let randomness_bits = boolean::field_into_boolean_vec_le(
+            cs.namespace(|| "randomness_bits"),
+            randomness.map(|e| *e)
+        )?;
+
+        // Multiply the amount to the base point same as FixedGenerators::ElGamal.
+        let amount_g = ecc::fixed_base_multiplication(
+            cs.namespace(|| "compute the amount in the exponent"),
+            FixedGenerators::NoteCommitmentRandomness,
+            &amount_bits,
+            params
+        )?;
+
+        for (i, e) in enc_keys.0.into_iter().enumerate() {
+            let val_rlr = e.mul(
+                cs.namespace(|| format!("compute {} amount cipher component", i)),
+                &randomness_bits,
+                params
+            )?;
+
+            let c_left = amount_g.add(
+                cs.namespace(|| format!("computation {} left ciphertext", i)),
+                &val_rlr,
+                params
+            )?;
+
+            self.0.push(c_left);
+        }
+
+        Ok(())
+    }
+
+    pub fn inputize<CS: ConstraintSystem<E>>(
+        &self,
+        mut cs: CS
+    ) -> Result<(), SynthesisError> {
+        for (i, e) in self.0.iter().enumerate() {
+            e.inputize(cs.namespace(|| format!("inputize left ciphertexts {}", i)))?;
+        }
+
+        Ok(())
     }
 }

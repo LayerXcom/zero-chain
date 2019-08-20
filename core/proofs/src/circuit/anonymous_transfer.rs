@@ -20,7 +20,7 @@ use crate::{elgamal::Ciphertext, Assignment, Nonce};
 use super::range_check::u32_into_bit_vec_le;
 use super::anonimity_set::*;
 
-const ANONIMITY_SIZE: usize = 11;
+pub const ANONIMITY_SIZE: usize = 11;
 
 // Non-decoy-index is defined over 00 to 99 to represent which enc_keys are not decoys.
 // First digit is for sender's index in the list of encryption keys and
