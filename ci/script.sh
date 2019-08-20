@@ -24,6 +24,7 @@ case $TARGET in
 
 	"wasm")
 		rustup component add rustc --toolchain nightly-2019-07-16-x86_64-unknown-linux-gnu
+		rustup target add wasm32-unknown-unknown --toolchain nightly
 		rustc --version
 		rustup --version
 		cargo --version

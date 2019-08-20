@@ -11,8 +11,8 @@ use crate::{ProofGenerationKey, EncryptionKey, DecryptionKey};
 pub struct EncKeySet<E: JubjubEngine>(Vec<EdwardsPoint<E>>);
 
 impl<E: JubjubEngine> EncKeySet<E> {
-    pub fn new() -> Self {
-        unimplemented!();
+    pub fn new(capacity: usize) -> Self {
+        EncKeySet(Vec::with_capacity(capacity))
     }
 
     pub fn push_sender<CS: ConstraintSystem<E>>(
@@ -20,7 +20,7 @@ impl<E: JubjubEngine> EncKeySet<E> {
         mut cs: CS,
         dec_key: Option<&DecryptionKey<E>>,
         params: &E::Params,
-    ) -> Result<EdwardsPoint<E>, SynthesisError> {
+    ) -> Result<(), SynthesisError> {
         // dec_key_sender in circuit
         let dec_key_sender_bits = boolean::field_into_boolean_vec_le(
             cs.namespace(|| format!("dec_key_sender")),
@@ -37,7 +37,7 @@ impl<E: JubjubEngine> EncKeySet<E> {
 
         self.0.push(enc_key_sender_alloc.clone());
 
-        Ok(enc_key_sender_alloc)
+        Ok(())
     }
 
     pub fn push_recipient<CS: ConstraintSystem<E>>(
@@ -45,32 +45,41 @@ impl<E: JubjubEngine> EncKeySet<E> {
         mut cs: CS,
         enc_key: Option<&EncryptionKey<E>>,
         params: &E::Params,
-    ) -> Result<EdwardsPoint<E>, SynthesisError> {
+    ) -> Result<(), SynthesisError> {
         // Ensures recipient enc_key is on the curve
-        let recipient_enc_key_bits = ecc::EdwardsPoint::witness(
+        let enc_key_recipient_bits = ecc::EdwardsPoint::witness(
             cs.namespace(|| "recipient enc_key witness"),
             enc_key.as_ref().map(|e| e.0.clone()),
             params
         )?;
 
         // Check the recipient enc_key is not small order
-        recipient_enc_key_bits.assert_not_small_order(
+        enc_key_recipient_bits.assert_not_small_order(
             cs.namespace(|| "val_gl not small order"),
             params
         )?;
 
-        self.0.push(recipient_enc_key_bits.clone());
-
-        Ok(recipient_enc_key_bits)
+        self.0.push(enc_key_recipient_bits.clone());
+        Ok(())
     }
 
     pub fn push_decoys<CS: ConstraintSystem<E>>(
         &mut self,
         mut cs: CS,
-        enc_keys: Vec<EdwardsPoint<E>>,
+        enc_keys: &[Option<EncryptionKey<E>>],
         params: &E::Params
-    ) -> Result<Self, SynthesisError> {
-        unimplemented!();
+    ) -> Result<(), SynthesisError> {
+        for (i, e) in enc_keys.into_iter().enumerate() {
+            let decoy_bits = ecc::EdwardsPoint::witness(
+                cs.namespace(|| format!("decoy {} enc_key witness", i)),
+                e.as_ref().map(|e| e.0.clone()),
+                params
+            )?;
+
+            self.0.push(decoy_bits);
+        }
+
+        Ok(())
     }
 
     pub fn shuffle<P: PrimeField>(&self, randomnes: P) -> ShuffledEncKeySet<E> {
@@ -81,8 +90,15 @@ impl<E: JubjubEngine> EncKeySet<E> {
 pub struct ShuffledEncKeySet<E: JubjubEngine>(Vec<EdwardsPoint<E>>);
 
 impl<E: JubjubEngine> ShuffledEncKeySet<E> {
-    pub fn inputize(&self) -> Result<(), SynthesisError> {
-        unimplemented!();
+    pub fn inputize<CS: ConstraintSystem<E>>(
+        &self,
+        mut cs: CS
+    ) -> Result<(), SynthesisError> {
+        for (i, e) in self.0.iter().enumerate() {
+            e.inputize(cs.namespace(|| format!("inputize enc keys {}", i)))?;
+        }
+
+        Ok(())
     }
 }
 

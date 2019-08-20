@@ -1,7 +1,7 @@
 //! This module contains a circuit implementation for confidential transfer.
 //! The statement is following.
-//! * Range proof of the transferred amount
-//! * Range proof of the sender's balance
+//! * Range check of the transferred amount
+//! * Range check of the sender's balance
 //! * Validity of public key
 //! * Validity of encryption for transferred amount
 //! * Validity of encryption for sender's balance
@@ -92,7 +92,7 @@ impl<'a, E: JubjubEngine> Circuit<E> for Transfer<'a, E> {
         )?;
 
         // Ensure the validity of enc_key_sender
-        let enc_key_sender_alloc = ecc::fixed_base_multiplication(
+        let enc_key_sender_bits = ecc::fixed_base_multiplication(
             cs.namespace(|| format!("compute enc_key_sender")),
             FixedGenerators::NoteCommitmentRandomness,
             &dec_key_sender_bits,
@@ -100,7 +100,7 @@ impl<'a, E: JubjubEngine> Circuit<E> for Transfer<'a, E> {
         )?;
 
         // Expose the enc_key_sender publicly
-        enc_key_sender_alloc.inputize(cs.namespace(|| format!("inputize enc_key_sender")))?;
+        enc_key_sender_bits.inputize(cs.namespace(|| format!("inputize enc_key_sender")))?;
 
         // Multiply the amount to the base point same as FixedGenerators::ElGamal.
         let amount_g = ecc::fixed_base_multiplication(
@@ -125,39 +125,39 @@ impl<'a, E: JubjubEngine> Circuit<E> for Transfer<'a, E> {
         )?;
 
         // Generate the randomness * enc_key_sender in circuit
-        let val_rls = enc_key_sender_alloc.mul(
+        let val_rls = enc_key_sender_bits.mul(
             cs.namespace(|| format!("compute sender amount cipher")),
             &randomness_bits,
             params
         )?;
 
-        let fee_rls = enc_key_sender_alloc.mul(
+        let fee_rls = enc_key_sender_bits.mul(
             cs.namespace(|| format!("compute sender fee cipher")),
             &randomness_bits,
             params
         )?;
 
         // Ensures recipient enc_key is on the curve
-        let recipient_enc_key_bits = ecc::EdwardsPoint::witness(
+        let enc_key_recipient_bits = ecc::EdwardsPoint::witness(
             cs.namespace(|| "recipient enc_key witness"),
             self.enc_key_recipient.as_ref().map(|e| e.0.clone()),
             params
         )?;
 
         // Check the recipient enc_key is not small order
-        recipient_enc_key_bits.assert_not_small_order(
+        enc_key_recipient_bits.assert_not_small_order(
             cs.namespace(|| "val_gl not small order"),
             params
         )?;
 
         // Generate the randomness * enc_key_recipient in circuit
-        let val_rlr = recipient_enc_key_bits.mul(
+        let val_rlr = enc_key_recipient_bits.mul(
             cs.namespace(|| format!("compute recipient amount cipher")),
             &randomness_bits,
             params
         )?;
 
-        recipient_enc_key_bits.inputize(cs.namespace(|| format!("inputize enc_key_recipient")))?;
+        enc_key_recipient_bits.inputize(cs.namespace(|| format!("inputize enc_key_recipient")))?;
 
 
         // Generate the left elgamal component for sender in circuit
