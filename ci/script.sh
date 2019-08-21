@@ -9,7 +9,7 @@ export RUSTFLAGS=" -W unused-extern-crates"
 curl https://sh.rustup.rs -sSf | sh -s -- --default-toolchain=$RUST_TOOLCHAIN -y
 
 # Load cargo environment. Specifically, put cargo into PATH.
-source ~/.cargo/
+source ~/.cargo/env
 
 rustc --version
 rustup --version

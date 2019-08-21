@@ -82,7 +82,7 @@ impl<E: JubjubEngine> EncKeySet<E> {
         Ok(())
     }
 
-    pub fn shuffle<P: PrimeField>(&self, randomnes: P) -> ShuffledEncKeySet<E> {
+    pub fn shuffle<P: PrimeField>(&self, randomnes: Option<&P>) -> ShuffledEncKeySet<E> {
         unimplemented!();
     }
 }
@@ -113,28 +113,23 @@ impl<E: JubjubEngine> LeftCiphertextSet<E> {
         &mut self,
         mut cs: CS,
         enc_keys: ShuffledEncKeySet<E>,
-        amount_bits: Vec<Boolean>,
-        randomness: Option<&E::Fs>,
+        amount_bits: &[Boolean],
+        randomness_bits: &[Boolean],
         params: &E::Params
     ) -> Result<(), SynthesisError> {
-        // Generate the randomness for elgamal encryption into the circuit
-        let randomness_bits = boolean::field_into_boolean_vec_le(
-            cs.namespace(|| "randomness_bits"),
-            randomness.map(|e| *e)
-        )?;
 
         // Multiply the amount to the base point same as FixedGenerators::ElGamal.
         let amount_g = ecc::fixed_base_multiplication(
             cs.namespace(|| "compute the amount in the exponent"),
             FixedGenerators::NoteCommitmentRandomness,
-            &amount_bits,
+            amount_bits,
             params
         )?;
 
         for (i, e) in enc_keys.0.into_iter().enumerate() {
             let val_rlr = e.mul(
                 cs.namespace(|| format!("compute {} amount cipher component", i)),
-                &randomness_bits,
+                randomness_bits,
                 params
             )?;
 

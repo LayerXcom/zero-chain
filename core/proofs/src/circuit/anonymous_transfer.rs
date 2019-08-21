@@ -86,6 +86,45 @@ impl<'a, E: JubjubEngine> Circuit<E> for AnonymousTransfer<'a, E> {
                 params
             )?;
 
+        let shuffled_enc_keys = enc_key_set
+            .shuffle(self.randomness);
+
+        shuffled_enc_keys
+            .inputize(cs.namespace(|| "inputize shuffled enc keys."))?;
+
+
+        let mut left_ciphertexts = LeftCiphertextSet::new(ANONIMITY_SIZE);
+
+        // Generate the randomness for elgamal encryption into the circuit
+        let randomness_bits = boolean::field_into_boolean_vec_le(
+            cs.namespace(|| "randomness_bits"),
+            self.randomness.map(|e| *e)
+        )?;
+
+        left_ciphertexts.from_enc_keys(
+            cs.namespace(|| "create left ciphertext set"),
+            shuffled_enc_keys,
+            &amount_bits,
+            &randomness_bits,
+            params
+            )?;
+
+        left_ciphertexts
+            .inputize(cs.namespace(|| "inputize shuffled left ciphertext set."))?;
+
+        // Multiply the randomness to the base point same as FixedGenerators::ElGamal.
+        let right_ciphertext = ecc::fixed_base_multiplication(
+            cs.namespace(|| format!("compute the right elgamal component")),
+            FixedGenerators::NoteCommitmentRandomness,
+            &randomness_bits,
+            params
+        )?;
+
+        right_ciphertext
+            .inputize(cs.namespace(|| "inputize right ciphertext."))?;
+
+        
+
 
         Ok(())
     }
