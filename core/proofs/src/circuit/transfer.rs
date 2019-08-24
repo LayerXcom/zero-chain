@@ -19,13 +19,13 @@ use scrypto::jubjub::{
 };
 use crate::{ProofGenerationKey, EncryptionKey, DecryptionKey};
 use scrypto::circuit::{
-    boolean::{self, Boolean},
+    boolean,
     ecc::{self, EdwardsPoint},
     num::AllocatedNum,
 };
 use scrypto::jubjub::{edwards, PrimeOrder};
 use crate::{elgamal::Ciphertext, Assignment};
-use super::{range_check::u32_into_bit_vec_le, utils::eq_edwards_points};
+use super::{range_check::u32_into_bit_vec_le, utils::*};
 
 pub struct Transfer<'a, E: JubjubEngine> {
     pub params: &'a E::Params,
@@ -86,7 +86,7 @@ impl<'a, E: JubjubEngine> Circuit<E> for Transfer<'a, E> {
         )?;
 
         // dec_key_sender in circuit
-        let dec_key_sender_bits = boolean::field_into_boolean_vec_le(
+        let dec_key_bits = boolean::field_into_boolean_vec_le(
             cs.namespace(|| format!("dec_key_sender")),
             self.dec_key_sender.map(|e| e.0)
         )?;
@@ -95,7 +95,7 @@ impl<'a, E: JubjubEngine> Circuit<E> for Transfer<'a, E> {
         let enc_key_sender_bits = ecc::fixed_base_multiplication(
             cs.namespace(|| format!("compute enc_key_sender")),
             FixedGenerators::NoteCommitmentRandomness,
-            &dec_key_sender_bits,
+            &dec_key_bits,
             params
         )?;
 
@@ -259,7 +259,7 @@ impl<'a, E: JubjubEngine> Circuit<E> for Transfer<'a, E> {
             //  dec_key_sender * (random)G
             let dec_key_sender_random = c_right.mul(
                 cs.namespace(|| format!("c_right mul by dec_key_sender")),
-                &dec_key_sender_bits,
+                &dec_key_bits,
                 params
             )?;
 
@@ -280,7 +280,7 @@ impl<'a, E: JubjubEngine> Circuit<E> for Transfer<'a, E> {
             // dec_key_sender * Enc_sender(sender_balance).cr
             let dec_key_sender_pointr = pointr.mul(
                 cs.namespace(|| format!("c_right_sender mul by dec_key_sender")),
-                &dec_key_sender_bits,
+                &dec_key_bits,
                 params
             )?;
 
@@ -323,67 +323,19 @@ impl<'a, E: JubjubEngine> Circuit<E> for Transfer<'a, E> {
             pointr.inputize(cs.namespace(|| format!("inputize pointr")))?;
         }
 
-
-        // Ensure pgk on the curve.
-        let pgk = ecc::EdwardsPoint::witness(
-            cs.namespace(|| "pgk"),
-            self.proof_generation_key.as_ref().map(|k| k.0.clone()),
-            self.params
+        rvk_inputize(
+            cs.namespace(|| "inputize rvk"),
+            self.proof_generation_key,
+            self.alpha,
+            params
         )?;
 
-        // Ensure pgk is large order.
-        pgk.assert_not_small_order(
-            cs.namespace(|| "pgk not small order"),
-            self.params
+        g_epoch_nonce_inputize(
+            cs.namespace(|| "inputize g_epoch and nonce"),
+            self.g_epoch,
+            &dec_key_bits,
+            params
         )?;
-
-        // Re-randomized parameter for pgk
-        let alpha = boolean::field_into_boolean_vec_le(
-            cs.namespace(|| "alpha"),
-            self.alpha.map(|e| *e)
-        )?;
-
-        // Make the alpha on the curve
-        let alpha_g = ecc::fixed_base_multiplication(
-            cs.namespace(|| "computation of randomiation for the signing key"),
-            FixedGenerators::NoteCommitmentRandomness,
-            &alpha,
-            self.params
-        )?;
-
-        // Ensure randomaized sig-verification key is computed by the addition of ak and alpha_g
-        let rvk = pgk.add(
-            cs.namespace(|| "computation of rvk"),
-            &alpha_g,
-            self.params
-        )?;
-
-        // Ensure rvk is large order.
-        rvk.assert_not_small_order(
-            cs.namespace(|| "rvk not small order"),
-            self.params
-        )?;
-
-        rvk.inputize(cs.namespace(|| "rvk"))?;
-
-        {
-            // Ensure g_epoch is on the curve.
-            let g_epoch = ecc::EdwardsPoint::witness(
-                cs.namespace(|| "g_epoch"),
-                self.g_epoch.map(|e| e.clone()),
-                params
-            )?;
-
-            // Ensure that nonce = dec_key * g_epoch
-            let nonce = g_epoch.mul(
-                cs.namespace(|| format!("g_epoch mul by dec_key")),
-                &dec_key_sender_bits,
-                params
-            )?;
-
-            g_epoch.inputize(cs.namespace(|| "inputize g_epoch"))?;
-            nonce.inputize(cs.namespace(|| "inputize nonce"))?;
-        }
 
         Ok(())
     }
