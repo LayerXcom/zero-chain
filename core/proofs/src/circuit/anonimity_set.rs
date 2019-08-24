@@ -1,12 +1,119 @@
 use bellman::{SynthesisError, ConstraintSystem};
 use pairing::{Engine, PrimeField};
 use scrypto::circuit::{
-    boolean::{self, Boolean},
+    boolean::{self, Boolean, AllocatedBit},
     ecc::{self, EdwardsPoint},
     num::AllocatedNum,
 };
-use scrypto::jubjub::{JubjubEngine, FixedGenerators};
+use scrypto::jubjub::{JubjubEngine, FixedGenerators, edwards, PrimeOrder};
 use crate::{ProofGenerationKey, EncryptionKey, DecryptionKey};
+use std::fmt;
+
+pub const ANONIMITY_SIZE: usize = 11;
+
+pub enum ST {
+    S,
+    T,
+}
+
+impl fmt::Display for ST {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        match *self {
+            ST::S => write!(f, "s"),
+            ST::T => write!(f, "t"),
+        }
+    }
+}
+
+#[derive(Clone)]
+pub struct Binary(Vec<Boolean>);
+
+impl Binary {
+    pub fn new<E, CS>(
+        mut cs: CS,
+        st: ST,
+        index: Option<usize>
+    ) -> Result<Self, SynthesisError>
+    where
+        E: JubjubEngine,
+        CS: ConstraintSystem<E>,
+    {
+        let mut binaries = [false; ANONIMITY_SIZE];
+        if let Some(i) = index {
+            binaries[i] = true;
+        }
+
+        let mut acc = Vec::with_capacity(ANONIMITY_SIZE);
+        for (i, b) in binaries.into_iter().enumerate() {
+            acc[i] = Boolean::from(AllocatedBit::alloc(
+                    cs.namespace(|| format!("{} binary {}", st, i)),
+                    Some(*b))?
+                );
+        }
+
+        Ok(Binary(acc))
+    }
+
+    pub fn or<E, CS>(&self, mut cs: CS, other: &Self) -> Result<Self, SynthesisError>
+    where
+        E: JubjubEngine,
+        CS: ConstraintSystem<E>,
+    {
+        assert_eq!(self.len(), other.len());
+
+        unimplemented!();
+    }
+
+    pub fn xor<E, CS>(&self, mut cs: CS, other: &Self) -> Result<Self, SynthesisError>
+    where
+        E: JubjubEngine,
+        CS: ConstraintSystem<E>,
+    {
+        assert_eq!(self.len(), other.len());
+
+        unimplemented!();
+    }
+
+    pub fn edwards_add_fold<E, CS>(
+        &self,
+        mut cs: CS,
+        points: &[EdwardsPoint<E>],
+        params: &E::Params,
+    ) -> Result<EdwardsPoint<E>, SynthesisError>
+    where
+        E: JubjubEngine,
+        CS: ConstraintSystem<E>,
+    {
+        assert_eq!(self.len(), points.len());
+
+        let mut acc = EdwardsPoint::<E>::witness::<PrimeOrder, _>(
+            cs.namespace(|| "initialize acc."),
+            Some(edwards::Point::zero()),
+            params,
+        )?;
+        for (i, (b, p)) in self.0.iter().zip(points.iter()).enumerate() {
+            let selected_point = p.conditionally_select(
+                cs.namespace(|| format!("conditionally select p_{} depending on b", i)),
+                b
+            )?;
+
+            let tmp = acc.add(
+                cs.namespace(|| format!("add conditionally selected p_{}", i)),
+                &selected_point,
+                params,
+            )?;
+
+            acc = tmp
+        }
+
+        Ok(acc)
+    }
+
+    fn len(&self) -> usize {
+        self.0.len()
+    }
+}
+
 
 pub struct EncKeySet<E: JubjubEngine>(Vec<EdwardsPoint<E>>);
 

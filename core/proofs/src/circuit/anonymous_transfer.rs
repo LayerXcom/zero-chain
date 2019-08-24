@@ -26,8 +26,8 @@ pub struct AnonymousTransfer<'a, E: JubjubEngine> {
     params: &'a E::Params,
     amount: Option<u32>,
     remaining_balance: Option<u32>,
-    s_i: &'a [Option<bool>],
-    t_i: &'a [Option<bool>],
+    s_idnex: Option<usize>,
+    t_index: Option<usize>,
     randomness: Option<&'a E::Fs>,
     alpha: Option<&'a E::Fs>,
     proof_generation_key: Option<&'a ProofGenerationKey<E>>,
@@ -58,24 +58,7 @@ impl<'a, E: JubjubEngine> Circuit<E> for AnonymousTransfer<'a, E> {
             self.remaining_balance
         )?;
 
-        let mut s_bools = vec![];
-        let mut t_bools = vec![];
-
-        for (i, s) in self.s_i.into_iter().enumerate() {
-            let s_bool = Boolean::from(AllocatedBit::alloc(
-                cs.namespace(|| format!("s bool {}", i)),
-                *s
-                )?);
-            s_bools.push(s_bool);
-        }
-
-        for (i, t) in self.t_i.into_iter().enumerate() {
-            let t_bool = Boolean::from(AllocatedBit::alloc(
-                cs.namespace(|| format!("t bool {}", i)),
-                *t
-                )?);
-            t_bools.push(t_bool);
-        }
+        
 
 
 
