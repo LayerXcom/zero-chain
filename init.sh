@@ -6,6 +6,8 @@ echo "*** Initialising WASM build environment"
 
 if [ -z $CI_PROJECT_NAME ] ; then
 #    rustup update nightly
+rustup target add wasm32-unknown-unknown --toolchain nightly
+rustup component add rustc --toolchain nightly-2019-07-16-x86_64-unknown-linux-gnu
    rustup override set nightly-2019-07-16
    rustup update stable
 fi

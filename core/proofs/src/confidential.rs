@@ -29,9 +29,9 @@ use zprimitives::{
     Nonce as zNonce,
     Proof as zProof
 };
-use crate::circuit::Transfer;
-use crate::elgamal::Ciphertext;
 use crate::{
+    circuit::Transfer,
+    elgamal::Ciphertext,
     EncryptionKey,
     ProofGenerationKey,
     SpendingKey,

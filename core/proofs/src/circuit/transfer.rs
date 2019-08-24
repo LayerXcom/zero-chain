@@ -25,7 +25,7 @@ use scrypto::circuit::{
 };
 use scrypto::jubjub::{edwards, PrimeOrder};
 use crate::{elgamal::Ciphertext, Assignment};
-use super::range_check::u32_into_bit_vec_le;
+use super::{range_check::u32_into_bit_vec_le, utils::eq_edwards_points};
 
 pub struct Transfer<'a, E: JubjubEngine> {
     pub params: &'a E::Params,
@@ -313,26 +313,11 @@ impl<'a, E: JubjubEngine> Circuit<E> for Transfer<'a, E> {
                 params
             )?;
 
-            // The left hand for balance integrity into representation
-            let bi_left_repr = bi_left.repr(
-                cs.namespace(|| format!("bi_left into a representation"))
+            eq_edwards_points(
+                cs.namespace(|| "equal two edwards poinsts"),
+                &bi_left,
+                &bi_right
             )?;
-
-            // The right hand for balance integrity into representation
-            let bi_right_repr = bi_right.repr(
-                cs.namespace(|| format!("bi_right into a representation"))
-            )?;
-
-            let iter = bi_left_repr.iter().zip(bi_right_repr.iter());
-
-            // Ensure for the sender's balance integrity
-            for (i, (a, b)) in iter.enumerate() {
-                Boolean::enforce_equal(
-                    cs.namespace(|| format!("bi_left equals bi_right {}", i)),
-                    &a,
-                    &b
-                )?;
-            }
 
             pointl.inputize(cs.namespace(|| format!("inputize pointl")))?;
             pointr.inputize(cs.namespace(|| format!("inputize pointr")))?;

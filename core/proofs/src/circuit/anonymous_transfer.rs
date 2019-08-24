@@ -11,7 +11,7 @@ use scrypto::jubjub::{
 };
 use crate::{ProofGenerationKey, EncryptionKey, DecryptionKey};
 use scrypto::circuit::{
-    boolean::{self, Boolean},
+    boolean::{self, Boolean, AllocatedBit},
     ecc::{self, EdwardsPoint},
     num::AllocatedNum,
 };
@@ -22,15 +22,12 @@ use super::anonimity_set::*;
 
 pub const ANONIMITY_SIZE: usize = 11;
 
-// Non-decoy-index is defined over 00 to 99 to represent which enc_keys are not decoys.
-// First digit is for sender's index in the list of encryption keys and
-// second one is for recipient's.
-// The range is enough for representing non-decoys-index because
-// the entire set of encryption keys are limited with 10.
 pub struct AnonymousTransfer<'a, E: JubjubEngine> {
     params: &'a E::Params,
     amount: Option<u32>,
     remaining_balance: Option<u32>,
+    s_i: &'a [Option<bool>],
+    t_i: &'a [Option<bool>],
     randomness: Option<&'a E::Fs>,
     alpha: Option<&'a E::Fs>,
     proof_generation_key: Option<&'a ProofGenerationKey<E>>,
@@ -38,9 +35,7 @@ pub struct AnonymousTransfer<'a, E: JubjubEngine> {
     enc_key_recipient: Option<&'a EncryptionKey<E>>,
     enc_key_decoys: &'a [Option<EncryptionKey<E>>],
     encrypted_balance: Option<&'a Ciphertext<E>>,
-    fee: Option<u32>,
     g_epoch: Option<&'a edwards::Point<E, PrimeOrder>>,
-    // non_decoy_index: Option<u32>,
 }
 
 impl<'a, E: JubjubEngine> Circuit<E> for AnonymousTransfer<'a, E> {
@@ -62,6 +57,28 @@ impl<'a, E: JubjubEngine> Circuit<E> for AnonymousTransfer<'a, E> {
             cs.namespace(|| "range proof of remaining_balance"),
             self.remaining_balance
         )?;
+
+        let mut s_bools = vec![];
+        let mut t_bools = vec![];
+
+        for (i, s) in self.s_i.into_iter().enumerate() {
+            let s_bool = Boolean::from(AllocatedBit::alloc(
+                cs.namespace(|| format!("s bool {}", i)),
+                *s
+                )?);
+            s_bools.push(s_bool);
+        }
+
+        for (i, t) in self.t_i.into_iter().enumerate() {
+            let t_bool = Boolean::from(AllocatedBit::alloc(
+                cs.namespace(|| format!("t bool {}", i)),
+                *t
+                )?);
+            t_bools.push(t_bool);
+        }
+
+
+
 
         let mut enc_key_set = EncKeySet::new(ANONIMITY_SIZE);
 
@@ -123,7 +140,7 @@ impl<'a, E: JubjubEngine> Circuit<E> for AnonymousTransfer<'a, E> {
         right_ciphertext
             .inputize(cs.namespace(|| "inputize right ciphertext."))?;
 
-        
+
 
 
         Ok(())
