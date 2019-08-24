@@ -26,7 +26,7 @@ pub struct AnonymousTransfer<'a, E: JubjubEngine> {
     params: &'a E::Params,
     amount: Option<u32>,
     remaining_balance: Option<u32>,
-    s_idnex: Option<usize>,
+    s_index: Option<usize>,
     t_index: Option<usize>,
     randomness: Option<&'a E::Fs>,
     alpha: Option<&'a E::Fs>,
@@ -58,39 +58,33 @@ impl<'a, E: JubjubEngine> Circuit<E> for AnonymousTransfer<'a, E> {
             self.remaining_balance
         )?;
 
-        
+        let s_bins = Binary::new(
+            cs.namespace(|| "new s binary"),
+            ST::S,
+            self.s_index
+        )?;
 
+        let t_bins = Binary::new(
+            cs.namespace(|| "new t binary"),
+            ST::T,
+            self.t_index
+        )?;
 
 
 
         let mut enc_key_set = EncKeySet::new(ANONIMITY_SIZE);
 
         enc_key_set
-            .push_sender(
-                cs.namespace(|| "push sender to enckey set"),
+            .push_enckeys(
+                cs.namespace(|| "push enckeys"),
                 self.dec_key_sender,
-                params
-            )?;
-
-        enc_key_set
-            .push_recipient(
-                cs.namespace(|| "push recipient to enckey set"),
                 self.enc_key_recipient,
-                params
-            )?;
-
-        enc_key_set
-            .push_decoys(
-                cs.namespace(|| "push decoys to enckey set"),
                 self.enc_key_decoys,
+                self.s_index,
+                self.t_index,
                 params
             )?;
 
-        let shuffled_enc_keys = enc_key_set
-            .shuffle(self.randomness);
-
-        shuffled_enc_keys
-            .inputize(cs.namespace(|| "inputize shuffled enc keys."))?;
 
 
         let mut left_ciphertexts = LeftCiphertextSet::new(ANONIMITY_SIZE);
@@ -101,13 +95,13 @@ impl<'a, E: JubjubEngine> Circuit<E> for AnonymousTransfer<'a, E> {
             self.randomness.map(|e| *e)
         )?;
 
-        left_ciphertexts.from_enc_keys(
-            cs.namespace(|| "create left ciphertext set"),
-            shuffled_enc_keys,
-            &amount_bits,
-            &randomness_bits,
-            params
-            )?;
+        // left_ciphertexts.from_enc_keys(
+        //     cs.namespace(|| "create left ciphertext set"),
+        //     shuffled_enc_keys,
+        //     &amount_bits,
+        //     &randomness_bits,
+        //     params
+        //     )?;
 
         left_ciphertexts
             .inputize(cs.namespace(|| "inputize shuffled left ciphertext set."))?;

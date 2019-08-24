@@ -10,6 +10,13 @@ use crate::{ProofGenerationKey, EncryptionKey, DecryptionKey};
 use std::fmt;
 
 pub const ANONIMITY_SIZE: usize = 11;
+pub const DECOY_SIZE: usize = ANONIMITY_SIZE - 2;
+
+pub enum AnonimityIndexes {
+    Sender(usize),
+    Recipient(usize),
+    Decoys([usize; DECOY_SIZE])
+}
 
 pub enum ST {
     S,
@@ -45,10 +52,11 @@ impl Binary {
 
         let mut acc = Vec::with_capacity(ANONIMITY_SIZE);
         for (i, b) in binaries.into_iter().enumerate() {
-            acc[i] = Boolean::from(AllocatedBit::alloc(
-                    cs.namespace(|| format!("{} binary {}", st, i)),
-                    Some(*b))?
-                );
+            let tmp = Boolean::from(AllocatedBit::alloc(
+                cs.namespace(|| format!("{} binary {}", st, i)),
+                Some(*b))?
+            );
+            acc.push(tmp);
         }
 
         Ok(Binary(acc))
@@ -77,21 +85,21 @@ impl Binary {
     pub fn edwards_add_fold<E, CS>(
         &self,
         mut cs: CS,
-        points: &[EdwardsPoint<E>],
+        points: &EncKeySet<E>,
         params: &E::Params,
     ) -> Result<EdwardsPoint<E>, SynthesisError>
     where
         E: JubjubEngine,
         CS: ConstraintSystem<E>,
     {
-        assert_eq!(self.len(), points.len());
+        assert_eq!(self.len(), points.0.len());
 
         let mut acc = EdwardsPoint::<E>::witness::<PrimeOrder, _>(
             cs.namespace(|| "initialize acc."),
             Some(edwards::Point::zero()),
             params,
         )?;
-        for (i, (b, p)) in self.0.iter().zip(points.iter()).enumerate() {
+        for (i, (b, p)) in self.0.iter().zip(points.0.iter()).enumerate() {
             let selected_point = p.conditionally_select(
                 cs.namespace(|| format!("conditionally select p_{} depending on b", i)),
                 b
@@ -114,7 +122,6 @@ impl Binary {
     }
 }
 
-
 pub struct EncKeySet<E: JubjubEngine>(Vec<EdwardsPoint<E>>);
 
 impl<E: JubjubEngine> EncKeySet<E> {
@@ -122,41 +129,34 @@ impl<E: JubjubEngine> EncKeySet<E> {
         EncKeySet(Vec::with_capacity(capacity))
     }
 
-    pub fn push_sender<CS: ConstraintSystem<E>>(
+    pub fn push_enckeys<CS: ConstraintSystem<E>>(
         &mut self,
         mut cs: CS,
         dec_key: Option<&DecryptionKey<E>>,
+        enc_key_recipient: Option<&EncryptionKey<E>>,
+        enc_keys_decoy: &[Option<EncryptionKey<E>>],
+        s_index: Option<usize>,
+        t_index: Option<usize>,
         params: &E::Params,
     ) -> Result<(), SynthesisError> {
         // dec_key_sender in circuit
-        let dec_key_sender_bits = boolean::field_into_boolean_vec_le(
+        let dec_key_bits = boolean::field_into_boolean_vec_le(
             cs.namespace(|| format!("dec_key_sender")),
             dec_key.map(|e| e.0)
         )?;
 
         // Ensure the validity of enc_key_sender
-        let enc_key_sender_alloc = ecc::fixed_base_multiplication(
+        let enc_key_sender_bits = ecc::fixed_base_multiplication(
             cs.namespace(|| format!("compute enc_key_sender")),
             FixedGenerators::NoteCommitmentRandomness,
-            &dec_key_sender_bits,
+            &dec_key_bits,
             params
         )?;
 
-        self.0.push(enc_key_sender_alloc.clone());
-
-        Ok(())
-    }
-
-    pub fn push_recipient<CS: ConstraintSystem<E>>(
-        &mut self,
-        mut cs: CS,
-        enc_key: Option<&EncryptionKey<E>>,
-        params: &E::Params,
-    ) -> Result<(), SynthesisError> {
         // Ensures recipient enc_key is on the curve
         let enc_key_recipient_bits = ecc::EdwardsPoint::witness(
             cs.namespace(|| "recipient enc_key witness"),
-            enc_key.as_ref().map(|e| e.0.clone()),
+            enc_key_recipient.as_ref().map(|e| e.0.clone()),
             params
         )?;
 
@@ -166,32 +166,74 @@ impl<E: JubjubEngine> EncKeySet<E> {
             params
         )?;
 
-        self.0.push(enc_key_recipient_bits.clone());
-        Ok(())
-    }
-
-    pub fn push_decoys<CS: ConstraintSystem<E>>(
-        &mut self,
-        mut cs: CS,
-        enc_keys: &[Option<EncryptionKey<E>>],
-        params: &E::Params
-    ) -> Result<(), SynthesisError> {
-        for (i, e) in enc_keys.into_iter().enumerate() {
-            let decoy_bits = ecc::EdwardsPoint::witness(
+        let mut decoy_iter = enc_keys_decoy.iter().enumerate().map(|(i, e)| {
+            ecc::EdwardsPoint::witness(
                 cs.namespace(|| format!("decoy {} enc_key witness", i)),
                 e.as_ref().map(|e| e.0.clone()),
                 params
-            )?;
+            ).unwrap()
+        });
 
-            self.0.push(decoy_bits);
+        // TODO: Rmove clone and unwrap
+        for i in 0..ANONIMITY_SIZE {
+            if Some(i) == s_index {
+                self.0.push(enc_key_sender_bits.clone());
+            } else if Some(i) == t_index {
+                self.0.push(enc_key_recipient_bits.clone());
+            } else {
+                self.0.push(decoy_iter.next().unwrap())
+            }
         }
 
         Ok(())
     }
 
-    pub fn shuffle<P: PrimeField>(&self, randomnes: Option<&P>) -> ShuffledEncKeySet<E> {
-        unimplemented!();
-    }
+    // pub fn push_recipient<CS: ConstraintSystem<E>>(
+    //     &mut self,
+    //     mut cs: CS,
+    //     enc_key: Option<&EncryptionKey<E>>,
+    //     t_index: Option<usize>,
+    //     params: &E::Params,
+    // ) -> Result<(), SynthesisError> {
+    //     // Ensures recipient enc_key is on the curve
+    //     let enc_key_recipient_bits = ecc::EdwardsPoint::witness(
+    //         cs.namespace(|| "recipient enc_key witness"),
+    //         enc_key.as_ref().map(|e| e.0.clone()),
+    //         params
+    //     )?;
+
+    //     // Check the recipient enc_key is not small order
+    //     enc_key_recipient_bits.assert_not_small_order(
+    //         cs.namespace(|| "val_gl not small order"),
+    //         params
+    //     )?;
+
+    //     if let Some(i) = t_index {
+    //         self.0[i] = enc_key_recipient_bits;
+    //     }
+
+    //     Ok(())
+    // }
+
+    // pub fn push_decoys<CS: ConstraintSystem<E>>(
+    //     &mut self,
+    //     mut cs: CS,
+    //     enc_keys: &[Option<EncryptionKey<E>>],
+    //     params: &E::Params
+    // ) -> Result<(), SynthesisError> {
+    //     for (i, e) in enc_keys.into_iter().enumerate() {
+    //         let decoy_bits = ecc::EdwardsPoint::witness(
+    //             cs.namespace(|| format!("decoy {} enc_key witness", i)),
+    //             e.as_ref().map(|e| e.0.clone()),
+    //             params
+    //         )?;
+
+    //         self.0.push(decoy_bits);
+    //     }
+
+    //     Ok(())
+    // }
+
 }
 
 pub struct ShuffledEncKeySet<E: JubjubEngine>(Vec<EdwardsPoint<E>>);
