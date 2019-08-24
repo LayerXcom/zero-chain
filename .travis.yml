@@ -18,8 +18,8 @@ jobs:
         script: ./ci/script.sh
         env: TARGET=native RUST_BACKTRACE=1 RUST_TOOLCHAIN=stable
       - stage: test
-        script: cargo test --release --all
-        env: RUST_BACKTRACE=1
+        script: ./ci/script.sh
+        env: TARGET=test RUST_BACKTRACE=1 RUST_TOOLCHAIN=stable
 
 before_install:
   - chmod +x ./ci/script.sh

@@ -19,8 +19,13 @@ case $TARGET in
 	"native")
 		sudo apt-get -y update
 		sudo apt-get install -y cmake pkg-config libssl-dev
-
 		cargo build --release --all
+		;;
+
+	"test")
+		sudo apt-get -y update
+		sudo apt-get install -y cmake pkg-config libssl-dev
+		cargo test --release --all
 		;;
 
 	"wasm")
