@@ -553,16 +553,18 @@ fn subcommand_debug<R: Rng>(mut term: term::Term, matches: &ArgMatches, rng: &mu
                 \nrvk(Alice): 0x{}
                 \nrsk(Alice): 0x{}
                 \nEncrypted fee by sender: 0x{}
+                \nright_randomness: 0x{}
                 \nNonce:  0x{}
                 ",
                 HexDisplay::from(&&tx.proof[..] as &dyn AsBytesRef),
                 HexDisplay::from(&tx.enc_key_sender as &dyn AsBytesRef),
                 HexDisplay::from(&tx.enc_key_recipient as &dyn AsBytesRef),
-                HexDisplay::from(&tx.enc_amount_sender as &dyn AsBytesRef),
-                HexDisplay::from(&tx.enc_amount_recipient as &dyn AsBytesRef),
+                HexDisplay::from(&tx.left_amount_sender as &dyn AsBytesRef),
+                HexDisplay::from(&tx.left_amount_recipient as &dyn AsBytesRef),
                 HexDisplay::from(&tx.rvk as &dyn AsBytesRef),
                 HexDisplay::from(&tx.rsk as &dyn AsBytesRef),
-                HexDisplay::from(&tx.enc_fee as &dyn AsBytesRef),
+                HexDisplay::from(&tx.left_fee as &dyn AsBytesRef),
+                HexDisplay::from(&tx.right_randomness as &dyn AsBytesRef),
                 HexDisplay::from(&tx.nonce as &dyn AsBytesRef)
             );
         },

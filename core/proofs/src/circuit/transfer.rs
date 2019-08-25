@@ -1,7 +1,7 @@
 //! This module contains a circuit implementation for confidential transfer.
 //! The statement is following.
-//! * Range proof of the transferred amount
-//! * Range proof of the sender's balance
+//! * Range check of the transferred amount
+//! * Range check of the sender's balance
 //! * Validity of public key
 //! * Validity of encryption for transferred amount
 //! * Validity of encryption for sender's balance
@@ -19,13 +19,13 @@ use scrypto::jubjub::{
 };
 use crate::{ProofGenerationKey, EncryptionKey, DecryptionKey};
 use scrypto::circuit::{
-    boolean::{self, Boolean},
+    boolean,
     ecc::{self, EdwardsPoint},
     num::AllocatedNum,
 };
 use scrypto::jubjub::{edwards, PrimeOrder};
 use crate::{elgamal::Ciphertext, Assignment};
-use super::range_check::u32_into_bit_vec_le;
+use super::{range_check::u32_into_bit_vec_le, utils::*};
 
 pub struct Transfer<'a, E: JubjubEngine> {
     pub params: &'a E::Params,
@@ -86,21 +86,21 @@ impl<'a, E: JubjubEngine> Circuit<E> for Transfer<'a, E> {
         )?;
 
         // dec_key_sender in circuit
-        let dec_key_sender_bits = boolean::field_into_boolean_vec_le(
+        let dec_key_bits = boolean::field_into_boolean_vec_le(
             cs.namespace(|| format!("dec_key_sender")),
             self.dec_key_sender.map(|e| e.0)
         )?;
 
         // Ensure the validity of enc_key_sender
-        let enc_key_sender_alloc = ecc::fixed_base_multiplication(
+        let enc_key_sender_bits = ecc::fixed_base_multiplication(
             cs.namespace(|| format!("compute enc_key_sender")),
             FixedGenerators::NoteCommitmentRandomness,
-            &dec_key_sender_bits,
+            &dec_key_bits,
             params
         )?;
 
         // Expose the enc_key_sender publicly
-        enc_key_sender_alloc.inputize(cs.namespace(|| format!("inputize enc_key_sender")))?;
+        enc_key_sender_bits.inputize(cs.namespace(|| format!("inputize enc_key_sender")))?;
 
         // Multiply the amount to the base point same as FixedGenerators::ElGamal.
         let amount_g = ecc::fixed_base_multiplication(
@@ -125,39 +125,39 @@ impl<'a, E: JubjubEngine> Circuit<E> for Transfer<'a, E> {
         )?;
 
         // Generate the randomness * enc_key_sender in circuit
-        let val_rls = enc_key_sender_alloc.mul(
+        let val_rls = enc_key_sender_bits.mul(
             cs.namespace(|| format!("compute sender amount cipher")),
             &randomness_bits,
             params
         )?;
 
-        let fee_rls = enc_key_sender_alloc.mul(
+        let fee_rls = enc_key_sender_bits.mul(
             cs.namespace(|| format!("compute sender fee cipher")),
             &randomness_bits,
             params
         )?;
 
         // Ensures recipient enc_key is on the curve
-        let recipient_enc_key_bits = ecc::EdwardsPoint::witness(
+        let enc_key_recipient_bits = ecc::EdwardsPoint::witness(
             cs.namespace(|| "recipient enc_key witness"),
             self.enc_key_recipient.as_ref().map(|e| e.0.clone()),
             params
         )?;
 
         // Check the recipient enc_key is not small order
-        recipient_enc_key_bits.assert_not_small_order(
+        enc_key_recipient_bits.assert_not_small_order(
             cs.namespace(|| "val_gl not small order"),
             params
         )?;
 
         // Generate the randomness * enc_key_recipient in circuit
-        let val_rlr = recipient_enc_key_bits.mul(
+        let val_rlr = enc_key_recipient_bits.mul(
             cs.namespace(|| format!("compute recipient amount cipher")),
             &randomness_bits,
             params
         )?;
 
-        recipient_enc_key_bits.inputize(cs.namespace(|| format!("inputize enc_key_recipient")))?;
+        enc_key_recipient_bits.inputize(cs.namespace(|| format!("inputize enc_key_recipient")))?;
 
 
         // Generate the left elgamal component for sender in circuit
@@ -259,7 +259,7 @@ impl<'a, E: JubjubEngine> Circuit<E> for Transfer<'a, E> {
             //  dec_key_sender * (random)G
             let dec_key_sender_random = c_right.mul(
                 cs.namespace(|| format!("c_right mul by dec_key_sender")),
-                &dec_key_sender_bits,
+                &dec_key_bits,
                 params
             )?;
 
@@ -280,7 +280,7 @@ impl<'a, E: JubjubEngine> Circuit<E> for Transfer<'a, E> {
             // dec_key_sender * Enc_sender(sender_balance).cr
             let dec_key_sender_pointr = pointr.mul(
                 cs.namespace(|| format!("c_right_sender mul by dec_key_sender")),
-                &dec_key_sender_bits,
+                &dec_key_bits,
                 params
             )?;
 
@@ -313,92 +313,29 @@ impl<'a, E: JubjubEngine> Circuit<E> for Transfer<'a, E> {
                 params
             )?;
 
-            // The left hand for balance integrity into representation
-            let bi_left_repr = bi_left.repr(
-                cs.namespace(|| format!("bi_left into a representation"))
+            eq_edwards_points(
+                cs.namespace(|| "equal two edwards poinsts"),
+                &bi_left,
+                &bi_right
             )?;
-
-            // The right hand for balance integrity into representation
-            let bi_right_repr = bi_right.repr(
-                cs.namespace(|| format!("bi_right into a representation"))
-            )?;
-
-            let iter = bi_left_repr.iter().zip(bi_right_repr.iter());
-
-            // Ensure for the sender's balance integrity
-            for (i, (a, b)) in iter.enumerate() {
-                Boolean::enforce_equal(
-                    cs.namespace(|| format!("bi_left equals bi_right {}", i)),
-                    &a,
-                    &b
-                )?;
-            }
 
             pointl.inputize(cs.namespace(|| format!("inputize pointl")))?;
             pointr.inputize(cs.namespace(|| format!("inputize pointr")))?;
         }
 
-
-        // Ensure pgk on the curve.
-        let pgk = ecc::EdwardsPoint::witness(
-            cs.namespace(|| "pgk"),
-            self.proof_generation_key.as_ref().map(|k| k.0.clone()),
-            self.params
+        rvk_inputize(
+            cs.namespace(|| "inputize rvk"),
+            self.proof_generation_key,
+            self.alpha,
+            params
         )?;
 
-        // Ensure pgk is large order.
-        pgk.assert_not_small_order(
-            cs.namespace(|| "pgk not small order"),
-            self.params
+        g_epoch_nonce_inputize(
+            cs.namespace(|| "inputize g_epoch and nonce"),
+            self.g_epoch,
+            &dec_key_bits,
+            params
         )?;
-
-        // Re-randomized parameter for pgk
-        let alpha = boolean::field_into_boolean_vec_le(
-            cs.namespace(|| "alpha"),
-            self.alpha.map(|e| *e)
-        )?;
-
-        // Make the alpha on the curve
-        let alpha_g = ecc::fixed_base_multiplication(
-            cs.namespace(|| "computation of randomiation for the signing key"),
-            FixedGenerators::NoteCommitmentRandomness,
-            &alpha,
-            self.params
-        )?;
-
-        // Ensure randomaized sig-verification key is computed by the addition of ak and alpha_g
-        let rvk = pgk.add(
-            cs.namespace(|| "computation of rvk"),
-            &alpha_g,
-            self.params
-        )?;
-
-        // Ensure rvk is large order.
-        rvk.assert_not_small_order(
-            cs.namespace(|| "rvk not small order"),
-            self.params
-        )?;
-
-        rvk.inputize(cs.namespace(|| "rvk"))?;
-
-        {
-            // Ensure g_epoch is on the curve.
-            let g_epoch = ecc::EdwardsPoint::witness(
-                cs.namespace(|| "g_epoch"),
-                self.g_epoch.map(|e| e.clone()),
-                params
-            )?;
-
-            // Ensure that nonce = dec_key * g_epoch
-            let nonce = g_epoch.mul(
-                cs.namespace(|| format!("g_epoch mul by dec_key")),
-                &dec_key_sender_bits,
-                params
-            )?;
-
-            g_epoch.inputize(cs.namespace(|| "inputize g_epoch"))?;
-            nonce.inputize(cs.namespace(|| "inputize nonce"))?;
-        }
 
         Ok(())
     }
@@ -498,12 +435,12 @@ mod tests {
         assert_eq!(cs.get_input(14, "inputize pointl/y/input variable"), c_bal_left.1);
         assert_eq!(cs.get_input(15, "inputize pointr/x/input variable"), c_bal_right.0);
         assert_eq!(cs.get_input(16, "inputize pointr/y/input variable"), c_bal_right.1);
-        assert_eq!(cs.get_input(17, "rvk/x/input variable"), rvk.0);
-        assert_eq!(cs.get_input(18, "rvk/y/input variable"), rvk.1);
-        assert_eq!(cs.get_input(19, "inputize g_epoch/x/input variable"), g_epoch_xy.0);
-        assert_eq!(cs.get_input(20, "inputize g_epoch/y/input variable"), g_epoch_xy.1);
-        assert_eq!(cs.get_input(21, "inputize nonce/x/input variable"), nonce.0);
-        assert_eq!(cs.get_input(22, "inputize nonce/y/input variable"), nonce.1);
+        assert_eq!(cs.get_input(17, "inputize rvk/rvk/x/input variable"), rvk.0);
+        assert_eq!(cs.get_input(18, "inputize rvk/rvk/y/input variable"), rvk.1);
+        assert_eq!(cs.get_input(19, "inputize g_epoch and nonce/inputize g_epoch/x/input variable"), g_epoch_xy.0);
+        assert_eq!(cs.get_input(20, "inputize g_epoch and nonce/inputize g_epoch/y/input variable"), g_epoch_xy.1);
+        assert_eq!(cs.get_input(21, "inputize g_epoch and nonce/inputize nonce/x/input variable"), nonce.0);
+        assert_eq!(cs.get_input(22, "inputize g_epoch and nonce/inputize nonce/y/input variable"), nonce.1);
     }
 
     #[test]

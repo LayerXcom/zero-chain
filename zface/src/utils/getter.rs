@@ -11,6 +11,7 @@ use proofs::{EncryptionKey, DecryptionKey};
 use zpairing::bls12_381::Bls12 as zBls12;
 use scrypto::jubjub::{edwards, PrimeOrder};
 use crate::error::Result;
+use std::convert::TryFrom;
 
 pub struct BalanceQuery {
     pub decrypted_balance: u32,
@@ -24,7 +25,7 @@ impl BalanceQuery {
     /// Get encrypted and decrypted balance for the decryption key
     pub fn get_encrypted_balance(dec_key: &DecryptionKey<Bls12>, api: Api) -> Result<Self> {
         let encryption_key = zEncryptionKey::from_decryption_key(&no_std(&dec_key)?, &*ZPARAMS);
-        let account_id = EncKey::from_encryption_key(&encryption_key);
+        let account_id = EncKey::try_from(encryption_key)?;
 
         let encrypted_balance_str = api.get_storage(
             "EncryptedBalances",
@@ -43,7 +44,7 @@ impl BalanceQuery {
 
     pub fn get_encrypted_asset(asset_id: u32, dec_key: &DecryptionKey<Bls12>, api: Api) -> Result<Self> {
         let encryption_key = zEncryptionKey::from_decryption_key(&no_std(&dec_key)?, &*ZPARAMS);
-        let account_id = EncKey::from_encryption_key(&encryption_key);
+        let account_id = EncKey::try_from(encryption_key)?;
 
         let encrypted_asset_str = api.get_storage(
             "EncryptedAssets",

@@ -1,16 +1,16 @@
 #[cfg(feature = "std")]
 use serde::{Serialize, Serializer, Deserialize, Deserializer};
-use keys::EncryptionKey;
-use fixed_hash::construct_fixed_hash;
-use pairing::bls12_381::Bls12;
-use crate::PARAMS;
-
 #[cfg(feature = "std")]
 use substrate_primitives::hexdisplay::AsBytesRef;
 #[cfg(feature = "std")]
 use substrate_primitives::bytes;
-
+use keys::EncryptionKey;
+use fixed_hash::construct_fixed_hash;
+use pairing::bls12_381::{Bls12, Fr};
+use pairing::io;
 use parity_codec::{Encode, Decode, Input};
+use crate::{PARAMS, IntoXY};
+use core::convert::TryFrom;
 
 const SIZE: usize = 32;
 
@@ -51,21 +51,30 @@ impl Decode for EncKey {
     }
 }
 
-impl EncKey {
-    pub fn into_encryption_key(&self) -> Option<EncryptionKey<Bls12>> {
-        EncryptionKey::<Bls12>::read(&mut &self.0[..], &PARAMS).ok()
-    }
+impl TryFrom<EncryptionKey<Bls12>> for EncKey {
+    type Error = io::Error;
 
-    pub fn from_encryption_key(address: &EncryptionKey<Bls12>) -> Self {
+    fn try_from(enc_key: EncryptionKey<Bls12>) -> Result<Self, io::Error> {
         let mut writer = [0u8; 32];
-        address.write(&mut writer[..]).unwrap();
-        H256::from_slice(&writer)
+        enc_key.write(&mut writer[..])?;
+
+        Ok(H256::from_slice(&writer))
     }
 }
 
-impl Into<EncKey> for EncryptionKey<Bls12> {
-    fn into(self) -> EncKey {
-        EncKey::from_encryption_key(&self)
+impl TryFrom<EncKey> for EncryptionKey<Bls12> {
+    type Error = io::Error;
+
+    fn try_from(enc_key: EncKey) -> Result<Self, io::Error> {
+        EncryptionKey::<Bls12>::read(&mut &enc_key.0[..], &PARAMS)
+    }
+}
+
+impl TryFrom<&EncKey> for EncryptionKey<Bls12> {
+    type Error = io::Error;
+
+    fn try_from(enc_key: &EncKey) -> Result<Self, io::Error> {
+        EncryptionKey::<Bls12>::read(&mut &enc_key.0[..], &PARAMS)
     }
 }
 
@@ -76,22 +85,30 @@ impl AsBytesRef for EncKey {
     }
 }
 
+impl IntoXY<Bls12> for  EncKey {
+    fn into_xy(&self) -> Result<(Fr, Fr), io::Error> {
+        let point = EncryptionKey::<Bls12>::try_from(self)?
+            .into_xy();
+
+        Ok(point)
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
     use rand::{Rng, SeedableRng, XorShiftRng};
-    use jubjub::curve::JubjubBls12;
+    use core::convert::TryInto;
 
     #[test]
     fn test_addr_into_from() {
         let rng = &mut XorShiftRng::from_seed([0x3dbe6259, 0x8d313d76, 0x3237db17, 0xe5bc0654]);
-        let mut seed = [0u8; 32];
-        rng.fill_bytes(&mut seed[..]);
+        let seed: [u8; 32] = rng.gen();
 
-        let addr1 = EncryptionKey::from_seed(&seed[..], &PARAMS as &JubjubBls12).unwrap();
+        let addr1 = EncryptionKey::<Bls12>::from_seed(&seed[..], &*PARAMS).unwrap();
 
-        let account_id = EncKey::from_encryption_key(&addr1);
-        let addr2 = account_id.into_encryption_key().unwrap();
+        let account_id = EncKey::try_from(addr1.clone()).unwrap();
+        let addr2 = account_id.try_into().unwrap();
         assert!(addr1 == addr2);
     }
 }

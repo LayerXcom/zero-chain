@@ -19,8 +19,7 @@ case $TARGET in
 	"native")
 		sudo apt-get -y update
 		sudo apt-get install -y cmake pkg-config libssl-dev
-
-		cargo test --all --release --locked --exclude zerochain-pairing jubjub
+		cargo test --all --release --exclude zerochain-pairing --exclude jubjub
 		;;
 
 	"wasm")

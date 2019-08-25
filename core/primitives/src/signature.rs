@@ -2,13 +2,17 @@
 use serde::{Serialize, Serializer, Deserialize, Deserializer};
 #[cfg(feature = "std")]
 use substrate_primitives::hexdisplay::AsBytesRef;
-use jubjub::redjubjub;
-use runtime_primitives::traits::{Verify, Lazy};
-use fixed_hash::construct_fixed_hash;
-use crate::{SigVerificationKey, SigVk, PARAMS};
-use jubjub::curve::FixedGenerators;
 #[cfg(feature = "std")]
 use substrate_primitives::bytes;
+use jubjub::{
+    redjubjub,
+    curve::FixedGenerators
+};
+use runtime_primitives::traits::{Verify, Lazy};
+use fixed_hash::construct_fixed_hash;
+use pairing::{bls12_381::Bls12, io};
+use crate::{SigVerificationKey, PARAMS};
+use core::convert::TryFrom;
 
 use parity_codec::{Encode, Decode, Input};
 
@@ -60,37 +64,39 @@ impl AsBytesRef for RedjubjubSignature {
 
 impl Verify for RedjubjubSignature {
     type Signer = SigVerificationKey;
+
     fn verify<L: Lazy<[u8]>>(&self, mut msg: L, signer: &Self::Signer) -> bool {
-        let sig = match self.into_signature() {
-            Some(s) => s,
-            None => return false
+        let sig = match redjubjub::Signature::try_from(*self) {
+            Ok(s) => s,
+            Err(_) => return false
         };
 
         let p_g = FixedGenerators::Diversifier;
 
-        match signer.into_verification_key() {
-            Some(vk) => return vk.verify(msg.get(), &sig, p_g, &PARAMS),
-            None => return false
+        match redjubjub::PublicKey::<Bls12>::try_from(*signer) {
+            Ok(vk) => return vk.verify(msg.get(), &sig, p_g, &PARAMS),
+            Err(_) => return false
         }
 
     }
 }
 
-impl RedjubjubSignature {
-    pub fn into_signature(&self) -> Option<redjubjub::Signature> {
-        redjubjub::Signature::read(&self.0[..]).ok()
-    }
+impl TryFrom<redjubjub::Signature> for RedjubjubSignature {
+    type Error = io::Error;
 
-    pub fn from_signature(sig: &redjubjub::Signature) -> Self {
+    fn try_from(sig: redjubjub::Signature) -> Result<Self, io::Error> {
         let mut writer = [0u8; 64];
         sig.write(&mut writer[..]).unwrap();
-        H512::from_slice(&writer)
+
+        Ok(H512::from_slice(&writer))
     }
 }
 
-impl Into<RedjubjubSignature> for redjubjub::Signature {
-    fn into(self) -> RedjubjubSignature {
-        RedjubjubSignature::from_signature(&self)
+impl TryFrom<RedjubjubSignature> for redjubjub::Signature {
+    type Error = io::Error;
+
+    fn try_from(sig: RedjubjubSignature) -> Result<Self, io::Error> {
+        redjubjub::Signature::read(&sig.0[..])
     }
 }
 
@@ -98,9 +104,9 @@ impl Into<RedjubjubSignature> for redjubjub::Signature {
 mod tests {
     use super::*;
     use rand::{Rng, SeedableRng, XorShiftRng};
-    use pairing::bls12_381::Bls12;
     use jubjub::curve::{FixedGenerators, JubjubBls12};
     use jubjub::redjubjub::PublicKey;
+    use core::convert::TryInto;
 
     #[test]
     fn test_sig_into_from() {
@@ -116,8 +122,8 @@ mod tests {
 
         assert!(vk.verify(msg, &sig1, p_g, params));
 
-        let sig_b = RedjubjubSignature::from_signature(&sig1);
-        let sig2 = sig_b.into_signature().unwrap();
+        let sig_b = RedjubjubSignature::try_from(sig1.clone()).unwrap();
+        let sig2 = sig_b.try_into().unwrap();
 
         assert!(sig1 == sig2);
     }
@@ -135,7 +141,7 @@ mod tests {
         let sig1 = sk.sign(msg, &mut rng, p_g, params);
 
         assert!(vk.verify(msg, &sig1, p_g, params));
-        let sig_b = RedjubjubSignature::from_signature(&sig1);
+        let sig_b = RedjubjubSignature::try_from(sig1.clone()).unwrap();
 
         let encoded_sig = sig_b.encode();
 

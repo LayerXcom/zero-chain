@@ -1,15 +1,18 @@
 #[cfg(feature = "std")]
 use serde::{Serialize, Serializer, Deserialize, Deserializer};
-use fixed_hash::construct_fixed_hash;
-use jubjub::curve::JubjubBls12;
-use jubjub::redjubjub;
-use crate::PARAMS;
-use pairing::bls12_381::Bls12;
-
 #[cfg(feature = "std")]
 use substrate_primitives::bytes;
 #[cfg(feature = "std")]
 use substrate_primitives::hexdisplay::AsBytesRef;
+use fixed_hash::construct_fixed_hash;
+use parity_codec::{Encode, Decode, Input};
+use jubjub::redjubjub;
+use pairing::{
+    bls12_381::{Bls12, Fr},
+    io
+};
+use crate::{PARAMS, IntoXY};
+use core::convert::TryFrom;
 
 const SIZE: usize = 32;
 
@@ -19,7 +22,17 @@ construct_fixed_hash! {
 
 pub type SigVerificationKey = H256;
 
-use parity_codec::{Encode, Decode, Input};
+impl IntoXY<Bls12> for SigVerificationKey {
+    fn into_xy(&self) -> Result<(Fr, Fr), io::Error> {
+        let point = redjubjub::PublicKey::<Bls12>::try_from(self)?
+            .0
+            .as_prime_order(&*PARAMS) // TODO: Consider cofactor
+            .ok_or(io::Error::NotInField)?
+            .into_xy();
+
+        Ok(point)
+    }
+}
 
 #[cfg(feature = "std")]
 impl Serialize for SigVerificationKey {
@@ -52,26 +65,30 @@ impl Decode for SigVerificationKey {
     }
 }
 
-pub trait SigVk:  {
-    fn into_verification_key(&self) -> Option<redjubjub::PublicKey<Bls12>>;
-    fn from_verification_key(vk: &redjubjub::PublicKey<Bls12>) -> Self;
-}
+impl TryFrom<redjubjub::PublicKey<Bls12>> for SigVerificationKey {
+    type Error = io::Error;
 
-impl SigVk for SigVerificationKey {
-    fn into_verification_key(&self) -> Option<redjubjub::PublicKey<Bls12>> {
-        redjubjub::PublicKey::read(&mut &self.0[..], &PARAMS as &JubjubBls12).ok()
-    }
-
-    fn from_verification_key(vk: &redjubjub::PublicKey<Bls12>) -> Self {
+    fn try_from(vk: redjubjub::PublicKey<Bls12>) -> Result<Self, io::Error> {
         let mut writer = [0u8; 32];
         vk.write(&mut &mut writer[..]).unwrap();
-        H256::from_slice(&writer)
+
+        Ok(H256::from_slice(&writer))
     }
 }
 
-impl Into<SigVerificationKey> for redjubjub::PublicKey<Bls12> {
-    fn into(self) -> SigVerificationKey {
-        SigVerificationKey::from_verification_key(&self)
+impl TryFrom<SigVerificationKey> for redjubjub::PublicKey<Bls12> {
+    type Error = io::Error;
+
+    fn try_from(sig_vk: SigVerificationKey) -> Result<Self, io::Error> {
+        redjubjub::PublicKey::read(&mut &sig_vk.0[..], &*PARAMS)
+    }
+}
+
+impl TryFrom<&SigVerificationKey> for redjubjub::PublicKey<Bls12> {
+    type Error = io::Error;
+
+    fn try_from(sig_vk: &SigVerificationKey) -> Result<Self, io::Error> {
+        redjubjub::PublicKey::read(&mut &sig_vk.0[..], &*PARAMS)
     }
 }
 
@@ -82,15 +99,9 @@ impl AsBytesRef for SigVerificationKey {
     }
 }
 
-// just for test utility
-impl SigVk for u64 {
-    fn into_verification_key(&self) -> Option<redjubjub::PublicKey<Bls12>> {
-        unimplemented!();
-    }
-    fn from_verification_key(_vk: &redjubjub::PublicKey<Bls12>) -> Self {
-        unimplemented!();
-    }
-}
+pub trait SigVk { }
+impl SigVk for SigVerificationKey { }
+impl SigVk for u64 { }
 
 #[cfg(test)]
 mod tests {
@@ -99,6 +110,7 @@ mod tests {
     use pairing::bls12_381::Bls12;
     use jubjub::curve::{FixedGenerators, JubjubBls12};
     use jubjub::redjubjub::PublicKey;
+    use core::convert::TryInto;
 
     #[test]
     fn test_vk_into_from() {
@@ -109,8 +121,8 @@ mod tests {
         let sk = redjubjub::PrivateKey::<Bls12>(rng.gen());
         let vk1 = PublicKey::from_private(&sk, p_g, params);
 
-        let vk_b = SigVerificationKey::from_verification_key(&vk1);
-        let vk2 = vk_b.into_verification_key().unwrap();
+        let vk_b = SigVerificationKey::try_from(vk1.clone()).unwrap();
+        let vk2 = vk_b.try_into().unwrap();
 
         assert!(vk1 == vk2);
     }
@@ -124,7 +136,7 @@ mod tests {
         let sk = redjubjub::PrivateKey::<Bls12>(rng.gen());
         let vk1 = PublicKey::from_private(&sk, p_g, params);
 
-        let vk_b = SigVerificationKey::from_verification_key(&vk1);
+        let vk_b = SigVerificationKey::try_from(vk1.clone()).unwrap();
 
         let encoded_vk = vk_b.encode();
 

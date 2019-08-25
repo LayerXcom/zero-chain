@@ -24,12 +24,14 @@ use zerochain_runtime::{UncheckedExtrinsic, Call, EncryptedBalancesCall, Encrypt
 use zprimitives::{
     EncKey as zEncKey,
     Ciphertext as zCiphertext,
+    LeftCiphertext as zLeftCiphertext,
+    RightCiphertext as zRightCiphertext,
     Nonce as zNonce,
     Proof as zProof
 };
-use crate::circuit::Transfer;
-use crate::elgamal::Ciphertext;
 use crate::{
+    circuit::Transfer,
+    elgamal::Ciphertext,
     EncryptionKey,
     ProofGenerationKey,
     SpendingKey,
@@ -234,16 +236,27 @@ struct ConfidentialProofContext<E: JubjubEngine, IsChecked, PC: PrivacyConfing> 
 }
 
 impl<E: JubjubEngine, IsChecked, PC: PrivacyConfing> ConfidentialProofContext<E, IsChecked, PC> {
-    fn enc_amount_sender(&self) -> &Ciphertext<E> {
-        self.multi_ciphertexts.get_sender()
+    fn left_amount_sender(&self) -> &edwards::Point<E, PrimeOrder> {
+        &self.multi_ciphertexts.get_sender().left
     }
 
-    fn enc_amount_recipient(&self) -> &Ciphertext<E> {
-        self.multi_ciphertexts.get_recipient()
+    fn left_amount_recipient(&self) -> &edwards::Point<E, PrimeOrder> {
+        &self.multi_ciphertexts.get_recipient().left
     }
 
-    fn enc_fee(&self) -> &Ciphertext<E> {
-        self.multi_ciphertexts.get_fee()
+    fn left_fee(&self) -> &edwards::Point<E, PrimeOrder> {
+        &self.multi_ciphertexts.get_fee().left
+    }
+
+    fn right_randomness(&self) -> &edwards::Point<E, PrimeOrder> {
+        let sender_right = &self.multi_ciphertexts.get_sender().right;
+        let recipient_right = &self.multi_ciphertexts.get_recipient().right;
+        let fee_right = &self.multi_ciphertexts.get_fee().right;
+
+        assert!(sender_right == recipient_right);
+        assert!(recipient_right == fee_right);
+
+        &sender_right
     }
 
     fn recipient(&self) -> &EncryptionKey<E> {
@@ -292,22 +305,22 @@ impl<E: JubjubEngine, PC: PrivacyConfing> ConfidentialProofContext<E, Unchecked,
             public_input[3] = y;
         }
         {
-            let (x, y) = self.enc_amount_sender().left.into_xy();
+            let (x, y) = self.left_amount_sender().into_xy();
             public_input[4] = x;
             public_input[5] = y;
         }
         {
-            let (x, y) = self.enc_amount_recipient().left.into_xy();
+            let (x, y) = self.left_amount_recipient().into_xy();
             public_input[6] = x;
             public_input[7] = y;
         }
         {
-            let (x, y) = self.enc_amount_sender().right.into_xy();
+            let (x, y) = self.right_randomness().into_xy();
             public_input[8] = x;
             public_input[9] = y;
         }
         {
-            let (x, y) = self.enc_fee().left.into_xy();
+            let (x, y) = self.left_fee().into_xy();
             public_input[10] = x;
             public_input[11] = y;
         }
@@ -390,20 +403,25 @@ impl<E: JubjubEngine, PC: PrivacyConfing> ConfidentialProofContext<E, Checked, P
 			.recipient()
 			.write(&mut enc_key_recipient[..])?;
 
-		let mut enc_amount_recipient = [0u8; 64];
+        let mut left_amount_sender = [0u8; 32];
 		self
-            .enc_amount_recipient()
-			.write(&mut enc_amount_recipient[..])?;
+			.left_amount_sender()
+			.write(&mut left_amount_sender[..])?;
 
-		let mut enc_amount_sender = [0u8; 64];
+		let mut left_amount_recipient = [0u8; 32];
 		self
-			.enc_amount_sender()
-			.write(&mut enc_amount_sender[..])?;
+            .left_amount_recipient()
+			.write(&mut left_amount_recipient[..])?;
 
-		let mut enc_fee = [0u8; 64];
+		let mut left_fee = [0u8; 32];
 		self
-			.enc_fee()
-			.write(&mut enc_fee[..])?;
+			.left_fee()
+			.write(&mut left_fee[..])?;
+
+        let mut right_randomness = [0u8; 32];
+        self
+            .right_randomness()
+            .write(&mut right_randomness[..])?;
 
 		let mut enc_balance = [0u8; 64];
 		self
@@ -420,10 +438,11 @@ impl<E: JubjubEngine, PC: PrivacyConfing> ConfidentialProofContext<E, Checked, P
 			rvk: rvk_bytes,
 			enc_key_sender,
 			enc_key_recipient,
-			enc_amount_recipient,
-			enc_amount_sender,
+			left_amount_sender,
+			left_amount_recipient,
+            left_fee,
+            right_randomness,
 			rsk: rsk_bytes,
-			enc_fee,
 			enc_balance,
 			nonce,
 		};
@@ -438,15 +457,16 @@ pub trait Submitter {
 
 /// Transaction components which is needed to create a signed `UncheckedExtrinsic`.
 pub struct ConfidentialXt{
-    pub proof: [u8; 192],                // 192 bytes
-    pub enc_key_sender: [u8; 32],        // 32 bytes
-    pub enc_key_recipient: [u8; 32],     // 32 bytes
-    pub enc_amount_recipient: [u8; 64],  // 64 bytes
-	pub enc_amount_sender: [u8; 64],     // 64 bytes
-	pub enc_fee: [u8; 64],			     // 64 bytes
-	pub rsk: [u8; 32],                   // 32 bytes
-	pub rvk: [u8; 32],                   // 32 bytes
-	pub enc_balance: [u8; 64],           // 32 bytes
+    pub proof: [u8; 192],
+    pub enc_key_sender: [u8; 32],
+    pub enc_key_recipient: [u8; 32],
+    pub left_amount_sender: [u8; 32],
+    pub left_amount_recipient: [u8; 32],
+	pub left_fee: [u8; 32],
+    pub right_randomness: [u8; 32],
+	pub rsk: [u8; 32],
+	pub rvk: [u8; 32],
+	pub enc_balance: [u8; 64],
 	pub nonce: [u8; 32],
 }
 
@@ -454,7 +474,7 @@ impl Submitter for ConfidentialXt {
     fn submit<R: Rng>(&self, calls: Calls, api: &Api, rng: &mut R) {
         use zjubjub::{
             curve::{fs::Fs as zFs, FixedGenerators as zFixedGenerators},
-            redjubjub::PrivateKey as zPrivateKey
+            redjubjub,
         };
         use zpairing::{
             bls12_381::Bls12 as zBls12,
@@ -464,7 +484,8 @@ impl Submitter for ConfidentialXt {
         use parity_codec::{Compact, Encode};
         use primitives::blake2_256;
         use runtime_primitives::generic::Era;
-        use zprimitives::{PARAMS as ZPARAMS, SigVerificationKey, RedjubjubSignature, SigVk};
+        use zprimitives::{PARAMS as ZPARAMS, SigVerificationKey, RedjubjubSignature};
+        use std::convert::TryFrom;
 
         let p_g = zFixedGenerators::Diversifier; // 1
 
@@ -474,7 +495,7 @@ impl Submitter for ConfidentialXt {
         let rsk = zFs::from_repr(rsk_repr)
             .expect("should be casted to Fs type from repr type.");
 
-        let sig_sk = zPrivateKey::<zBls12>(rsk);
+        let sig_sk = redjubjub::PrivateKey::<zBls12>(rsk);
         let sig_vk = SigVerificationKey::from_slice(&self.rvk[..]);
 
         let era = Era::Immortal;
@@ -493,14 +514,15 @@ impl Submitter for ConfidentialXt {
             let msg = blake2_256(payload);
             let sig = sig_sk.sign(&msg[..], rng, p_g, &*ZPARAMS);
 
-            let sig_vk = sig_vk.into_verification_key()
+            let sig_vk = redjubjub::PublicKey::<zBls12>::try_from(sig_vk)
                 .expect("should be casted to redjubjub::PublicKey<Bls12> type.");
             assert!(sig_vk.verify(&msg, &sig, p_g, &*ZPARAMS));
 
             sig
         });
 
-        let sig_repr = RedjubjubSignature::from_signature(&sig);
+        let sig_repr = RedjubjubSignature::try_from(sig)
+            .expect("shoukd be casted from RedjubjubSignature.");
         let uxt = UncheckedExtrinsic::new_signed(index, raw_payload.1, sig_vk.into(), sig_repr, era);
         let _tx_hash = api.submit_extrinsic(&uxt)
             .expect("Faild to submit a extrinsic to zerochain node.");
@@ -520,9 +542,10 @@ impl ConfidentialXt {
             zProof::from_slice(&self.proof[..]),
             zEncKey::from_slice(&self.enc_key_sender[..]),
             zEncKey::from_slice(&self.enc_key_recipient[..]),
-            zCiphertext::from_slice(&self.enc_amount_sender[..]),
-            zCiphertext::from_slice(&self.enc_amount_recipient[..]),
-            zCiphertext::from_slice(&self.enc_fee[..]),
+            zLeftCiphertext::from_slice(&self.left_amount_sender[..]),
+            zLeftCiphertext::from_slice(&self.left_amount_recipient[..]),
+            zLeftCiphertext::from_slice(&self.left_fee[..]),
+            zRightCiphertext::from_slice(&self.right_randomness[..]),
             zNonce::from_slice(&self.nonce[..])
         ))
     }
@@ -531,9 +554,10 @@ impl ConfidentialXt {
         Call::EncryptedAssets(EncryptedAssetsCall::issue(
             zProof::from_slice(&self.proof[..]),
             zEncKey::from_slice(&self.enc_key_recipient[..]),
-            zCiphertext::from_slice(&self.enc_amount_recipient[..]),
-            zCiphertext::from_slice(&self.enc_fee[..]),
+            zLeftCiphertext::from_slice(&self.left_amount_recipient[..]),
+            zLeftCiphertext::from_slice(&self.left_fee[..]),
             zCiphertext::from_slice(&self.enc_balance[..]),
+            zRightCiphertext::from_slice(&self.right_randomness[..]),
             zNonce::from_slice(&self.nonce[..])
         ))
     }
@@ -544,9 +568,10 @@ impl ConfidentialXt {
             zProof::from_slice(&self.proof[..]),
             zEncKey::from_slice(&self.enc_key_sender[..]),
             zEncKey::from_slice(&self.enc_key_recipient[..]),
-            zCiphertext::from_slice(&self.enc_amount_sender[..]),
-            zCiphertext::from_slice(&self.enc_amount_recipient[..]),
-            zCiphertext::from_slice(&self.enc_fee[..]),
+            zLeftCiphertext::from_slice(&self.left_amount_sender[..]),
+            zLeftCiphertext::from_slice(&self.left_amount_recipient[..]),
+            zLeftCiphertext::from_slice(&self.left_fee[..]),
+            zRightCiphertext::from_slice(&self.right_randomness[..]),
             zNonce::from_slice(&self.nonce[..])
         ))
     }
@@ -556,9 +581,10 @@ impl ConfidentialXt {
             zProof::from_slice(&self.proof[..]),
             zEncKey::from_slice(&self.enc_key_recipient[..]),
             asset_id,
-            zCiphertext::from_slice(&self.enc_amount_recipient[..]),
-            zCiphertext::from_slice(&self.enc_fee[..]),
+            zLeftCiphertext::from_slice(&self.left_amount_recipient[..]),
+            zLeftCiphertext::from_slice(&self.left_fee[..]),
             zCiphertext::from_slice(&self.enc_balance[..]),
+            zRightCiphertext::from_slice(&self.right_randomness[..]),
             zNonce::from_slice(&self.nonce[..])
         ))
     }

@@ -1,35 +1,77 @@
-use crate::PARAMS;
-use zcrypto::elgamal;
-use pairing::bls12_381::Bls12;
-use jubjub::curve::JubjubBls12;
-
 #[cfg(feature = "std")]
 use ::std::{vec::Vec, fmt, write};
-#[cfg(not(feature = "std"))]
-use crate::std::vec::Vec;
-
-use parity_codec::{Encode, Decode};
 #[cfg(feature = "std")]
 use substrate_primitives::hexdisplay::AsBytesRef;
+#[cfg(not(feature = "std"))]
+use crate::std::vec::Vec;
+use crate::{PARAMS, LeftCiphertext, RightCiphertext};
+use zcrypto::elgamal;
+use pairing::{
+    bls12_381::{Bls12, Fr},
+    io
+};
+use parity_codec::{Encode, Decode};
+use core::convert::{TryInto, TryFrom};
 
 #[derive(Eq, PartialEq, Clone, Default, Encode, Decode)]
 #[cfg_attr(feature = "std", derive(Debug, Serialize, Deserialize))]
 pub struct Ciphertext(Vec<u8>);
 
-pub trait ElgamalCiphertext {
-    fn into_ciphertext(&self) -> Option<elgamal::Ciphertext<Bls12>>;
-    fn from_ciphertext(ciphertext: &elgamal::Ciphertext<Bls12>) -> Self;
+impl TryFrom<elgamal::Ciphertext<Bls12>> for Ciphertext {
+    type Error = io::Error;
+
+    fn try_from(point: elgamal::Ciphertext<Bls12>) -> Result<Self, io::Error> {
+        let mut writer = [0u8; 64];
+        point.write(&mut writer[..])?;
+
+        Ok(Ciphertext(writer.to_vec()))
+    }
 }
 
-impl ElgamalCiphertext for Ciphertext {
-    fn into_ciphertext(&self) -> Option<elgamal::Ciphertext<Bls12>> {
-        elgamal::Ciphertext::read(&mut &self.0[..], &PARAMS as &JubjubBls12).ok()
-    }
+impl TryFrom<&elgamal::Ciphertext<Bls12>> for Ciphertext {
+    type Error = io::Error;
 
-    fn from_ciphertext(ciphertext: &elgamal::Ciphertext<Bls12>) -> Self {
+    fn try_from(point: &elgamal::Ciphertext<Bls12>) -> Result<Self, io::Error> {
         let mut writer = [0u8; 64];
-        ciphertext.write(&mut writer[..]).unwrap();
-        Ciphertext(writer.to_vec())
+        point.write(&mut writer[..])?;
+
+        Ok(Ciphertext(writer.to_vec()))
+    }
+}
+
+impl TryFrom<Ciphertext> for elgamal::Ciphertext<Bls12> {
+    type Error = io::Error;
+
+    fn try_from(ct: Ciphertext) -> Result<Self, io::Error> {
+        elgamal::Ciphertext::read(&mut &ct.0[..], &*PARAMS)
+    }
+}
+
+impl TryFrom<&Ciphertext> for elgamal::Ciphertext<Bls12> {
+    type Error = io::Error;
+
+    fn try_from(ct: &Ciphertext) -> Result<Self, io::Error> {
+        elgamal::Ciphertext::read(&mut &ct.0[..], &*PARAMS)
+    }
+}
+
+impl TryFrom<Ciphertext> for LeftCiphertext {
+    type Error = io::Error;
+
+    fn try_from(ct: Ciphertext) -> Result<LeftCiphertext, io::Error> {
+        elgamal::Ciphertext::<Bls12>::try_from(ct)?
+            .left
+            .try_into()
+    }
+}
+
+impl TryFrom<Ciphertext> for RightCiphertext {
+    type Error = io::Error;
+
+    fn try_from(ct: Ciphertext) -> Result<RightCiphertext, io::Error> {
+        elgamal::Ciphertext::<Bls12>::try_from(ct)?
+            .right
+            .try_into()
     }
 }
 
@@ -37,11 +79,26 @@ impl Ciphertext {
     pub fn from_slice(slice: &[u8]) -> Self {
         Ciphertext(slice.to_vec())
     }
-}
 
-impl Into<Ciphertext> for elgamal::Ciphertext<Bls12> {
-    fn into(self) -> Ciphertext {
-        Ciphertext::from_ciphertext(&self)
+    pub fn from_left_right(left: LeftCiphertext, right: RightCiphertext) -> Result<Self, io::Error> {
+        elgamal::Ciphertext::new(
+            left.try_into()?,
+            right.try_into()?
+        )
+        .try_into()
+        .map_err(|_| io::Error::InvalidData)
+    }
+
+    pub fn add(&self, other: &Self) -> Result<Self, io::Error> {
+        elgamal::Ciphertext::<Bls12>::try_from(self)?
+            .add_no_params(&elgamal::Ciphertext::<Bls12>::try_from(other)?)
+            .try_into()
+    }
+
+    pub fn sub(&self, other: &Self) -> Result<Self, io::Error> {
+        elgamal::Ciphertext::<Bls12>::try_from(self)?
+            .sub_no_params(&elgamal::Ciphertext::<Bls12>::try_from(other)?)
+            .try_into()
     }
 }
 
@@ -60,6 +117,28 @@ impl fmt::Display for Ciphertext {
 impl AsBytesRef for Ciphertext {
     fn as_bytes_ref(&self) -> &[u8] {
         self.0.as_slice()
+    }
+}
+
+impl Ciphertext {
+    pub fn into_xy_left(&self) -> Result<(Fr, Fr), io::Error> {
+        let left_point = elgamal::Ciphertext::<Bls12>::try_from(self)?
+            .left.into_xy();
+
+        Ok(left_point)
+    }
+
+    pub fn into_xy_right(&self) -> Result<(Fr, Fr), io::Error> {
+        let right_point = elgamal::Ciphertext::<Bls12>::try_from(self)?
+            .right.into_xy();
+
+        Ok(right_point)
+    }
+
+    // TODO: Make constant
+    pub fn zero() ->Self {
+        elgamal::Ciphertext::zero().try_into()
+            .expect("Should valid point.")
     }
 }
 
@@ -89,8 +168,8 @@ mod tests {
     #[test]
     fn test_ciphertext_into_from() {
         let ciphertext_from = gen_ciphertext();
-        let ciphertext = Ciphertext::from_ciphertext(&ciphertext_from);
-        let ciphertext_into = ciphertext.into_ciphertext().unwrap();
+        let ciphertext = Ciphertext::try_from(&ciphertext_from).unwrap();
+        let ciphertext_into = ciphertext.try_into().unwrap();
 
         assert!(ciphertext_from == ciphertext_into);
     }
@@ -98,7 +177,7 @@ mod tests {
     #[test]
     fn test_ciphertext_encode_decode() {
         let ciphertext = gen_ciphertext();
-        let ciphertext_b = Ciphertext::from_ciphertext(&ciphertext);
+        let ciphertext_b = Ciphertext::try_from(&ciphertext).unwrap();
 
         let encoded_cipher = ciphertext_b.encode();
         let decoded_cipher = Ciphertext::decode(&mut encoded_cipher.as_slice()).unwrap();
@@ -114,8 +193,24 @@ mod tests {
         ciphertext.write(&mut &mut buf[..]).unwrap();
 
         let ciphertext_a = Ciphertext(buf.to_vec());
-        let ciphertext_b = Ciphertext::from_ciphertext(&ciphertext);
+        let ciphertext_b = Ciphertext::try_from(&ciphertext).unwrap();
 
         assert_eq!(ciphertext_a, ciphertext_b);
+    }
+
+    #[test]
+    fn test_from_left_right() {
+        let ciphertext = gen_ciphertext();
+
+        let mut buf = [0u8; 64];
+        ciphertext.write(&mut &mut buf[..]).unwrap();
+
+        let left = LeftCiphertext::from_slice(&buf[..32]);
+        let right = RightCiphertext::from_slice(&buf[32..]);
+
+        let ciphertext_from = Ciphertext::from_left_right(left, right).unwrap();
+        let ciphertext2 = ciphertext_from.try_into().unwrap();
+
+        assert!(ciphertext == ciphertext2);
     }
 }

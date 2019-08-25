@@ -26,3 +26,4 @@ script:
 
 after_script:
   # Check how much free disk space left after the build
+  - df -h

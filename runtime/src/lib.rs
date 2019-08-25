@@ -27,7 +27,6 @@ use version::NativeVersion;
 use zprimitives::{
 	RedjubjubSignature,
 	SigVerificationKey,
-	Ciphertext,
 };
 
 // A few exports that help ease life for downstream crates.
@@ -196,7 +195,6 @@ impl sudo::Trait for Runtime {
 
 impl encrypted_balances::Trait for Runtime {
 	type Event = Event;
-	type EncryptedBalance = Ciphertext;
 }
 
 impl encrypted_assets::Trait for Runtime {

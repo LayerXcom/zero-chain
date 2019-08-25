@@ -305,7 +305,7 @@ pub fn subscribe_event(api: Api, remaining_balance: u32) {
                                             _zkproof,
                                             _enc_key_sender, _enc_key_recipient,
                                             _amount_sender, _amount_recipient,
-                                            _fee_sender, _enc_balances, _sig_vk
+                                            _fee_sender,  _randomness, _enc_balances, _sig_vk
                                         ) => println!("Submitting transaction is completed successfully. \n Remaining balance is {}", remaining_balance),
                                         encrypted_balances::RawEvent::InvalidZkProof() => {
                                             println!("Invalid zk proof.");
@@ -321,7 +321,7 @@ pub fn subscribe_event(api: Api, remaining_balance: u32) {
                                             asset_id, _zkproof,
                                             _enc_key_sender, _enc_key_recipient,
                                             _amount_sender, _amount_recipient,
-                                            _fee_sender, _enc_balances, _sig_vk
+                                            _fee_sender, _randomness, _enc_balances, _sig_vk
                                         ) => println!("Submitting transaction is completed successfully. \nRemaining balance is {}. \nThe asset id is {}.", remaining_balance, asset_id),
                                         encrypted_assets::RawEvent::Destroyed(asset_id, _address, _balance, _pending_transfer)
                                             => println!("destroyed coins. \nThe asset id is {}.", asset_id),
