@@ -435,12 +435,12 @@ mod tests {
         assert_eq!(cs.get_input(14, "inputize pointl/y/input variable"), c_bal_left.1);
         assert_eq!(cs.get_input(15, "inputize pointr/x/input variable"), c_bal_right.0);
         assert_eq!(cs.get_input(16, "inputize pointr/y/input variable"), c_bal_right.1);
-        assert_eq!(cs.get_input(17, "rvk/x/input variable"), rvk.0);
-        assert_eq!(cs.get_input(18, "rvk/y/input variable"), rvk.1);
-        assert_eq!(cs.get_input(19, "inputize g_epoch/x/input variable"), g_epoch_xy.0);
-        assert_eq!(cs.get_input(20, "inputize g_epoch/y/input variable"), g_epoch_xy.1);
-        assert_eq!(cs.get_input(21, "inputize nonce/x/input variable"), nonce.0);
-        assert_eq!(cs.get_input(22, "inputize nonce/y/input variable"), nonce.1);
+        assert_eq!(cs.get_input(17, "inputize rvk/rvk/x/input variable"), rvk.0);
+        assert_eq!(cs.get_input(18, "inputize rvk/rvk/y/input variable"), rvk.1);
+        assert_eq!(cs.get_input(19, "inputize g_epoch and nonce/inputize g_epoch/x/input variable"), g_epoch_xy.0);
+        assert_eq!(cs.get_input(20, "inputize g_epoch and nonce/inputize g_epoch/y/input variable"), g_epoch_xy.1);
+        assert_eq!(cs.get_input(21, "inputize g_epoch and nonce/inputize nonce/x/input variable"), nonce.0);
+        assert_eq!(cs.get_input(22, "inputize g_epoch and nonce/inputize nonce/y/input variable"), nonce.1);
     }
 
     #[test]

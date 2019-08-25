@@ -3,29 +3,26 @@
 sudo: true
 language: minimal
 
-cache:
-  cargo: true
+cache: cargo
 
-before_cache:
-  - chmod -R a+r $HOME/.cargo
-  - chmod -R a+r $TRAVIS_BUILD_DIR/target
+branches:
+  only:
+  - master
 
-jobs:
-  include:
-      - stage: wasm
-        script: ./ci/script.sh
-        env: TARGET=wasm RUST_BACKTRACE=1 RUST_TOOLCHAIN=nightly
-      - stage: compile
-        script: ./ci/script.sh
-        env: TARGET=native RUST_BACKTRACE=1 RUST_TOOLCHAIN=stable
-      - stage: test
-        script: ./ci/script.sh
-        env: TARGET=test RUST_BACKTRACE=1 RUST_TOOLCHAIN=stable
+env:
+  global:
+    - RUST_BACKTRACE=1
+  matrix:
+    - RUST_TOOLCHAIN=nightly TARGET=wasm
+    - RUST_TOOLCHAIN=stable TARGET=native
 
 before_install:
   - chmod +x ./ci/script.sh
   # Check how much space we've got on this machine.
   - df -h
+
+script:
+  - ./ci/script.sh
 
 after_script:
   # Check how much free disk space left after the build
