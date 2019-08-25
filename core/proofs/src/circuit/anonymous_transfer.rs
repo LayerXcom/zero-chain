@@ -19,6 +19,7 @@ use scrypto::jubjub::{edwards, PrimeOrder};
 use crate::{elgamal::Ciphertext, Assignment, Nonce};
 use super::range_check::u32_into_bit_vec_le;
 use super::anonimity_set::*;
+use super::utils::*;
 
 pub const ANONIMITY_SIZE: usize = 11;
 
@@ -70,8 +71,6 @@ impl<'a, E: JubjubEngine> Circuit<E> for AnonymousTransfer<'a, E> {
             self.t_index
         )?;
 
-
-
         let mut enc_key_set = EncKeySet::new(ANONIMITY_SIZE);
 
         enc_key_set
@@ -85,6 +84,19 @@ impl<'a, E: JubjubEngine> Circuit<E> for AnonymousTransfer<'a, E> {
                 params
             )?;
 
+        let expected_enc_key_sender = s_bins.edwards_add_fold(
+            cs.namespace(|| "add folded enc keys"),
+            &enc_key_set,
+            params
+        )?;
+
+        if let Some(i) = self.s_index {
+            eq_edwards_points(
+                cs.namespace(|| "equal enc_key_sender"),
+                &expected_enc_key_sender,
+                &enc_key_set.0[i]
+            )?;
+        }
 
 
         let mut left_ciphertexts = LeftCiphertextSet::new(ANONIMITY_SIZE);

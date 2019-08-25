@@ -5,6 +5,10 @@ language: minimal
 
 cache: cargo
 
+before_cache:
+  - chmod -R a+r $HOME/.cargo
+  - chmod -R a+r $TRAVIS_BUILD_DIR/target
+
 branches:
   only:
   - master

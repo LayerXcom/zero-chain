@@ -62,6 +62,7 @@ impl Binary {
         Ok(Binary(acc))
     }
 
+    // s_i + t_i
     pub fn or<E, CS>(&self, mut cs: CS, other: &Self) -> Result<Self, SynthesisError>
     where
         E: JubjubEngine,
@@ -72,6 +73,7 @@ impl Binary {
         unimplemented!();
     }
 
+    // (1 - s_i)(1 - t_i)
     pub fn xor<E, CS>(&self, mut cs: CS, other: &Self) -> Result<Self, SynthesisError>
     where
         E: JubjubEngine,
@@ -79,7 +81,17 @@ impl Binary {
     {
         assert_eq!(self.len(), other.len());
 
-        unimplemented!();
+        let mut acc = Vec::with_capacity(ANONIMITY_SIZE);
+        for i in 0..self.len() {
+            let tmp = Boolean::xor(
+                cs.namespace(|| format!("{} xor binary", i)),
+                &self.0[i],
+                &other.0[i]
+            )?;
+            acc.push(tmp);
+        }
+
+        Ok(Binary(acc))
     }
 
     pub fn edwards_add_fold<E, CS>(
@@ -122,7 +134,7 @@ impl Binary {
     }
 }
 
-pub struct EncKeySet<E: JubjubEngine>(Vec<EdwardsPoint<E>>);
+pub struct EncKeySet<E: JubjubEngine>(pub(crate) Vec<EdwardsPoint<E>>);
 
 impl<E: JubjubEngine> EncKeySet<E> {
     pub fn new(capacity: usize) -> Self {
@@ -188,53 +200,44 @@ impl<E: JubjubEngine> EncKeySet<E> {
         Ok(())
     }
 
-    // pub fn push_recipient<CS: ConstraintSystem<E>>(
-    //     &mut self,
-    //     mut cs: CS,
-    //     enc_key: Option<&EncryptionKey<E>>,
-    //     t_index: Option<usize>,
-    //     params: &E::Params,
-    // ) -> Result<(), SynthesisError> {
-    //     // Ensures recipient enc_key is on the curve
-    //     let enc_key_recipient_bits = ecc::EdwardsPoint::witness(
-    //         cs.namespace(|| "recipient enc_key witness"),
-    //         enc_key.as_ref().map(|e| e.0.clone()),
-    //         params
-    //     )?;
+    pub fn gen_enc_keys_mul_random<CS>(
+        &self,
+        mut cs: CS,
+        randomness: Option<&E::Fs>,
+        params: &E::Params
+    ) -> Result<EncKeysMulRandom<E>, SynthesisError>
+    where
+        CS: ConstraintSystem<E>
+    {
+        // Generate the randomness for elgamal encryption into the circuit
+        let randomness_bits = boolean::field_into_boolean_vec_le(
+            cs.namespace(|| format!("randomness_bits")),
+            randomness.map(|e| *e)
+        )?;
 
-    //     // Check the recipient enc_key is not small order
-    //     enc_key_recipient_bits.assert_not_small_order(
-    //         cs.namespace(|| "val_gl not small order"),
-    //         params
-    //     )?;
+        let mut acc = Vec::with_capacity(ANONIMITY_SIZE);
+        for i in 0..self.0.len() {
+            // Generate the randomness * enc_keys in circuit
+            let tmp = self.0[i].mul(
+                cs.namespace(|| format!("randomness mul enc_key_{}", i)),
+                &randomness_bits,
+                params
+            )?;
+            acc.push(tmp);
+        }
 
-    //     if let Some(i) = t_index {
-    //         self.0[i] = enc_key_recipient_bits;
-    //     }
-
-    //     Ok(())
-    // }
-
-    // pub fn push_decoys<CS: ConstraintSystem<E>>(
-    //     &mut self,
-    //     mut cs: CS,
-    //     enc_keys: &[Option<EncryptionKey<E>>],
-    //     params: &E::Params
-    // ) -> Result<(), SynthesisError> {
-    //     for (i, e) in enc_keys.into_iter().enumerate() {
-    //         let decoy_bits = ecc::EdwardsPoint::witness(
-    //             cs.namespace(|| format!("decoy {} enc_key witness", i)),
-    //             e.as_ref().map(|e| e.0.clone()),
-    //             params
-    //         )?;
-
-    //         self.0.push(decoy_bits);
-    //     }
-
-    //     Ok(())
-    // }
-
+        Ok(EncKeysMulRandom(acc))
+    }
 }
+
+pub struct EncKeysMulRandom<E: JubjubEngine>(pub(crate) Vec<EdwardsPoint<E>>);
+
+impl<E: JubjubEngine> EncKeysMulRandom<E> {
+    
+}
+
+pub struct LeftCiphertexts<E: JubjubEngine>(pub(crate) Vec<EdwardsPoint<E>>);
+
 
 pub struct ShuffledEncKeySet<E: JubjubEngine>(Vec<EdwardsPoint<E>>);
 
