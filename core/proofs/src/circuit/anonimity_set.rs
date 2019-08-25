@@ -62,7 +62,9 @@ impl Binary {
         Ok(Binary(acc))
     }
 
-    // s_i + t_i
+    // (1 - s_i)(1 - t_i)
+    // iff s:0 * t:0 = 1
+    // TODO:
     pub fn or<E, CS>(&self, mut cs: CS, other: &Self) -> Result<Self, SynthesisError>
     where
         E: JubjubEngine,
@@ -70,10 +72,24 @@ impl Binary {
     {
         assert_eq!(self.len(), other.len());
 
-        unimplemented!();
+        let mut acc = Vec::with_capacity(ANONIMITY_SIZE);
+        for i in 0..self.len() {
+            let tmp = Boolean::xor( // TODO:
+                cs.namespace(|| format!("{} xor binary", i)),
+                &self.0[i],
+                &other.0[i]
+            )?;
+            acc.push(tmp);
+        }
+
+        Ok(Binary(acc))
     }
 
-    // (1 - s_i)(1 - t_i)
+    // s_i + t_i
+    // 1 + 0 = 1 -> sender
+    // 0 + 1 = 1 -> recipient
+    // 0 + 0 = 0
+    // 1 + 1 = 0
     pub fn xor<E, CS>(&self, mut cs: CS, other: &Self) -> Result<Self, SynthesisError>
     where
         E: JubjubEngine,
@@ -97,21 +113,19 @@ impl Binary {
     pub fn edwards_add_fold<E, CS>(
         &self,
         mut cs: CS,
-        points: &EncKeySet<E>,
+        points: &[EdwardsPoint<E>],
+        recipient_op: &RecipientOp<E>,
+        zero_p: EdwardsPoint<E>,
         params: &E::Params,
     ) -> Result<EdwardsPoint<E>, SynthesisError>
     where
         E: JubjubEngine,
         CS: ConstraintSystem<E>,
     {
-        assert_eq!(self.len(), points.0.len());
+        assert_eq!(self.len(), points.len());
+        let mut acc = zero_p;
 
-        let mut acc = EdwardsPoint::<E>::witness::<PrimeOrder, _>(
-            cs.namespace(|| "initialize acc."),
-            Some(edwards::Point::zero()),
-            params,
-        )?;
-        for (i, (b, p)) in self.0.iter().zip(points.0.iter()).enumerate() {
+        for (i, (b, p)) in self.0.iter().zip(points.iter()).enumerate() {
             let selected_point = p.conditionally_select(
                 cs.namespace(|| format!("conditionally select p_{} depending on b", i)),
                 b
@@ -132,6 +146,12 @@ impl Binary {
     fn len(&self) -> usize {
         self.0.len()
     }
+}
+
+pub enum RecipientOp<E: JubjubEngine> {
+    Add(EdwardsPoint<E>),
+    Remove(usize),
+    None,
 }
 
 pub struct EncKeySet<E: JubjubEngine>(pub(crate) Vec<EdwardsPoint<E>>);
@@ -233,7 +253,56 @@ impl<E: JubjubEngine> EncKeySet<E> {
 pub struct EncKeysMulRandom<E: JubjubEngine>(pub(crate) Vec<EdwardsPoint<E>>);
 
 impl<E: JubjubEngine> EncKeysMulRandom<E> {
-    
+    pub fn gen_left_ciphertexts<CS>(
+        &self,
+        mut cs: CS,
+        amount_bits: &[Boolean],
+        s_index: Option<usize>,
+        t_index: Option<usize>,
+        zero_p: EdwardsPoint<E>,
+        params: &E::Params,
+    ) -> Result<LeftCiphertexts<E>, SynthesisError>
+    where
+        CS: ConstraintSystem<E>
+    {
+        assert_eq!(self.0.len(), ANONIMITY_SIZE);
+        let mut acc = Vec::with_capacity(ANONIMITY_SIZE);
+
+        // Multiply the amount to the base point same as FixedGenerators::ElGamal.
+        let amount_g = ecc::fixed_base_multiplication(
+            cs.namespace(|| format!("compute the amount in the exponent")),
+            FixedGenerators::NoteCommitmentRandomness,
+            &amount_bits,
+            params
+        )?;
+
+        for i in 0..self.0.len() {
+            if Some(i) == s_index {
+                let tmp = amount_g.add(
+                    cs.namespace(|| "sender's left ciphertext"),
+                    &self.0[i],
+                    params
+                )?;
+                acc.push(tmp);
+            } else if Some(i) == t_index {
+                let tmp = amount_g.add(
+                    cs.namespace(|| "recipient's left ciphertext"),
+                    &self.0[i],
+                    params
+                )?;
+                acc.push(tmp);
+            } else {
+                let tmp = zero_p.add(
+                    cs.namespace(|| format!("decoy_{} left ciphertext", i)),
+                    &self.0[i],
+                    params
+                )?;
+                acc.push(tmp);
+            }
+        }
+
+        Ok(LeftCiphertexts(acc))
+    }
 }
 
 pub struct LeftCiphertexts<E: JubjubEngine>(pub(crate) Vec<EdwardsPoint<E>>);

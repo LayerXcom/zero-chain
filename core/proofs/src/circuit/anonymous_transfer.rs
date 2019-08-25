@@ -59,6 +59,12 @@ impl<'a, E: JubjubEngine> Circuit<E> for AnonymousTransfer<'a, E> {
             self.remaining_balance
         )?;
 
+        let zero_p = EdwardsPoint::<E>::witness::<PrimeOrder, _>(
+            cs.namespace(|| "initialize acc."),
+            Some(edwards::Point::zero()),
+            params,
+        )?;
+
         let s_bins = Binary::new(
             cs.namespace(|| "new s binary"),
             ST::S,
@@ -86,7 +92,9 @@ impl<'a, E: JubjubEngine> Circuit<E> for AnonymousTransfer<'a, E> {
 
         let expected_enc_key_sender = s_bins.edwards_add_fold(
             cs.namespace(|| "add folded enc keys"),
-            &enc_key_set,
+            &enc_key_set.0,
+            &RecipientOp::None,
+            zero_p.clone(),
             params
         )?;
 
