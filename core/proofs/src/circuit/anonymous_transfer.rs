@@ -33,9 +33,7 @@ pub struct AnonymousTransfer<'a, E: JubjubEngine> {
     dec_key: Option<&'a DecryptionKey<E>>,
     enc_key_recipient: Option<&'a EncryptionKey<E>>,
     enc_key_decoys: &'a [Option<EncryptionKey<E>>],
-    enc_balance_sendder: Option<&'a Ciphertext<E>>,
-    enc_balance_recipient: Option<&'a Ciphertext<E>>,
-    enc_balances_decoys: &'a [Option<Ciphertext<E>>],
+    enc_balances: &'a [Option<Ciphertext<E>>],
     g_epoch: Option<&'a edwards::Point<E, PrimeOrder>>,
 }
 
@@ -186,8 +184,12 @@ impl<'a, E: JubjubEngine> Circuit<E> for AnonymousTransfer<'a, E> {
             &enc_keys_random_fold_s_xor_t
         )?;
 
-
         let nor_st_bins = s_bins.nor(cs.namespace(|| "s_i nor t_i"), &t_bins)?;
+        nor_st_bins.conditionally_equals(
+            cs.namespace(|| "equal a and b in nor st"),
+            &ciphertext_left_set.0,
+            &enc_keys_mul_random.0
+        )?;
 
 
         // Generate the randomness for elgamal encryption into the circuit
@@ -249,8 +251,7 @@ mod tests {
         params: &JubjubBls12
     ) -> Ciphertext<Bls12> {
         let right = params.generator(p_g).mul(*randomness, params);
-        let mut v_point = params.generator(p_g).mul(amount as u64, params);
-        v_point.negate();
+        let v_point = params.generator(p_g).mul(amount as u64, params).negate();
         let r_point = enc_key.0.mul(*randomness, params);
         let left = v_point.add(&r_point, params);
 
@@ -308,8 +309,11 @@ mod tests {
         let ciphertexts_amount_decoy = enc_keys_decoy.iter().zip(randomness_amounts_iter).map(|(e, r)| Ciphertext::encrypt(0, &r, e.as_ref().unwrap(), p_g, params));
         let ciphertext_balance_sender = Ciphertext::encrypt(remaining_balance, &randomness_balanace_sender, &enc_key_sender, p_g, params);
         let ciphertext_balance_recipient = Ciphertext::encrypt(remaining_balance_recipient, &randomness_balanace_recipient, &enc_key_recipient, p_g, params);
-        let cipherrtexts_balances = enc_keys_decoy.iter().zip(remaining_balance_iter).zip(randomness_balances_iter)
-            .map(|((e, a), r)| Some(Ciphertext::encrypt(a, &r, e.as_ref().unwrap(), p_g, params)));
+        let mut ciphertext_balances = enc_keys_decoy.iter().zip(remaining_balance_iter).zip(randomness_balances_iter)
+            .map(|((e, a), r)| Some(Ciphertext::encrypt(a, &r, e.as_ref().unwrap(), p_g, params)))
+            .collect::<Vec<Option<Ciphertext<Bls12>>>>();
+        ciphertext_balances.insert(s_index, Some(ciphertext_balance_sender));
+        ciphertext_balances.insert(t_index, Some(ciphertext_balance_recipient));
 
         let rvk = proof_gen_key.into_rvk(alpha, params).0.into_xy();
         let g_epoch = edwards::Point::<Bls12, _>::rand(rng, params).mul_by_cofactor(params);
@@ -329,9 +333,7 @@ mod tests {
             dec_key: Some(&dec_key),
             enc_key_recipient: Some(&enc_key_recipient),
             enc_key_decoys: &enc_keys_decoy,
-            enc_balance_sendder: Some(&ciphertext_balance_sender),
-            enc_balance_recipient: Some(&ciphertext_balance_recipient),
-            enc_balances_decoys: &cipherrtexts_balances.collect::<Vec<Option<Ciphertext<Bls12>>>>(),
+            enc_balances: &ciphertext_balances,
             g_epoch: Some(&g_epoch),
         };
 

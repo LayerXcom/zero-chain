@@ -7,6 +7,7 @@ use scrypto::circuit::{
 };
 use scrypto::jubjub::{JubjubEngine, FixedGenerators, edwards, PrimeOrder};
 use crate::{ProofGenerationKey, EncryptionKey, DecryptionKey};
+use super::utils::eq_edwards_points;
 use std::fmt;
 
 pub const ANONIMITY_SIZE: usize = 11;
@@ -124,6 +125,39 @@ impl Binary {
         }
 
         Ok(Binary(acc))
+    }
+
+    pub fn conditionally_equals<E, CS>(
+        &self,
+        mut cs: CS,
+        a_points: &[EdwardsPoint<E>],
+        b_points: &[EdwardsPoint<E>]
+    ) -> Result<(), SynthesisError>
+    where
+        E: JubjubEngine,
+        CS: ConstraintSystem<E>,
+    {
+        assert_eq!(self.len(), a_points.len());
+        assert_eq!(self.len(), b_points.len());
+
+        for (i, (a, b)) in a_points.iter().zip(b_points.iter()).enumerate() {
+            let c_a = a.conditionally_select(
+                cs.namespace(|| format!("conditionally select a_{}", i)),
+                &self.0[i]
+            )?;
+            let c_b = b.conditionally_select(
+                cs.namespace(|| format!("conditionally select b_{}", i)),
+                &self.0[i]
+            )?;
+
+            eq_edwards_points(
+                cs.namespace(|| format!("equal ca_{} and cb", i)),
+                &c_a,
+                &c_b
+            )?;
+        }
+
+        Ok(())
     }
 
     pub fn edwards_add_fold<E, CS>(
@@ -320,4 +354,15 @@ impl<E: JubjubEngine> EncKeysMulRandom<E> {
 
 pub struct LeftCiphertexts<E: JubjubEngine>(pub(crate) Vec<EdwardsPoint<E>>);
 
+impl<E: JubjubEngine> LeftCiphertexts<E> {
+    pub fn inputize<CS>(&self, mut cs: CS) -> Result<(), SynthesisError>
+    where
+        CS: ConstraintSystem<E>
+    {
+        for (i, e) in self.0.iter().enumerate() {
+            e.inputize(cs.namespace(|| format!("inputize left ciphertexts {}", i)))?;
+        }
 
+        Ok(())
+    }
+}
