@@ -16,16 +16,22 @@ where
     E: JubjubEngine,
     CS: ConstraintSystem<E>,
 {
-    let a_repr = a.repr(cs.namespace(|| "a into representation."))?;
-    let b_repr = b.repr(cs.namespace(|| "b into representation."))?;
+    let (a_x, a_y) = (a.get_x(), a.get_y());
+    let (b_x, b_y) = (b.get_x(), b.get_y());
 
-    for (i, (a, b)) in a_repr.iter().zip(b_repr.iter()).enumerate() {
-        Boolean::enforce_equal(
-            cs.namespace(|| format!("a_repr equals b_repr {}", i)),
-            &a,
-            &b
-        )?;
-    }
+    cs.enforce(
+        || "equal x nums",
+        |lc| lc + a_x.get_variable(),
+        |lc| lc + CS::one(),
+        |lc| lc + b_x.get_variable()
+    );
+
+    cs.enforce(
+        || "equal y nums",
+        |lc| lc + a_y.get_variable(),
+        |lc| lc + CS::one(),
+        |lc| lc + b_y.get_variable()
+    );
 
     Ok(())
 }

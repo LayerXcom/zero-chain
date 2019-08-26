@@ -387,8 +387,8 @@ mod tests {
         // println!("num: {:?}", cs.num_constraints());
         // println!("hash: {:?}", cs.hash());
 
-        assert_eq!(cs.num_constraints(), 25045);
-        assert_eq!(cs.hash(), "b81693f5e8433fafa8f422729eedb9217b904c2cbfa21e8ddabf041da37bfdd7");
+        assert_eq!(cs.num_constraints(), 23239);
+        assert_eq!(cs.hash(), "37a8a1c8d1c88182caf851e065e95f76dccb56699f351a74563f12ca6aa74b37");
 
         assert_eq!(cs.num_inputs(), 23);
         assert_eq!(cs.get_input(0, "ONE"), Fr::one());

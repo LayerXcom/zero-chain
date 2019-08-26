@@ -131,14 +131,14 @@ impl<'a, E: JubjubEngine> Circuit<E> for AnonymousTransfer<'a, E> {
             params
         )?;
 
-        let enc_keys_mul_random_add_fold = s_bins.edwards_add_fold(
+        let enc_keys_random_fold_s_i = s_bins.edwards_add_fold(
             cs.namespace(|| "add folded enc keys mul random"),
             &enc_keys_mul_random.0,
             zero_p.clone(),
             params
         )?;
 
-        let expected_ciphertext_left_s_i = enc_keys_mul_random_add_fold.add(
+        let expected_ciphertext_left_s_i = enc_keys_random_fold_s_i.add(
             cs.namespace(|| "compute ciphertext left s_i"),
             &amount_g,
             params
@@ -162,10 +162,30 @@ impl<'a, E: JubjubEngine> Circuit<E> for AnonymousTransfer<'a, E> {
         )?;
 
         eq_edwards_points(
-            cs.namespace(|| "left ciphertext equals"),
+            cs.namespace(|| "left ciphertext equals based in s_i"),
             &expected_ciphertext_left_s_i,
             &ciphertext_left_s_i
         )?;
+
+        let xor_st_bins = s_bins.xor(cs.namespace(|| "s_i xor t_i"), &t_bins)?;
+        let ciphertext_left_s_xor_t = xor_st_bins.edwards_add_fold(
+            cs.namespace(|| "add folded left ciphertext based in (s_i xor t_i)"),
+            &ciphertext_left_set.0,
+            zero_p.clone(),
+            params
+        )?;
+        let enc_keys_random_fold_s_xor_t = xor_st_bins.edwards_add_fold(
+            cs.namespace(|| "add folded randomized enc keys based in (s_i xor t_i)"),
+            &enc_keys_mul_random.0,
+            zero_p.clone(),
+            params
+        )?;
+        eq_edwards_points(
+            cs.namespace(|| "left ciphertext equals based in (s_i xor t_i)"),
+            &ciphertext_left_s_xor_t,
+            &enc_keys_random_fold_s_xor_t
+        )?;
+
 
         let nor_st_bins = s_bins.nor(cs.namespace(|| "s_i nor t_i"), &t_bins)?;
 
@@ -253,7 +273,6 @@ mod tests {
         let seed_sender: [u8; 32] = rng.gen();
         let seed_recipient: [u8; 32] = rng.gen();
         let alpha = Fs::rand(rng);
-        let randomness_balance = Fs::rand(rng);
         let randomness_amount = Fs::rand(rng);
         let randomness_balanace_sender = Fs::rand(rng);
         let randomness_balanace_recipient = Fs::rand(rng);
@@ -290,7 +309,8 @@ mod tests {
         let ciphertexts_amount_decoy = enc_keys_decoy.iter().zip(randomness_amounts_iter).map(|(e, r)| Ciphertext::encrypt(0, &r, e.as_ref().unwrap(), p_g, params));
         let ciphertext_balance_sender = Ciphertext::encrypt(remaining_balance, &randomness_balanace_sender, &enc_key_sender, p_g, params);
         let ciphertext_balance_recipient = Ciphertext::encrypt(remaining_balance_recipient, &randomness_balanace_recipient, &enc_key_recipient, p_g, params);
-        let cipherrtexts_balances = enc_keys_decoy.iter().zip(remaining_balance_iter).zip(randomness_balances_iter).map(|((e, a), r)| Some(Ciphertext::encrypt(a, &r, e.as_ref().unwrap(), p_g, params)));
+        let cipherrtexts_balances = enc_keys_decoy.iter().zip(remaining_balance_iter).zip(randomness_balances_iter)
+            .map(|((e, a), r)| Some(Ciphertext::encrypt(a, &r, e.as_ref().unwrap(), p_g, params)));
 
         let rvk = proof_gen_key.into_rvk(alpha, params).0.into_xy();
         let g_epoch = edwards::Point::<Bls12, _>::rand(rng, params).mul_by_cofactor(params);
