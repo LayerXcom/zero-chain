@@ -30,6 +30,37 @@ where
     Ok(())
 }
 
+pub fn negate_point<E, CS>(
+    mut cs: CS,
+    point: &EdwardsPoint<E>,
+    params: &E::Params
+) -> Result<EdwardsPoint<E>, SynthesisError>
+where
+    E: JubjubEngine,
+    CS: ConstraintSystem<E>,
+{
+    use scrypto::circuit::num::AllocatedNum;
+    use pairing::Field;
+    use crate::Assignment;
+
+    let neg_x = AllocatedNum::alloc(
+        cs.namespace(|| "negate x"),
+        || {
+            let x_value = point.get_x().get_value();
+            let mut x = *x_value.get()?;
+            x.negate();
+            Ok(x)
+        }
+    )?;
+
+    EdwardsPoint::interpret(
+        cs.namespace(|| "interpret negate point"),
+        &neg_x,
+        point.get_y(),
+        params
+    )
+}
+
 /// Inputize re-randomized signature verification key.
 pub fn rvk_inputize<E, CS>(
     mut cs: CS,

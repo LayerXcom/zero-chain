@@ -21,8 +21,6 @@ use super::range_check::u32_into_bit_vec_le;
 use super::anonimity_set::*;
 use super::utils::*;
 
-pub const ANONIMITY_SIZE: usize = 11;
-
 pub struct AnonymousTransfer<'a, E: JubjubEngine> {
     params: &'a E::Params,
     amount: Option<u32>,
@@ -60,6 +58,8 @@ impl<'a, E: JubjubEngine> Circuit<E> for AnonymousTransfer<'a, E> {
             &amount_bits,
             params
         )?;
+
+        // let neg_amount_g = ;
 
         // Ensure the remaining balance is u32.
         let remaining_balance_bits = u32_into_bit_vec_le(
@@ -164,7 +164,7 @@ impl<'a, E: JubjubEngine> Circuit<E> for AnonymousTransfer<'a, E> {
         )?;
 
         let nor_st_bins = s_bins.nor(cs.namespace(|| "s_i nor t_i"), &t_bins)?;
-        
+
 
 
         // Generate the randomness for elgamal encryption into the circuit
@@ -212,5 +212,78 @@ impl<'a, E: JubjubEngine> Circuit<E> for AnonymousTransfer<'a, E> {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use pairing::{bls12_381::{Bls12, Fr}, Field};
+    use rand::{SeedableRng, Rng, XorShiftRng, Rand};
+    use crate::EncryptionKey;
+    use crate::circuit::TestConstraintSystem;
+    use scrypto::jubjub::{JubjubBls12, fs::Fs};
 
+    fn test_based_amount(amount: u32) {
+        // constants
+        let params = &JubjubBls12::new();
+        let rng = &mut XorShiftRng::from_seed([0x3dbe6258, 0x8d313d76, 0x3237db17, 0xe5bc0654]);
+        let p_g = FixedGenerators::NoteCommitmentRandomness;
+        let current_balance = 100;
+        let remaining_balance = current_balance - amount;
+
+        // randomness
+        let seed_sender: [u8; 32] = rng.gen();
+        let seed_recipient: [u8; 32] = rng.gen();
+        let seed_decoys_iter = rng.gen_iter::<[u8; 32]>().take(DECOY_SIZE);
+        let alpha = Fs::rand(rng);
+        let randomness_balance = Fs::rand(rng);
+        let randomness_amount = Fs::rand(rng);
+        // let randomness_balance_iter = rng.gen_iter::<u32>()
+        let s_index: usize = rng.gen_range(0, ANONIMITY_SIZE+1);
+        let mut t_index: usize;
+        loop {
+            t_index = rng.gen_range(0, ANONIMITY_SIZE+1);
+            if t_index != s_index {
+                break;
+            }
+        }
+
+        // keys
+        let proof_gen_key = ProofGenerationKey::<Bls12>::from_seed(&seed_sender[..], params);
+        let dec_key = proof_gen_key.into_decryption_key().unwrap();
+        let enc_key_sender = EncryptionKey::from_decryption_key(&dec_key, params);
+        let enc_key_recipient = EncryptionKey::from_seed(&seed_recipient, params).unwrap();
+        let enc_key_decoys = seed_decoys_iter.map(|e| EncryptionKey::from_seed(&e, params).ok()).collect::<Vec<Option<EncryptionKey<Bls12>>>>();
+        let enc_key_sender_xy = enc_key_sender.0.into_xy();
+        let enc_key_recipient_xy = enc_key_recipient.0.into_xy();
+
+
+        // ciphertexts
+        let ciphertext_amount_sender = Ciphertext::encrypt(amount, &randomness_amount, &enc_key_sender, p_g, params);
+        let ciphertext_amount_recipient = Ciphertext::encrypt(amount, &randomness_amount, &enc_key_recipient, p_g, params);
+
+
+        let rvk = proof_gen_key.into_rvk(alpha, params).0.into_xy();
+        let g_epoch = edwards::Point::<Bls12, _>::rand(rng, params).mul_by_cofactor(params);
+        let g_epoch_xy = g_epoch.into_xy();
+        let nonce = g_epoch.mul(dec_key.0, params).into_xy();
+
+        let mut cs = TestConstraintSystem::<Bls12>::new();
+        // let instance = AnonymousTransfer {
+        //     params,
+        //     amount: Some(amount),
+        //     remaining_balance: Some(remaining_balance),
+        //     s_index: Some(s_index),
+        //     t_index: Some(t_index),
+        //     randomness: Some(&randomness_amount),
+        //     alpha: Some(&alpha),
+        //     proof_generation_key: Some(&proof_gen_key),
+        //     dec_key: Some(&dec_key),
+        //     enc_key_recipient: Some(&enc_key_recipient),
+        //     enc_key_decoys: &enc_key_decoys,
+        //     encrypted_balance: Option<&'a Ciphertext<E>>,
+        //     g_epoch: Some(&g_epoch),
+        // };
+
+    }
+
+    #[test]
+    fn test_circuit_anonymous_transfer_valid() {
+        test_based_amount(10);
+    }
 }

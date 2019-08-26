@@ -317,47 +317,47 @@ mod tests {
     use pairing::{bls12_381::{Bls12, Fr}, Field};
     use rand::{SeedableRng, Rng, XorShiftRng, Rand};
     use crate::circuit::TestConstraintSystem;
-    use scrypto::jubjub::{JubjubBls12, fs};
+    use scrypto::jubjub::{JubjubBls12, fs::Fs};
     use crate::EncryptionKey;
 
     fn test_based_amount(amount: u32) {
         let params = &JubjubBls12::new();
         let rng = &mut XorShiftRng::from_seed([0x3dbe6258, 0x8d313d76, 0x3237db17, 0xe5bc0654]);
 
-        let sk_fs_s: [u8; 32] = rng.gen();
-        let sk_fs_r: [u8; 32] = rng.gen();
+        let seed_sender: [u8; 32] = rng.gen();
+        let seed_recipient: [u8; 32] = rng.gen();
 
-        let proof_gen_key = ProofGenerationKey::<Bls12>::from_seed(&sk_fs_s[..], params);
+        let proof_gen_key = ProofGenerationKey::<Bls12>::from_seed(&seed_sender[..], params);
         let dec_key = proof_gen_key.into_decryption_key().unwrap();
 
         let enc_key_sender = EncryptionKey::from_decryption_key(&dec_key, params);
-        let enc_key_recipient = EncryptionKey::from_seed(&sk_fs_r, params).unwrap();
-        let address_sender_xy = enc_key_sender.0.into_xy();
-        let address_recipient_xy = enc_key_recipient.0.into_xy();
+        let enc_key_recipient = EncryptionKey::from_seed(&seed_recipient, params).unwrap();
+        let enc_key_sender_xy = enc_key_sender.0.into_xy();
+        let enc_key_recipient_xy = enc_key_recipient.0.into_xy();
 
-        let alpha: fs::Fs = rng.gen();
+        let alpha: Fs = rng.gen();
 
-        let fee = 1 as u32;
-        let remaining_balance = 16 as u32;
-        let current_balance = 27 as u32;
+        let fee = 1;
+        let current_balance = 27;
+        let remaining_balance = current_balance - amount - fee;
 
-        let r_fs_b = fs::Fs::rand(rng);
-        let r_fs_v = fs::Fs::rand(rng);
+        let randomness_balance = Fs::rand(rng);
+        let randomness_amount = Fs::rand(rng);
 
         let p_g = FixedGenerators::NoteCommitmentRandomness;
-        let ciphetext_balance = Ciphertext::encrypt(current_balance, &r_fs_b, &enc_key_sender, p_g, params);
+        let ciphetext_balance = Ciphertext::encrypt(current_balance, &randomness_balance, &enc_key_sender, p_g, params);
 
         let c_bal_left = ciphetext_balance.left.into_xy();
         let c_bal_right = ciphetext_balance.right.into_xy();
 
-        let ciphertext_amount_sender = Ciphertext::encrypt(amount, &r_fs_v, &enc_key_sender, p_g, params);
+        let ciphertext_amount_sender = Ciphertext::encrypt(amount, &randomness_amount, &enc_key_sender, p_g, params);
         let c_val_s_left = ciphertext_amount_sender.left.into_xy();
         let c_val_right = ciphertext_amount_sender.right.into_xy();
 
-        let ciphertext_fee_sender = Ciphertext::encrypt(fee, &r_fs_v, &enc_key_sender, p_g, params);
+        let ciphertext_fee_sender = Ciphertext::encrypt(fee, &randomness_amount, &enc_key_sender, p_g, params);
         let c_fee_s_left = ciphertext_fee_sender.left.into_xy();
 
-        let ciphertext_amount_recipient = Ciphertext::encrypt(amount, &r_fs_v, &enc_key_recipient, p_g, params);
+        let ciphertext_amount_recipient = Ciphertext::encrypt(amount, &randomness_amount, &enc_key_recipient, p_g, params);
         let c_val_r_left = ciphertext_amount_recipient.left.into_xy();
 
         let rvk = proof_gen_key.into_rvk(alpha, params).0.into_xy();
@@ -368,10 +368,10 @@ mod tests {
         let mut cs = TestConstraintSystem::<Bls12>::new();
 
         let instance = Transfer {
-            params: params,
+            params,
             amount: Some(amount),
             remaining_balance: Some(remaining_balance),
-            randomness: Some(&r_fs_v),
+            randomness: Some(&randomness_amount),
             alpha: Some(&alpha),
             proof_generation_key: Some(&proof_gen_key),
             dec_key_sender: Some(&dec_key),
@@ -392,10 +392,10 @@ mod tests {
 
         assert_eq!(cs.num_inputs(), 23);
         assert_eq!(cs.get_input(0, "ONE"), Fr::one());
-        assert_eq!(cs.get_input(1, "inputize enc_key_sender/x/input variable"), address_sender_xy.0);
-        assert_eq!(cs.get_input(2, "inputize enc_key_sender/y/input variable"), address_sender_xy.1);
-        assert_eq!(cs.get_input(3, "inputize enc_key_recipient/x/input variable"), address_recipient_xy.0);
-        assert_eq!(cs.get_input(4, "inputize enc_key_recipient/y/input variable"), address_recipient_xy.1);
+        assert_eq!(cs.get_input(1, "inputize enc_key_sender/x/input variable"), enc_key_sender_xy.0);
+        assert_eq!(cs.get_input(2, "inputize enc_key_sender/y/input variable"), enc_key_sender_xy.1);
+        assert_eq!(cs.get_input(3, "inputize enc_key_recipient/x/input variable"), enc_key_recipient_xy.0);
+        assert_eq!(cs.get_input(4, "inputize enc_key_recipient/y/input variable"), enc_key_recipient_xy.1);
         assert_eq!(cs.get_input(5, "c_left_sender/x/input variable"), c_val_s_left.0);
         assert_eq!(cs.get_input(6, "c_left_sender/y/input variable"), c_val_s_left.1);
         assert_eq!(cs.get_input(7, "c_left_recipient/x/input variable"), c_val_r_left.0);

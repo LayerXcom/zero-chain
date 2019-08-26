@@ -18,6 +18,8 @@ use pairing::io;
 /// The constant personalization for elgamal extending function
 pub const ELGAMAL_EXTEND_PERSONALIZATION: &'static [u8; 16] = b"zech_elgamal_ext";
 
+/// lifted-Elgamal encryption
+/// Enc(m) = (m + rs)G, rG), where m: message, r: randomness, s: private key, G: Generator point
 #[derive(Clone, PartialEq)]
 pub struct Ciphertext<E: JubjubEngine> {
     pub left: edwards::Point<E, PrimeOrder>,
