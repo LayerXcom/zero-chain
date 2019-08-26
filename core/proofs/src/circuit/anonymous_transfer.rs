@@ -32,7 +32,7 @@ pub struct AnonymousTransfer<'a, E: JubjubEngine> {
     randomness: Option<&'a E::Fs>,
     alpha: Option<&'a E::Fs>,
     proof_generation_key: Option<&'a ProofGenerationKey<E>>,
-    dec_key_sender: Option<&'a DecryptionKey<E>>,
+    dec_key: Option<&'a DecryptionKey<E>>,
     enc_key_recipient: Option<&'a EncryptionKey<E>>,
     enc_key_decoys: &'a [Option<EncryptionKey<E>>],
     encrypted_balance: Option<&'a Ciphertext<E>>,
@@ -85,12 +85,18 @@ impl<'a, E: JubjubEngine> Circuit<E> for AnonymousTransfer<'a, E> {
             self.t_index
         )?;
 
+        // dec_key in circuit
+        let dec_key_bits = boolean::field_into_boolean_vec_le(
+            cs.namespace(|| format!("dec_key")),
+            self.dec_key.map(|e| e.0)
+        )?;
+
         let mut enc_key_set = EncKeySet::new(ANONIMITY_SIZE);
 
         enc_key_set
             .push_enckeys(
                 cs.namespace(|| "push enckeys"),
-                self.dec_key_sender,
+                &dec_key_bits,
                 self.enc_key_recipient,
                 self.enc_key_decoys,
                 self.s_index,
@@ -134,16 +140,28 @@ impl<'a, E: JubjubEngine> Circuit<E> for AnonymousTransfer<'a, E> {
             params
         )?;
 
-        let ciphertext_left_s_i = enc_keys_mul_random.gen_left_ciphertexts(
+        let ciphertext_left_set= enc_keys_mul_random.gen_left_ciphertexts(
             cs.namespace(|| "compute left ciphertexts of s_i"),
             &amount_g,
             self.s_index,
             self.t_index,
-            zero_p,
+            zero_p.clone(),
             params
         )?;
 
+        let ciphertext_left_s_i = s_bins.edwards_add_fold(
+            cs.namespace(|| "add folded left ciphertext based in s_i"),
+            &ciphertext_left_set.0,
+            &RecipientOp::None,
+            zero_p.clone(),
+            params
+        )?;
 
+        eq_edwards_points(
+            cs.namespace(|| "left ciphertext equals"),
+            &expected_ciphertext_left_s_i,
+            &ciphertext_left_s_i
+        )?;
 
         // Generate the randomness for elgamal encryption into the circuit
         let randomness_bits = boolean::field_into_boolean_vec_le(
@@ -163,6 +181,19 @@ impl<'a, E: JubjubEngine> Circuit<E> for AnonymousTransfer<'a, E> {
             .inputize(cs.namespace(|| "inputize right ciphertext."))?;
 
 
+        rvk_inputize(
+            cs.namespace(|| "inputize rvk"),
+            self.proof_generation_key,
+            self.alpha,
+            params
+        )?;
+
+        g_epoch_nonce_inputize(
+            cs.namespace(|| "inputize g_epoch and nonce"),
+            self.g_epoch,
+            &dec_key_bits,
+            params
+        )?;
 
 
         Ok(())

@@ -62,10 +62,22 @@ impl Binary {
         Ok(Binary(acc))
     }
 
+    pub fn ensure_total_one<E, CS>(
+        &self,
+        mut cs: CS,
+        true_index: Option<usize>
+    ) -> Result<(), SynthesisError>
+    where
+        E: JubjubEngine,
+        CS: ConstraintSystem<E>
+    {
+        unimplemented!();
+    }
+
     // (1 - s_i)(1 - t_i)
     // iff s:0 * t:0 = 1
-    // TODO:
-    pub fn or<E, CS>(&self, mut cs: CS, other: &Self) -> Result<Self, SynthesisError>
+    // Calculates `(NOT a) AND (NOT b)`
+    pub fn nor<E, CS>(&self, mut cs: CS, other: &Self) -> Result<Self, SynthesisError>
     where
         E: JubjubEngine,
         CS: ConstraintSystem<E>,
@@ -74,10 +86,10 @@ impl Binary {
 
         let mut acc = Vec::with_capacity(ANONIMITY_SIZE);
         for i in 0..self.len() {
-            let tmp = Boolean::xor( // TODO:
-                cs.namespace(|| format!("{} xor binary", i)),
-                &self.0[i],
-                &other.0[i]
+            let tmp = Boolean::and(
+                cs.namespace(|| format!("{} nor binary", i)),
+                &self.0[i].not(),
+                &other.0[i].not()
             )?;
             acc.push(tmp);
         }
@@ -164,24 +176,18 @@ impl<E: JubjubEngine> EncKeySet<E> {
     pub fn push_enckeys<CS: ConstraintSystem<E>>(
         &mut self,
         mut cs: CS,
-        dec_key: Option<&DecryptionKey<E>>,
+        dec_key_bits: &[Boolean],
         enc_key_recipient: Option<&EncryptionKey<E>>,
         enc_keys_decoy: &[Option<EncryptionKey<E>>],
         s_index: Option<usize>,
         t_index: Option<usize>,
         params: &E::Params,
     ) -> Result<(), SynthesisError> {
-        // dec_key_sender in circuit
-        let dec_key_bits = boolean::field_into_boolean_vec_le(
-            cs.namespace(|| format!("dec_key_sender")),
-            dec_key.map(|e| e.0)
-        )?;
-
         // Ensure the validity of enc_key_sender
         let enc_key_sender_bits = ecc::fixed_base_multiplication(
             cs.namespace(|| format!("compute enc_key_sender")),
             FixedGenerators::NoteCommitmentRandomness,
-            &dec_key_bits,
+            dec_key_bits,
             params
         )?;
 
