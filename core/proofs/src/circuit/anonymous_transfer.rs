@@ -33,7 +33,9 @@ pub struct AnonymousTransfer<'a, E: JubjubEngine> {
     dec_key: Option<&'a DecryptionKey<E>>,
     enc_key_recipient: Option<&'a EncryptionKey<E>>,
     enc_key_decoys: &'a [Option<EncryptionKey<E>>],
-    encrypted_balance: Option<&'a Ciphertext<E>>,
+    enc_balance_sendder: Option<&'a Ciphertext<E>>,
+    enc_balance_recipient: Option<&'a Ciphertext<E>>,
+    enc_balances_decoys: &'a [Option<Ciphertext<E>>],
     g_epoch: Option<&'a edwards::Point<E, PrimeOrder>>,
 }
 
@@ -253,7 +255,9 @@ mod tests {
         let alpha = Fs::rand(rng);
         let randomness_balance = Fs::rand(rng);
         let randomness_amount = Fs::rand(rng);
-        // let randomness_balance_iter = rng.gen_iter::<u32>()
+        let randomness_balanace_sender = Fs::rand(rng);
+        let randomness_balanace_recipient = Fs::rand(rng);
+        let remaining_balance_recipient: u32 = rng.gen();
         let s_index: usize = rng.gen_range(0, ANONIMITY_SIZE+1);
         let mut t_index: usize;
         loop {
@@ -263,21 +267,30 @@ mod tests {
             }
         }
         let seed_decoys_iter = rng.gen_iter::<[u8; 32]>().take(DECOY_SIZE);
+        let rng = &mut XorShiftRng::from_seed([0x3dbe6258, 0x8d313d76, 0x3237db17, 0xe5bc0654]);
+        let randomness_amounts_iter = rng.gen_iter::<Fs>().take(DECOY_SIZE);
+        let rng = &mut XorShiftRng::from_seed([0x3dbe6258, 0x8d313d76, 0x3237db17, 0xe5bc0654]);
+        let randomness_balances_iter = rng.gen_iter::<Fs>().take(DECOY_SIZE);
+        let rng = &mut XorShiftRng::from_seed([0x3dbe6258, 0x8d313d76, 0x3237db17, 0xe5bc0654]);
+        let remaining_balance_iter = rng.gen_iter::<u32>().take(DECOY_SIZE);
+        let rng = &mut XorShiftRng::from_seed([0x3dbe6258, 0x8d313d76, 0x3237db17, 0xe5bc0654]);
 
         // keys
         let proof_gen_key = ProofGenerationKey::<Bls12>::from_seed(&seed_sender[..], params);
         let dec_key = proof_gen_key.into_decryption_key().unwrap();
         let enc_key_sender = EncryptionKey::from_decryption_key(&dec_key, params);
         let enc_key_recipient = EncryptionKey::<Bls12>::from_seed(&seed_recipient, params).unwrap();
-        let enc_key_decoys = seed_decoys_iter.map(|e| EncryptionKey::from_seed(&e, params).ok()).collect::<Vec<Option<EncryptionKey<Bls12>>>>();
+        let enc_keys_decoy = seed_decoys_iter.map(|e| EncryptionKey::from_seed(&e, params).ok()).collect::<Vec<Option<EncryptionKey<Bls12>>>>();
         let enc_key_sender_xy = enc_key_sender.0.into_xy();
         let enc_key_recipient_xy = enc_key_recipient.0.into_xy();
-
 
         // ciphertexts
         let ciphertext_amount_sender = Ciphertext::encrypt(amount, &randomness_amount, &enc_key_sender, p_g, params);
         let ciphertext_amount_recipient = neg_encrypt(amount, &randomness_amount, &enc_key_recipient, p_g, params);
-
+        let ciphertexts_amount_decoy = enc_keys_decoy.iter().zip(randomness_amounts_iter).map(|(e, r)| Ciphertext::encrypt(0, &r, e.as_ref().unwrap(), p_g, params));
+        let ciphertext_balance_sender = Ciphertext::encrypt(remaining_balance, &randomness_balanace_sender, &enc_key_sender, p_g, params);
+        let ciphertext_balance_recipient = Ciphertext::encrypt(remaining_balance_recipient, &randomness_balanace_recipient, &enc_key_recipient, p_g, params);
+        let cipherrtexts_balances = enc_keys_decoy.iter().zip(remaining_balance_iter).zip(randomness_balances_iter).map(|((e, a), r)| Some(Ciphertext::encrypt(a, &r, e.as_ref().unwrap(), p_g, params)));
 
         let rvk = proof_gen_key.into_rvk(alpha, params).0.into_xy();
         let g_epoch = edwards::Point::<Bls12, _>::rand(rng, params).mul_by_cofactor(params);
@@ -285,22 +298,28 @@ mod tests {
         let nonce = g_epoch.mul(dec_key.0, params).into_xy();
 
         let mut cs = TestConstraintSystem::<Bls12>::new();
-        // let instance = AnonymousTransfer {
-        //     params,
-        //     amount: Some(amount),
-        //     remaining_balance: Some(remaining_balance),
-        //     s_index: Some(s_index),
-        //     t_index: Some(t_index),
-        //     randomness: Some(&randomness_amount),
-        //     alpha: Some(&alpha),
-        //     proof_generation_key: Some(&proof_gen_key),
-        //     dec_key: Some(&dec_key),
-        //     enc_key_recipient: Some(&enc_key_recipient),
-        //     enc_key_decoys: &enc_key_decoys,
-        //     encrypted_balance: Option<&'a Ciphertext<E>>,
-        //     g_epoch: Some(&g_epoch),
-        // };
+        let instance = AnonymousTransfer {
+            params,
+            amount: Some(amount),
+            remaining_balance: Some(remaining_balance),
+            s_index: Some(s_index),
+            t_index: Some(t_index),
+            randomness: Some(&randomness_amount),
+            alpha: Some(&alpha),
+            proof_generation_key: Some(&proof_gen_key),
+            dec_key: Some(&dec_key),
+            enc_key_recipient: Some(&enc_key_recipient),
+            enc_key_decoys: &enc_keys_decoy,
+            enc_balance_sendder: Some(&ciphertext_balance_sender),
+            enc_balance_recipient: Some(&ciphertext_balance_recipient),
+            enc_balances_decoys: &cipherrtexts_balances.collect::<Vec<Option<Ciphertext<Bls12>>>>(),
+            g_epoch: Some(&g_epoch),
+        };
 
+        instance.synthesize(&mut cs).unwrap();
+        assert!(cs.is_satisfied());
+        println!("num: {:?}", cs.num_constraints());
+        println!("hash: {:?}", cs.hash());
     }
 
     #[test]
