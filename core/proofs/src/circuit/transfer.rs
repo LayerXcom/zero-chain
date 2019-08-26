@@ -204,55 +204,25 @@ impl<'a, E: JubjubEngine> Circuit<E> for Transfer<'a, E> {
         // Enc_sender(sender_balance).cl + dec_key_sender * (random)G + dec_key_sender * (random)G
         //      == (remaining_balance)G + dec_key_sender * Enc_sender(sender_balance).cr + Enc_sender(amount).cl + Enc_sender(fee).cl
         {
-            let bal_gl = ecc::EdwardsPoint::witness(
-                cs.namespace(|| "balance left"),
+            let enc_balance_left = ecc::EdwardsPoint::witness(
+                cs.namespace(|| "encrypted balance left"),
                 self.encrypted_balance.as_ref().map(|e| e.left.clone()),
                 params
             )?;
 
-            bal_gl.assert_not_small_order(
-                cs.namespace(|| "bal_gl not small order"),
-                params
-            )?;
-
-            let bal_gr = ecc::EdwardsPoint::witness(
-                cs.namespace(|| "balance right"),
+            let enc_balance_right = ecc::EdwardsPoint::witness(
+                cs.namespace(|| "encrypted balance right"),
                 self.encrypted_balance.as_ref().map(|e| e.right.clone()),
                 params
             )?;
 
-            bal_gr.assert_not_small_order(
-                cs.namespace(|| "bal_gr not small order"),
+            // TODO:
+            enc_balance_left.assert_not_small_order(
+                cs.namespace(|| "enc_balance_left isn't small order"),
                 params
             )?;
-
-            let left = self.encrypted_balance.clone().map(|e| e.left.into_xy());
-            let right = self.encrypted_balance.map(|e| e.right.into_xy());
-
-            let numxl = AllocatedNum::alloc(cs.namespace(|| "numxl"), || {
-                Ok(left.get()?.0)
-            })?;
-            let numyl = AllocatedNum::alloc(cs.namespace(|| "numyl"), || {
-                Ok(left.get()?.1)
-            })?;
-            let numxr = AllocatedNum::alloc(cs.namespace(|| "numxr"), || {
-                Ok(right.get()?.0)
-            })?;
-            let numyr = AllocatedNum::alloc(cs.namespace(|| "numyr"), || {
-                Ok(right.get()?.1)
-            })?;
-
-            let pointl = EdwardsPoint::interpret(
-                cs.namespace(|| format!("interpret to pointl")),
-                &numxl,
-                &numyl,
-                params
-            )?;
-
-            let pointr = EdwardsPoint::interpret(
-                cs.namespace(|| format!("interpret to pointr")),
-                &numxr,
-                &numyr,
+            enc_balance_right.assert_not_small_order(
+                cs.namespace(|| "enc_balance_right isn't small order"),
                 params
             )?;
 
@@ -264,8 +234,8 @@ impl<'a, E: JubjubEngine> Circuit<E> for Transfer<'a, E> {
             )?;
 
             // Enc_sender(sender_balance).cl + dec_key_sender * (random)G
-            let balance_dec_key_sender_random = pointl.add(
-                cs.namespace(|| format!("pointl add dec_key_sender_pointl")),
+            let balance_dec_key_sender_random = enc_balance_left.add(
+                cs.namespace(|| format!("enc_balance_left add dec_key_sender_pointl")),
                 &dec_key_sender_random,
                 params
             )?;
@@ -278,7 +248,7 @@ impl<'a, E: JubjubEngine> Circuit<E> for Transfer<'a, E> {
             )?;
 
             // dec_key_sender * Enc_sender(sender_balance).cr
-            let dec_key_sender_pointr = pointr.mul(
+            let dec_key_sender_pointr = enc_balance_right.mul(
                 cs.namespace(|| format!("c_right_sender mul by dec_key_sender")),
                 &dec_key_bits,
                 params
@@ -319,8 +289,8 @@ impl<'a, E: JubjubEngine> Circuit<E> for Transfer<'a, E> {
                 &bi_right
             )?;
 
-            pointl.inputize(cs.namespace(|| format!("inputize pointl")))?;
-            pointr.inputize(cs.namespace(|| format!("inputize pointr")))?;
+            enc_balance_left.inputize(cs.namespace(|| format!("inputize enc_balance_left")))?;
+            enc_balance_right.inputize(cs.namespace(|| format!("inputize enc_balance_right")))?;
         }
 
         rvk_inputize(
@@ -414,8 +384,11 @@ mod tests {
         instance.synthesize(&mut cs).unwrap();
 
         assert!(cs.is_satisfied());
-        assert_eq!(cs.num_constraints(), 25053);
-        assert_eq!(cs.hash(), "fabd4cb7d2ebbdb643eefe54b21a4c2d802544ea860c485a14532b2cd1194b4f");
+        // println!("num: {:?}", cs.num_constraints());
+        // println!("hash: {:?}", cs.hash());
+
+        assert_eq!(cs.num_constraints(), 25045);
+        assert_eq!(cs.hash(), "b81693f5e8433fafa8f422729eedb9217b904c2cbfa21e8ddabf041da37bfdd7");
 
         assert_eq!(cs.num_inputs(), 23);
         assert_eq!(cs.get_input(0, "ONE"), Fr::one());
@@ -431,10 +404,10 @@ mod tests {
         assert_eq!(cs.get_input(10, "c_right/y/input variable"), c_val_right.1);
         assert_eq!(cs.get_input(11, "f_left_sender/x/input variable"), c_fee_s_left.0);
         assert_eq!(cs.get_input(12, "f_left_sender/y/input variable"), c_fee_s_left.1);
-        assert_eq!(cs.get_input(13, "inputize pointl/x/input variable"), c_bal_left.0);
-        assert_eq!(cs.get_input(14, "inputize pointl/y/input variable"), c_bal_left.1);
-        assert_eq!(cs.get_input(15, "inputize pointr/x/input variable"), c_bal_right.0);
-        assert_eq!(cs.get_input(16, "inputize pointr/y/input variable"), c_bal_right.1);
+        assert_eq!(cs.get_input(13, "inputize enc_balance_left/x/input variable"), c_bal_left.0);
+        assert_eq!(cs.get_input(14, "inputize enc_balance_left/y/input variable"), c_bal_left.1);
+        assert_eq!(cs.get_input(15, "inputize enc_balance_right/x/input variable"), c_bal_right.0);
+        assert_eq!(cs.get_input(16, "inputize enc_balance_right/y/input variable"), c_bal_right.1);
         assert_eq!(cs.get_input(17, "inputize rvk/rvk/x/input variable"), rvk.0);
         assert_eq!(cs.get_input(18, "inputize rvk/rvk/y/input variable"), rvk.1);
         assert_eq!(cs.get_input(19, "inputize g_epoch and nonce/inputize g_epoch/x/input variable"), g_epoch_xy.0);

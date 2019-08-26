@@ -163,6 +163,10 @@ impl<'a, E: JubjubEngine> Circuit<E> for AnonymousTransfer<'a, E> {
             &ciphertext_left_s_i
         )?;
 
+        let nor_st_bins = s_bins.nor(cs.namespace(|| "s_i nor t_i"), &t_bins)?;
+        
+
+
         // Generate the randomness for elgamal encryption into the circuit
         let randomness_bits = boolean::field_into_boolean_vec_le(
             cs.namespace(|| "randomness_bits"),
