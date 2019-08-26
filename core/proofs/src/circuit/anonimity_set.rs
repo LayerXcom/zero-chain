@@ -248,6 +248,17 @@ impl<E: JubjubEngine> EncKeySet<E> {
 
         Ok(EncKeysMulRandom(acc))
     }
+
+    pub fn inputize<CS>(&self, mut cs: CS) -> Result<(), SynthesisError>
+    where
+        CS: ConstraintSystem<E>
+    {
+        for (i, e) in self.0.iter().enumerate() {
+            e.inputize(cs.namespace(|| format!("inputize enc keys {}", i)))?;
+        }
+
+        Ok(())
+    }
 }
 
 pub struct EncKeysMulRandom<E: JubjubEngine>(pub(crate) Vec<EdwardsPoint<E>>);
@@ -256,7 +267,7 @@ impl<E: JubjubEngine> EncKeysMulRandom<E> {
     pub fn gen_left_ciphertexts<CS>(
         &self,
         mut cs: CS,
-        amount_bits: &[Boolean],
+        amount_g: &EdwardsPoint<E>,
         s_index: Option<usize>,
         t_index: Option<usize>,
         zero_p: EdwardsPoint<E>,
@@ -267,14 +278,6 @@ impl<E: JubjubEngine> EncKeysMulRandom<E> {
     {
         assert_eq!(self.0.len(), ANONIMITY_SIZE);
         let mut acc = Vec::with_capacity(ANONIMITY_SIZE);
-
-        // Multiply the amount to the base point same as FixedGenerators::ElGamal.
-        let amount_g = ecc::fixed_base_multiplication(
-            cs.namespace(|| format!("compute the amount in the exponent")),
-            FixedGenerators::NoteCommitmentRandomness,
-            &amount_bits,
-            params
-        )?;
 
         for i in 0..self.0.len() {
             if Some(i) == s_index {
@@ -308,72 +311,3 @@ impl<E: JubjubEngine> EncKeysMulRandom<E> {
 pub struct LeftCiphertexts<E: JubjubEngine>(pub(crate) Vec<EdwardsPoint<E>>);
 
 
-pub struct ShuffledEncKeySet<E: JubjubEngine>(Vec<EdwardsPoint<E>>);
-
-impl<E: JubjubEngine> ShuffledEncKeySet<E> {
-    pub fn inputize<CS: ConstraintSystem<E>>(
-        &self,
-        mut cs: CS
-    ) -> Result<(), SynthesisError> {
-        for (i, e) in self.0.iter().enumerate() {
-            e.inputize(cs.namespace(|| format!("inputize enc keys {}", i)))?;
-        }
-
-        Ok(())
-    }
-}
-
-pub struct LeftCiphertextSet<E: JubjubEngine>(Vec<EdwardsPoint<E>>);
-
-impl<E: JubjubEngine> LeftCiphertextSet<E> {
-    pub fn new(capacity: usize) -> Self {
-        LeftCiphertextSet(Vec::with_capacity(capacity))
-    }
-
-    pub fn from_enc_keys<CS: ConstraintSystem<E>>(
-        &mut self,
-        mut cs: CS,
-        enc_keys: ShuffledEncKeySet<E>,
-        amount_bits: &[Boolean],
-        randomness_bits: &[Boolean],
-        params: &E::Params
-    ) -> Result<(), SynthesisError> {
-
-        // Multiply the amount to the base point same as FixedGenerators::ElGamal.
-        let amount_g = ecc::fixed_base_multiplication(
-            cs.namespace(|| "compute the amount in the exponent"),
-            FixedGenerators::NoteCommitmentRandomness,
-            amount_bits,
-            params
-        )?;
-
-        for (i, e) in enc_keys.0.into_iter().enumerate() {
-            let val_rlr = e.mul(
-                cs.namespace(|| format!("compute {} amount cipher component", i)),
-                randomness_bits,
-                params
-            )?;
-
-            let c_left = amount_g.add(
-                cs.namespace(|| format!("computation {} left ciphertext", i)),
-                &val_rlr,
-                params
-            )?;
-
-            self.0.push(c_left);
-        }
-
-        Ok(())
-    }
-
-    pub fn inputize<CS: ConstraintSystem<E>>(
-        &self,
-        mut cs: CS
-    ) -> Result<(), SynthesisError> {
-        for (i, e) in self.0.iter().enumerate() {
-            e.inputize(cs.namespace(|| format!("inputize left ciphertexts {}", i)))?;
-        }
-
-        Ok(())
-    }
-}
