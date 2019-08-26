@@ -339,7 +339,7 @@ mod tests {
 
         let fee = 1;
         let current_balance = 27;
-        let remaining_balance = current_balance - amount - fee;
+        let remaining_balance = 16;
 
         let randomness_balance = Fs::rand(rng);
         let randomness_amount = Fs::rand(rng);

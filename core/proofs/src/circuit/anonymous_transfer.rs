@@ -59,7 +59,11 @@ impl<'a, E: JubjubEngine> Circuit<E> for AnonymousTransfer<'a, E> {
             params
         )?;
 
-        // let neg_amount_g = ;
+        let neg_amount_g = negate_point(
+            cs.namespace(|| "negate amount_g"),
+            &amount_g,
+            params
+        )?;
 
         // Ensure the remaining balance is u32.
         let remaining_balance_bits = u32_into_bit_vec_le(
@@ -107,7 +111,6 @@ impl<'a, E: JubjubEngine> Circuit<E> for AnonymousTransfer<'a, E> {
         let expected_enc_key_sender = s_bins.edwards_add_fold(
             cs.namespace(|| "add folded enc keys"),
             &enc_key_set.0,
-            &RecipientOp::None,
             zero_p.clone(),
             params
         )?;
@@ -129,7 +132,6 @@ impl<'a, E: JubjubEngine> Circuit<E> for AnonymousTransfer<'a, E> {
         let enc_keys_mul_random_add_fold = s_bins.edwards_add_fold(
             cs.namespace(|| "add folded enc keys mul random"),
             &enc_keys_mul_random.0,
-            &RecipientOp::None,
             zero_p.clone(),
             params
         )?;
@@ -143,6 +145,7 @@ impl<'a, E: JubjubEngine> Circuit<E> for AnonymousTransfer<'a, E> {
         let ciphertext_left_set= enc_keys_mul_random.gen_left_ciphertexts(
             cs.namespace(|| "compute left ciphertexts of s_i"),
             &amount_g,
+            &neg_amount_g,
             self.s_index,
             self.t_index,
             zero_p.clone(),
@@ -152,7 +155,6 @@ impl<'a, E: JubjubEngine> Circuit<E> for AnonymousTransfer<'a, E> {
         let ciphertext_left_s_i = s_bins.edwards_add_fold(
             cs.namespace(|| "add folded left ciphertext based in s_i"),
             &ciphertext_left_set.0,
-            &RecipientOp::None,
             zero_p.clone(),
             params
         )?;
@@ -216,7 +218,26 @@ mod tests {
     use rand::{SeedableRng, Rng, XorShiftRng, Rand};
     use crate::EncryptionKey;
     use crate::circuit::TestConstraintSystem;
-    use scrypto::jubjub::{JubjubBls12, fs::Fs};
+    use scrypto::jubjub::{JubjubBls12, fs::Fs, JubjubParams};
+
+    fn neg_encrypt(
+        amount: u32,
+        randomness: &Fs,
+        enc_key: &EncryptionKey<Bls12>,
+        p_g: FixedGenerators,
+        params: &JubjubBls12
+    ) -> Ciphertext<Bls12> {
+        let right = params.generator(p_g).mul(*randomness, params);
+        let mut v_point = params.generator(p_g).mul(amount as u64, params);
+        v_point.negate();
+        let r_point = enc_key.0.mul(*randomness, params);
+        let left = v_point.add(&r_point, params);
+
+        Ciphertext {
+            left,
+            right,
+        }
+    }
 
     fn test_based_amount(amount: u32) {
         // constants
@@ -229,7 +250,6 @@ mod tests {
         // randomness
         let seed_sender: [u8; 32] = rng.gen();
         let seed_recipient: [u8; 32] = rng.gen();
-        let seed_decoys_iter = rng.gen_iter::<[u8; 32]>().take(DECOY_SIZE);
         let alpha = Fs::rand(rng);
         let randomness_balance = Fs::rand(rng);
         let randomness_amount = Fs::rand(rng);
@@ -242,12 +262,13 @@ mod tests {
                 break;
             }
         }
+        let seed_decoys_iter = rng.gen_iter::<[u8; 32]>().take(DECOY_SIZE);
 
         // keys
         let proof_gen_key = ProofGenerationKey::<Bls12>::from_seed(&seed_sender[..], params);
         let dec_key = proof_gen_key.into_decryption_key().unwrap();
         let enc_key_sender = EncryptionKey::from_decryption_key(&dec_key, params);
-        let enc_key_recipient = EncryptionKey::from_seed(&seed_recipient, params).unwrap();
+        let enc_key_recipient = EncryptionKey::<Bls12>::from_seed(&seed_recipient, params).unwrap();
         let enc_key_decoys = seed_decoys_iter.map(|e| EncryptionKey::from_seed(&e, params).ok()).collect::<Vec<Option<EncryptionKey<Bls12>>>>();
         let enc_key_sender_xy = enc_key_sender.0.into_xy();
         let enc_key_recipient_xy = enc_key_recipient.0.into_xy();
@@ -255,7 +276,7 @@ mod tests {
 
         // ciphertexts
         let ciphertext_amount_sender = Ciphertext::encrypt(amount, &randomness_amount, &enc_key_sender, p_g, params);
-        let ciphertext_amount_recipient = Ciphertext::encrypt(amount, &randomness_amount, &enc_key_recipient, p_g, params);
+        let ciphertext_amount_recipient = neg_encrypt(amount, &randomness_amount, &enc_key_recipient, p_g, params);
 
 
         let rvk = proof_gen_key.into_rvk(alpha, params).0.into_xy();

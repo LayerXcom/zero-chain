@@ -75,7 +75,11 @@ impl Binary {
     }
 
     // (1 - s_i)(1 - t_i)
-    // iff s:0 * t:0 = 1
+    // 1 + 0 -> 0
+    // 0 + 1 -> 0
+    // 0 + 0 -> 1 => non-sender, non-recipient
+    // 1 + 1 -> 0
+    // so, iff s:0 * t:0 = 1
     // Calculates `(NOT a) AND (NOT b)`
     pub fn nor<E, CS>(&self, mut cs: CS, other: &Self) -> Result<Self, SynthesisError>
     where
@@ -98,10 +102,10 @@ impl Binary {
     }
 
     // s_i + t_i
-    // 1 + 0 = 1 -> sender
-    // 0 + 1 = 1 -> recipient
-    // 0 + 0 = 0
-    // 1 + 1 = 0
+    // 1 + 0 -> 1 => sender
+    // 0 + 1 -> 1 => recipient
+    // 0 + 0 -> 0
+    // 1 + 1 -> 0
     pub fn xor<E, CS>(&self, mut cs: CS, other: &Self) -> Result<Self, SynthesisError>
     where
         E: JubjubEngine,
@@ -126,7 +130,6 @@ impl Binary {
         &self,
         mut cs: CS,
         points: &[EdwardsPoint<E>],
-        recipient_op: &RecipientOp<E>,
         zero_p: EdwardsPoint<E>,
         params: &E::Params,
     ) -> Result<EdwardsPoint<E>, SynthesisError>
@@ -274,6 +277,7 @@ impl<E: JubjubEngine> EncKeysMulRandom<E> {
         &self,
         mut cs: CS,
         amount_g: &EdwardsPoint<E>,
+        neg_amount_g: &EdwardsPoint<E>,
         s_index: Option<usize>,
         t_index: Option<usize>,
         zero_p: EdwardsPoint<E>,
@@ -294,7 +298,7 @@ impl<E: JubjubEngine> EncKeysMulRandom<E> {
                 )?;
                 acc.push(tmp);
             } else if Some(i) == t_index {
-                let tmp = amount_g.add(
+                let tmp = neg_amount_g.add(
                     cs.namespace(|| "recipient's left ciphertext"),
                     &self.0[i],
                     params

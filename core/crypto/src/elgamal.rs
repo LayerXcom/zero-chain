@@ -46,16 +46,16 @@ impl<E: JubjubEngine> Ciphertext<E> {
     }
 
     pub fn encrypt(
-        value: u32, // 32-bits restriction for the decryption.
+        amount: u32, // 32-bits restriction for the decryption.
         randomness: &E::Fs,
-        public_key: &keys::EncryptionKey<E>,
+        enc_key: &keys::EncryptionKey<E>,
         p_g: FixedGenerators,
         params: &E::Params
     ) -> Self
     {
-        let right = params.generator(p_g).mul(*randomness, params).into();
-        let v_point: edwards::Point<E, PrimeOrder> = params.generator(p_g).mul(value as u64, params).into();
-        let r_point = public_key.0.mul(*randomness, params);
+        let right = params.generator(p_g).mul(*randomness, params);
+        let v_point = params.generator(p_g).mul(amount as u64, params);
+        let r_point = enc_key.0.mul(*randomness, params);
         let left = v_point.add(&r_point, params);
 
         Ciphertext {
@@ -64,7 +64,7 @@ impl<E: JubjubEngine> Ciphertext<E> {
         }
     }
 
-    /// Decryption of the ciphetext for the value
+    /// Decryption of the ciphetext for the amount
     pub fn decrypt(
         &self,
         decryption_key: &keys::DecryptionKey<E>,
@@ -181,17 +181,17 @@ mod tests {
         let params = &JubjubBls12::new();
         let p_g = FixedGenerators::Diversifier; // 1
         let rng = &mut XorShiftRng::from_seed([0xbc4f6d44, 0xd62f276c, 0xb963afd0, 0x5455863d]);
-        let value: u32 = 5 as u32;
+        let amount = 5;
 
         let sk_fs = Fs::rand(rng);
         let r_fs = Fs::rand(rng);
 
-        let public_key = EncryptionKey(params.generator(p_g).mul(sk_fs, params));
+        let enc_key = EncryptionKey(params.generator(p_g).mul(sk_fs, params));
 
-        let ciphetext = Ciphertext::encrypt(value, &r_fs, &public_key, p_g, params);
-        let decrypted_value = ciphetext.decrypt(&DecryptionKey(sk_fs), p_g, params).unwrap();
+        let ciphetext = Ciphertext::encrypt(amount, &r_fs, &enc_key, p_g, params);
+        let decrypted_amount = ciphetext.decrypt(&DecryptionKey(sk_fs), p_g, params).unwrap();
 
-        assert_eq!(value, decrypted_value);
+        assert_eq!(amount, decrypted_amount);
     }
 
     #[test]
@@ -201,21 +201,21 @@ mod tests {
         let rng = &mut XorShiftRng::from_seed([0xbc4f6d44, 0xd62f276c, 0xb963afd0, 0x5455863d]);
 
         let alice_seed = b"Alice                           ";
-        let alice_value = 100 as u32;
+        let alice_amount = 100;
 
         let r_fs = Fs::rand(rng);
 
         let address = EncryptionKey::<Bls12>::from_seed(alice_seed, params).unwrap();
-	    let enc_alice_val = Ciphertext::encrypt(alice_value, &r_fs, &address, p_g, params);
+	    let enc_alice_val = Ciphertext::encrypt(alice_amount, &r_fs, &address, p_g, params);
 
         let bdk = ProofGenerationKey::<Bls12>::from_seed(alice_seed, params).into_decryption_key().unwrap();
 
         let dec_alice_val = enc_alice_val.decrypt(&bdk, p_g, params).unwrap();
-	    assert_eq!(dec_alice_val, alice_value);
+	    assert_eq!(dec_alice_val, alice_amount);
     }
 
     #[test]
-    fn test_homomorphic_correct_public_key() {
+    fn test_homomorphic_correct_enc_key() {
         let params = &JubjubBls12::new();
         let p_g = FixedGenerators::Diversifier; // 1
         let rng = &mut XorShiftRng::from_seed([0xbc4f6d44, 0xd62f276c, 0xb963afd0, 0x5455863d]);
@@ -224,20 +224,20 @@ mod tests {
         let r_fs1 = Fs::rand(rng);
         let r_fs2 = Fs::rand(rng);
 
-        let public_key = EncryptionKey(params.generator(p_g).mul(sk_fs, params));
-        let value20: u32 = 20 as u32;
-        let value13: u32 = 13 as u32;
-        let value7: u32 = 7 as u32;
+        let enc_key = EncryptionKey(params.generator(p_g).mul(sk_fs, params));
+        let amount20 = 20;
+        let amount13 = 13;
+        let amount7 = 7;
 
-        let ciphetext20 = Ciphertext::encrypt(value20, &r_fs1, &public_key, p_g, params);
-        let ciphetext13 = Ciphertext::encrypt(value13, &r_fs2, &public_key, p_g, params);
+        let ciphetext20 = Ciphertext::encrypt(amount20, &r_fs1, &enc_key, p_g, params);
+        let ciphetext13 = Ciphertext::encrypt(amount13, &r_fs2, &enc_key, p_g, params);
 
         let homo_ciphetext7 = ciphetext20.sub(&ciphetext13, params);
 
         let decryption_key = DecryptionKey(sk_fs);
 
-        let decrypted_value7 = homo_ciphetext7.decrypt(&decryption_key, p_g, params).unwrap();
-        assert_eq!(decrypted_value7, value7);
+        let decrypted_amount7 = homo_ciphetext7.decrypt(&decryption_key, p_g, params).unwrap();
+        assert_eq!(decrypted_amount7, amount7);
     }
 
     #[test]
@@ -250,30 +250,30 @@ mod tests {
         let r_fs1 = Fs::rand(rng);
         let r_fs2 = Fs::rand(rng);
 
-        let public_key = EncryptionKey(params.generator(p_g).mul(sk_fs, params));
-        let value15: u32 = 15 as u32;
-        let value4: u32 = 4 as u32;
-        let value19: u32 = 19 as u32;
+        let enc_key = EncryptionKey(params.generator(p_g).mul(sk_fs, params));
+        let amount15 = 15;
+        let amount4 = 4;
+        let amount19 = 19;
 
-        let ciphetext15 = Ciphertext::encrypt(value15, &r_fs1, &public_key, p_g, params);
-        let ciphetext4 = Ciphertext::encrypt(value4, &r_fs2, &public_key, p_g, params);
+        let ciphetext15 = Ciphertext::encrypt(amount15, &r_fs1, &enc_key, p_g, params);
+        let ciphetext4 = Ciphertext::encrypt(amount4, &r_fs2, &enc_key, p_g, params);
 
         let homo_ciphetext19 = ciphetext15.add_no_params(&ciphetext4);
         let homo_ciphetext19_params = ciphetext15.add(&ciphetext4, params);
 
         let decryption_key = DecryptionKey(sk_fs);
 
-        let decrypted_value19 = homo_ciphetext19.decrypt(&decryption_key, p_g, params).unwrap();
-        let decrypted_value19_params = homo_ciphetext19_params.decrypt(&decryption_key, p_g, params).unwrap();
+        let decrypted_amount19 = homo_ciphetext19.decrypt(&decryption_key, p_g, params).unwrap();
+        let decrypted_amount19_params = homo_ciphetext19_params.decrypt(&decryption_key, p_g, params).unwrap();
 
-        assert_eq!(decrypted_value19, value19);
+        assert_eq!(decrypted_amount19, amount19);
         assert!(homo_ciphetext19 == homo_ciphetext19_params);
-        assert_eq!(decrypted_value19, decrypted_value19_params);
+        assert_eq!(decrypted_amount19, decrypted_amount19_params);
     }
 
     #[test]
     #[should_panic]
-    fn test_homomorphic_wrong_public_key() {
+    fn test_homomorphic_wrong_enc_key() {
         let params = &JubjubBls12::new();
         let p_g = FixedGenerators::Diversifier; // 1
         let rng = &mut XorShiftRng::from_seed([0xbc4f6d44, 0xd62f276c, 0xb963afd0, 0x5455863d]);
@@ -283,21 +283,21 @@ mod tests {
         let r_fs1 = Fs::rand(rng);
         let r_fs2 = Fs::rand(rng);
 
-        let public_key1 = EncryptionKey(params.generator(p_g).mul(sk_fs1, params));
-        let public_key2 = EncryptionKey(params.generator(p_g).mul(sk_fs2, params));
-        let value20: u32 = 20 as u32;
-        let value13: u32 = 13 as u32;
-        let value7: u32 = 7 as u32;
+        let enc_key1 = EncryptionKey(params.generator(p_g).mul(sk_fs1, params));
+        let enc_key2 = EncryptionKey(params.generator(p_g).mul(sk_fs2, params));
+        let amount20 = 20;
+        let amount13 = 13;
+        let amount7 = 7;
 
-        let ciphetext20 = Ciphertext::encrypt(value20, &r_fs1, &public_key1, p_g, params);
-        let ciphetext13 = Ciphertext::encrypt(value13, &r_fs2, &public_key2, p_g, params);
+        let ciphetext20 = Ciphertext::encrypt(amount20, &r_fs1, &enc_key1, p_g, params);
+        let ciphetext13 = Ciphertext::encrypt(amount13, &r_fs2, &enc_key2, p_g, params);
 
         let homo_ciphetext7 = ciphetext20.sub(&ciphetext13, params);
 
         let decryption_key = DecryptionKey(sk_fs1);
 
-        let expected_value7 = homo_ciphetext7.decrypt(&decryption_key, p_g, params).unwrap();
-        assert_eq!(expected_value7, value7);
+        let expected_amount7 = homo_ciphetext7.decrypt(&decryption_key, p_g, params).unwrap();
+        assert_eq!(expected_amount7, amount7);
     }
 
     #[test]
@@ -309,10 +309,10 @@ mod tests {
         let sk_fs = Fs::rand(rng);
         let r_fs = Fs::rand(rng);
 
-        let public_key = EncryptionKey(params.generator(p_g).mul(sk_fs, params));
-        let value: u32 = 6 as u32;
+        let enc_key = EncryptionKey(params.generator(p_g).mul(sk_fs, params));
+        let amount = 6;
 
-        let ciphetext1 = Ciphertext::encrypt(value, &r_fs, &public_key, p_g, params);
+        let ciphetext1 = Ciphertext::encrypt(amount, &r_fs, &enc_key, p_g, params);
 
         let mut v = vec![];
         ciphetext1.write(&mut v).unwrap();
