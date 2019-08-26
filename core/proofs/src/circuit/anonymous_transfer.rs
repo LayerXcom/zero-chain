@@ -306,7 +306,8 @@ mod tests {
         // ciphertexts
         let ciphertext_amount_sender = Ciphertext::encrypt(amount, &randomness_amount, &enc_key_sender, p_g, params);
         let ciphertext_amount_recipient = neg_encrypt(amount, &randomness_amount, &enc_key_recipient, p_g, params);
-        let ciphertexts_amount_decoy = enc_keys_decoy.iter().zip(randomness_amounts_iter).map(|(e, r)| Ciphertext::encrypt(0, &r, e.as_ref().unwrap(), p_g, params));
+        let ciphertexts_amount_decoy = enc_keys_decoy.iter().zip(randomness_amounts_iter)
+            .map(|(e, r)| Ciphertext::encrypt(0, &r, e.as_ref().unwrap(), p_g, params));
         let ciphertext_balance_sender = Ciphertext::encrypt(remaining_balance, &randomness_balanace_sender, &enc_key_sender, p_g, params);
         let ciphertext_balance_recipient = Ciphertext::encrypt(remaining_balance_recipient, &randomness_balanace_recipient, &enc_key_recipient, p_g, params);
         let mut ciphertext_balances = enc_keys_decoy.iter().zip(remaining_balance_iter).zip(randomness_balances_iter)
