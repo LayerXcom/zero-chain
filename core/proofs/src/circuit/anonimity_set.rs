@@ -6,8 +6,8 @@ use scrypto::circuit::{
     num::AllocatedNum,
 };
 use scrypto::jubjub::{JubjubEngine, FixedGenerators, edwards, PrimeOrder};
-use crate::{ProofGenerationKey, EncryptionKey, DecryptionKey};
-use super::utils::eq_edwards_points;
+use crate::{ProofGenerationKey, EncryptionKey, DecryptionKey, elgamal};
+use super::utils::{eq_edwards_points, negate_point};
 use std::fmt;
 
 pub const ANONIMITY_SIZE: usize = 11;
@@ -316,7 +316,7 @@ impl<E: JubjubEngine> EncKeysMulRandom<E> {
         t_index: Option<usize>,
         zero_p: EdwardsPoint<E>,
         params: &E::Params,
-    ) -> Result<LeftCiphertexts<E>, SynthesisError>
+    ) -> Result<LeftAmountCiphertexts<E>, SynthesisError>
     where
         CS: ConstraintSystem<E>
     {
@@ -348,13 +348,28 @@ impl<E: JubjubEngine> EncKeysMulRandom<E> {
             }
         }
 
-        Ok(LeftCiphertexts(acc))
+        Ok(LeftAmountCiphertexts(acc))
     }
 }
 
-pub struct LeftCiphertexts<E: JubjubEngine>(pub(crate) Vec<EdwardsPoint<E>>);
+pub struct LeftAmountCiphertexts<E: JubjubEngine>(pub(crate) Vec<EdwardsPoint<E>>);
 
-impl<E: JubjubEngine> LeftCiphertexts<E> {
+impl<E: JubjubEngine> LeftAmountCiphertexts<E> {
+    pub fn neg_each<CS>(&self, mut cs: CS, params: &E::Params) -> Result<Self, SynthesisError>
+    where
+        CS: ConstraintSystem<E>
+    {
+        let neg_iter = self.0.iter().enumerate().map(|(i, e)| {
+            negate_point(
+                cs.namespace(|| format!("negate left amount ciphertexts {}", i)),
+                e,
+                params
+            ).unwrap() // TODO
+        });
+
+        Ok(LeftAmountCiphertexts(neg_iter.collect::<Vec<EdwardsPoint<E>>>()))
+    }
+
     pub fn inputize<CS>(&self, mut cs: CS) -> Result<(), SynthesisError>
     where
         CS: ConstraintSystem<E>
@@ -364,5 +379,44 @@ impl<E: JubjubEngine> LeftCiphertexts<E> {
         }
 
         Ok(())
+    }
+}
+
+pub struct BalanceCiphertexts<E: JubjubEngine>{
+    pub(crate) left: Vec<EdwardsPoint<E>>,
+    pub(crate) right: Vec<EdwardsPoint<E>>,
+}
+
+impl<E: JubjubEngine> BalanceCiphertexts<E> {
+    pub fn witness<Order, CS>(
+        mut cs: CS,
+        c: &[Option<elgamal::Ciphertext<E>>],
+        params: &E::Params
+    ) -> Result<Self, SynthesisError>
+    where
+        CS: ConstraintSystem<E>
+    {
+        let c_left = c.iter().flat_map(|e| e.iter()).enumerate().map(|(i, l)| {
+            let left = l.clone().left;
+            EdwardsPoint::witness(
+                cs.namespace(|| format!("left ciphertext {} witness", i)),
+                Some(left),
+                params
+            ).unwrap() // TODO
+        }).collect::<Vec<EdwardsPoint<E>>>();
+
+        let c_right = c.iter().flat_map(|e| e.iter()).enumerate().map(|(i, l)| {
+            let right = l.clone().right;
+            EdwardsPoint::witness(
+                cs.namespace(|| format!("right ciphertext {} witness", i)),
+                Some(right),
+                params
+            ).unwrap() // TODO
+        }).collect::<Vec<EdwardsPoint<E>>>();
+
+        Ok(BalanceCiphertexts {
+            left: c_left,
+            right: c_right,
+        })
     }
 }

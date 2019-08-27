@@ -231,9 +231,6 @@ impl<'a, E: JubjubEngine> Circuit<E> for AnonymousTransfer<'a, E> {
 
 
 
-
-
-
 #[cfg(test)]
 mod tests {
     use super::*;
