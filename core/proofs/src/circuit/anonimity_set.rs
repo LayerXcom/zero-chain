@@ -382,12 +382,10 @@ impl<E: JubjubEngine> LeftAmountCiphertexts<E> {
     }
 }
 
-pub struct BalanceCiphertexts<E: JubjubEngine>{
-    pub(crate) left: Vec<EdwardsPoint<E>>,
-    pub(crate) right: Vec<EdwardsPoint<E>>,
-}
+pub struct LeftBalanceCiphertexts<E: JubjubEngine>(pub(crate) Vec<EdwardsPoint<E>>);
+pub struct RightBalanceCiphertexts<E: JubjubEngine>(pub(crate) Vec<EdwardsPoint<E>>);
 
-impl<E: JubjubEngine> BalanceCiphertexts<E> {
+impl<E: JubjubEngine> LeftBalanceCiphertexts<E> {
     pub fn witness<Order, CS>(
         mut cs: CS,
         c: &[Option<elgamal::Ciphertext<E>>],
@@ -405,6 +403,43 @@ impl<E: JubjubEngine> BalanceCiphertexts<E> {
             ).unwrap() // TODO
         }).collect::<Vec<EdwardsPoint<E>>>();
 
+        Ok(LeftBalanceCiphertexts(c_left))
+    }
+
+    pub fn add_each<CS>(
+        &self,
+        mut cs: CS,
+        left_ac: &LeftAmountCiphertexts<E>,
+        params: &E::Params
+    ) -> Result<Self, SynthesisError>
+    where
+        CS: ConstraintSystem<E>
+    {
+        assert_eq!(self.0.len(), left_ac.0.len());
+
+        let mut acc = Vec::with_capacity(ANONIMITY_SIZE);
+        for i in 0..self.0.len() {
+            let tmp = self.0[i].add(
+                cs.namespace(|| format!("add each left ciphertexts {}", i)),
+                &left_ac.0[i],
+                params
+            )?;
+            acc.push(tmp);
+        }
+
+        Ok(LeftBalanceCiphertexts(acc))
+    }
+}
+
+impl<E: JubjubEngine> RightBalanceCiphertexts<E> {
+    pub fn witness<Order, CS>(
+        mut cs: CS,
+        c: &[Option<elgamal::Ciphertext<E>>],
+        params: &E::Params
+    ) -> Result<Self, SynthesisError>
+    where
+        CS: ConstraintSystem<E>
+    {
         let c_right = c.iter().flat_map(|e| e.iter()).enumerate().map(|(i, l)| {
             let right = l.clone().right;
             EdwardsPoint::witness(
@@ -414,9 +449,6 @@ impl<E: JubjubEngine> BalanceCiphertexts<E> {
             ).unwrap() // TODO
         }).collect::<Vec<EdwardsPoint<E>>>();
 
-        Ok(BalanceCiphertexts {
-            left: c_left,
-            right: c_right,
-        })
+        Ok(RightBalanceCiphertexts(c_right))
     }
 }

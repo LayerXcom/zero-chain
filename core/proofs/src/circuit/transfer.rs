@@ -131,12 +131,6 @@ impl<'a, E: JubjubEngine> Circuit<E> for Transfer<'a, E> {
             params
         )?;
 
-        let fee_rls = enc_key_sender_bits.mul(
-            cs.namespace(|| format!("compute sender fee cipher")),
-            &randomness_bits,
-            params
-        )?;
-
         // Ensures recipient enc_key is on the curve
         let enc_key_recipient_bits = ecc::EdwardsPoint::witness(
             cs.namespace(|| "recipient enc_key witness"),
@@ -184,7 +178,7 @@ impl<'a, E: JubjubEngine> Circuit<E> for Transfer<'a, E> {
 
         let f_left_sender = fee_g.add(
             cs.namespace(|| format!("computation of sender's f_left")),
-            &fee_rls,
+            &val_rls,
             params
         )?;
 
@@ -387,8 +381,8 @@ mod tests {
         // println!("num: {:?}", cs.num_constraints());
         // println!("hash: {:?}", cs.hash());
 
-        assert_eq!(cs.num_constraints(), 23239);
-        assert_eq!(cs.hash(), "37a8a1c8d1c88182caf851e065e95f76dccb56699f351a74563f12ca6aa74b37");
+        assert_eq!(cs.num_constraints(), 19974);
+        assert_eq!(cs.hash(), "d23c92fb60ee547d45118e160679929cfa186957280673af62f09fa12d401784");
 
         assert_eq!(cs.num_inputs(), 23);
         assert_eq!(cs.get_input(0, "ONE"), Fr::one());

@@ -70,6 +70,13 @@ impl<'a, E: JubjubEngine> Circuit<E> for AnonymousTransfer<'a, E> {
             cs.namespace(|| "range proof of remaining_balance"),
             self.remaining_balance
         )?;
+        // Multiply the remaining balance to the base point same as FixedGenerators::ElGamal.
+        let remaining_balance_g = ecc::fixed_base_multiplication(
+            cs.namespace(|| format!("compute the remaining balance in the exponent")),
+            FixedGenerators::NoteCommitmentRandomness,
+            &remaining_balance_bits,
+            params
+        )?;
 
         let zero_p = EdwardsPoint::<E>::witness::<PrimeOrder, _>(
             cs.namespace(|| "initialize acc."),
@@ -191,24 +198,81 @@ impl<'a, E: JubjubEngine> Circuit<E> for AnonymousTransfer<'a, E> {
             &enc_keys_mul_random.0
         )?;
 
+        {
+            let neg_left_amount_cipher = ciphertext_left_set.neg_each(
+                cs.namespace(|| "negate left amount ciphertexts"),
+                params
+            )?;
+            let left_balance_ciphertexts = LeftBalanceCiphertexts::witness::<PrimeOrder, _>(
+                cs.namespace(|| "left balance ciphertexts witness"),
+                self.enc_balances,
+                params
+            )?;
+            let added_lefts = left_balance_ciphertexts.add_each(
+                cs.namespace(|| "add each with left amount ciphertexts"),
+                &neg_left_amount_cipher,
+                params
+            )?;
+            let lh_c = s_bins.edwards_add_fold(
+                cs.namespace(|| "Add folded C_l minus C"),
+                &added_lefts.0,
+                zero_p.clone(),
+                params
+            )?;
 
-        // Generate the randomness for elgamal encryption into the circuit
-        let randomness_bits = boolean::field_into_boolean_vec_le(
-            cs.namespace(|| "randomness_bits"),
-            self.randomness.map(|e| *e)
-        )?;
+            let right_balance_ciphertects = RightBalanceCiphertexts::witness::<PrimeOrder, _>(
+                cs.namespace(|| "right balance ciphertexts witness"),
+                self.enc_balances,
+                params
+            )?;
+            let right_balance_cipher_fold = s_bins.edwards_add_fold(
+                cs.namespace(|| "add folded right balance ciphertexts"),
+                &right_balance_ciphertects.0,
+                zero_p.clone(),
+                params
+            )?;
 
-        // Multiply the randomness to the base point same as FixedGenerators::ElGamal.
-        let right_ciphertext = ecc::fixed_base_multiplication(
-            cs.namespace(|| format!("compute the right elgamal component")),
-            FixedGenerators::NoteCommitmentRandomness,
-            &randomness_bits,
-            params
-        )?;
+            // Generate the randomness for elgamal encryption into the circuit
+            let randomness_bits = boolean::field_into_boolean_vec_le(
+                cs.namespace(|| "randomness_bits"),
+                self.randomness.map(|e| *e)
+            )?;
+            // Multiply the randomness to the base point same as FixedGenerators::ElGamal.
+            let right_ciphertext = ecc::fixed_base_multiplication(
+                cs.namespace(|| format!("compute the right elgamal component")),
+                FixedGenerators::NoteCommitmentRandomness,
+                &randomness_bits,
+                params
+            )?;
+            let neg_right_ciphertext = negate_point(
+                cs.namespace(|| "negate right ciphertext"),
+                &right_ciphertext,
+                params
+            )?;
+            let cr_minus_d = right_balance_cipher_fold.add(
+                cs.namespace(|| "amount minus balance ciphertext"),
+                &neg_right_ciphertext,
+                params
+            )?;
+            let cr_minus_d_mul_sk = cr_minus_d.mul(
+                cs.namespace(|| "cr_minus_d mul sk"),
+                &dec_key_bits,
+                params
+            )?;
+            let rh_c = remaining_balance_g.add(
+                cs.namespace(|| "rb_g adds cr_minus_d_mul_sk"),
+                &cr_minus_d_mul_sk,
+                params
+            )?;
+            // eq_edwards_points(
+            //     cs.namespace(|| "rl_c equals to rh_c"),
+            //     &lh_c,
+            //     &rh_c
+            // )?;
 
-        right_ciphertext
-            .inputize(cs.namespace(|| "inputize right ciphertext."))?;
-
+            right_ciphertext
+                .inputize(cs.namespace(|| "inputize right ciphertext."))?;
+        }
 
         rvk_inputize(
             cs.namespace(|| "inputize rvk"),
@@ -223,7 +287,6 @@ impl<'a, E: JubjubEngine> Circuit<E> for AnonymousTransfer<'a, E> {
             &dec_key_bits,
             params
         )?;
-
 
         Ok(())
     }
