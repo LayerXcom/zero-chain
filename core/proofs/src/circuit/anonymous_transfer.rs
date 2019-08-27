@@ -11,9 +11,8 @@ use scrypto::jubjub::{
 };
 use crate::{ProofGenerationKey, EncryptionKey, DecryptionKey};
 use scrypto::circuit::{
-    boolean::{self, Boolean, AllocatedBit},
+    boolean::self,
     ecc::{self, EdwardsPoint},
-    num::AllocatedNum,
 };
 use scrypto::jubjub::{edwards, PrimeOrder};
 use crate::{elgamal::Ciphertext, Assignment, Nonce};
@@ -198,6 +197,10 @@ impl<'a, E: JubjubEngine> Circuit<E> for AnonymousTransfer<'a, E> {
             &enc_keys_mul_random.0
         )?;
 
+
+        enc_key_set.inputize(cs.namespace(|| "inputize enc key set"))?;
+        ciphertext_left_set.inputize(cs.namespace(|| "inputize ciphertext left set"))?;
+
         {
             let neg_left_amount_cipher = ciphertext_left_set.neg_each(
                 cs.namespace(|| "negate left amount ciphertexts"),
@@ -270,8 +273,9 @@ impl<'a, E: JubjubEngine> Circuit<E> for AnonymousTransfer<'a, E> {
             //     &rh_c
             // )?;
 
-            right_ciphertext
-                .inputize(cs.namespace(|| "inputize right ciphertext."))?;
+            left_balance_ciphertexts.inputize(cs.namespace(|| "inputize left balance ciphertext"))?;
+            right_balance_ciphertects.inputize(cs.namespace(|| "inputize right balance ciphertext"))?;
+            right_ciphertext.inputize(cs.namespace(|| "inputize right amount ciphertext."))?;
         }
 
         rvk_inputize(
@@ -347,8 +351,6 @@ mod tests {
         }
         let seed_decoys_iter = rng.gen_iter::<[u8; 32]>().take(DECOY_SIZE);
         let rng = &mut XorShiftRng::from_seed([0x3dbe6258, 0x8d313d76, 0x3237db17, 0xe5bc0654]);
-        let randomness_amounts_iter = rng.gen_iter::<Fs>().take(DECOY_SIZE);
-        let rng = &mut XorShiftRng::from_seed([0x3dbe6258, 0x8d313d76, 0x3237db17, 0xe5bc0654]);
         let randomness_balances_iter = rng.gen_iter::<Fs>().take(DECOY_SIZE);
         let rng = &mut XorShiftRng::from_seed([0x3dbe6258, 0x8d313d76, 0x3237db17, 0xe5bc0654]);
         let remaining_balance_iter = rng.gen_iter::<u32>().take(DECOY_SIZE);
@@ -360,14 +362,21 @@ mod tests {
         let enc_key_sender = EncryptionKey::from_decryption_key(&dec_key, params);
         let enc_key_recipient = EncryptionKey::<Bls12>::from_seed(&seed_recipient, params).unwrap();
         let enc_keys_decoy = seed_decoys_iter.map(|e| EncryptionKey::from_seed(&e, params).ok()).collect::<Vec<Option<EncryptionKey<Bls12>>>>();
-        let enc_key_sender_xy = enc_key_sender.0.into_xy();
-        let enc_key_recipient_xy = enc_key_recipient.0.into_xy();
+        let mut enc_keys = enc_keys_decoy.clone();
+        enc_keys.insert(s_index, Some(enc_key_sender.clone()));
+        enc_keys.insert(t_index, Some(enc_key_recipient.clone()));
 
         // ciphertexts
-        let ciphertext_amount_sender = Ciphertext::encrypt(amount, &randomness_amount, &enc_key_sender, p_g, params);
-        let ciphertext_amount_recipient = neg_encrypt(amount, &randomness_amount, &enc_key_recipient, p_g, params);
-        let ciphertexts_amount_decoy = enc_keys_decoy.iter().zip(randomness_amounts_iter)
-            .map(|(e, r)| Ciphertext::encrypt(0, &r, e.as_ref().unwrap(), p_g, params));
+        let left_ciphertext_amount_sender = Ciphertext::encrypt(amount, &randomness_amount, &enc_key_sender, p_g, params).left;
+        let left_ciphertext_amount_recipient = neg_encrypt(amount, &randomness_amount, &enc_key_recipient, p_g, params).left;
+        let left_ciphertexts_amount_decoy = enc_keys_decoy.iter()
+            .map(|e| Some(Ciphertext::encrypt(0, &randomness_amount, e.as_ref().unwrap(), p_g, params).left))
+            .collect::<Vec<Option<edwards::Point<Bls12, PrimeOrder>>>>();
+        let mut left_ciphertexts_amount = left_ciphertexts_amount_decoy.clone();
+        left_ciphertexts_amount.insert(s_index, Some(left_ciphertext_amount_sender));
+        left_ciphertexts_amount.insert(t_index, Some(left_ciphertext_amount_recipient));
+        let right_ciphertext_amount = Ciphertext::encrypt(amount, &randomness_amount, &enc_key_sender, p_g, params).right;
+
         let ciphertext_balance_sender = Ciphertext::encrypt(remaining_balance, &randomness_balanace_sender, &enc_key_sender, p_g, params);
         let ciphertext_balance_recipient = Ciphertext::encrypt(remaining_balance_recipient, &randomness_balanace_recipient, &enc_key_recipient, p_g, params);
         let mut ciphertext_balances = enc_keys_decoy.iter().zip(remaining_balance_iter).zip(randomness_balances_iter)
@@ -375,11 +384,13 @@ mod tests {
             .collect::<Vec<Option<Ciphertext<Bls12>>>>();
         ciphertext_balances.insert(s_index, Some(ciphertext_balance_sender));
         ciphertext_balances.insert(t_index, Some(ciphertext_balance_recipient));
+        let left_ciphertext_balances = ciphertext_balances.clone().into_iter().map(|e| e.unwrap().left).collect::<Vec<edwards::Point<Bls12, PrimeOrder>>>();
+        let right_ciphertext_balances = ciphertext_balances.clone().into_iter().map(|e| e.unwrap().right).collect::<Vec<edwards::Point<Bls12, PrimeOrder>>>();
 
         let rvk = proof_gen_key.into_rvk(alpha, params).0.into_xy();
         let g_epoch = edwards::Point::<Bls12, _>::rand(rng, params).mul_by_cofactor(params);
         let g_epoch_xy = g_epoch.into_xy();
-        let nonce = g_epoch.mul(dec_key.0, params).into_xy();
+        let nonce_xy = g_epoch.mul(dec_key.0, params).into_xy();
 
         let mut cs = TestConstraintSystem::<Bls12>::new();
         let instance = AnonymousTransfer {
@@ -402,6 +413,34 @@ mod tests {
         assert!(cs.is_satisfied());
         println!("num: {:?}", cs.num_constraints());
         println!("hash: {:?}", cs.hash());
+        println!("num_inputs: {:?}", cs.num_inputs());
+
+        let len = enc_keys.len();
+        assert_eq!(cs.get_input(0, "ONE"), Fr::one());
+        for (i, enc_key) in enc_keys.into_iter().map(|e| e.unwrap().0).enumerate() {
+            assert_eq!(cs.get_input((i+1) * 2 - 1, &format!("inputize enc key set/inputize enc keys {}/x/input variable", i)), enc_key.into_xy().0);
+            assert_eq!(cs.get_input((i+1) * 2, &format!("inputize enc key set/inputize enc keys {}/y/input variable", i)), enc_key.into_xy().1);
+        }
+        for (i, lca) in left_ciphertexts_amount.into_iter().map(|e| e.unwrap()).enumerate() {
+            assert_eq!(cs.get_input((len+i+1) * 2 - 1, &format!("inputize ciphertext left set/inputize left ciphertexts {}/x/input variable", i)), lca.into_xy().0);
+            assert_eq!(cs.get_input((len+i+1) * 2, &format!("inputize ciphertext left set/inputize left ciphertexts {}/y/input variable", i)), lca.into_xy().1);
+        }
+        for (i, lcb) in left_ciphertext_balances.into_iter().map(|e| e).enumerate() {
+            assert_eq!(cs.get_input((i+1) * 2 - 1 + len*4, &format!("inputize left balance ciphertext/inputize left balance ciphertexts {}/x/input variable", i)), lcb.into_xy().0);
+            assert_eq!(cs.get_input((i+1) * 2 + len*4, &format!("inputize left balance ciphertext/inputize left balance ciphertexts {}/y/input variable", i)), lcb.into_xy().1);
+        }
+        for (i, rcb) in right_ciphertext_balances.into_iter().map(|e| e).enumerate() {
+            assert_eq!(cs.get_input((i+1) * 2 - 1 + len*6, &format!("inputize right balance ciphertext/inputize right balance ciphertexts {}/x/input variable", i)), rcb.into_xy().0);
+            assert_eq!(cs.get_input((i+1) * 2 + len*6, &format!("inputize right balance ciphertext/inputize right balance ciphertexts {}/y/input variable", i)), rcb.into_xy().1);
+        }
+        assert_eq!(cs.get_input(len*8+1, &format!("inputize right amount ciphertext./x/input variable")), right_ciphertext_amount.into_xy().0);
+        assert_eq!(cs.get_input(len*8+2, &format!("inputize right amount ciphertext./y/input variable")), right_ciphertext_amount.into_xy().1);
+        assert_eq!(cs.get_input(len*8+3, &format!("inputize rvk/rvk/x/input variable")), rvk.0);
+        assert_eq!(cs.get_input(len*8+4, &format!("inputize rvk/rvk/y/input variable")), rvk.1);
+        assert_eq!(cs.get_input(len*8+5, &format!("inputize g_epoch and nonce/inputize g_epoch/x/input variable")), g_epoch_xy.0);
+        assert_eq!(cs.get_input(len*8+6, &format!("inputize g_epoch and nonce/inputize g_epoch/y/input variable")), g_epoch_xy.1);
+        assert_eq!(cs.get_input(len*8+7, &format!("inputize g_epoch and nonce/inputize nonce/x/input variable")), nonce_xy.0);
+        assert_eq!(cs.get_input(len*8+8, &format!("inputize g_epoch and nonce/inputize nonce/y/input variable")), nonce_xy.1);
     }
 
     #[test]

@@ -1,12 +1,10 @@
 use bellman::{SynthesisError, ConstraintSystem};
-use pairing::{Engine, PrimeField};
 use scrypto::circuit::{
     boolean::{self, Boolean, AllocatedBit},
     ecc::{self, EdwardsPoint},
-    num::AllocatedNum,
 };
-use scrypto::jubjub::{JubjubEngine, FixedGenerators, edwards, PrimeOrder};
-use crate::{ProofGenerationKey, EncryptionKey, DecryptionKey, elgamal};
+use scrypto::jubjub::{JubjubEngine, FixedGenerators};
+use crate::{EncryptionKey, elgamal};
 use super::utils::{eq_edwards_points, negate_point};
 use std::fmt;
 
@@ -429,6 +427,17 @@ impl<E: JubjubEngine> LeftBalanceCiphertexts<E> {
 
         Ok(LeftBalanceCiphertexts(acc))
     }
+
+    pub fn inputize<CS>(&self, mut cs: CS) -> Result<(), SynthesisError>
+    where
+        CS: ConstraintSystem<E>
+    {
+        for (i, e) in self.0.iter().enumerate() {
+            e.inputize(cs.namespace(|| format!("inputize left balance ciphertexts {}", i)))?;
+        }
+
+        Ok(())
+    }
 }
 
 impl<E: JubjubEngine> RightBalanceCiphertexts<E> {
@@ -450,5 +459,16 @@ impl<E: JubjubEngine> RightBalanceCiphertexts<E> {
         }).collect::<Vec<EdwardsPoint<E>>>();
 
         Ok(RightBalanceCiphertexts(c_right))
+    }
+
+    pub fn inputize<CS>(&self, mut cs: CS) -> Result<(), SynthesisError>
+    where
+        CS: ConstraintSystem<E>
+    {
+        for (i, e) in self.0.iter().enumerate() {
+            e.inputize(cs.namespace(|| format!("inputize right balance ciphertexts {}", i)))?;
+        }
+
+        Ok(())
     }
 }
