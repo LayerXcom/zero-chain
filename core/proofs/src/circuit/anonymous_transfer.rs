@@ -269,11 +269,11 @@ impl<'a, E: JubjubEngine> Circuit<E> for AnonymousTransfer<'a, E> {
                 &cr_minus_d_mul_sk,
                 params
             )?;
-            // eq_edwards_points(
-            //     cs.namespace(|| "rl_c equals to rh_c"),
-            //     &lh_c,
-            //     &rh_c
-            // )?;
+            eq_edwards_points(
+                cs.namespace(|| "rl_c equals to rh_c"),
+                &lh_c,
+                &rh_c
+            )?;
 
             left_balance_ciphertexts.inputize(cs.namespace(|| "inputize left balance ciphertext"))?;
             right_balance_ciphertects.inputize(cs.namespace(|| "inputize right balance ciphertext"))?;
@@ -330,8 +330,8 @@ mod tests {
         let params = &JubjubBls12::new();
         let rng = &mut XorShiftRng::from_seed([0x3dbe6258, 0x8d313d76, 0x3237db17, 0xe5bc0654]);
         let p_g = FixedGenerators::NoteCommitmentRandomness;
-        let current_balance = 100;
-        let remaining_balance = current_balance - amount;
+        let current_balance_sender = 100;
+        let remaining_balance = current_balance_sender - amount;
 
         // randomness
         let seed_sender: [u8; 32] = rng.gen();
@@ -340,7 +340,7 @@ mod tests {
         let randomness_amount = Fs::rand(rng);
         let randomness_balanace_sender = Fs::rand(rng);
         let randomness_balanace_recipient = Fs::rand(rng);
-        let remaining_balance_recipient: u32 = rng.gen();
+        let current_balance_recipient: u32 = rng.gen();
         let s_index: usize = rng.gen_range(0, ANONIMITY_SIZE+1);
         let mut t_index: usize;
         loop {
@@ -353,7 +353,7 @@ mod tests {
         let rng = &mut XorShiftRng::from_seed([0x3dbe6258, 0x8d313d76, 0x3237db17, 0xe5bc0654]);
         let randomness_balances_iter = rng.gen_iter::<Fs>().take(DECOY_SIZE);
         let rng = &mut XorShiftRng::from_seed([0x3dbe6258, 0x8d313d76, 0x3237db17, 0xe5bc0654]);
-        let remaining_balance_iter = rng.gen_iter::<u32>().take(DECOY_SIZE);
+        let current_balance_iter = rng.gen_iter::<u32>().take(DECOY_SIZE);
         let rng = &mut XorShiftRng::from_seed([0x3dbe6258, 0x8d313d76, 0x3237db17, 0xe5bc0654]);
 
         // keys
@@ -377,15 +377,19 @@ mod tests {
         left_ciphertexts_amount.insert(t_index, Some(left_ciphertext_amount_recipient));
         let right_ciphertext_amount = elgamal::Ciphertext::encrypt(amount, &randomness_amount, &enc_key_sender, p_g, params).right;
 
-        let ciphertext_balance_sender = elgamal::Ciphertext::encrypt(remaining_balance, &randomness_balanace_sender, &enc_key_sender, p_g, params);
-        let ciphertext_balance_recipient = elgamal::Ciphertext::encrypt(remaining_balance_recipient, &randomness_balanace_recipient, &enc_key_recipient, p_g, params);
-        let mut ciphertext_balances = enc_keys_decoy.iter().zip(remaining_balance_iter).zip(randomness_balances_iter)
+        let ciphertext_balance_sender =
+            elgamal::Ciphertext::encrypt(current_balance_sender, &randomness_balanace_sender, &enc_key_sender, p_g, params);
+        let ciphertext_balance_recipient =
+            elgamal::Ciphertext::encrypt(current_balance_recipient, &randomness_balanace_recipient, &enc_key_recipient, p_g, params);
+        let mut ciphertext_balances = enc_keys_decoy.iter().zip(current_balance_iter).zip(randomness_balances_iter)
             .map(|((e, a), r)| Some(elgamal::Ciphertext::encrypt(a, &r, e.as_ref().unwrap(), p_g, params)))
             .collect::<Vec<Option<elgamal::Ciphertext<Bls12>>>>();
         ciphertext_balances.insert(s_index, Some(ciphertext_balance_sender));
         ciphertext_balances.insert(t_index, Some(ciphertext_balance_recipient));
-        let left_ciphertext_balances = ciphertext_balances.clone().into_iter().map(|e| e.unwrap().left).collect::<Vec<edwards::Point<Bls12, PrimeOrder>>>();
-        let right_ciphertext_balances = ciphertext_balances.clone().into_iter().map(|e| e.unwrap().right).collect::<Vec<edwards::Point<Bls12, PrimeOrder>>>();
+        let left_ciphertext_balances = ciphertext_balances.clone().into_iter().map(|e| e.unwrap().left)
+            .collect::<Vec<edwards::Point<Bls12, PrimeOrder>>>();
+        let right_ciphertext_balances = ciphertext_balances.clone().into_iter().map(|e| e.unwrap().right)
+            .collect::<Vec<edwards::Point<Bls12, PrimeOrder>>>();
 
         let rvk = proof_gen_key.into_rvk(alpha, params).0.into_xy();
         let g_epoch = edwards::Point::<Bls12, _>::rand(rng, params).mul_by_cofactor(params);

@@ -20,11 +20,10 @@ use scrypto::jubjub::{
 use crate::{ProofGenerationKey, EncryptionKey, DecryptionKey};
 use scrypto::circuit::{
     boolean,
-    ecc::{self, EdwardsPoint},
-    num::AllocatedNum,
+    ecc::self,
 };
 use scrypto::jubjub::{edwards, PrimeOrder};
-use crate::{elgamal::Ciphertext, Assignment};
+use crate::elgamal::Ciphertext;
 use super::{range_check::u32_into_bit_vec_le, utils::*};
 
 pub struct ConfidentialTransfer<'a, E: JubjubEngine> {
