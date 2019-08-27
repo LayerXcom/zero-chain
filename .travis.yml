@@ -14,7 +14,8 @@ env:
     - RUST_BACKTRACE=1
   matrix:
     - RUST_TOOLCHAIN=nightly TARGET=wasm
-    - RUST_TOOLCHAIN=stable TARGET=native
+    - RUST_TOOLCHAIN=stable TARGET=native1
+    - RUST_TOOLCHAIN=stable TARGET=native2
 
 before_install:
   - chmod +x ./ci/script.sh

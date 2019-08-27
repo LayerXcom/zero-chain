@@ -429,14 +429,14 @@ pub mod tests {
     fn test_call_function() {
         with_externalities(&mut new_test_ext(), || {
             // Needed to be updated manually once snark paramters are pre-processed.
-            let proof: [u8; 192] = hex!("95dbee00db7a61a907185f119b971341121faa9475271aca69a12d3f6fbb2705e5b516acb8902858a85553f4e082e09cb95497330dd3f9c79a36eed0275b3c5ded36fb53cb15f59a294ff9797b6df03f3e524fe503fec29baba2ff3b2a092541160c83778947f62e79419e3b8cb81a99eb52247e272d688622daddfc77f97acc0e29b0bc64f4d6c03114f0ae85643b12b035715b6acc34e6c2308c5678379fbe9fb0a74c9290bdde3298586a7a7283a37dfa025200c21ab08bfd7ae110d5b703");
+            let proof: [u8; 192] = hex!("90e85fa9496fba35af8b842879f090ec4ca69e40197adcfebe0772c39aad665c3ef0ba8fe906d24f890551351692bca3915efcc8a772a62ffb7e2d48245ddcf6a9ad3c3a37623ceb4a36bfe714415044e2e055a640fe839f30f378e93d1f88be07696fda69042f30805eaa8044a57261fc7b490b097037310b7de9aa07a248d917875aab44853f28311c4b946e843d6787e18ca0a9d3dda99de62a7440813cc3988ef61e352beaa48797307166b2a5f5a862358da073711f750dacd7701aec75");
             let pkd_addr_alice: [u8; 32] = hex!("fd0c0c0183770c99559bf64df4fe23f77ced9b8b4d02826a282bcd125117dcc2");
             let pkd_addr_bob: [u8; 32] = hex!("45e66da531088b55dcb3b273ca825454d79d2d1d5c4fa2ba4a12c1fa1ccd6389");
-            let enc10_by_alice: [u8; 32] = hex!("63946e72576a843711d583dd18cc328923da5cacae709809669eafd56fae7889");
-            let enc10_by_bob: [u8; 32] = hex!("159fe720e918b19dab20d188a04cd62231066087f576c550c0366aa68d0cb4a0");
-            let enc1_by_alice: [u8; 32] = hex!("f607d32c536d9f6c2472291a290de335ce682a636a5d26b251f49d350b124343");
-            let randomness: [u8; 32] = hex!("4037d0ddf22f9d09d335be087ff492ab6815c996817512458b2be26614eea455");
-            let rvk: [u8; 32] = hex!("99d8d24c3b4610392c9a54259caad3bd9b987591313b52990db9f459c5b4addf");
+            let enc10_by_alice: [u8; 32] = hex!("9c890d3a99623d0a3b5be4e43ae2cbd7a0bfe83523f93ff2ca8dfcb498b8e461");
+            let enc10_by_bob: [u8; 32] = hex!("3ef1c1c7af605ceed316e8517d3fd5761461a64fb24f57cd5fcb213731347830");
+            let enc1_by_alice: [u8; 32] = hex!("127778d9ea15d20b6c812cca5377ed8c18cca4a6ec5e2c9d33df8324b3b8e81f");
+            let randomness: [u8; 32] = hex!("12fe19f453051b2a6df6d0c443b882f9df040408293677d123467975ab80bb00");
+            let rvk: [u8; 32] = hex!("baa16af0d19b50be778d4de0fe03a8cc76cfb17f7a447cef9a5f886397d2d217");
             let nonce: [u8; 32] = hex!("c3427a3e3e9f19ff730d45c7c7daa1ee3c96b10a86085d11647fe27d923d654e");
 
             assert_ok!(EncryptedBalances::confidential_transfer(
