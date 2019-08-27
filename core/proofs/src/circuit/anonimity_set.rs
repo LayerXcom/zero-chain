@@ -58,19 +58,13 @@ impl Binary {
             acc.push(tmp);
         }
 
-        Ok(Binary(acc))
-    }
+        let res = Binary(acc);
+        let mut check = res.clone();
+        if let Some(i) = index {
+            check.ensure_total_one(cs.namespace(|| format!("{} total one {}", st, i)), i)?;
+        }
 
-    pub fn ensure_total_one<E, CS>(
-        &self,
-        mut cs: CS,
-        true_index: Option<usize>
-    ) -> Result<(), SynthesisError>
-    where
-        E: JubjubEngine,
-        CS: ConstraintSystem<E>
-    {
-        unimplemented!();
+        Ok(res)
     }
 
     // (1 - s_i)(1 - t_i)
@@ -188,6 +182,27 @@ impl Binary {
         }
 
         Ok(acc)
+    }
+
+    fn ensure_total_one<E, CS>(
+        &mut self,
+        mut cs: CS,
+        true_index: usize
+    ) -> Result<(), SynthesisError>
+    where
+        E: JubjubEngine,
+        CS: ConstraintSystem<E>
+    {
+        let tb = Boolean::from(AllocatedBit::alloc(cs.namespace(|| "tb"), Some(true))?);
+        let fb = Boolean::from(AllocatedBit::alloc(cs.namespace(|| "fb"), Some(false))?);
+        let t = self.0.remove(true_index);
+
+        Boolean::enforce_equal(cs.namespace(|| "eq true"), &tb, &t)?;
+        for (i, f) in self.0.iter().enumerate() {
+            Boolean::enforce_equal(cs.namespace(|| format!("eq false {}", i)), &fb, &f)?;
+        }
+
+        Ok(())
     }
 
     fn len(&self) -> usize {

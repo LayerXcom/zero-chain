@@ -199,10 +199,10 @@ impl<'a, E: JubjubEngine> Circuit<E> for AnonymousTransfer<'a, E> {
             &enc_keys_mul_random.0
         )?;
 
-
         enc_key_set.inputize(cs.namespace(|| "inputize enc key set"))?;
         ciphertext_left_set.inputize(cs.namespace(|| "inputize ciphertext left set"))?;
 
+        // balance integrity
         {
             let neg_left_amount_cipher = ciphertext_left_set.neg_each(
                 cs.namespace(|| "negate left amount ciphertexts"),
@@ -280,6 +280,7 @@ impl<'a, E: JubjubEngine> Circuit<E> for AnonymousTransfer<'a, E> {
             right_ciphertext.inputize(cs.namespace(|| "inputize right amount ciphertext."))?;
         }
 
+        // Inputize re-randomized signature verification key
         rvk_inputize(
             cs.namespace(|| "inputize rvk"),
             self.proof_generation_key,
@@ -287,6 +288,7 @@ impl<'a, E: JubjubEngine> Circuit<E> for AnonymousTransfer<'a, E> {
             params
         )?;
 
+        // Inputize g_epoch and nonce
         g_epoch_nonce_inputize(
             cs.namespace(|| "inputize g_epoch and nonce"),
             self.g_epoch,
@@ -361,7 +363,8 @@ mod tests {
         let dec_key = proof_gen_key.into_decryption_key().unwrap();
         let enc_key_sender = EncryptionKey::from_decryption_key(&dec_key, params);
         let enc_key_recipient = EncryptionKey::<Bls12>::from_seed(&seed_recipient, params).unwrap();
-        let enc_keys_decoy = seed_decoys_iter.map(|e| EncryptionKey::from_seed(&e, params).ok()).collect::<Vec<Option<EncryptionKey<Bls12>>>>();
+        let enc_keys_decoy = seed_decoys_iter.map(|e| EncryptionKey::from_seed(&e, params).ok())
+            .collect::<Vec<Option<EncryptionKey<Bls12>>>>();
         let mut enc_keys = enc_keys_decoy.clone();
         enc_keys.insert(s_index, Some(enc_key_sender.clone()));
         enc_keys.insert(t_index, Some(enc_key_recipient.clone()));
@@ -391,11 +394,13 @@ mod tests {
         let right_ciphertext_balances = ciphertext_balances.clone().into_iter().map(|e| e.unwrap().right)
             .collect::<Vec<edwards::Point<Bls12, PrimeOrder>>>();
 
+        // rvk and nonce
         let rvk = proof_gen_key.into_rvk(alpha, params).0.into_xy();
         let g_epoch = edwards::Point::<Bls12, _>::rand(rng, params).mul_by_cofactor(params);
         let g_epoch_xy = g_epoch.into_xy();
         let nonce_xy = g_epoch.mul(dec_key.0, params).into_xy();
 
+        // cs test
         let mut cs = TestConstraintSystem::<Bls12>::new();
         let instance = AnonymousTransfer {
             params,
