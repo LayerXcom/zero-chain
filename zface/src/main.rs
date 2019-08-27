@@ -14,7 +14,7 @@ use rand::{OsRng, Rng};
 use proofs::{
     EncryptionKey, SpendingKey, DecryptionKey,
     elgamal, MultiEncKeys,
-    setup, PARAMS, KeyContext, ProofBuilder,
+    confidential_setup, PARAMS, KeyContext, ProofBuilder,
     Confidential,
     };
 use primitives::{hexdisplay::{HexDisplay, AsBytesRef}, crypto::Ss58Codec};
@@ -83,7 +83,7 @@ fn subcommand_snark<R: Rng>(mut term: term::Term, matches: &ArgMatches, rng: &mu
             let pk_path = matches.value_of("proving-key-path").unwrap();
             let vk_path = matches.value_of("verification-key-path").unwrap();
 
-            setup(rng)
+            confidential_setup(rng)
                 .write_to_file(pk_path, vk_path)
                 .unwrap();
 

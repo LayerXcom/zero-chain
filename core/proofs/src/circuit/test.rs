@@ -4,7 +4,6 @@ use pairing::{
     PrimeField,
     PrimeFieldRepr,
 };
-
 use bellman::{
     LinearCombination,
     SynthesisError,
@@ -12,14 +11,11 @@ use bellman::{
     Variable,
     Index
 };
-
 use std::collections::HashMap;
 use std::fmt::Write;
-
 use byteorder::{BigEndian, ByteOrder};
 use std::cmp::Ordering;
 use std::collections::BTreeMap;
-
 use blake2_rfc::blake2s::Blake2s;
 
 #[derive(Debug)]

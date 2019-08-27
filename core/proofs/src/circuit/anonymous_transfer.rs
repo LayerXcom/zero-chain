@@ -8,17 +8,19 @@ use bellman::{
 use scrypto::jubjub::{
     JubjubEngine,
     FixedGenerators,
+    edwards,
+    PrimeOrder,
 };
-use crate::{ProofGenerationKey, EncryptionKey, DecryptionKey};
 use scrypto::circuit::{
     boolean::self,
     ecc::{self, EdwardsPoint},
 };
-use scrypto::jubjub::{edwards, PrimeOrder};
-use crate::{elgamal::Ciphertext, Assignment, Nonce};
-use super::range_check::u32_into_bit_vec_le;
-use super::anonimity_set::*;
-use super::utils::*;
+use crate::{ProofGenerationKey, EncryptionKey, DecryptionKey, elgamal};
+use super::{
+    range_check::u32_into_bit_vec_le,
+    anonimity_set::*,
+    utils::*,
+};
 
 pub struct AnonymousTransfer<'a, E: JubjubEngine> {
     params: &'a E::Params,
@@ -32,7 +34,7 @@ pub struct AnonymousTransfer<'a, E: JubjubEngine> {
     dec_key: Option<&'a DecryptionKey<E>>,
     enc_key_recipient: Option<&'a EncryptionKey<E>>,
     enc_key_decoys: &'a [Option<EncryptionKey<E>>],
-    enc_balances: &'a [Option<Ciphertext<E>>],
+    enc_balances: &'a [Option<elgamal::Ciphertext<E>>],
     g_epoch: Option<&'a edwards::Point<E, PrimeOrder>>,
 }
 
@@ -296,8 +298,6 @@ impl<'a, E: JubjubEngine> Circuit<E> for AnonymousTransfer<'a, E> {
     }
 }
 
-
-
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -313,13 +313,13 @@ mod tests {
         enc_key: &EncryptionKey<Bls12>,
         p_g: FixedGenerators,
         params: &JubjubBls12
-    ) -> Ciphertext<Bls12> {
+    ) -> elgamal::Ciphertext<Bls12> {
         let right = params.generator(p_g).mul(*randomness, params);
         let v_point = params.generator(p_g).mul(amount as u64, params).negate();
         let r_point = enc_key.0.mul(*randomness, params);
         let left = v_point.add(&r_point, params);
 
-        Ciphertext {
+        elgamal::Ciphertext {
             left,
             right,
         }
@@ -367,21 +367,21 @@ mod tests {
         enc_keys.insert(t_index, Some(enc_key_recipient.clone()));
 
         // ciphertexts
-        let left_ciphertext_amount_sender = Ciphertext::encrypt(amount, &randomness_amount, &enc_key_sender, p_g, params).left;
+        let left_ciphertext_amount_sender = elgamal::Ciphertext::encrypt(amount, &randomness_amount, &enc_key_sender, p_g, params).left;
         let left_ciphertext_amount_recipient = neg_encrypt(amount, &randomness_amount, &enc_key_recipient, p_g, params).left;
         let left_ciphertexts_amount_decoy = enc_keys_decoy.iter()
-            .map(|e| Some(Ciphertext::encrypt(0, &randomness_amount, e.as_ref().unwrap(), p_g, params).left))
+            .map(|e| Some(elgamal::Ciphertext::encrypt(0, &randomness_amount, e.as_ref().unwrap(), p_g, params).left))
             .collect::<Vec<Option<edwards::Point<Bls12, PrimeOrder>>>>();
         let mut left_ciphertexts_amount = left_ciphertexts_amount_decoy.clone();
         left_ciphertexts_amount.insert(s_index, Some(left_ciphertext_amount_sender));
         left_ciphertexts_amount.insert(t_index, Some(left_ciphertext_amount_recipient));
-        let right_ciphertext_amount = Ciphertext::encrypt(amount, &randomness_amount, &enc_key_sender, p_g, params).right;
+        let right_ciphertext_amount = elgamal::Ciphertext::encrypt(amount, &randomness_amount, &enc_key_sender, p_g, params).right;
 
-        let ciphertext_balance_sender = Ciphertext::encrypt(remaining_balance, &randomness_balanace_sender, &enc_key_sender, p_g, params);
-        let ciphertext_balance_recipient = Ciphertext::encrypt(remaining_balance_recipient, &randomness_balanace_recipient, &enc_key_recipient, p_g, params);
+        let ciphertext_balance_sender = elgamal::Ciphertext::encrypt(remaining_balance, &randomness_balanace_sender, &enc_key_sender, p_g, params);
+        let ciphertext_balance_recipient = elgamal::Ciphertext::encrypt(remaining_balance_recipient, &randomness_balanace_recipient, &enc_key_recipient, p_g, params);
         let mut ciphertext_balances = enc_keys_decoy.iter().zip(remaining_balance_iter).zip(randomness_balances_iter)
-            .map(|((e, a), r)| Some(Ciphertext::encrypt(a, &r, e.as_ref().unwrap(), p_g, params)))
-            .collect::<Vec<Option<Ciphertext<Bls12>>>>();
+            .map(|((e, a), r)| Some(elgamal::Ciphertext::encrypt(a, &r, e.as_ref().unwrap(), p_g, params)))
+            .collect::<Vec<Option<elgamal::Ciphertext<Bls12>>>>();
         ciphertext_balances.insert(s_index, Some(ciphertext_balance_sender));
         ciphertext_balances.insert(t_index, Some(ciphertext_balance_recipient));
         let left_ciphertext_balances = ciphertext_balances.clone().into_iter().map(|e| e.unwrap().left).collect::<Vec<edwards::Point<Bls12, PrimeOrder>>>();

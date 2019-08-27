@@ -27,7 +27,7 @@ use scrypto::jubjub::{edwards, PrimeOrder};
 use crate::{elgamal::Ciphertext, Assignment};
 use super::{range_check::u32_into_bit_vec_le, utils::*};
 
-pub struct Transfer<'a, E: JubjubEngine> {
+pub struct ConfidentialTransfer<'a, E: JubjubEngine> {
     pub params: &'a E::Params,
     pub amount: Option<u32>,
     pub remaining_balance: Option<u32>,
@@ -41,9 +41,9 @@ pub struct Transfer<'a, E: JubjubEngine> {
     pub g_epoch: Option<&'a edwards::Point<E, PrimeOrder>>,
 }
 
-impl<'a, E: JubjubEngine> Transfer<'a, E> {
+impl<'a, E: JubjubEngine> ConfidentialTransfer<'a, E> {
     pub fn new(params: &'a E::Params) -> Self {
-        Transfer {
+        ConfidentialTransfer {
             params,
             amount: None,
             remaining_balance: None,
@@ -59,7 +59,7 @@ impl<'a, E: JubjubEngine> Transfer<'a, E> {
     }
 }
 
-impl<'a, E: JubjubEngine> Circuit<E> for Transfer<'a, E> {
+impl<'a, E: JubjubEngine> Circuit<E> for ConfidentialTransfer<'a, E> {
     fn synthesize<CS: ConstraintSystem<E>>(
         self,
         cs: &mut CS
@@ -361,7 +361,7 @@ mod tests {
 
         let mut cs = TestConstraintSystem::<Bls12>::new();
 
-        let instance = Transfer {
+        let instance = ConfidentialTransfer {
             params,
             amount: Some(amount),
             remaining_balance: Some(remaining_balance),

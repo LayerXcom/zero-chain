@@ -195,12 +195,6 @@ impl Binary {
     }
 }
 
-pub enum RecipientOp<E: JubjubEngine> {
-    Add(EdwardsPoint<E>),
-    Remove(usize),
-    None,
-}
-
 pub struct EncKeySet<E: JubjubEngine>(pub(crate) Vec<EdwardsPoint<E>>);
 
 impl<E: JubjubEngine> EncKeySet<E> {
