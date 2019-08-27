@@ -152,3 +152,67 @@ where
 
     Ok(())
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use rand::{SeedableRng, XorShiftRng};
+    use scrypto::jubjub::JubjubBls12;
+    use pairing::bls12_381::Bls12;
+    use crate::circuit::TestConstraintSystem;
+    use scrypto::circuit::num::AllocatedNum;
+
+    #[test]
+    fn test_eq_points() {
+        let params = &JubjubBls12::new();
+        let rng = &mut XorShiftRng::from_seed([0x3dbe6258, 0x8d313d76, 0x3237db17, 0xe5bc0654]);
+        let mut cs = TestConstraintSystem::<Bls12>::new();
+
+        let p = edwards::Point::<Bls12, _>::rand(rng, params);
+        let (x, y) = p.into_xy();
+        let numx = AllocatedNum::alloc(cs.namespace(|| "x"), || {
+            Ok(x)
+        }).unwrap();
+        let numy = AllocatedNum::alloc(cs.namespace(|| "y"), || {
+            Ok(y)
+        }).unwrap();
+        let p1 = EdwardsPoint::interpret(&mut cs, &numx, &numy, &params).unwrap();
+        let p2 = p1.clone();
+
+        eq_edwards_points(
+            cs.namespace(|| "eq_edwards_points"),
+            &p1,
+            &p2
+        ).unwrap();
+
+        assert!(cs.is_satisfied());
+    }
+
+    #[test]
+    fn test_negate_point() {
+        let params = &JubjubBls12::new();
+        let rng = &mut XorShiftRng::from_seed([0x3dbe6258, 0x8d313d76, 0x3237db17, 0xe5bc0654]);
+        let mut cs = TestConstraintSystem::<Bls12>::new();
+
+        let p = edwards::Point::<Bls12, _>::rand(rng, params);
+        let (expected_x, expected_y) = p.negate().into_xy();
+        let (x, y) = p.into_xy();
+        let numx = AllocatedNum::alloc(cs.namespace(|| "x"), || {
+            Ok(x)
+        }).unwrap();
+        let numy = AllocatedNum::alloc(cs.namespace(|| "y"), || {
+            Ok(y)
+        }).unwrap();
+        let p = EdwardsPoint::interpret(&mut cs, &numx, &numy, &params).unwrap();
+
+        let neg_p = negate_point(
+            cs.namespace(|| "negate point"),
+            &p,
+            params
+        ).unwrap();
+
+        assert!(cs.is_satisfied());
+        assert!(neg_p.get_x().get_value().unwrap() == expected_x);
+        assert!(neg_p.get_y().get_value().unwrap() == expected_y);
+    }
+}
