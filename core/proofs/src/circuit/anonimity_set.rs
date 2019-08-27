@@ -351,15 +351,19 @@ impl<E: JubjubEngine> LeftAmountCiphertexts<E> {
     where
         CS: ConstraintSystem<E>
     {
-        let neg_iter = self.0.iter().enumerate().map(|(i, e)| {
-            negate_point(
-                cs.namespace(|| format!("negate left amount ciphertexts {}", i)),
-                e,
-                params
-            ).unwrap() // TODO
-        });
+        assert_eq!(self.0.len(), ANONIMITY_SIZE);
 
-        Ok(LeftAmountCiphertexts(neg_iter.collect::<Vec<EdwardsPoint<E>>>()))
+        let mut acc = Vec::with_capacity(ANONIMITY_SIZE);
+        for i in 0..self.0.len() {
+            let tmp = negate_point(
+                cs.namespace(|| format!("negate left amount ciphertexts {}", i)),
+                &self.0[i],
+                params
+            )?;
+            acc.push(tmp);
+        }
+
+        Ok(LeftAmountCiphertexts(acc))
     }
 
     pub fn inputize<CS>(&self, mut cs: CS) -> Result<(), SynthesisError>
@@ -386,16 +390,19 @@ impl<E: JubjubEngine> LeftBalanceCiphertexts<E> {
     where
         CS: ConstraintSystem<E>
     {
-        let c_left = c.iter().flat_map(|e| e.iter()).enumerate().map(|(i, l)| {
-            let left = l.clone().left;
-            EdwardsPoint::witness(
-                cs.namespace(|| format!("left ciphertext {} witness", i)),
-                Some(left),
-                params
-            ).unwrap() // TODO
-        }).collect::<Vec<EdwardsPoint<E>>>();
+        assert_eq!(c.len(), ANONIMITY_SIZE);
 
-        Ok(LeftBalanceCiphertexts(c_left))
+        let mut acc = Vec::with_capacity(ANONIMITY_SIZE);
+        for i in 0..c.len() {
+            let tmp = EdwardsPoint::witness(
+                cs.namespace(|| format!("left ciphertext {} witness", i)),
+                c[i].as_ref().map(|e| e.clone().left),
+                params
+            )?;
+            acc.push(tmp);
+        }
+
+        Ok(LeftBalanceCiphertexts(acc))
     }
 
     pub fn add_each<CS>(
@@ -443,16 +450,19 @@ impl<E: JubjubEngine> RightBalanceCiphertexts<E> {
     where
         CS: ConstraintSystem<E>
     {
-        let c_right = c.iter().flat_map(|e| e.iter()).enumerate().map(|(i, l)| {
-            let right = l.clone().right;
-            EdwardsPoint::witness(
-                cs.namespace(|| format!("right ciphertext {} witness", i)),
-                Some(right),
-                params
-            ).unwrap() // TODO
-        }).collect::<Vec<EdwardsPoint<E>>>();
+        assert_eq!(c.len(), ANONIMITY_SIZE);
 
-        Ok(RightBalanceCiphertexts(c_right))
+        let mut acc = Vec::with_capacity(ANONIMITY_SIZE);
+        for i in 0..c.len() {
+            let tmp = EdwardsPoint::witness(
+                cs.namespace(|| format!("right ciphertext {} witness", i)),
+                c[i].as_ref().map(|e| e.clone().right),
+                params
+            )?;
+            acc.push(tmp);
+        }
+
+        Ok(RightBalanceCiphertexts(acc))
     }
 
     pub fn inputize<CS>(&self, mut cs: CS) -> Result<(), SynthesisError>
