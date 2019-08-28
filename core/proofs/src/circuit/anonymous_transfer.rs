@@ -1,4 +1,19 @@
 //! This module contains a circuit implementation for anonymous transfer.
+//! The statements are following:
+//! Amount check: \sum s_i * C_i = b_1 + \sum r * s_i * y_i ,where b_1: transferred amount
+//! Amount check: \sum (s_i + t_i) * C_i = \sum (s_i + t_i) * r * y_i
+//! Amount check: (1 - s_i)(1 - t_i) * C = (1 - s_i)(1 - t_i) * r * y_i
+//! Randomness check: D = r * G
+//! Balance check: \sum s_i * (C_li - C_i) = b_2 * G + sk * (\sum (s_i * C_ri) - D) ,where b_2: remaining balance
+//! Secret key check: sk * G = \sum s_i * y_i
+//! Nonce check: sk * G_epoch = u
+//! Spend authority: rvk = alpha * G + pgk
+//! s_i \in {0, 1}
+//! t_i \in {0, 1}
+//! \sum s_i = 1
+//! \sum t_i = 1
+//! b_1 \in [0, MAX]
+//! b_2 \in [0, MAX]
 
 use bellman::{
     SynthesisError,
@@ -46,6 +61,13 @@ impl<'a, E: JubjubEngine> Circuit<E> for AnonymousTransfer<'a, E> {
     {
         let params = self.params;
 
+        // the neutral element
+        let zero_p = EdwardsPoint::<E>::witness::<PrimeOrder, _>(
+            cs.namespace(|| "initialize acc."),
+            Some(edwards::Point::zero()),
+            params,
+        )?;
+
         // Ensure the amount is u32.
         let amount_bits = u32_into_bit_vec_le(
             cs.namespace(|| "range proof of amount"),
@@ -79,10 +101,10 @@ impl<'a, E: JubjubEngine> Circuit<E> for AnonymousTransfer<'a, E> {
             params
         )?;
 
-        let zero_p = EdwardsPoint::<E>::witness::<PrimeOrder, _>(
-            cs.namespace(|| "initialize acc."),
-            Some(edwards::Point::zero()),
-            params,
+        // dec_key in circuit
+        let dec_key_bits = boolean::field_into_boolean_vec_le(
+            cs.namespace(|| format!("dec_key")),
+            self.dec_key.map(|e| e.0)
         )?;
 
         let s_bins = Binary::new(
@@ -97,14 +119,7 @@ impl<'a, E: JubjubEngine> Circuit<E> for AnonymousTransfer<'a, E> {
             self.t_index
         )?;
 
-        // dec_key in circuit
-        let dec_key_bits = boolean::field_into_boolean_vec_le(
-            cs.namespace(|| format!("dec_key")),
-            self.dec_key.map(|e| e.0)
-        )?;
-
         let mut enc_key_set = EncKeySet::new(ANONIMITY_SIZE);
-
         enc_key_set
             .push_enckeys(
                 cs.namespace(|| "push enckeys"),
@@ -131,12 +146,14 @@ impl<'a, E: JubjubEngine> Circuit<E> for AnonymousTransfer<'a, E> {
             )?;
         }
 
+        // Multiply randomness to all enc keys: \sum r * y_i
         let enc_keys_mul_random = enc_key_set.gen_enc_keys_mul_random(
             cs.namespace(|| "generate enc keys multipled by randomness"),
             self.randomness,
             params
         )?;
 
+        // Evaluate by the s_i binaries: \sum s_i * r * y_i
         let enc_keys_random_fold_s_i = s_bins.edwards_add_fold(
             cs.namespace(|| "add folded enc keys mul random"),
             &enc_keys_mul_random.0,
@@ -144,12 +161,14 @@ impl<'a, E: JubjubEngine> Circuit<E> for AnonymousTransfer<'a, E> {
             params
         )?;
 
+        // Add amount * G: b_1 + \sum r * s_i * y_i
         let expected_ciphertext_left_s_i = enc_keys_random_fold_s_i.add(
             cs.namespace(|| "compute ciphertext left s_i"),
             &amount_g,
             params
         )?;
 
+        // Generate all ciphertexts of left components: \sum C_i
         let ciphertext_left_set= enc_keys_mul_random.gen_left_ciphertexts(
             cs.namespace(|| "compute left ciphertexts of s_i"),
             &amount_g,
@@ -160,6 +179,7 @@ impl<'a, E: JubjubEngine> Circuit<E> for AnonymousTransfer<'a, E> {
             params
         )?;
 
+        // Evaluate by the s_i binaries: \sum s_i * C_i
         let ciphertext_left_s_i = s_bins.edwards_add_fold(
             cs.namespace(|| "add folded left ciphertext based in s_i"),
             &ciphertext_left_set.0,
@@ -167,57 +187,75 @@ impl<'a, E: JubjubEngine> Circuit<E> for AnonymousTransfer<'a, E> {
             params
         )?;
 
+        // Amount check: \sum s_i * C_i = b_1 + \sum r * s_i * y_i
         eq_edwards_points(
             cs.namespace(|| "left ciphertext equals based in s_i"),
             &expected_ciphertext_left_s_i,
             &ciphertext_left_s_i
         )?;
 
-        let xor_st_bins = s_bins.xor(cs.namespace(|| "s_i xor t_i"), &t_bins)?;
-        let ciphertext_left_s_xor_t = xor_st_bins.edwards_add_fold(
-            cs.namespace(|| "add folded left ciphertext based in (s_i xor t_i)"),
-            &ciphertext_left_set.0,
-            zero_p.clone(),
-            params
-        )?;
-        let enc_keys_random_fold_s_xor_t = xor_st_bins.edwards_add_fold(
-            cs.namespace(|| "add folded randomized enc keys based in (s_i xor t_i)"),
-            &enc_keys_mul_random.0,
-            zero_p.clone(),
-            params
-        )?;
-        eq_edwards_points(
-            cs.namespace(|| "left ciphertext equals based in (s_i xor t_i)"),
-            &ciphertext_left_s_xor_t,
-            &enc_keys_random_fold_s_xor_t
-        )?;
+        {
+            let xor_st_bins = s_bins.xor(cs.namespace(|| "s_i xor t_i"), &t_bins)?;
 
-        let nor_st_bins = s_bins.nor(cs.namespace(|| "s_i nor t_i"), &t_bins)?;
-        nor_st_bins.conditionally_equals(
-            cs.namespace(|| "equal a and b in nor st"),
-            &ciphertext_left_set.0,
-            &enc_keys_mul_random.0
-        )?;
+            // Evaluate by the (s_i + t_i) binaries: \sum (s_i + t_i) * C_i
+            let enc_keys_random_fold_s_xor_t = xor_st_bins.edwards_add_fold(
+                cs.namespace(|| "add folded randomized enc keys based in (s_i xor t_i)"),
+                &enc_keys_mul_random.0,
+                zero_p.clone(),
+                params
+            )?;
+
+            // Evaluate by the (s_i + t_i) binaries: \sum (s_i + t_i) * C_i
+            let ciphertext_left_s_xor_t = xor_st_bins.edwards_add_fold(
+                cs.namespace(|| "add folded left ciphertext based in (s_i xor t_i)"),
+                &ciphertext_left_set.0,
+                zero_p.clone(),
+                params
+            )?;
+
+            // Amount check: \sum (s_i + t_i) * C_i = \sum (s_i + t_i) * r * y_i
+            eq_edwards_points(
+                cs.namespace(|| "left ciphertext equals based in (s_i xor t_i)"),
+                &ciphertext_left_s_xor_t,
+                &enc_keys_random_fold_s_xor_t
+            )?;
+
+            let nor_st_bins = s_bins.nor(cs.namespace(|| "s_i nor t_i"), &t_bins)?;
+
+            // Amount check: (1 - s_i)(1 - t_i) * C = (1 - s_i)(1 - t_i) * r * y_i
+            nor_st_bins.conditionally_equals(
+                cs.namespace(|| "equal a and b in nor st"),
+                &ciphertext_left_set.0,
+                &enc_keys_mul_random.0
+            )?;
+        }
 
         enc_key_set.inputize(cs.namespace(|| "inputize enc key set"))?;
         ciphertext_left_set.inputize(cs.namespace(|| "inputize ciphertext left set"))?;
 
         // balance integrity
         {
+            // Negate amount ciphertexts of left components
             let neg_left_amount_cipher = ciphertext_left_set.neg_each(
                 cs.namespace(|| "negate left amount ciphertexts"),
                 params
             )?;
+
+            // Witness current balance ciphertexts of left components
             let left_balance_ciphertexts = LeftBalanceCiphertexts::witness::<PrimeOrder, _>(
                 cs.namespace(|| "left balance ciphertexts witness"),
                 self.enc_balances,
                 params
             )?;
+
+            // Compute left balance ciphertexts minus left amount ciphertexts : C_li - C_i
             let added_lefts = left_balance_ciphertexts.add_each(
                 cs.namespace(|| "add each with left amount ciphertexts"),
                 &neg_left_amount_cipher,
                 params
             )?;
+
+            //  Evaluate by the s_i binaries: \sum s_i * (C_li - C_i)
             let lh_c = s_bins.edwards_add_fold(
                 cs.namespace(|| "Add folded C_l minus C"),
                 &added_lefts.0,
@@ -225,11 +263,14 @@ impl<'a, E: JubjubEngine> Circuit<E> for AnonymousTransfer<'a, E> {
                 params
             )?;
 
+            // Witness current balance ciphertexts of right components
             let right_balance_ciphertects = RightBalanceCiphertexts::witness::<PrimeOrder, _>(
                 cs.namespace(|| "right balance ciphertexts witness"),
                 self.enc_balances,
                 params
             )?;
+
+            // Evaluate by the s_i binaries: \sum (s_i * C_ri)
             let right_balance_cipher_fold = s_bins.edwards_add_fold(
                 cs.namespace(|| "add folded right balance ciphertexts"),
                 &right_balance_ciphertects.0,
@@ -242,33 +283,44 @@ impl<'a, E: JubjubEngine> Circuit<E> for AnonymousTransfer<'a, E> {
                 cs.namespace(|| "randomness_bits"),
                 self.randomness.map(|e| *e)
             )?;
-            // Multiply the randomness to the base point same as FixedGenerators::ElGamal.
+
+            // Multiply the randomness to the base point
             let right_ciphertext = ecc::fixed_base_multiplication(
                 cs.namespace(|| format!("compute the right elgamal component")),
                 FixedGenerators::NoteCommitmentRandomness,
                 &randomness_bits,
                 params
             )?;
+
+            // Negate amount ciphertexts of right components
             let neg_right_ciphertext = negate_point(
                 cs.namespace(|| "negate right ciphertext"),
                 &right_ciphertext,
                 params
             )?;
+
+            // Subtract right ciphertexts: \sum (s_i * C_ri) - D
             let cr_minus_d = right_balance_cipher_fold.add(
                 cs.namespace(|| "amount minus balance ciphertext"),
                 &neg_right_ciphertext,
                 params
             )?;
+
+            // Multiply dec_key: sk * (\sum (s_i * C_ri) - D)
             let cr_minus_d_mul_sk = cr_minus_d.mul(
                 cs.namespace(|| "cr_minus_d mul sk"),
                 &dec_key_bits,
                 params
             )?;
+
+            // Add remaining_balance * G :b_2 * G + sk * (\sum (s_i * C_ri) - D)
             let rh_c = remaining_balance_g.add(
                 cs.namespace(|| "rb_g adds cr_minus_d_mul_sk"),
                 &cr_minus_d_mul_sk,
                 params
             )?;
+
+            // Balance check: \sum s_i * (C_li - C_i) = b_2 * G + sk * (\sum s_i * C_ri - D)
             eq_edwards_points(
                 cs.namespace(|| "rl_c equals to rh_c"),
                 &lh_c,
