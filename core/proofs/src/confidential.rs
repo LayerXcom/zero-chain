@@ -30,7 +30,7 @@ use zprimitives::{
     Proof as zProof
 };
 use crate::{
-    circuit::Transfer,
+    circuit::ConfidentialTransfer,
     elgamal::Ciphertext,
     EncryptionKey,
     ProofGenerationKey,
@@ -174,7 +174,7 @@ impl<E: JubjubEngine> ProofBuilder<E> for KeyContext<E> {
         );
         let nonce = g_epoch.mul(dec_key_sender.0, params);
 
-        let instance = Transfer {
+        let instance = ConfidentialTransfer {
             params: params,
             amount: Some(amount),
             remaining_balance: Some(remaining_balance),

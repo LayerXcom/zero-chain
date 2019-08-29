@@ -10,7 +10,7 @@ pub mod setup;
 pub mod nonce;
 pub mod crypto_components;
 
-pub use self::setup::setup;
+pub use self::setup::confidential_setup;
 pub use self::no_std_aliases::keys::{
     EncryptionKey, ProofGenerationKey,
     SpendingKey, DecryptionKey,

@@ -4,14 +4,14 @@ use bellman::groth16::{
     prepare_verifying_key,
 };
 use rand::Rng;
-use crate::circuit::Transfer;
+use crate::circuit::ConfidentialTransfer;
 use crate::PARAMS;
 use crate::confidential::KeyContext;
 
-pub fn setup<R: Rng>(rng: &mut R) -> KeyContext<Bls12> {
+pub fn confidential_setup<R: Rng>(rng: &mut R) -> KeyContext<Bls12> {
     // Create parameters for the confidential transfer circuit
     let proving_key = {
-        let c = Transfer::<Bls12> {
+        let c = ConfidentialTransfer::<Bls12> {
             params: &PARAMS,
             amount: None,
             remaining_balance: None,
@@ -46,7 +46,7 @@ mod tests {
     fn test_preparedvk_rw() {
         let rng = &mut XorShiftRng::from_seed([0x5dbe6259, 0x8d313d76, 0x3237db17, 0xe5bc0654]);
 
-        let key_context = setup(rng);
+        let key_context = confidential_setup(rng);
         let mut v = vec![];
         key_context.vk().write(&mut &mut v).unwrap();
 
