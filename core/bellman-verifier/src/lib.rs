@@ -18,7 +18,12 @@ mod std {
 use ::std::vec::Vec;
 #[cfg(not(feature = "std"))]
 use crate::std::vec::Vec;
-
+#[cfg(feature = "std")]
+use serde::{Serialize, Serializer, Deserialize, Deserializer};
+#[cfg(feature = "std")]
+use substrate_primitives::bytes;
+use pairing::bls12_381::{G1Affine, G2Affine, Fq, FqRepr, Fq2, Bls12, G2Prepared, Fq12};
+use parity_codec::{Encode, Decode, Input};
 use pairing::{
     Engine,
     CurveAffine,
@@ -107,6 +112,7 @@ impl<E: Engine> Proof<E> {
 }
 
 #[cfg_attr(feature = "std", derive(Debug))]
+#[derive(Clone)]
 pub struct PreparedVerifyingKey<E: Engine> {
     /// Pairing result of alpha*beta
     alpha_g1_beta_g2: E::Fqk,
@@ -116,6 +122,49 @@ pub struct PreparedVerifyingKey<E: Engine> {
     neg_delta_g2: <E::G2Affine as CurveAffine>::Prepared,
     /// Copy of IC from `VerifiyingKey`.
     ic: Vec<E::G1Affine>
+}
+
+#[cfg(feature = "std")]
+impl<E: Engine> Serialize for PreparedVerifyingKey<E> {
+    fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
+        where S: Serializer
+    {
+        let mut writer = vec![];
+        self.write(&mut &mut writer[..]).unwrap();
+        bytes::serialize(&writer[..], serializer)
+    }
+}
+
+#[cfg(feature = "std")]
+impl<'de, E: Engine> Deserialize<'de> for PreparedVerifyingKey<E> {
+    fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
+        where D: Deserializer<'de>
+    {
+        // bytes::deserialize_check_len(deserializer, bytes::ExpectedLen::Exact(SIZE))
+        //     .map(|mut x| PreparedVerifyingKey::<E>::read(&x).unwrap())
+        unimplemented!();
+    }
+}
+
+impl<E: Engine> Encode for PreparedVerifyingKey<E> {
+    fn using_encoded<R, F: FnOnce(&[u8]) -> R>(&self, f: F) -> R {
+        let mut writer = vec![];
+        self.write(&mut &mut writer[..]).unwrap();
+        writer.using_encoded(f)
+    }
+}
+
+impl<E: Engine> Decode for PreparedVerifyingKey<E> {
+    fn decode<I: Input>(input: &mut I) -> Option<Self> {
+        <Vec<u8> as Decode>::decode(input)
+            .map(|mut b| PreparedVerifyingKey::<E>::read(&mut &b[..]).unwrap())
+    }
+}
+
+impl<E: Engine> Default for PreparedVerifyingKey<E> {
+    fn default() -> Self {
+        PreparedVerifyingKey::<E>::read(&mut &vec![0u8][..]).unwrap()
+    }
 }
 
 impl<E: Engine> PreparedVerifyingKey<E> {

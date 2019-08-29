@@ -5,7 +5,7 @@ use support::{decl_module, decl_storage, StorageValue};
 use rstd::prelude::*;
 use rstd::result;
 use rstd::convert::TryFrom;
-use bellman_verifier::{self, verify_proof};
+use bellman_verifier::{verify_proof, PreparedVerifyingKey};
 use pairing::{
     bls12_381::{Bls12, Fr},
     Field,
@@ -45,7 +45,7 @@ decl_storage! {
         pub NoncePool get(nonce_pool) config() : Vec<Nonce>;
 
         /// A verification key of zk proofs (only readable)
-        pub VerifyingKey get(verifying_key) config(): PreparedVk;
+        pub VerifyingKey get(verifying_key) config(): PreparedVerifyingKey<Bls12>;
     }
 }
 
@@ -155,8 +155,7 @@ impl<T: Trait> Module<T> {
             public_input[21] = y;
         }
 
-        let pvk = Self::verifying_key().into_prepared_vk()
-            .ok_or("Invalid verifying key.")?;
+        let pvk = Self::verifying_key();
         let proof = bellman_verifier::Proof::<Bls12>::try_from(zkproof)
             .map_err(|_| "Faild to read zkproof.")?;
 
