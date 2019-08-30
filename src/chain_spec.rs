@@ -3,23 +3,20 @@ use zerochain_runtime::{
 	AccountId, GenesisConfig, ConsensusConfig, TimestampConfig, BalancesConfig, SudoConfig,
 	IndicesConfig, EncryptedBalancesConfig, EncryptedAssetsConfig, ZkSystemConfig,
 };
-use substrate_service;
 use ed25519::Public as AuthorityId;
-use zprimitives::{
-	PreparedVk,
-	EncKey,
-	Ciphertext,
-	SigVerificationKey,
-};
+use zprimitives::{EncKey, Ciphertext, SigVerificationKey};
+use bellman_verifier::PreparedVerifyingKey;
 use keys::EncryptionKey;
 use zjubjub::{curve::{FixedGenerators, fs}};
 use zpairing::{bls12_381::Bls12, Field};
 use zcrypto::elgamal;
 use zprimitives::PARAMS;
-use std::path::Path;
-use std::fs::File;
-use std::io::{BufReader, Read};
-use std::convert::TryFrom;
+use std::{
+	path::Path,
+	fs::File,
+	io::{BufReader, Read},
+	convert::TryFrom,
+};
 
 // Note this is the URL for the telemetry server
 //const STAGING_TELEMETRY_URL: &str = "wss://telemetry.polkadot.io/submit/";
@@ -152,7 +149,7 @@ fn testnet_genesis(initial_authorities: Vec<AuthorityId>, endowed_accounts: Vec<
 	}
 }
 
-fn get_pvk() -> PreparedVk {
+fn get_pvk() -> PreparedVerifyingKey<Bls12> {
 	let vk_path = Path::new("./zface/verification.params");
 	let vk_file = File::open(&vk_path).unwrap();
 	let mut vk_reader = BufReader::new(vk_file);
@@ -160,7 +157,7 @@ fn get_pvk() -> PreparedVk {
 	let mut buf_vk = vec![];
     vk_reader.read_to_end(&mut buf_vk).unwrap();
 
-	PreparedVk::from_slice(&buf_vk[..])
+	PreparedVerifyingKey::<Bls12>::read(&mut &buf_vk[..]).unwrap()
 }
 
 fn alice_balance_init() -> (EncKey, Ciphertext) {
