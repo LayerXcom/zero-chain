@@ -8,7 +8,7 @@ use crate::{EncryptionKey, elgamal};
 use super::utils::{eq_edwards_points, negate_point};
 use std::fmt;
 
-pub const ANONIMITY_SIZE: usize = 11;
+pub const ANONIMITY_SIZE: usize = 12;
 pub const DECOY_SIZE: usize = ANONIMITY_SIZE - 2;
 
 pub enum AnonimityIndexes {

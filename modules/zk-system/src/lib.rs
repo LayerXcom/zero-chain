@@ -19,7 +19,7 @@ mod input_builder;
 pub trait Trait: system::Trait { }
 
 const CONFIDENTIAL_INPUT_SIZE: usize = 22;
-const ANONIMOUS_INPUT_SIZE: usize = 97;
+const ANONIMOUS_INPUT_SIZE: usize = 105;
 
 decl_module! {
     pub struct Module<T: Trait> for enum Call where origin: T::Origin { }
@@ -149,7 +149,7 @@ impl<T: Trait> Module<T> {
         public_input.push(Some(nonce))
             .map_err(|_| "Faild to get nonce into xy.")?;
 
-        ensure!(public_input.len() == CONFIDENTIAL_INPUT_SIZE, "Mismatch the length of public input.");
+        ensure!(public_input.len() == ANONIMOUS_INPUT_SIZE, "Mismatch the length of public input.");
 
         let proof = bellman_verifier::Proof::<Bls12>::try_from(zkproof)
             .map_err(|_| "Faild to read zkproof.")?;
