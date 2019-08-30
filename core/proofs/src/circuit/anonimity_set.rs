@@ -3,7 +3,7 @@ use scrypto::circuit::{
     boolean::{self, Boolean, AllocatedBit},
     ecc::{self, EdwardsPoint},
 };
-use scrypto::jubjub::{JubjubEngine, FixedGenerators};
+use scrypto::jubjub::{JubjubEngine, FixedGenerators, PrimeOrder};
 use crate::{EncryptionKey, elgamal};
 use super::utils::{eq_edwards_points, negate_point};
 use std::fmt;
@@ -222,7 +222,7 @@ impl<E: JubjubEngine> EncKeySet<E> {
         mut cs: CS,
         dec_key_bits: &[Boolean],
         enc_key_recipient: Option<&EncryptionKey<E>>,
-        enc_keys_decoy: &[Option<EncryptionKey<E>>],
+        enc_keys_decoy: Option<&[EncryptionKey<E>]>,
         s_index: Option<usize>,
         t_index: Option<usize>,
         params: &E::Params,
@@ -248,24 +248,47 @@ impl<E: JubjubEngine> EncKeySet<E> {
             params
         )?;
 
-        let mut decoy_iter = enc_keys_decoy.iter().enumerate().map(|(i, e)| {
-            ecc::EdwardsPoint::witness(
-                cs.namespace(|| format!("decoy {} enc_key witness", i)),
-                e.as_ref().map(|e| e.0.clone()),
-                params
-            ).unwrap()
-        });
-
-        // TODO: Rmove clone and unwrap
-        for i in 0..ANONIMITY_SIZE {
-            if Some(i) == s_index {
-                self.0.push(enc_key_sender_bits.clone());
-            } else if Some(i) == t_index {
-                self.0.push(enc_key_recipient_bits.clone());
-            } else {
-                self.0.push(decoy_iter.next().unwrap())
+        // TODO: Return boxed enc_keys_decoy
+        match enc_keys_decoy {
+            Some(e) => {
+                let mut iter = e.clone().iter().enumerate().map(|(i, e)| {
+                    ecc::EdwardsPoint::witness(
+                        cs.namespace(|| format!("decoy {} enc_key witness", i)),
+                        Some(e.0.clone()),
+                        params
+                    ).expect("Faild to witness edwards point.")
+                });
+                // TODO: Rmove clone and unwrap
+                for i in 0..ANONIMITY_SIZE {
+                    if Some(i) == s_index {
+                        self.0.push(enc_key_sender_bits.clone());
+                    } else if Some(i) == t_index {
+                        self.0.push(enc_key_recipient_bits.clone());
+                    } else {
+                        self.0.push(iter.next().unwrap())
+                    }
+                }
+            },
+            None => {
+                let mut iter = (0..ANONIMITY_SIZE).map(|i| {
+                    ecc::EdwardsPoint::witness::<PrimeOrder, _>(
+                        cs.namespace(|| format!("decoy {} enc_key witness", i)),
+                        None,
+                        params
+                    ).expect("Faild to witness edwards point.")
+                });
+                // TODO: Rmove clone and unwrap
+                for i in 0..ANONIMITY_SIZE {
+                    if Some(i) == s_index {
+                        self.0.push(enc_key_sender_bits.clone());
+                    } else if Some(i) == t_index {
+                        self.0.push(enc_key_recipient_bits.clone());
+                    } else {
+                        self.0.push(iter.next().unwrap())
+                    }
+                }
             }
-        }
+        };
 
         Ok(())
     }
@@ -399,19 +422,21 @@ pub struct RightBalanceCiphertexts<E: JubjubEngine>(pub(crate) Vec<EdwardsPoint<
 impl<E: JubjubEngine> LeftBalanceCiphertexts<E> {
     pub fn witness<Order, CS>(
         mut cs: CS,
-        c: &[Option<elgamal::Ciphertext<E>>],
+        c: Option<&[elgamal::Ciphertext<E>]>,
         params: &E::Params
     ) -> Result<Self, SynthesisError>
     where
         CS: ConstraintSystem<E>
     {
-        assert_eq!(c.len(), ANONIMITY_SIZE);
+        if let Some(i) = c {
+            assert_eq!(i.len(), ANONIMITY_SIZE);
+        }
 
         let mut acc = Vec::with_capacity(ANONIMITY_SIZE);
-        for i in 0..c.len() {
+        for i in 0..ANONIMITY_SIZE {
             let tmp = EdwardsPoint::witness(
                 cs.namespace(|| format!("left ciphertext {} witness", i)),
-                c[i].as_ref().map(|e| e.clone().left),
+                c.map(|e| e[i].left.clone()),
                 params
             )?;
             acc.push(tmp);
@@ -459,19 +484,21 @@ impl<E: JubjubEngine> LeftBalanceCiphertexts<E> {
 impl<E: JubjubEngine> RightBalanceCiphertexts<E> {
     pub fn witness<Order, CS>(
         mut cs: CS,
-        c: &[Option<elgamal::Ciphertext<E>>],
+        c: Option<&[elgamal::Ciphertext<E>]>,
         params: &E::Params
     ) -> Result<Self, SynthesisError>
     where
         CS: ConstraintSystem<E>
     {
-        assert_eq!(c.len(), ANONIMITY_SIZE);
+        if let Some(i) = c {
+            assert_eq!(i.len(), ANONIMITY_SIZE);
+        }
 
         let mut acc = Vec::with_capacity(ANONIMITY_SIZE);
-        for i in 0..c.len() {
+        for i in 0..ANONIMITY_SIZE {
             let tmp = EdwardsPoint::witness(
                 cs.namespace(|| format!("right ciphertext {} witness", i)),
-                c[i].as_ref().map(|e| e.clone().right),
+                c.map(|e| e[i].right.clone()),
                 params
             )?;
             acc.push(tmp);

@@ -6,4 +6,5 @@ mod utils;
 pub mod test;
 
 pub use self::confidential_transfer::ConfidentialTransfer;
+pub use self::anonymous_transfer::AnonymousTransfer;
 pub use self::test::TestConstraintSystem;

@@ -38,19 +38,19 @@ use super::{
 };
 
 pub struct AnonymousTransfer<'a, E: JubjubEngine> {
-    params: &'a E::Params,
-    amount: Option<u32>,
-    remaining_balance: Option<u32>,
-    s_index: Option<usize>,
-    t_index: Option<usize>,
-    randomness: Option<&'a E::Fs>,
-    alpha: Option<&'a E::Fs>,
-    proof_generation_key: Option<&'a ProofGenerationKey<E>>,
-    dec_key: Option<&'a DecryptionKey<E>>,
-    enc_key_recipient: Option<&'a EncryptionKey<E>>,
-    enc_key_decoys: &'a [Option<EncryptionKey<E>>],
-    enc_balances: &'a [Option<elgamal::Ciphertext<E>>],
-    g_epoch: Option<&'a edwards::Point<E, PrimeOrder>>,
+    pub params: &'a E::Params,
+    pub amount: Option<u32>,
+    pub remaining_balance: Option<u32>,
+    pub s_index: Option<usize>,
+    pub t_index: Option<usize>,
+    pub randomness: Option<&'a E::Fs>,
+    pub alpha: Option<&'a E::Fs>,
+    pub proof_generation_key: Option<&'a ProofGenerationKey<E>>,
+    pub dec_key: Option<&'a DecryptionKey<E>>,
+    pub enc_key_recipient: Option<&'a EncryptionKey<E>>,
+    pub enc_key_decoys: Option<&'a [EncryptionKey<E>]>,
+    pub enc_balances: Option<&'a [elgamal::Ciphertext<E>]>,
+    pub g_epoch: Option<&'a edwards::Point<E, PrimeOrder>>,
 }
 
 impl<'a, E: JubjubEngine> Circuit<E> for AnonymousTransfer<'a, E> {
@@ -465,8 +465,8 @@ mod tests {
             proof_generation_key: Some(&proof_gen_key),
             dec_key: Some(&dec_key),
             enc_key_recipient: Some(&enc_key_recipient),
-            enc_key_decoys: &enc_keys_decoy,
-            enc_balances: &ciphertext_balances,
+            enc_key_decoys: None,
+            enc_balances: None,
             g_epoch: Some(&g_epoch),
         };
 

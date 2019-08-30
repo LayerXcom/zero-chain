@@ -3,7 +3,7 @@ use rand::{Rng, Rand};
 use proofs::{
     SpendingKey, ProofGenerationKey, EncryptionKey, PARAMS, elgamal,
     crypto_components::{MultiEncKeys, Confidential},
-    confidential::{ProofBuilder, KeyContext, Calls, Submitter},
+    crypto_components::{ProofBuilder, KeyContext, Calls, Submitter},
 };
 use pairing::bls12_381::Bls12;
 use parity_codec::Decode;
