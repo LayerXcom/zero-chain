@@ -22,7 +22,6 @@ use crate::std::vec::Vec;
 use serde::{Serialize, Serializer, Deserialize, Deserializer};
 #[cfg(feature = "std")]
 use substrate_primitives::bytes;
-use pairing::bls12_381::{G1Affine, G2Affine, Fq, FqRepr, Fq2, Bls12, G2Prepared, Fq12};
 use parity_codec::{Encode, Decode, Input};
 use pairing::{
     Engine,
@@ -130,18 +129,17 @@ impl<E: Engine> Serialize for PreparedVerifyingKey<E> {
         where S: Serializer
     {
         let mut writer = vec![];
-        self.write(&mut &mut writer[..]).unwrap();
+        self.write(&mut &mut writer[..]).expect("Faild to serialize PreparedVerifyingKey.");
         bytes::serialize(&writer[..], serializer)
     }
 }
 
 #[cfg(feature = "std")]
 impl<'de, E: Engine> Deserialize<'de> for PreparedVerifyingKey<E> {
-    fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
+    fn deserialize<D>(_deserializer: D) -> Result<Self, D::Error>
         where D: Deserializer<'de>
     {
-        // bytes::deserialize_check_len(deserializer, bytes::ExpectedLen::Exact(SIZE))
-        //     .map(|mut x| PreparedVerifyingKey::<E>::read(&x).unwrap())
+        // Never called
         unimplemented!();
     }
 }
@@ -149,7 +147,12 @@ impl<'de, E: Engine> Deserialize<'de> for PreparedVerifyingKey<E> {
 impl<E: Engine> Encode for PreparedVerifyingKey<E> {
     fn using_encoded<R, F: FnOnce(&[u8]) -> R>(&self, f: F) -> R {
         let mut writer = vec![];
-        self.write(&mut &mut writer[..]).unwrap();
+
+        #[cfg(feature = "std")]
+        self.write(&mut &mut writer).expect("Faild to write PreparedVerifyingKey");
+        #[cfg(not(feature = "std"))]
+        self.write(&mut &mut writer[..]).expect("Faild to write PreparedVerifyingKey");
+
         writer.using_encoded(f)
     }
 }
@@ -157,13 +160,15 @@ impl<E: Engine> Encode for PreparedVerifyingKey<E> {
 impl<E: Engine> Decode for PreparedVerifyingKey<E> {
     fn decode<I: Input>(input: &mut I) -> Option<Self> {
         <Vec<u8> as Decode>::decode(input)
-            .map(|mut b| PreparedVerifyingKey::<E>::read(&mut &b[..]).unwrap())
+            .map(|b| PreparedVerifyingKey::<E>::read(&mut &b[..])
+                .expect("Faild to read PreparedVerifyingKey"))
     }
 }
 
 impl<E: Engine> Default for PreparedVerifyingKey<E> {
     fn default() -> Self {
-        PreparedVerifyingKey::<E>::read(&mut &vec![0u8][..]).unwrap()
+        PreparedVerifyingKey::<E>::read(&mut &vec![0u8][..])
+            .expect("Faild to read PreparedVerifyingKey")
     }
 }
 

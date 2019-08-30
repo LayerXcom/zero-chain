@@ -7,7 +7,6 @@ edition = "2018"
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
 [dependencies]
-bellman-verifier = { path = "../../core/bellman-verifier", default-features = false }
 pairing = { package = "zerochain-pairing", path = "../../core/pairing", default-features = false }
 zprimitives = { package = "zerochain-primitives", path = "../../core/primitives", default-features = false }
 jubjub = { path = "../../core/jubjub", default-features = false }
@@ -24,6 +23,7 @@ zface = { path = "../../zface" }
 test-pairing = { package = "pairing", git = "https://github.com/LayerXcom/librustzcash", branch = "zero-chain" }
 scrypto = { package = "sapling-crypto", git = "https://github.com/LayerXcom/librustzcash", branch = "zero-chain" }
 test-proofs = { package = "zerochain-proofs", path = "../../core/proofs" }
+bellman-verifier = { path = "../../core/bellman-verifier" }
 
 [dependencies.support]
 default_features = false
@@ -77,7 +77,6 @@ std = [
     'runtime-primitives/std',
     'runtime-io/std',
     "pairing/std",
-	"bellman-verifier/std",
 	"zprimitives/std",
 	"jubjub/std",
 	"keys/std",

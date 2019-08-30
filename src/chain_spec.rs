@@ -17,10 +17,12 @@ use zjubjub::{curve::{FixedGenerators, fs}};
 use zpairing::{bls12_381::Bls12, Field};
 use zcrypto::elgamal;
 use zprimitives::PARAMS;
-use std::path::Path;
-use std::fs::File;
-use std::io::{BufReader, Read};
-use std::convert::TryFrom;
+use std::{
+	path::Path,
+	fs::File,
+	io::{BufReader, Read},
+	convert::TryFrom,
+};
 
 // Note this is the URL for the telemetry server
 //const STAGING_TELEMETRY_URL: &str = "wss://telemetry.polkadot.io/submit/";

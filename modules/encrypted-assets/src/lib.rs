@@ -375,9 +375,6 @@ mod tests {
     use jubjub::{curve::{JubjubBls12, FixedGenerators, fs}};
     use pairing::{Field, bls12_381::Bls12};
     use hex_literal::{hex, hex_impl};
-    use std::path::Path;
-    use std::fs::File;
-    use std::io::{BufReader, Read};
     use rand::{SeedableRng, XorShiftRng};
     use test_pairing::{bls12_381::Bls12 as tBls12, Field as tField};
     use test_proofs::{EncryptionKey as tEncryptionKey, SpendingKey as tSpendingKey,
@@ -385,7 +382,13 @@ mod tests {
     };
     use scrypto::jubjub::{FixedGenerators as tFixedGenerators, fs::Fs as tFs, edwards as tedwards, PrimeOrder};
     use zcrypto::elgamal;
-    use std::convert::TryFrom;
+    use bellman_verifier::PreparedVerifyingKey;
+    use std::{
+        path::Path,
+        fs::File,
+        io::{BufReader, Read},
+        convert::TryFrom,
+    };
 
     const PK_PATH: &str = "../../zface/tests/proving.dat";
     const VK_PATH: &str = "../../zface/tests/verification.dat";
@@ -465,7 +468,7 @@ mod tests {
             .expect("should be generated encryption key from seed."))
     }
 
-    pub fn get_pvk() -> PreparedVk {
+    pub fn get_pvk() -> PreparedVerifyingKey<Bls12> {
         let vk_path = Path::new("../../zface/tests/verification.dat");
         let vk_file = File::open(&vk_path).unwrap();
         let mut vk_reader = BufReader::new(vk_file);
@@ -473,7 +476,7 @@ mod tests {
         let mut buf_vk = vec![];
         vk_reader.read_to_end(&mut buf_vk).unwrap();
 
-        PreparedVk::from_slice(&buf_vk[..])
+        PreparedVerifyingKey::<Bls12>::read(&mut &buf_vk[..]).unwrap()
     }
 
     fn new_test_ext() -> runtime_io::TestExternalities<Blake2Hasher> {
