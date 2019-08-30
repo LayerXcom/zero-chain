@@ -22,18 +22,6 @@ construct_fixed_hash! {
 
 pub type SigVerificationKey = H256;
 
-impl IntoXY<Bls12> for SigVerificationKey {
-    fn into_xy(&self) -> Result<(Fr, Fr), io::Error> {
-        let point = redjubjub::PublicKey::<Bls12>::try_from(self)?
-            .0
-            .as_prime_order(&*PARAMS) // TODO: Consider cofactor
-            .ok_or(io::Error::NotInField)?
-            .into_xy();
-
-        Ok(point)
-    }
-}
-
 #[cfg(feature = "std")]
 impl Serialize for SigVerificationKey {
     fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
@@ -92,6 +80,30 @@ impl TryFrom<&SigVerificationKey> for redjubjub::PublicKey<Bls12> {
     }
 }
 
+impl IntoXY<Bls12> for SigVerificationKey {
+    fn into_xy(&self) -> Result<(Fr, Fr), io::Error> {
+        let point = redjubjub::PublicKey::<Bls12>::try_from(self)?
+            .0
+            .as_prime_order(&*PARAMS) // TODO: Consider cofactor
+            .ok_or(io::Error::NotInField)?
+            .into_xy();
+
+        Ok(point)
+    }
+}
+
+impl IntoXY<Bls12> for &SigVerificationKey {
+    fn into_xy(&self) -> Result<(Fr, Fr), io::Error> {
+        let point = redjubjub::PublicKey::<Bls12>::try_from(**self)?
+            .0
+            .as_prime_order(&*PARAMS) // TODO: Consider cofactor
+            .ok_or(io::Error::NotInField)?
+            .into_xy();
+
+        Ok(point)
+    }
+}
+
 #[cfg(feature = "std")]
 impl AsBytesRef for SigVerificationKey {
     fn as_bytes_ref(&self) -> &[u8] {
@@ -101,6 +113,7 @@ impl AsBytesRef for SigVerificationKey {
 
 pub trait SigVk { }
 impl SigVk for SigVerificationKey { }
+impl SigVk for &SigVerificationKey { }
 impl SigVk for u64 { }
 
 #[cfg(test)]

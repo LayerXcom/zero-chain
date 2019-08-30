@@ -1,7 +1,9 @@
+use support::ensure;
 use jubjub::curve::JubjubEngine;
 use zprimitives::IntoXY;
 use pairing::io;
 use rstd::prelude::*;
+use rstd::result;
 
 // TODO: make compatible with smallvec
 pub struct PublicInputBuilder<E: JubjubEngine>(Vec<E::Fr>);
@@ -11,7 +13,7 @@ impl<E: JubjubEngine> PublicInputBuilder<E> {
         PublicInputBuilder(Vec::with_capacity(capacity))
     }
 
-    pub fn push<I>(&mut self, input: I) -> Result<(), io::Error>
+    pub fn push<I>(&mut self, input: I) -> result::Result<(), io::Error>
     where
         I: IntoIterator,
         I::Item: IntoXY<E>,
@@ -25,11 +27,15 @@ impl<E: JubjubEngine> PublicInputBuilder<E> {
         Ok(())
     }
 
-    pub fn ensure_length(&self, expected_length: usize) -> bool {
-        self.0.len() == expected_length
+    pub fn ensure_length(&self, expected_length: usize) {
+        unimplemented!();
     }
 
     pub fn as_slice(&self) -> &[E::Fr] {
         &self.0[..]
+    }
+
+    pub fn len(&self) -> usize {
+        self.0.len()
     }
 }

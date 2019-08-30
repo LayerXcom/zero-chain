@@ -1,18 +1,15 @@
 #[cfg(feature = "std")]
-use ::std::{vec::Vec, fmt, write};
-#[cfg(feature = "std")]
-use substrate_primitives::hexdisplay::AsBytesRef;
 #[cfg(not(feature = "std"))]
 use crate::std::vec::Vec;
-use crate::{PARAMS, LeftCiphertext, RightCiphertext};
+use crate::{LeftCiphertext, RightCiphertext};
 use zcrypto::elgamal;
 use pairing::{
-    bls12_381::{Bls12, Fr},
+    bls12_381::Bls12,
     io
 };
 use parity_codec::{Encode, Decode};
 use core::convert::{TryInto, TryFrom};
-use jubjub::curve::{edwards, PrimeOrder, Unknown};
+use jubjub::curve::{edwards, PrimeOrder};
 
 #[derive(Eq, PartialEq, Clone, Default, Encode, Decode)]
 #[cfg_attr(feature = "std", derive(Debug, Serialize, Deserialize))]
@@ -127,24 +124,6 @@ impl Ciphertext {
             .try_into()
     }
 }
-
-// #[cfg(feature = "std")]
-// impl fmt::Display for Ciphertext {
-//     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-//         write!(f, "0x")?;
-//         for i in &self.0 {
-//             write!(f, "{:02x}", i)?;
-//         }
-//         Ok(())
-//     }
-// }
-
-// #[cfg(feature = "std")]
-// impl AsBytesRef for Ciphertext {
-//     fn as_bytes_ref(&self) -> &[u8] {
-//         self.0.as_slice()
-//     }
-// }
 
 impl Ciphertext {
     pub fn left(&self) -> LeftCiphertext {

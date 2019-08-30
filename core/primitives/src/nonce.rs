@@ -103,6 +103,15 @@ impl IntoXY<Bls12> for Nonce {
     }
 }
 
+impl IntoXY<Bls12> for &Nonce {
+    fn into_xy(&self) -> Result<(Fr, Fr), io::Error> {
+        let point = edwards::Point::<Bls12, PrimeOrder>::try_from(**self)?
+            .into_xy();
+
+        Ok(point)
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;

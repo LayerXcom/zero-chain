@@ -1,7 +1,7 @@
 //! A module for dealing with zk-system
 #![cfg_attr(not(feature = "std"), no_std)]
 
-use support::{decl_module, decl_storage, StorageValue};
+use support::{decl_module, decl_storage, StorageValue, ensure};
 use rstd::prelude::*;
 use rstd::result;
 use rstd::convert::TryFrom;
@@ -86,13 +86,13 @@ impl<T: Trait> Module<T> {
         public_input.push(Some(fee_sender))
             .map_err(|_| "Faild to get fee_sender into xy.")?;
 
-        public_input.push(Some(balance_sender.into_left().unwrap()))
+        public_input.push(Some(balance_sender.left()))
             .map_err(|_| "Faild to get balance_sender's left into xy.")?;
 
-        public_input.push(Some(balance_sender.into_right().unwrap()))
+        public_input.push(Some(balance_sender.right()))
             .map_err(|_| "Faild to get balance_sender's right into xy.")?;
 
-        public_input.push(Some(rvk))
+        public_input.push(Some(rvk.clone()))
             .map_err(|_| "Faild to get rvk into xy.")?;
 
         public_input.push(Some(Self::g_epoch()))
@@ -101,15 +101,16 @@ impl<T: Trait> Module<T> {
         public_input.push(Some(nonce))
             .map_err(|_| "Faild to get nonce into xy.")?;
 
-        let pvk = Self::verifying_key();
+        ensure!(public_input.len() == CONFIDENTIAL_INPUT_SIZE, "Mismatch the length of public input.");
+
         let proof = bellman_verifier::Proof::<Bls12>::try_from(zkproof)
             .map_err(|_| "Faild to read zkproof.")?;
 
         // Verify the provided proof
         verify_proof(
-            &pvk,
+            &Self::verifying_key(),
             &proof,
-            &public_input[..]
+            public_input.as_slice()
         )
         .map_err(|_| "Invalid proof.")
     }
