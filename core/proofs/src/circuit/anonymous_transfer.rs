@@ -385,7 +385,7 @@ mod tests {
         let rng = &mut XorShiftRng::from_seed([0x3dbe6258, 0x8d313d76, 0x3237db17, 0xe5bc0654]);
         let p_g = FixedGenerators::NoteCommitmentRandomness;
         let current_balance_sender = 100;
-        let remaining_balance = current_balance_sender - amount;
+        let remaining_balance = 90;
 
         // randomness
         let seed_sender: [u8; 32] = rng.gen();
@@ -472,6 +472,9 @@ mod tests {
 
         instance.synthesize(&mut cs).unwrap();
         assert!(cs.is_satisfied());
+        assert_eq!(cs.num_constraints(), 47265);
+        assert_eq!(cs.hash(), "c9c3d48fff65f07b39ac2edbc21da671c5b1c7d9cb9d85b2b92e7deb90eab991");
+        assert_eq!(cs.num_inputs(), 97);
         println!("num: {:?}", cs.num_constraints());
         println!("hash: {:?}", cs.hash());
         println!("num_inputs: {:?}", cs.num_inputs());
@@ -507,5 +510,10 @@ mod tests {
     #[test]
     fn test_circuit_anonymous_transfer_valid() {
         test_based_amount(10);
+    }
+    #[should_panic]
+    #[test]
+    fn test_circuit_anonymous_transfer_invalid() {
+        test_based_amount(11);
     }
 }

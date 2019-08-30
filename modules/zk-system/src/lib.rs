@@ -6,25 +6,20 @@ use rstd::prelude::*;
 use rstd::result;
 use rstd::convert::TryFrom;
 use bellman_verifier::{verify_proof, PreparedVerifyingKey};
-use pairing::{
-    bls12_381::{Bls12, Fr},
-    Field,
-};
+use pairing::bls12_381::Bls12;
 use runtime_primitives::traits::As;
 use zprimitives::{
     Nonce, GEpoch, Proof, Ciphertext,
-    LeftCiphertext, RightCiphertext, EncKey, IntoXY,
+    LeftCiphertext, RightCiphertext, EncKey,
 };
 use self::input_builder::PublicInputBuilder;
 mod input_builder;
 
 
-pub trait Trait: system::Trait {
-	// The overarching event type.
-	// type Event: From<Event<Self>> + Into<<Self as system::Trait>::Event>;
-}
+pub trait Trait: system::Trait { }
 
 const CONFIDENTIAL_INPUT_SIZE: usize = 22;
+const ANONIMOUS_INPUT_SIZE: usize = 97;
 
 decl_module! {
     pub struct Module<T: Trait> for enum Call where origin: T::Origin { }
@@ -47,14 +42,17 @@ decl_storage! {
         // Consider chainging Vec to BtreeMap
         pub NoncePool get(nonce_pool) config() : Vec<Nonce>;
 
-        /// A verification key of zk proofs (only readable)
-        pub VerifyingKey get(verifying_key) config(): PreparedVerifyingKey<Bls12>;
+        /// A verification key of zk proofs of confidential transfer(only readable)
+        pub ConfidentialVk get(confidential_vk) config(): PreparedVerifyingKey<Bls12>;
+
+        /// A verification key of zk proofs of anonymous transfer(only readable)
+        pub AnonymousVk get(anonymous_vk) config(): PreparedVerifyingKey<Bls12>;
     }
 }
 
 impl<T: Trait> Module<T> {
-    /// Validate zk proofs of confidential transfers
-	pub fn validate_confidential_proof (
+    /// Verify zk proofs of confidential transfers
+	pub fn verify_confidential_proof (
         zkproof: &Proof,
         address_sender: &EncKey,
         address_recipient: &EncKey,
@@ -108,7 +106,57 @@ impl<T: Trait> Module<T> {
 
         // Verify the provided proof
         verify_proof(
-            &Self::verifying_key(),
+            &Self::confidential_vk(),
+            &proof,
+            public_input.as_slice()
+        )
+        .map_err(|_| "Invalid proof.")
+    }
+
+    /// Verify zk proofs of anonymous transfers
+	pub fn verify_anonymous_proof (
+        zkproof: &Proof,
+        enc_keys: &[EncKey],
+        left_ciphertexts: &[LeftCiphertext],
+        right_ciphertext: &RightCiphertext,
+        enc_balances: &[Ciphertext],
+        rvk: &T::AccountId,
+        nonce: &Nonce
+    ) -> result::Result<bool, &'static str> {
+        // Construct public input for circuit
+        let mut public_input = PublicInputBuilder::<Bls12>::new(ANONIMOUS_INPUT_SIZE);
+        public_input.push(enc_keys)
+            .map_err(|_| "Faild to get enc keys into xy.")?;
+
+        public_input.push(left_ciphertexts)
+            .map_err(|_| "Faild to get left ciphertexts into xy.")?;
+
+        public_input.push(enc_balances.iter().map(|e| e.left()))
+            .map_err(|_| "Faild to get left ciphertexts into xy.")?;
+
+        public_input.push(enc_balances.iter().map(|e| e.right()))
+            .map_err(|_| "Faild to get right ciphertexts into xy.")?;
+
+        public_input.push(Some(right_ciphertext))
+            .map_err(|_| "Faild to get right ciphertexts into xy.")?;
+
+        public_input.push(Some(rvk.clone()))
+            .map_err(|_| "Faild to get rvk into xy.")?;
+
+        public_input.push(Some(Self::g_epoch()))
+            .map_err(|_| "Faild to get g_epoch into xy.")?;
+
+        public_input.push(Some(nonce))
+            .map_err(|_| "Faild to get nonce into xy.")?;
+
+        ensure!(public_input.len() == CONFIDENTIAL_INPUT_SIZE, "Mismatch the length of public input.");
+
+        let proof = bellman_verifier::Proof::<Bls12>::try_from(zkproof)
+            .map_err(|_| "Faild to read zkproof.")?;
+
+        // Verify the provided proof
+        verify_proof(
+            &Self::anonymous_vk(),
             &proof,
             public_input.as_slice()
         )

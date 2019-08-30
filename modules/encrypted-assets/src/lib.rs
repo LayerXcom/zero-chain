@@ -50,9 +50,9 @@ decl_module! {
 
             // Verify a zk proof
             // 1. Spend authority verification
-            // 2. Range proof of issued amount
+            // 2. Range check of issued amount
             // 3. Encryption integrity
-            if !<zk_system::Module<T>>::validate_confidential_proof(
+            if !<zk_system::Module<T>>::verify_confidential_proof(
                 &zkproof,
                 &issuer,
                 &issuer,
@@ -113,7 +113,7 @@ decl_module! {
             assert!(!<zk_system::Module<T>>::nonce_pool().contains(&nonce));
 
             // Verify the zk proof
-            if !<zk_system::Module<T>>::validate_confidential_proof(
+            if !<zk_system::Module<T>>::verify_confidential_proof(
                 &zkproof,
                 &address_sender,
                 &address_recipient,
@@ -186,7 +186,7 @@ decl_module! {
 
             // Verify the zk proof
             // 1. Spend authority verification
-            if !<zk_system::Module<T>>::validate_confidential_proof(
+            if !<zk_system::Module<T>>::verify_confidential_proof(
                 &zkproof,
                 &owner,
                 &owner,
@@ -487,7 +487,7 @@ mod tests {
         let _ = zk_system::GenesisConfig::<Test>{
             last_epoch: 1,
             epoch_length: 1,
-            verifying_key: get_pvk(),
+            confidential_vk: get_pvk(),
             nonce_pool: vec![],
         }.assimilate_storage(&mut t, &mut c);
         let _ = encrypted_balances::GenesisConfig::<Test>{

@@ -7,9 +7,7 @@ use rstd::{
     result,
 };
 use runtime_primitives::traits::Zero;
-use zprimitives::{
-    EncKey, Proof, Nonce, RightCiphertext, LeftCiphertext, Ciphertext,
-};
+use zprimitives::{EncKey, Proof, Nonce, RightCiphertext, LeftCiphertext, Ciphertext};
 use system::{IsDeadAccount, ensure_signed};
 
 pub trait Trait: system::Trait + zk_system::Trait {
@@ -54,7 +52,7 @@ decl_module! {
             assert!(!<zk_system::Module<T>>::nonce_pool().contains(&nonce));
 
             // Verify the zk proof
-            if !<zk_system::Module<T>>::validate_confidential_proof(
+            if !<zk_system::Module<T>>::verify_confidential_proof(
                     &zkproof,
                     &address_sender,
                     &address_recipient,
@@ -348,7 +346,7 @@ pub mod tests {
         let _ = zk_system::GenesisConfig::<Test>{
             last_epoch: 1,
             epoch_length: 1,
-            verifying_key: get_pvk(),
+            confidential_vk: get_pvk(),
             nonce_pool: vec![],
         }.assimilate_storage(&mut t, &mut c);
 
