@@ -6,7 +6,7 @@ use bellman::groth16::{
 use rand::Rng;
 use crate::circuit::ConfidentialTransfer;
 use crate::PARAMS;
-use crate::confidential::KeyContext;
+use crate::crypto_components::KeyContext;
 
 pub fn confidential_setup<R: Rng>(rng: &mut R) -> KeyContext<Bls12> {
     // Create parameters for the confidential transfer circuit
@@ -35,6 +35,36 @@ pub fn confidential_setup<R: Rng>(rng: &mut R) -> KeyContext<Bls12> {
 
     KeyContext::new(proving_key, prepared_vk)
 }
+
+pub fn anonymous_setup<R: Rng>(rng: &mut R) -> KeyContext<Bls12> {
+    // Create parameters for the confidential transfer circuit
+    let proving_key = {
+        let c = ConfidentialTransfer::<Bls12> {
+            params: &PARAMS,
+            amount: None,
+            remaining_balance: None,
+            randomness: None,
+            alpha: None,
+            proof_generation_key: None,
+            dec_key_sender: None,
+            enc_key_recipient: None,
+            encrypted_balance: None,
+            fee: None,
+            g_epoch: None,
+        };
+
+        generate_random_parameters(c, rng).unwrap()
+    };
+
+    let prepared_vk = prepare_verifying_key(&proving_key.vk);
+    let mut v = vec![];
+    prepared_vk.write(&mut &mut v).unwrap();
+    println!("pvk: {:?}", v.len());
+
+    KeyContext::new(proving_key, prepared_vk)
+}
+
+
 
 #[cfg(test)]
 mod tests {

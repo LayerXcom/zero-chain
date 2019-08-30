@@ -1,7 +1,31 @@
-use scrypto::jubjub::{JubjubEngine, FixedGenerators};
-use crate::elgamal::Ciphertext;
-use crate::EncryptionKey;
-use std::marker::PhantomData;
+use bellman::{
+        groth16::{
+            Parameters,
+            PreparedVerifyingKey,
+        },
+        SynthesisError,
+};
+use rand::Rng;
+use scrypto::{
+    jubjub::{
+        JubjubEngine,
+        FixedGenerators,
+        edwards,
+        PrimeOrder,
+    },
+};
+use polkadot_rs::Api;
+use crate::{
+    elgamal::Ciphertext,
+    EncryptionKey,
+    SpendingKey,
+};
+use std::{
+    io::{self, BufReader, Read},
+    path::Path,
+    fs::File,
+    marker::PhantomData,
+};
 
 #[derive(Clone, Debug)]
 pub struct Confidential;
@@ -160,5 +184,73 @@ impl<E: JubjubEngine> MultiEncKeys<E, Anonymous> {
             decoys: Some(decoys),
             _marker: PhantomData,
         }
+    }
+}
+
+pub enum Calls {
+    BalanceTransfer,
+    AssetIssue,
+    AssetTransfer(u32),
+    AssetBurn(u32),
+    AnonymousTransfer,
+}
+
+pub trait Submitter {
+    fn submit<R: Rng>(&self, calls: Calls, api: &Api, rng: &mut R);
+}
+
+pub trait ProofBuilder<E: JubjubEngine>: Sized {
+    type Submitter: Submitter;
+    type PC: PrivacyConfing;
+
+    fn setup<R: Rng>(rng: &mut R) -> Self;
+
+    fn write_to_file<P: AsRef<Path>>(&self, pk_path: P, vk_path: P) -> io::Result<()>;
+
+    fn read_from_path<P: AsRef<Path>>(pk_path: P, vk_path: P) -> io::Result<Self>;
+
+    fn gen_proof<R: Rng>(
+        &self,
+        amount: u32,
+        fee: u32,
+        remaining_balance: u32,
+        spending_key: &SpendingKey<E>,
+        enc_keys: MultiEncKeys<E, Self::PC>,
+        encrypted_balance: &Ciphertext<E>,
+        g_epoch: edwards::Point<E, PrimeOrder>,
+        rng: &mut R,
+        params: &E::Params,
+    ) -> Result<Self::Submitter, SynthesisError>;
+}
+
+pub struct KeyContext<E: JubjubEngine> {
+    pub proving_key: Parameters<E>,
+    pub prepared_vk: PreparedVerifyingKey<E>,
+}
+
+impl<E: JubjubEngine> KeyContext<E> {
+    pub fn new(proving_key: Parameters<E>, prepared_vk: PreparedVerifyingKey<E>) -> Self {
+        KeyContext {
+            proving_key,
+            prepared_vk,
+        }
+    }
+
+    pub fn pk(&self) -> &Parameters<E> {
+        &self.proving_key
+    }
+
+    pub fn vk(&self) -> &PreparedVerifyingKey<E> {
+        &self.prepared_vk
+    }
+
+    pub(crate) fn inner_read<P: AsRef<Path>>(path: P) -> io::Result<Vec<u8>> {
+        let file = File::open(&path)?;
+
+        let mut reader = BufReader::new(file);
+        let mut buffer = vec![];
+        reader.read_to_end(&mut buffer)?;
+
+        Ok(buffer)
     }
 }

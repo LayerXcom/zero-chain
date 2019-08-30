@@ -35,76 +35,24 @@ use crate::{
     EncryptionKey,
     ProofGenerationKey,
     SpendingKey,
+    KeyContext,
+    ProofBuilder
 };
 use crate::crypto_components::{
     MultiEncKeys,
     MultiCiphertexts,
     Confidential,
     CiphertextTrait,
-    PrivacyConfing
+    PrivacyConfing,
+    Submitter,
+    Calls,
 };
 use std::{
-    io::{self, Write, BufReader, BufWriter, Read},
+    io::{self, Write, BufWriter},
     path::Path,
     fs::File,
     marker::PhantomData,
 };
-
-pub trait ProofBuilder<E: JubjubEngine>: Sized {
-    type Submitter: Submitter;
-    type PC: PrivacyConfing;
-
-    fn setup<R: Rng>(rng: &mut R) -> Self;
-
-    fn write_to_file<P: AsRef<Path>>(&self, pk_path: P, vk_path: P) -> io::Result<()>;
-
-    fn read_from_path<P: AsRef<Path>>(pk_path: P, vk_path: P) -> io::Result<Self>;
-
-    fn gen_proof<R: Rng>(
-        &self,
-        amount: u32,
-        fee: u32,
-        remaining_balance: u32,
-        spending_key: &SpendingKey<E>,
-        enc_keys: MultiEncKeys<E, Self::PC>,
-        encrypted_balance: &Ciphertext<E>,
-        g_epoch: edwards::Point<E, PrimeOrder>,
-        rng: &mut R,
-        params: &E::Params,
-    ) -> Result<Self::Submitter, SynthesisError>;
-}
-
-pub struct KeyContext<E: JubjubEngine> {
-    proving_key: Parameters<E>,
-    prepared_vk: PreparedVerifyingKey<E>,
-}
-
-impl<E: JubjubEngine> KeyContext<E> {
-    pub fn new(proving_key: Parameters<E>, prepared_vk: PreparedVerifyingKey<E>) -> Self {
-        KeyContext {
-            proving_key,
-            prepared_vk,
-        }
-    }
-
-    pub fn pk(&self) -> &Parameters<E> {
-        &self.proving_key
-    }
-
-    pub fn vk(&self) -> &PreparedVerifyingKey<E> {
-        &self.prepared_vk
-    }
-
-    fn inner_read<P: AsRef<Path>>(path: P) -> io::Result<Vec<u8>> {
-        let file = File::open(&path)?;
-
-        let mut reader = BufReader::new(file);
-        let mut buffer = vec![];
-        reader.read_to_end(&mut buffer)?;
-
-        Ok(buffer)
-    }
-}
 
 impl<E: JubjubEngine> ProofBuilder<E> for KeyContext<E> {
     type Submitter = ConfidentialXt;
@@ -451,10 +399,6 @@ impl<E: JubjubEngine, PC: PrivacyConfing> ConfidentialProofContext<E, Checked, P
     }
 }
 
-pub trait Submitter {
-    fn submit<R: Rng>(&self, calls: Calls, api: &Api, rng: &mut R);
-}
-
 /// Transaction components which is needed to create a signed `UncheckedExtrinsic`.
 pub struct ConfidentialXt{
     pub proof: [u8; 192],
@@ -508,6 +452,7 @@ impl Submitter for ConfidentialXt {
             Calls::AssetIssue => (Compact(index), self.call_asset_issue(), era, checkpoint),
             Calls::AssetTransfer(asset_id) => (Compact(index), self.call_asset_transfer(asset_id), era, checkpoint),
             Calls::AssetBurn(asset_id) => (Compact(index), self.call_asset_burn(asset_id), era, checkpoint),
+            _ => unreachable!(),
         };
 
         let sig = raw_payload.using_encoded(|payload| {
@@ -527,13 +472,6 @@ impl Submitter for ConfidentialXt {
         let _tx_hash = api.submit_extrinsic(&uxt)
             .expect("Faild to submit a extrinsic to zerochain node.");
     }
-}
-
-pub enum Calls {
-    BalanceTransfer,
-    AssetIssue,
-    AssetTransfer(u32),
-    AssetBurn(u32),
 }
 
 impl ConfidentialXt {
