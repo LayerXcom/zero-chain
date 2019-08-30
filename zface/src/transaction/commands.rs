@@ -40,7 +40,7 @@ pub fn asset_issue_tx<R: Rng>(
     subscribe_event(api.clone(), amount);
 
     println!("Start submitting a transaction to Zerochain...");
-    KeyContext::read_from_path(PROVING_KEY_PATH, VERIFICATION_KEY_PATH)?
+    KeyContext::read_from_path(CONF_PK_PATH, CONF_VK_PATH)?
         .gen_proof(
             amount,
             0,
@@ -99,7 +99,7 @@ pub fn asset_transfer_tx<R: Rng>(
     }
 
     println!("Start submitting a transaction to Zerochain...");
-    KeyContext::read_from_path(PROVING_KEY_PATH, VERIFICATION_KEY_PATH)?
+    KeyContext::read_from_path(CONF_PK_PATH, CONF_VK_PATH)?
         .gen_proof(
             amount,
             fee,
@@ -150,7 +150,7 @@ pub fn asset_burn_tx<R: Rng>(
     subscribe_event(api.clone(), amount);
 
     println!("Start submitting a transaction to Zerochain...");
-    KeyContext::read_from_path(PROVING_KEY_PATH, VERIFICATION_KEY_PATH)?
+    KeyContext::read_from_path(CONF_PK_PATH, CONF_VK_PATH)?
         .gen_proof(
             amount,
             0,
@@ -232,7 +232,7 @@ fn inner_transfer_tx<R: Rng>(
     }
 
     println!("Start submitting a transaction to Zerochain...");
-    KeyContext::read_from_path(PROVING_KEY_PATH, VERIFICATION_KEY_PATH)?
+    KeyContext::read_from_path(CONF_PK_PATH, CONF_VK_PATH)?
         .gen_proof(
             amount,
             fee,

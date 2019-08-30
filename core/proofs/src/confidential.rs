@@ -562,7 +562,7 @@ mod tests {
 
         let g_epoch = edwards::Point::rand(rng, params).mul_by_cofactor(params);
 
-        let proofs = KeyContext::read_from_path("../../zface/proving.params", "../../zface/verification.params")
+        let proofs = KeyContext::read_from_path("../../zface/params/test_conf_pk.dat", "../../zface/params/test_conf_vk.dat")
             .unwrap()
             .gen_proof(
                 amount, fee, remaining_balance, &spending_key,
@@ -576,7 +576,7 @@ mod tests {
 
     #[test]
     fn test_read_proving_key() {
-        let pk_path = Path::new("../../zface/proving.params");
+        let pk_path = Path::new("../../zface/params/test_conf_pk.dat");
 
         let pk_file = File::open(&pk_path).unwrap();
 

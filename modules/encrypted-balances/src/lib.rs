@@ -331,7 +331,7 @@ pub mod tests {
     }
 
     pub fn get_pvk() -> PreparedVerifyingKey<Bls12> {
-        let vk_path = Path::new("../../zface/tests/verification.dat");
+        let vk_path = Path::new("../../zface/params/test_conf_vk.dat");
         let vk_file = File::open(&vk_path).unwrap();
         let mut vk_reader = BufReader::new(vk_file);
 

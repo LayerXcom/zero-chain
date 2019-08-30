@@ -1,4 +1,4 @@
-pub const VERIFICATION_KEY_PATH: &'static str = "zface/verification.params";
-pub const PROVING_KEY_PATH: &'static str = "zface/proving.params";
-pub const TEST_VERIFICATION_KEY_PATH: &'static str = "zface/tests/verification.dat";
-pub const TEST_PROVING_KEY_PATH: &'static str = "zface/tests/proving.dat";
+pub const CONF_PK_PATH: &'static str = "zface/params/conf_pk.dat";
+pub const CONF_VK_PATH: &'static str = "zface/params/conf_vk.dat";
+pub const ANONY_PK_PATH: &'static str = "zface/params/anony_pk.dat";
+pub const ANONY_VK_PATH: &'static str = "zface/params/anony_vk.dat";

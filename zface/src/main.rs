@@ -13,7 +13,7 @@ use clap::{Arg, App, SubCommand, AppSettings, ArgMatches};
 use rand::{OsRng, Rng};
 use proofs::{
     EncryptionKey, SpendingKey, DecryptionKey,
-    elgamal, MultiEncKeys,
+    elgamal, MultiEncKeys, anonymous_setup,
     confidential_setup, PARAMS, KeyContext, ProofBuilder,
     Confidential,
     };
@@ -76,19 +76,42 @@ fn main() {
 
 const SNARK_COMMAND: &'static str = "snark";
 
+fn snark_arg_confidential_setup_match<'a, R: Rng>(matches: &ArgMatches<'a>, rng: &mut R) {
+    println!("Performing setup for confidential transfer...");
+    let pk_path = matches.value_of("proving-key-path").unwrap();
+    let vk_path = matches.value_of("verification-key-path").unwrap();
+
+    confidential_setup(rng)
+        .write_to_file(pk_path, vk_path)
+        .unwrap();
+
+    println!("Success! Output >> 'conf_pk.dat' and 'conf_vk.dat'");
+}
+
+fn snark_arg_anonymous_setup_match<'a, R: Rng>(matches: &ArgMatches<'a>, rng: &mut R) {
+    println!("Performing setup for anonymous transfer...");
+    let pk_path = matches.value_of("proving-key-path").unwrap();
+    let vk_path = matches.value_of("verification-key-path").unwrap();
+
+    anonymous_setup(rng)
+        .write_to_file(pk_path, vk_path)
+        .unwrap();
+
+    println!("Success! Output >> 'anony_pk.dat' and 'anony_vk.dat'");
+}
+
 fn subcommand_snark<R: Rng>(mut term: term::Term, matches: &ArgMatches, rng: &mut R) {
     match matches.subcommand() {
         ("setup", Some(matches)) => {
-            println!("Performing setup...");
-            let pk_path = matches.value_of("proving-key-path").unwrap();
-            let vk_path = matches.value_of("verification-key-path").unwrap();
-
-            confidential_setup(rng)
-                .write_to_file(pk_path, vk_path)
-                .unwrap();
-
-            println!("Success! Output >> 'proving.params' and 'verification.params'");
+            snark_arg_confidential_setup_match(matches, rng);
+            snark_arg_anonymous_setup_match(matches, rng);
         },
+        ("confidential-setup", Some(matches)) => {
+            snark_arg_confidential_setup_match(matches, rng);
+        },
+        ("anonymous-setup", Some(matches)) => {
+            snark_arg_anonymous_setup_match(matches, rng);
+        }
         _ => {
             term.error(matches.usage()).unwrap();
             ::std::process::exit(1)
@@ -108,7 +131,7 @@ fn snark_commands_definition<'a, 'b>() -> App<'a, 'b> {
                 .value_name("FILE")
                 .takes_value(true)
                 .required(false)
-                .default_value(PROVING_KEY_PATH)
+                .default_value(CONF_PK_PATH)
             )
             .arg(Arg::with_name("verification-key-path")
                 .short("v")
@@ -117,7 +140,67 @@ fn snark_commands_definition<'a, 'b>() -> App<'a, 'b> {
                 .value_name("FILE")
                 .takes_value(true)
                 .required(false)
-                .default_value(VERIFICATION_KEY_PATH)
+                .default_value(CONF_VK_PATH)
+            )
+             .arg(Arg::with_name("proving-key-path")
+                .short("p")
+                .long("proving-key-path")
+                .help("Path of the generated proving key file")
+                .value_name("FILE")
+                .takes_value(true)
+                .required(false)
+                .default_value(ANONY_PK_PATH)
+            )
+            .arg(Arg::with_name("verification-key-path")
+                .short("v")
+                .long("verification-key-path")
+                .help("Path of the generated verification key file")
+                .value_name("FILE")
+                .takes_value(true)
+                .required(false)
+                .default_value(ANONY_VK_PATH)
+            )
+        )
+        .subcommand(SubCommand::with_name("confidential-setup")
+            .about("Performs a trusted setup for a given constraint system")
+            .arg(Arg::with_name("proving-key-path")
+                .short("p")
+                .long("proving-key-path")
+                .help("Path of the generated proving key file")
+                .value_name("FILE")
+                .takes_value(true)
+                .required(false)
+                .default_value(CONF_PK_PATH)
+            )
+            .arg(Arg::with_name("verification-key-path")
+                .short("v")
+                .long("verification-key-path")
+                .help("Path of the generated verification key file")
+                .value_name("FILE")
+                .takes_value(true)
+                .required(false)
+                .default_value(CONF_VK_PATH)
+            )
+        )
+        .subcommand(SubCommand::with_name("anonymous-setup")
+            .about("Performs a trusted setup for a given constraint system")
+            .arg(Arg::with_name("proving-key-path")
+                .short("p")
+                .long("proving-key-path")
+                .help("Path of the generated proving key file")
+                .value_name("FILE")
+                .takes_value(true)
+                .required(false)
+                .default_value(ANONY_PK_PATH)
+            )
+            .arg(Arg::with_name("verification-key-path")
+                .short("v")
+                .long("verification-key-path")
+                .help("Path of the generated verification key file")
+                .value_name("FILE")
+                .takes_value(true)
+                .required(false)
+                .default_value(ANONY_VK_PATH)
             )
         )
 }
@@ -642,7 +725,7 @@ fn debug_commands_definition<'a, 'b>() -> App<'a, 'b> {
                 .value_name("FILE")
                 .takes_value(true)
                 .required(false)
-                .default_value(TEST_PROVING_KEY_PATH)
+                .default_value(CONF_PK_PATH)
             )
             .arg(Arg::with_name("verification-key-path")
                 .short("v")
@@ -651,7 +734,7 @@ fn debug_commands_definition<'a, 'b>() -> App<'a, 'b> {
                 .value_name("FILE")
                 .takes_value(true)
                 .required(false)
-                .default_value(TEST_VERIFICATION_KEY_PATH)
+                .default_value(CONF_VK_PATH)
             )
             .arg(Arg::with_name("amount")
                 .short("a")
