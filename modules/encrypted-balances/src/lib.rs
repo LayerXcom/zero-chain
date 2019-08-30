@@ -245,7 +245,7 @@ pub mod tests {
         BuildStorage, traits::{BlakeTwo256, IdentityLookup},
         testing::{Digest, DigestItem, Header}
     };
-    use zprimitives::{Ciphertext, SigVerificationKey, PreparedVk};
+    use zprimitives::{Ciphertext, SigVerificationKey};
     use keys::{ProofGenerationKey, EncryptionKey};
     use jubjub::{curve::{JubjubBls12, FixedGenerators, fs}};
     use pairing::{Field, bls12_381::Bls12};

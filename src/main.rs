@@ -3,9 +3,6 @@
 #![warn(missing_docs)]
 #![warn(unused_extern_crates)]
 
-#[macro_use]
-extern crate hex_literal;
-
 mod chain_spec;
 mod service;
 mod cli;

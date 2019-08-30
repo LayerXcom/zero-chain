@@ -17,7 +17,6 @@ use jubjub::redjubjub::PublicKey;
 use zprimitives::{
     EncKey,
     Proof,
-    PreparedVk,
     SigVk,
 };
 use parity_codec::Codec;

@@ -12,7 +12,7 @@ use pairing::{
 };
 use runtime_primitives::traits::As;
 use zprimitives::{
-    PreparedVk, Nonce, GEpoch, Proof, Ciphertext,
+    Nonce, GEpoch, Proof, Ciphertext,
     LeftCiphertext, RightCiphertext, EncKey, IntoXY,
 };
 

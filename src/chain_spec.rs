@@ -3,14 +3,8 @@ use zerochain_runtime::{
 	AccountId, GenesisConfig, ConsensusConfig, TimestampConfig, BalancesConfig, SudoConfig,
 	IndicesConfig, EncryptedBalancesConfig, EncryptedAssetsConfig, ZkSystemConfig,
 };
-use substrate_service;
 use ed25519::Public as AuthorityId;
-use zprimitives::{
-	PreparedVk,
-	EncKey,
-	Ciphertext,
-	SigVerificationKey,
-};
+use zprimitives::{EncKey, Ciphertext, SigVerificationKey};
 use bellman_verifier::PreparedVerifyingKey;
 use keys::EncryptionKey;
 use zjubjub::{curve::{FixedGenerators, fs}};
