@@ -257,8 +257,8 @@ pub mod tests {
         convert::TryFrom,
     };
 
-    const PK_PATH: &str = "../../zface/tests/proving.dat";
-    const VK_PATH: &str = "../../zface/tests/verification.dat";
+    const PK_PATH: &str = "../../zface/params/test_conf_pk.dat";
+    const VK_PATH: &str = "../../zface/params/test_conf_vk.dat";
 
     impl_outer_origin! {
         pub enum Origin for Test {}
@@ -330,8 +330,19 @@ pub mod tests {
             .expect("should be generated encryption key from seed."))
     }
 
-    pub fn get_pvk() -> PreparedVerifyingKey<Bls12> {
+    pub fn get_conf_vk() -> PreparedVerifyingKey<Bls12> {
         let vk_path = Path::new("../../zface/params/test_conf_vk.dat");
+        let vk_file = File::open(&vk_path).unwrap();
+        let mut vk_reader = BufReader::new(vk_file);
+
+        let mut buf_vk = vec![];
+        vk_reader.read_to_end(&mut buf_vk).unwrap();
+
+        PreparedVerifyingKey::<Bls12>::read(&mut &buf_vk[..]).unwrap()
+    }
+
+    pub fn get_anony_vk() -> PreparedVerifyingKey<Bls12> {
+        let vk_path = Path::new("../../zface/params/test_anony_vk.dat");
         let vk_file = File::open(&vk_path).unwrap();
         let mut vk_reader = BufReader::new(vk_file);
 
@@ -346,7 +357,8 @@ pub mod tests {
         let _ = zk_system::GenesisConfig::<Test>{
             last_epoch: 1,
             epoch_length: 1,
-            confidential_vk: get_pvk(),
+            confidential_vk: get_conf_vk(),
+            anonymous_vk: get_anony_vk(),
             nonce_pool: vec![],
         }.assimilate_storage(&mut t, &mut c);
 
@@ -422,34 +434,6 @@ pub mod tests {
                 LeftCiphertext::from_slice(&tx.left_fee[..]),
                 RightCiphertext::from_slice(&tx.right_randomness[..]),
                 Nonce::from_slice(&tx.nonce[..])
-            ));
-        })
-    }
-
-    #[test]
-    fn test_call_function() {
-        with_externalities(&mut new_test_ext(), || {
-            // Needed to be updated manually once snark paramters are pre-processed.
-            let proof: [u8; 192] = hex!("90e85fa9496fba35af8b842879f090ec4ca69e40197adcfebe0772c39aad665c3ef0ba8fe906d24f890551351692bca3915efcc8a772a62ffb7e2d48245ddcf6a9ad3c3a37623ceb4a36bfe714415044e2e055a640fe839f30f378e93d1f88be07696fda69042f30805eaa8044a57261fc7b490b097037310b7de9aa07a248d917875aab44853f28311c4b946e843d6787e18ca0a9d3dda99de62a7440813cc3988ef61e352beaa48797307166b2a5f5a862358da073711f750dacd7701aec75");
-            let pkd_addr_alice: [u8; 32] = hex!("fd0c0c0183770c99559bf64df4fe23f77ced9b8b4d02826a282bcd125117dcc2");
-            let pkd_addr_bob: [u8; 32] = hex!("45e66da531088b55dcb3b273ca825454d79d2d1d5c4fa2ba4a12c1fa1ccd6389");
-            let enc10_by_alice: [u8; 32] = hex!("9c890d3a99623d0a3b5be4e43ae2cbd7a0bfe83523f93ff2ca8dfcb498b8e461");
-            let enc10_by_bob: [u8; 32] = hex!("3ef1c1c7af605ceed316e8517d3fd5761461a64fb24f57cd5fcb213731347830");
-            let enc1_by_alice: [u8; 32] = hex!("127778d9ea15d20b6c812cca5377ed8c18cca4a6ec5e2c9d33df8324b3b8e81f");
-            let randomness: [u8; 32] = hex!("12fe19f453051b2a6df6d0c443b882f9df040408293677d123467975ab80bb00");
-            let rvk: [u8; 32] = hex!("baa16af0d19b50be778d4de0fe03a8cc76cfb17f7a447cef9a5f886397d2d217");
-            let nonce: [u8; 32] = hex!("c3427a3e3e9f19ff730d45c7c7daa1ee3c96b10a86085d11647fe27d923d654e");
-
-            assert_ok!(EncryptedBalances::confidential_transfer(
-                Origin::signed(SigVerificationKey::from_slice(&rvk[..])),
-                Proof::from_slice(&proof[..]),
-                EncKey::from_slice(&pkd_addr_alice),
-                EncKey::from_slice(&pkd_addr_bob),
-                LeftCiphertext::from_slice(&enc10_by_alice[..]),
-                LeftCiphertext::from_slice(&enc10_by_bob[..]),
-                LeftCiphertext::from_slice(&enc1_by_alice[..]),
-                RightCiphertext::from_slice(&randomness[..]),
-                Nonce::from_slice(&nonce[..])
             ));
         })
     }

@@ -144,13 +144,25 @@ fn testnet_genesis(initial_authorities: Vec<AuthorityId>, endowed_accounts: Vec<
 			last_epoch: 0,
 			epoch_length: 3,
 			nonce_pool: vec![],
-			verifying_key: get_pvk(),
+			confidential_vk: get_conf_vk(),
+			anonymous_vk: get_anony_vk()
 		})
 	}
 }
 
-fn get_pvk() -> PreparedVerifyingKey<Bls12> {
-	let vk_path = Path::new("./zface/verification.params");
+fn get_conf_vk() -> PreparedVerifyingKey<Bls12> {
+	let vk_path = Path::new("./zface/params/conf_vk.dat");
+	let vk_file = File::open(&vk_path).unwrap();
+	let mut vk_reader = BufReader::new(vk_file);
+
+	let mut buf_vk = vec![];
+    vk_reader.read_to_end(&mut buf_vk).unwrap();
+
+	PreparedVerifyingKey::<Bls12>::read(&mut &buf_vk[..]).unwrap()
+}
+
+fn get_anony_vk() -> PreparedVerifyingKey<Bls12> {
+	let vk_path = Path::new("./zface/params/anony_vk.dat");
 	let vk_file = File::open(&vk_path).unwrap();
 	let mut vk_reader = BufReader::new(vk_file);
 

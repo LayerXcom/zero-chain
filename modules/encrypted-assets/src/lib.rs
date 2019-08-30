@@ -390,8 +390,8 @@ mod tests {
         convert::TryFrom,
     };
 
-    const PK_PATH: &str = "../../zface/tests/proving.dat";
-    const VK_PATH: &str = "../../zface/tests/verification.dat";
+    const PK_PATH: &str = "../../zface/params/test_conf_pk.dat";
+    const VK_PATH: &str = "../../zface/params/test_conf_vk.dat";
 
     impl_outer_origin! {
         pub enum Origin for Test {}
@@ -468,8 +468,19 @@ mod tests {
             .expect("should be generated encryption key from seed."))
     }
 
-    pub fn get_pvk() -> PreparedVerifyingKey<Bls12> {
+    pub fn get_conf_vk() -> PreparedVerifyingKey<Bls12> {
         let vk_path = Path::new("../../zface/params/test_conf_vk.dat");
+        let vk_file = File::open(&vk_path).unwrap();
+        let mut vk_reader = BufReader::new(vk_file);
+
+        let mut buf_vk = vec![];
+        vk_reader.read_to_end(&mut buf_vk).unwrap();
+
+        PreparedVerifyingKey::<Bls12>::read(&mut &buf_vk[..]).unwrap()
+    }
+
+    pub fn get_anony_vk() -> PreparedVerifyingKey<Bls12> {
+        let vk_path = Path::new("../../zface/params/test_anony_vk.dat");
         let vk_file = File::open(&vk_path).unwrap();
         let mut vk_reader = BufReader::new(vk_file);
 
@@ -487,7 +498,8 @@ mod tests {
         let _ = zk_system::GenesisConfig::<Test>{
             last_epoch: 1,
             epoch_length: 1,
-            confidential_vk: get_pvk(),
+            confidential_vk: get_conf_vk(),
+            anonymous_vk: get_anony_vk(),
             nonce_pool: vec![],
         }.assimilate_storage(&mut t, &mut c);
         let _ = encrypted_balances::GenesisConfig::<Test>{
