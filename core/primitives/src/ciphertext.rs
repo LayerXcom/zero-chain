@@ -12,10 +12,14 @@ use pairing::{
 };
 use parity_codec::{Encode, Decode};
 use core::convert::{TryInto, TryFrom};
+use jubjub::curve::{edwards, PrimeOrder, Unknown};
 
 #[derive(Eq, PartialEq, Clone, Default, Encode, Decode)]
 #[cfg_attr(feature = "std", derive(Debug, Serialize, Deserialize))]
-pub struct Ciphertext(Vec<u8>);
+pub struct Ciphertext {
+    left: LeftCiphertext,
+    right: RightCiphertext,
+}
 
 impl TryFrom<elgamal::Ciphertext<Bls12>> for Ciphertext {
     type Error = io::Error;
@@ -24,7 +28,10 @@ impl TryFrom<elgamal::Ciphertext<Bls12>> for Ciphertext {
         let mut writer = [0u8; 64];
         point.write(&mut writer[..])?;
 
-        Ok(Ciphertext(writer.to_vec()))
+        Ok(Ciphertext {
+            left: LeftCiphertext::from_slice(&writer[..32]),
+            right: RightCiphertext::from_slice(&writer[32..]),
+        })
     }
 }
 
@@ -35,7 +42,10 @@ impl TryFrom<&elgamal::Ciphertext<Bls12>> for Ciphertext {
         let mut writer = [0u8; 64];
         point.write(&mut writer[..])?;
 
-        Ok(Ciphertext(writer.to_vec()))
+        Ok(Ciphertext {
+            left: LeftCiphertext::from_slice(&writer[..32]),
+            right: RightCiphertext::from_slice(&writer[32..]),
+        })
     }
 }
 
@@ -43,7 +53,13 @@ impl TryFrom<Ciphertext> for elgamal::Ciphertext<Bls12> {
     type Error = io::Error;
 
     fn try_from(ct: Ciphertext) -> Result<Self, io::Error> {
-        elgamal::Ciphertext::read(&mut &ct.0[..], &*PARAMS)
+        let left = edwards::Point::<Bls12, PrimeOrder>::try_from(ct.left())?;
+        let right = edwards::Point::<Bls12, PrimeOrder>::try_from(ct.right())?;
+
+        Ok(elgamal::Ciphertext{
+            left,
+            right,
+        })
     }
 }
 
@@ -51,7 +67,13 @@ impl TryFrom<&Ciphertext> for elgamal::Ciphertext<Bls12> {
     type Error = io::Error;
 
     fn try_from(ct: &Ciphertext) -> Result<Self, io::Error> {
-        elgamal::Ciphertext::read(&mut &ct.0[..], &*PARAMS)
+        let left = edwards::Point::<Bls12, PrimeOrder>::try_from(ct.left())?;
+        let right = edwards::Point::<Bls12, PrimeOrder>::try_from(ct.right())?;
+
+        Ok(elgamal::Ciphertext{
+            left,
+            right,
+        })
     }
 }
 
@@ -77,7 +99,11 @@ impl TryFrom<Ciphertext> for RightCiphertext {
 
 impl Ciphertext {
     pub fn from_slice(slice: &[u8]) -> Self {
-        Ciphertext(slice.to_vec())
+        assert_eq!(slice.len(), 64);
+        Ciphertext {
+            left: LeftCiphertext::from_slice(&slice[..32]),
+            right: RightCiphertext::from_slice(&slice[32..]),
+        }
     }
 
     pub fn from_left_right(left: LeftCiphertext, right: RightCiphertext) -> Result<Self, io::Error> {
@@ -102,37 +128,31 @@ impl Ciphertext {
     }
 }
 
-#[cfg(feature = "std")]
-impl fmt::Display for Ciphertext {
-    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        write!(f, "0x")?;
-        for i in &self.0 {
-            write!(f, "{:02x}", i)?;
-        }
-        Ok(())
-    }
-}
+// #[cfg(feature = "std")]
+// impl fmt::Display for Ciphertext {
+//     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+//         write!(f, "0x")?;
+//         for i in &self.0 {
+//             write!(f, "{:02x}", i)?;
+//         }
+//         Ok(())
+//     }
+// }
 
-#[cfg(feature = "std")]
-impl AsBytesRef for Ciphertext {
-    fn as_bytes_ref(&self) -> &[u8] {
-        self.0.as_slice()
-    }
-}
+// #[cfg(feature = "std")]
+// impl AsBytesRef for Ciphertext {
+//     fn as_bytes_ref(&self) -> &[u8] {
+//         self.0.as_slice()
+//     }
+// }
 
 impl Ciphertext {
-    pub fn into_xy_left(&self) -> Result<(Fr, Fr), io::Error> {
-        let left_point = elgamal::Ciphertext::<Bls12>::try_from(self)?
-            .left.into_xy();
-
-        Ok(left_point)
+    pub fn left(&self) -> LeftCiphertext {
+        self.left
     }
 
-    pub fn into_xy_right(&self) -> Result<(Fr, Fr), io::Error> {
-        let right_point = elgamal::Ciphertext::<Bls12>::try_from(self)?
-            .right.into_xy();
-
-        Ok(right_point)
+    pub fn right(&self) -> RightCiphertext {
+        self.right
     }
 
     // TODO: Make constant
@@ -192,7 +212,7 @@ mod tests {
         let mut buf = [0u8; 64];
         ciphertext.write(&mut &mut buf[..]).unwrap();
 
-        let ciphertext_a = Ciphertext(buf.to_vec());
+        let ciphertext_a = Ciphertext::from_slice(&buf[..]);
         let ciphertext_b = Ciphertext::try_from(&ciphertext).unwrap();
 
         assert_eq!(ciphertext_a, ciphertext_b);

@@ -11,11 +11,18 @@ impl<E: JubjubEngine> PublicInputBuilder<E> {
         PublicInputBuilder(Vec::with_capacity(capacity))
     }
 
-    pub fn push<I>(&self, input: I) -> Result<Self, io::Error>
+    pub fn push<I>(&mut self, input: I) -> Result<(), io::Error>
     where
-        I: IntoXY<E> + IntoIterator
+        I: IntoIterator,
+        I::Item: IntoXY<E>,
     {
-        unimplemented!();
+        for i in input {
+            let (x, y) = i.into_xy()?;
+            self.0.push(x);
+            self.0.push(y);
+        }
+
+        Ok(())
     }
 
     pub fn ensure_length(&self, expected_length: usize) -> bool {

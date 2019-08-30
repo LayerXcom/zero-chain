@@ -15,13 +15,16 @@ use zprimitives::{
     Nonce, GEpoch, Proof, Ciphertext,
     LeftCiphertext, RightCiphertext, EncKey, IntoXY,
 };
-
+use self::input_builder::PublicInputBuilder;
 mod input_builder;
+
 
 pub trait Trait: system::Trait {
 	// The overarching event type.
 	// type Event: From<Event<Self>> + Into<<Self as system::Trait>::Event>;
 }
+
+const CONFIDENTIAL_INPUT_SIZE: usize = 22;
 
 decl_module! {
     pub struct Module<T: Trait> for enum Call where origin: T::Origin { }
@@ -64,96 +67,39 @@ impl<T: Trait> Module<T> {
         nonce: &Nonce
     ) -> result::Result<bool, &'static str> {
         // Construct public input for circuit
-        let mut public_input = [Fr::zero(); 22];
+        let mut public_input = PublicInputBuilder::<Bls12>::new(CONFIDENTIAL_INPUT_SIZE);
+        public_input.push(Some(address_sender))
+            .map_err(|_| "Faild to get address_sender into xy.")?;
 
-        {
-            let (x, y) = address_sender
-                .into_xy()
-                .map_err(|_| "Faild to get address_sender into xy.")?;
+        public_input.push(Some(address_recipient))
+            .map_err(|_| "Faild to get address_recipient into xy.")?;
 
-            public_input[0] = x;
-            public_input[1] = y;
-        }
-        {
-            let (x, y) = address_recipient
-                .into_xy()
-                .map_err(|_| "Faild to get address_recipient into xy.")?;
+        public_input.push(Some(amount_sender))
+            .map_err(|_| "Faild to get amount_sender into xy.")?;
 
-            public_input[2] = x;
-            public_input[3] = y;
-        }
-        {
-            let (x, y) = amount_sender
-                .into_xy()
-                .map_err(|_| "Faild to get amount_sender into xy.")?;
+        public_input.push(Some(amount_recipient))
+            .map_err(|_| "Faild to get amount_recipient into xy.")?;
 
-            public_input[4] = x;
-            public_input[5] = y;
-        }
-        {
-            let (x, y) = amount_recipient
-                .into_xy()
-                .map_err(|_| "Faild to get amount_recipient into xy.")?;
+        public_input.push(Some(randomness))
+            .map_err(|_| "Faild to get randomness into xy.")?;
 
-            public_input[6] = x;
-            public_input[7] = y;
-        }
-        {
-            let (x, y) = randomness
-                .into_xy()
-                .map_err(|_| "Faild to get randomness into xy.")?;
+        public_input.push(Some(fee_sender))
+            .map_err(|_| "Faild to get fee_sender into xy.")?;
 
-            public_input[8] = x;
-            public_input[9] = y;
-        }
-        {
-            let (x, y) = fee_sender
-                .into_xy()
-                .map_err(|_| "Faild to get fee_sender into xy.")?;
+        public_input.push(Some(balance_sender.into_left().unwrap()))
+            .map_err(|_| "Faild to get balance_sender's left into xy.")?;
 
-            public_input[10] = x;
-            public_input[11] = y;
-        }
-        {
-            let (x, y) = balance_sender
-                .into_xy_left()
-                .map_err(|_| "Faild to get balance_sender's left into xy.")?;
+        public_input.push(Some(balance_sender.into_right().unwrap()))
+            .map_err(|_| "Faild to get balance_sender's right into xy.")?;
 
-            public_input[12] = x;
-            public_input[13] = y;
-        }
-        {
-            let (x, y) = balance_sender
-                .into_xy_right()
-                .map_err(|_| "Faild to get balance_sender's right into xy.")?;
+        public_input.push(Some(rvk))
+            .map_err(|_| "Faild to get rvk into xy.")?;
 
-            public_input[14] = x;
-            public_input[15] = y;
-        }
-        {
-            let (x, y) = rvk
-                .into_xy()
-                .map_err(|_| "Faild to get rvk into xy.")?;
+        public_input.push(Some(Self::g_epoch()))
+            .map_err(|_| "Faild to get g_epoch into xy.")?;
 
-            public_input[16] = x;
-            public_input[17] = y;
-        }
-        {
-            let (x, y) = Self::g_epoch()
-                .into_xy()
-                .map_err(|_| "Faild to get g_epoch into xy.")?;
-
-            public_input[18] = x;
-            public_input[19] = y;
-        }
-        {
-            let (x, y) = nonce
-                .into_xy()
-                .map_err(|_| "Faild to get nonce into xy.")?;
-
-            public_input[20] = x;
-            public_input[21] = y;
-        }
+        public_input.push(Some(nonce))
+            .map_err(|_| "Faild to get nonce into xy.")?;
 
         let pvk = Self::verifying_key();
         let proof = bellman_verifier::Proof::<Bls12>::try_from(zkproof)
