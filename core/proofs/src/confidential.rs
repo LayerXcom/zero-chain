@@ -400,7 +400,7 @@ impl<E: JubjubEngine, PC: PrivacyConfing> ConfidentialProofContext<E, Checked, P
 }
 
 /// Transaction components which is needed to create a signed `UncheckedExtrinsic`.
-pub struct ConfidentialXt{
+pub struct ConfidentialXt {
     pub proof: [u8; 192],
     pub enc_key_sender: [u8; 32],
     pub enc_key_recipient: [u8; 32],

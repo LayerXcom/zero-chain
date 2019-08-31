@@ -7,14 +7,13 @@ use rstd::result;
 use rstd::convert::TryFrom;
 use bellman_verifier::{verify_proof, PreparedVerifyingKey};
 use pairing::bls12_381::Bls12;
-use runtime_primitives::traits::As;
+use runtime_primitives::traits::{As, Zero};
 use zprimitives::{
     Nonce, GEpoch, Proof, Ciphertext,
     LeftCiphertext, RightCiphertext, EncKey,
 };
 use self::input_builder::PublicInputBuilder;
 mod input_builder;
-
 
 pub trait Trait: system::Trait { }
 
@@ -84,10 +83,10 @@ impl<T: Trait> Module<T> {
         public_input.push(Some(fee_sender))
             .map_err(|_| "Faild to get fee_sender into xy.")?;
 
-        public_input.push(Some(balance_sender.left()))
+        public_input.push(balance_sender.left().ok())
             .map_err(|_| "Faild to get balance_sender's left into xy.")?;
 
-        public_input.push(Some(balance_sender.right()))
+        public_input.push(balance_sender.right().ok())
             .map_err(|_| "Faild to get balance_sender's right into xy.")?;
 
         public_input.push(Some(rvk.clone()))
@@ -131,10 +130,10 @@ impl<T: Trait> Module<T> {
         public_input.push(left_ciphertexts)
             .map_err(|_| "Faild to get left ciphertexts into xy.")?;
 
-        public_input.push(enc_balances.iter().map(|e| e.left()))
+        public_input.push(enc_balances.iter().map(|e| e.left().unwrap())) // TODO
             .map_err(|_| "Faild to get left ciphertexts into xy.")?;
 
-        public_input.push(enc_balances.iter().map(|e| e.right()))
+        public_input.push(enc_balances.iter().map(|e| e.right().unwrap())) // TODO
             .map_err(|_| "Faild to get right ciphertexts into xy.")?;
 
         public_input.push(Some(right_ciphertext))
@@ -174,7 +173,7 @@ impl<T: Trait> Module<T> {
     /// 2. Remove all nonces in the pool
     /// 3. Set last epoch to current epoch
     pub fn init_nonce_pool(current_epoch: T::BlockNumber) {
-        if Self::last_epoch() < current_epoch {
+        if Self::last_epoch() < current_epoch || current_epoch == T::BlockNumber::zero() {
             let g_epoch = GEpoch::group_hash(current_epoch.as_() as u32).unwrap();
 
             <LastGEpoch<T>>::put(g_epoch);

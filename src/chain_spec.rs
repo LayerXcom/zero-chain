@@ -112,7 +112,7 @@ fn testnet_genesis(initial_authorities: Vec<AuthorityId>, endowed_accounts: Vec<
 		}),
 		system: None,
 		timestamp: Some(TimestampConfig {
-			minimum_period: 10,	// 10 second block time.
+			minimum_period: 13,	// 13 second block time.
 		}),
 		indices: Some(IndicesConfig {
 			ids: endowed_accounts.clone(),
@@ -142,7 +142,7 @@ fn testnet_genesis(initial_authorities: Vec<AuthorityId>, endowed_accounts: Vec<
 		}),
 		zk_system: Some(ZkSystemConfig {
 			last_epoch: 0,
-			epoch_length: 3,
+			epoch_length: 5,
 			nonce_pool: vec![],
 			confidential_vk: get_conf_vk(),
 			anonymous_vk: get_anony_vk()

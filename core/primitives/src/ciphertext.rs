@@ -1,7 +1,8 @@
 #[cfg(feature = "std")]
+use ::std::vec::Vec;
 #[cfg(not(feature = "std"))]
 use crate::std::vec::Vec;
-use crate::{LeftCiphertext, RightCiphertext};
+use crate::{PARAMS, LeftCiphertext, RightCiphertext};
 use zcrypto::elgamal;
 use pairing::{
     bls12_381::Bls12,
@@ -13,10 +14,7 @@ use jubjub::curve::{edwards, PrimeOrder};
 
 #[derive(Eq, PartialEq, Clone, Default, Encode, Decode)]
 #[cfg_attr(feature = "std", derive(Debug, Serialize, Deserialize))]
-pub struct Ciphertext {
-    left: LeftCiphertext,
-    right: RightCiphertext,
-}
+pub struct Ciphertext(Vec<u8>);
 
 impl TryFrom<elgamal::Ciphertext<Bls12>> for Ciphertext {
     type Error = io::Error;
@@ -25,10 +23,7 @@ impl TryFrom<elgamal::Ciphertext<Bls12>> for Ciphertext {
         let mut writer = [0u8; 64];
         point.write(&mut writer[..])?;
 
-        Ok(Ciphertext {
-            left: LeftCiphertext::from_slice(&writer[..32]),
-            right: RightCiphertext::from_slice(&writer[32..]),
-        })
+        Ok(Ciphertext(writer.to_vec()))
     }
 }
 
@@ -39,10 +34,7 @@ impl TryFrom<&elgamal::Ciphertext<Bls12>> for Ciphertext {
         let mut writer = [0u8; 64];
         point.write(&mut writer[..])?;
 
-        Ok(Ciphertext {
-            left: LeftCiphertext::from_slice(&writer[..32]),
-            right: RightCiphertext::from_slice(&writer[32..]),
-        })
+        Ok(Ciphertext(writer.to_vec()))
     }
 }
 
@@ -50,13 +42,7 @@ impl TryFrom<Ciphertext> for elgamal::Ciphertext<Bls12> {
     type Error = io::Error;
 
     fn try_from(ct: Ciphertext) -> Result<Self, io::Error> {
-        let left = edwards::Point::<Bls12, PrimeOrder>::try_from(ct.left())?;
-        let right = edwards::Point::<Bls12, PrimeOrder>::try_from(ct.right())?;
-
-        Ok(elgamal::Ciphertext{
-            left,
-            right,
-        })
+        elgamal::Ciphertext::read(&mut &ct.0[..], &*PARAMS)
     }
 }
 
@@ -64,13 +50,7 @@ impl TryFrom<&Ciphertext> for elgamal::Ciphertext<Bls12> {
     type Error = io::Error;
 
     fn try_from(ct: &Ciphertext) -> Result<Self, io::Error> {
-        let left = edwards::Point::<Bls12, PrimeOrder>::try_from(ct.left())?;
-        let right = edwards::Point::<Bls12, PrimeOrder>::try_from(ct.right())?;
-
-        Ok(elgamal::Ciphertext{
-            left,
-            right,
-        })
+        elgamal::Ciphertext::read(&mut &ct.0[..], &*PARAMS)
     }
 }
 
@@ -96,11 +76,7 @@ impl TryFrom<Ciphertext> for RightCiphertext {
 
 impl Ciphertext {
     pub fn from_slice(slice: &[u8]) -> Self {
-        assert_eq!(slice.len(), 64);
-        Ciphertext {
-            left: LeftCiphertext::from_slice(&slice[..32]),
-            right: RightCiphertext::from_slice(&slice[32..]),
-        }
+        Ciphertext(slice.to_vec())
     }
 
     pub fn from_left_right(left: LeftCiphertext, right: RightCiphertext) -> Result<Self, io::Error> {
@@ -126,12 +102,14 @@ impl Ciphertext {
 }
 
 impl Ciphertext {
-    pub fn left(&self) -> LeftCiphertext {
-        self.left
+    pub fn left(&self) -> Result<LeftCiphertext, io::Error> {
+        elgamal::Ciphertext::<Bls12>::try_from(self)?
+            .left.try_into()
     }
 
-    pub fn right(&self) -> RightCiphertext {
-        self.right
+    pub fn right(&self) -> Result<RightCiphertext, io::Error> {
+        elgamal::Ciphertext::<Bls12>::try_from(self)?
+            .right.try_into()
     }
 
     // TODO: Make constant

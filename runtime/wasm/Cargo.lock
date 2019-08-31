@@ -506,7 +506,6 @@ dependencies = [
 name = "encrypted-assets"
 version = "0.1.0"
 dependencies = [
- "bellman-verifier 0.1.0",
  "encrypted-balances 0.1.0",
  "jubjub 0.1.0",
  "keys 0.1.0",
@@ -529,7 +528,6 @@ dependencies = [
 name = "encrypted-balances"
 version = "0.1.0"
 dependencies = [
- "bellman-verifier 0.1.0",
  "jubjub 0.1.0",
  "keys 0.1.0",
  "parity-codec 3.5.4 (registry+https://github.com/rust-lang/crates.io-index)",

@@ -76,11 +76,9 @@ pub fn asset_transfer_tx<R: Rng>(
     println!("Preparing paramters...");
 
     let api = Api::init(url);
-
     let spending_key = spending_key_from_keystore(root_dir, &password[..])?;
     let dec_key = ProofGenerationKey::<Bls12>::from_spending_key(&spending_key, &PARAMS)
         .into_decryption_key()?;
-
     let fee = getter::fee(&api)?;
 
     let balance_query = BalanceQuery::get_encrypted_asset(asset_id, &dec_key, api.clone())?;
