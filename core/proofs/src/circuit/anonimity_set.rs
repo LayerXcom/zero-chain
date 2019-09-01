@@ -4,12 +4,9 @@ use scrypto::circuit::{
     ecc::{self, EdwardsPoint},
 };
 use scrypto::jubjub::{JubjubEngine, FixedGenerators, PrimeOrder};
-use crate::{EncryptionKey, elgamal};
+use crate::{EncryptionKey, elgamal, constants::{ANONIMITY_SIZE, DECOY_SIZE}};
 use super::utils::{eq_edwards_points, negate_point};
 use std::fmt;
-
-pub const ANONIMITY_SIZE: usize = 12;
-pub const DECOY_SIZE: usize = ANONIMITY_SIZE - 2;
 
 pub enum AnonimityIndexes {
     Sender(usize),

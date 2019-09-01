@@ -42,7 +42,7 @@ pub struct MultiCiphertexts<E: JubjubEngine, PC: PrivacyConfing> {
     sender: Ciphertext<E>,
     recipient: Ciphertext<E>,
     decoys: Option<Vec<Ciphertext<E>>>,
-    fee: Ciphertext<E>,
+    fee: Option<Ciphertext<E>>,
     _marker: PhantomData<PC>,
 }
 
@@ -53,10 +53,6 @@ impl<E: JubjubEngine, PC: PrivacyConfing> MultiCiphertexts<E, PC> {
 
     pub fn get_recipient(&self) -> &Ciphertext<E> {
         &self.recipient
-    }
-
-    pub fn get_fee(&self) -> &Ciphertext<E> {
-        &self.fee
     }
 }
 
@@ -113,7 +109,7 @@ impl<E: JubjubEngine> CiphertextTrait<E> for MultiCiphertexts<E, Confidential> {
         MultiCiphertexts::<E, Self::PC>::new(
             cipher_sender,
             cipher_recipient,
-            cipher_fee
+            cipher_fee,
         )
     }
 }
@@ -128,9 +124,13 @@ impl<E: JubjubEngine> MultiCiphertexts<E, Confidential> {
             sender,
             recipient,
             decoys: None,
-            fee,
+            fee: Some(fee),
             _marker: PhantomData,
         }
+    }
+
+    pub fn get_fee(&self) -> &Ciphertext<E> {
+        &self.fee.as_ref().expect("should have fee")
     }
 }
 
@@ -139,13 +139,12 @@ impl<E: JubjubEngine> MultiCiphertexts<E, Anonymous> {
         sender: Ciphertext<E>,
         recipient: Ciphertext<E>,
         decoys: Vec<Ciphertext<E>>,
-        fee: Ciphertext<E>,
     ) -> Self {
         MultiCiphertexts {
             sender,
             recipient,
             decoys: Some(decoys),
-            fee,
+            fee: None,
             _marker: PhantomData,
         }
     }
@@ -184,6 +183,10 @@ impl<E: JubjubEngine> MultiEncKeys<E, Anonymous> {
             decoys: Some(decoys),
             _marker: PhantomData,
         }
+    }
+
+    pub fn get_decoys(&self) -> &[EncryptionKey<E>] {
+        &self.decoys.as_ref().expect("should have decoys enckeys")[..]
     }
 }
 

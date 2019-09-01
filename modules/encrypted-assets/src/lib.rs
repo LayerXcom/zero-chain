@@ -3,7 +3,7 @@
 // Ensure we're `no_std` when compiling for Wasm.
 #![cfg_attr(not(feature = "std"), no_std)]
 
-use support::{decl_module, decl_storage, decl_event, StorageMap, Parameter, StorageValue};
+use support::{decl_module, decl_storage, decl_event, StorageMap, Parameter, StorageValue, ensure};
 use rstd::prelude::*;
 use rstd::result;
 use runtime_primitives::traits::{SimpleArithmetic, Zero, One};
@@ -46,7 +46,7 @@ decl_module! {
             <zk_system::Module<T>>::init_nonce_pool(current_epoch);
 
             // Veridate the provided nonce isn't included in the nonce pool.
-            assert!(!<zk_system::Module<T>>::nonce_pool().contains(&nonce));
+            assert!(!<zk_system::Module<T>>::nonce_pool().contains(&nonce)); // TODO: use ensure!
 
             // Verify a zk proof
             // 1. Spend authority verification
@@ -110,7 +110,7 @@ decl_module! {
             Self::rollover(&address_recipient, asset_id)?;
 
             // Veridate the provided nonce isn't included in the nonce pool.
-            assert!(!<zk_system::Module<T>>::nonce_pool().contains(&nonce));
+            ensure!(!<zk_system::Module<T>>::nonce_pool().contains(&nonce), "Provided nonce is already included in the nonce pool.");
 
             // Verify the zk proof
             if !<zk_system::Module<T>>::verify_confidential_proof(
@@ -182,7 +182,7 @@ decl_module! {
             <zk_system::Module<T>>::init_nonce_pool(current_epoch);
 
             // Veridate the provided nonce isn't included in the nonce pool.
-            assert!(!<zk_system::Module<T>>::nonce_pool().contains(&nonce));
+            ensure!(!<zk_system::Module<T>>::nonce_pool().contains(&nonce), "Provided nonce is already included in the nonce pool.");
 
             // Verify the zk proof
             // 1. Spend authority verification

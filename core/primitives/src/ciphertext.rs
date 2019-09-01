@@ -10,7 +10,6 @@ use pairing::{
 };
 use parity_codec::{Encode, Decode};
 use core::convert::{TryInto, TryFrom};
-use jubjub::curve::{edwards, PrimeOrder};
 
 #[derive(Eq, PartialEq, Clone, Default, Encode, Decode)]
 #[cfg_attr(feature = "std", derive(Debug, Serialize, Deserialize))]

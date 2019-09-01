@@ -36,7 +36,8 @@ use crate::{
     ProofGenerationKey,
     SpendingKey,
     KeyContext,
-    ProofBuilder
+    ProofBuilder,
+    constants::*,
 };
 use crate::crypto_components::{
     MultiEncKeys,
@@ -110,26 +111,26 @@ impl<E: JubjubEngine> ProofBuilder<E> for KeyContext<E> {
         let randomness = E::Fs::rand(rng);
         let alpha = E::Fs::rand(rng);
 
-        let proof_generation_key = ProofGenerationKey::<E>::from_spending_key(&spending_key, params);
-        let dec_key_sender = proof_generation_key.into_decryption_key()?;
-        let enc_key_sender = proof_generation_key.into_encryption_key(params)?;
+        let pgk = ProofGenerationKey::<E>::from_spending_key(&spending_key, params);
+        let dec_key = pgk.into_decryption_key()?;
+        let enc_key_sender = pgk.into_encryption_key(params)?;
 
-        let rvk = PublicKey(proof_generation_key.0.clone().into())
+        let rvk = PublicKey(pgk.0.clone().into())
             .randomize(
                 alpha,
                 FixedGenerators::NoteCommitmentRandomness,
                 params,
         );
-        let nonce = g_epoch.mul(dec_key_sender.0, params);
+        let nonce = g_epoch.mul(dec_key.0, params);
 
         let instance = ConfidentialTransfer {
-            params: params,
+            params,
             amount: Some(amount),
             remaining_balance: Some(remaining_balance),
             randomness: Some(&randomness),
             alpha: Some(&alpha),
-            proof_generation_key: Some(&proof_generation_key),
-            dec_key_sender: Some(&dec_key_sender),
+            proof_generation_key: Some(&pgk),
+            dec_key_sender: Some(&dec_key),
             enc_key_recipient: Some(&enc_keys.get_recipient()),
             encrypted_balance: Some(&encrypted_balance),
             fee: Some(fee),
@@ -183,7 +184,7 @@ struct ConfidentialProofContext<E: JubjubEngine, IsChecked, PC: PrivacyConfing> 
     _marker: PhantomData<IsChecked>,
 }
 
-impl<E: JubjubEngine, IsChecked, PC: PrivacyConfing> ConfidentialProofContext<E, IsChecked, PC> {
+impl<E: JubjubEngine, IsChecked> ConfidentialProofContext<E, IsChecked, Confidential> {
     fn left_amount_sender(&self) -> &edwards::Point<E, PrimeOrder> {
         &self.multi_ciphertexts.get_sender().left
     }
@@ -212,13 +213,13 @@ impl<E: JubjubEngine, IsChecked, PC: PrivacyConfing> ConfidentialProofContext<E,
     }
 }
 
-impl<E: JubjubEngine, PC: PrivacyConfing> ConfidentialProofContext<E, Unchecked, PC> {
+impl<E: JubjubEngine> ConfidentialProofContext<E, Unchecked, Confidential> {
     fn new(
         proof: Proof<E>,
         rvk: PublicKey<E>,
         enc_key_sender: EncryptionKey<E>,
-        enc_keys: MultiEncKeys<E, PC>,
-        multi_ciphertexts: MultiCiphertexts<E, PC>,
+        enc_keys: MultiEncKeys<E, Confidential>,
+        multi_ciphertexts: MultiCiphertexts<E, Confidential>,
         encrypted_balance: Ciphertext<E>,
         g_epoch: edwards::Point<E, PrimeOrder>,
         nonce: edwards::Point<E, PrimeOrder>,
@@ -239,7 +240,7 @@ impl<E: JubjubEngine, PC: PrivacyConfing> ConfidentialProofContext<E, Unchecked,
     fn check_proof(
         self,
         prepared_vk: &PreparedVerifyingKey<E>
-    ) -> Result<ConfidentialProofContext<E, Checked, PC>, SynthesisError> {
+    ) -> Result<ConfidentialProofContext<E, Checked, Confidential>, SynthesisError> {
         let mut public_input = [E::Fr::zero(); 22];
 
         {
@@ -304,7 +305,7 @@ impl<E: JubjubEngine, PC: PrivacyConfing> ConfidentialProofContext<E, Unchecked,
             return Err(SynthesisError::MalformedVerifyingKey)
         }
 
-        Ok(convert_to_checked::<E, Unchecked, Checked, PC>(self))
+        Ok(convert_to_checked::<E, Unchecked, Checked, Confidential>(self))
     }
 }
 
@@ -322,7 +323,7 @@ fn convert_to_checked<E: JubjubEngine, C1, C2, PC: PrivacyConfing>(from: Confide
     }
 }
 
-impl<E: JubjubEngine, PC: PrivacyConfing> ConfidentialProofContext<E, Checked, PC> {
+impl<E: JubjubEngine> ConfidentialProofContext<E, Checked, Confidential> {
     fn gen_xt(&self, spending_key: &SpendingKey<E>, alpha: E::Fs) -> io::Result<ConfidentialXt> {
 
         // Generate the re-randomized sign key
@@ -401,17 +402,17 @@ impl<E: JubjubEngine, PC: PrivacyConfing> ConfidentialProofContext<E, Checked, P
 
 /// Transaction components which is needed to create a signed `UncheckedExtrinsic`.
 pub struct ConfidentialXt {
-    pub proof: [u8; 192],
-    pub enc_key_sender: [u8; 32],
-    pub enc_key_recipient: [u8; 32],
-    pub left_amount_sender: [u8; 32],
-    pub left_amount_recipient: [u8; 32],
-	pub left_fee: [u8; 32],
-    pub right_randomness: [u8; 32],
-	pub rsk: [u8; 32],
-	pub rvk: [u8; 32],
-	pub enc_balance: [u8; 64],
-	pub nonce: [u8; 32],
+    pub proof: [u8; PROOF_SIZE],
+    pub enc_key_sender: [u8; POINT_SIZE],
+    pub enc_key_recipient: [u8; POINT_SIZE],
+    pub left_amount_sender: [u8; POINT_SIZE],
+    pub left_amount_recipient: [u8; POINT_SIZE],
+	pub left_fee: [u8; POINT_SIZE],
+    pub right_randomness: [u8; POINT_SIZE],
+	pub rsk: [u8; POINT_SIZE],
+	pub rvk: [u8; POINT_SIZE],
+	pub enc_balance: [u8; CIPHERTEXT_SIZE],
+	pub nonce: [u8; POINT_SIZE],
 }
 
 impl Submitter for ConfidentialXt {

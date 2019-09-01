@@ -8,6 +8,7 @@ pub mod confidential;
 pub mod no_std_aliases;
 pub mod setup;
 pub mod crypto_components;
+mod constants;
 
 pub use self::setup::{confidential_setup, anonymous_setup};
 pub use self::no_std_aliases::keys::{

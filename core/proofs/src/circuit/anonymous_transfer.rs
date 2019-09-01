@@ -30,7 +30,7 @@ use scrypto::circuit::{
     boolean::self,
     ecc::{self, EdwardsPoint},
 };
-use crate::{ProofGenerationKey, EncryptionKey, DecryptionKey, elgamal};
+use crate::{ProofGenerationKey, EncryptionKey, DecryptionKey, elgamal, constants::ANONIMITY_SIZE};
 use super::{
     range_check::u32_into_bit_vec_le,
     anonimity_set::*,
@@ -380,6 +380,8 @@ mod tests {
     }
 
     fn test_based_amount(amount: u32) {
+        use crate::constants::DECOY_SIZE;
+
         // constants
         let params = &JubjubBls12::new();
         let rng = &mut XorShiftRng::from_seed([0x3dbe6258, 0x8d313d76, 0x3237db17, 0xe5bc0654]);
@@ -395,10 +397,10 @@ mod tests {
         let randomness_balanace_sender = Fs::rand(rng);
         let randomness_balanace_recipient = Fs::rand(rng);
         let current_balance_recipient: u32 = rng.gen();
-        let s_index: usize = rng.gen_range(0, ANONIMITY_SIZE+1);
+        let s_index: usize = rng.gen_range(0, ANONIMITY_SIZE); // TODO: check over 12
         let mut t_index: usize;
         loop {
-            t_index = rng.gen_range(0, ANONIMITY_SIZE+1);
+            t_index = rng.gen_range(0, ANONIMITY_SIZE);
             if t_index != s_index {
                 break;
             }
