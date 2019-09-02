@@ -37,6 +37,7 @@ pub use timestamp::Call as TimestampCall;
 pub use balances::Call as BalancesCall;
 pub use encrypted_balances::Call as EncryptedBalancesCall;
 pub use encrypted_assets::Call as EncryptedAssetsCall;
+pub use anonymous_balances::Call as AnonymousBalancesCall;
 pub use runtime_primitives::{Permill, Perbill};
 pub use timestamp::BlockPeriod;
 pub use support::{StorageValue, construct_runtime};
@@ -202,6 +203,10 @@ impl encrypted_assets::Trait for Runtime {
 	type AssetId = u32;
 }
 
+impl anonymous_balances::Trait for Runtime {
+	type Event = Event;
+}
+
 impl zk_system::Trait for Runtime { }
 
 construct_runtime!(
@@ -212,6 +217,7 @@ construct_runtime!(
 	{
 		EncryptedBalances: encrypted_balances::{Module, Call, Storage, Event<T>, Config<T>},
 		EncryptedAssets: encrypted_assets::{Module, Call, Storage, Event<T>, Config<T>},
+		AnonymousBalances: anonymous_balances::{Module, Call, Storage, Event<T>, Config<T>},
 		ZkSystem: zk_system::{Module, Call, Storage, Config<T>},
 		System: system::{default, Log(ChangesTrieRoot)},
 		Timestamp: timestamp::{Module, Call, Storage, Config<T>, Inherent},

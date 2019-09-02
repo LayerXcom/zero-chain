@@ -20,7 +20,6 @@ type FeeAmount = u32;
 decl_module! {
 	pub struct Module<T: Trait> for enum Call where origin: T::Origin {
         // Initializing events
-		// this is needed only if you are using events in your module
 		fn deposit_event<T>() = default;
 
 		pub fn confidential_transfer(
@@ -36,13 +35,11 @@ decl_module! {
         ) -> Result {
 			let rvk = ensure_signed(origin)?;
 
-            // Rollover and get sender's balance.
             // This function causes a storage mutation, but it's needed before `verify_proof` function is called.
             // No problem if errors occur after this function because
             // it just rollover user's own `pending trasfer` to `encrypted balances`.
             Self::rollover(&address_sender)?;
 
-            // Rollover and get recipient's balance
             // This function causes a storage mutation, but it's needed before `verify_proof` function is called.
             // No problem if errors occur after this function because
             // it just rollover user's own `pending trasfer` to `encrypted balances`.

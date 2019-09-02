@@ -209,3 +209,8 @@ impl Submitter for AnonymousXt {
     }
 }
 
+impl AnonymousXt {
+    pub fn call_transfer(&self) -> Call {
+        Call::
+    }
+}

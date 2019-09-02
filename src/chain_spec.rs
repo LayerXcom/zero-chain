@@ -2,6 +2,7 @@ use primitives::{ed25519, sr25519, Pair, crypto::Ss58Codec};
 use zerochain_runtime::{
 	AccountId, GenesisConfig, ConsensusConfig, TimestampConfig, BalancesConfig, SudoConfig,
 	IndicesConfig, EncryptedBalancesConfig, EncryptedAssetsConfig, ZkSystemConfig,
+	AnonymousBalancesConfig,
 };
 use ed25519::Public as AuthorityId;
 use zprimitives::{EncKey, Ciphertext, SigVerificationKey};
@@ -136,8 +137,13 @@ fn testnet_genesis(initial_authorities: Vec<AuthorityId>, endowed_accounts: Vec<
 			_genesis_phantom_data: Default::default(),
 		}),
 		encrypted_assets: Some(EncryptedAssetsConfig {
-			encrypted_balance: vec![((0, balance_init.0), balance_init.1)],
+			encrypted_balance: vec![((0, balance_init.clone().0), balance_init.clone().1)],
 			last_rollover: vec![((0, epoch_init.0), epoch_init.1)],
+			_genesis_phantom_data: Default::default(),
+		}),
+		anonymous_balances: Some(AnonymousBalancesConfig {
+			encrypted_balance: vec![balance_init.clone()],
+			last_rollover: vec![epoch_init],
 			_genesis_phantom_data: Default::default(),
 		}),
 		zk_system: Some(ZkSystemConfig {
