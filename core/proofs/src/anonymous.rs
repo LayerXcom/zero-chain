@@ -20,7 +20,7 @@ use scrypto::{
     redjubjub::PublicKey,
 };
 use polkadot_rs::Api;
-use zerochain_runtime::{UncheckedExtrinsic, Call, EncryptedBalancesCall, EncryptedAssetsCall};
+use zerochain_runtime::{UncheckedExtrinsic, Call, AnonymousBalancesCall};
 use zprimitives::{
     EncKey as zEncKey,
     Ciphertext as zCiphertext,
@@ -194,6 +194,22 @@ impl<E: JubjubEngine> ProofContext<E, Unchecked, Anonymous> {
 
 impl<E: JubjubEngine> ProofContext<E, Checked, Anonymous> {
     fn gen_tx(&self, spending_key: &SpendingKey<E>, alpha: E::Fs) -> io::Result<AnonymousXt> {
+        // Generate the re-randomized sign key
+		let mut rsk_bytes = [0u8; 32];
+		spending_key
+            .into_rsk(alpha)
+            .write(&mut rsk_bytes[..])?;
+
+		let mut rvk_bytes = [0u8; 32];
+		self
+			.rvk
+			.write(&mut rvk_bytes[..])?;
+
+		let mut proof_bytes = [0u8; 192];
+		self
+			.proof
+			.write(&mut proof_bytes[..])?;
+            
         unimplemented!();
     }
 }
@@ -211,6 +227,8 @@ impl Submitter for AnonymousXt {
 
 impl AnonymousXt {
     pub fn call_transfer(&self) -> Call {
-        Call::
+        Call::AnonymousBalances(AnonymousBalancesCall::anonymous_transfer(
+            zProof::from_slice(&self.proof[..]),
+        ))
     }
 }

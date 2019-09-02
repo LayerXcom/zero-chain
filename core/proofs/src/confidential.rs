@@ -44,7 +44,6 @@ use crate::crypto_components::{
     MultiCiphertexts,
     Confidential,
     CiphertextTrait,
-    PrivacyConfing,
     Submitter,
     Calls,
     Unchecked,Checked,ProofChecking,
