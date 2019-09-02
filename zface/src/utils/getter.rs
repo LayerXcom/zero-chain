@@ -131,6 +131,8 @@ pub fn g_epoch(api: &Api) -> Result<edwards::Point<Bls12, PrimeOrder>> {
     let point = edwards::Point::<Bls12, _>::read(&mut g_epoch.as_ref(), &PARAMS)?
             .as_prime_order(&PARAMS)
             .unwrap();
+    println!("epoch:{:?}", current_epoch);
+    println!("g_epoch:{:?}", hex::encode(g_epoch.as_ref()));
 
     Ok(point)
 }

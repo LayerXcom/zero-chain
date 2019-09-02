@@ -47,6 +47,8 @@ use crate::crypto_components::{
     PrivacyConfing,
     Submitter,
     Calls,
+    Unchecked,Checked,ProofChecking,
+    ProofContext, convert_to_checked,
 };
 use std::{
     io::{self, Write, BufWriter},
@@ -148,7 +150,7 @@ impl<E: JubjubEngine> ProofBuilder<E> for KeyContext<E> {
             params
         );
 
-        ConfidentialProofContext::new(
+        ProofContext::new(
             proof,
             rvk,
             enc_key_sender,
@@ -164,56 +166,13 @@ impl<E: JubjubEngine> ProofBuilder<E> for KeyContext<E> {
     }
 }
 
-struct Unchecked;
-struct Checked;
-trait ProofChecking { }
-
-impl ProofChecking for Unchecked { }
-impl ProofChecking for Checked { }
-
-#[derive(Clone)]
-struct ConfidentialProofContext<E: JubjubEngine, IsChecked, PC: PrivacyConfing> {
-    proof: Proof<E>,
-    rvk: PublicKey<E>, // re-randomization sig-verifying key
-    enc_key_sender: EncryptionKey<E>,
-    enc_keys: MultiEncKeys<E, PC>,
-    multi_ciphertexts: MultiCiphertexts<E, PC>,
-    encrypted_balance: Ciphertext<E>,
-    g_epoch: edwards::Point<E, PrimeOrder>,
-    nonce: edwards::Point<E, PrimeOrder>,
-    _marker: PhantomData<IsChecked>,
-}
-
-impl<E: JubjubEngine, IsChecked> ConfidentialProofContext<E, IsChecked, Confidential> {
-    fn left_amount_sender(&self) -> &edwards::Point<E, PrimeOrder> {
-        &self.multi_ciphertexts.get_sender().left
-    }
-
-    fn left_amount_recipient(&self) -> &edwards::Point<E, PrimeOrder> {
-        &self.multi_ciphertexts.get_recipient().left
-    }
-
+impl<E: JubjubEngine, IsChecked> ProofContext<E, IsChecked, Confidential> {
     fn left_fee(&self) -> &edwards::Point<E, PrimeOrder> {
         &self.multi_ciphertexts.get_fee().left
     }
-
-    fn right_randomness(&self) -> &edwards::Point<E, PrimeOrder> {
-        let sender_right = &self.multi_ciphertexts.get_sender().right;
-        let recipient_right = &self.multi_ciphertexts.get_recipient().right;
-        let fee_right = &self.multi_ciphertexts.get_fee().right;
-
-        assert!(sender_right == recipient_right);
-        assert!(recipient_right == fee_right);
-
-        &sender_right
-    }
-
-    fn recipient(&self) -> &EncryptionKey<E> {
-        self.enc_keys.get_recipient()
-    }
 }
 
-impl<E: JubjubEngine> ConfidentialProofContext<E, Unchecked, Confidential> {
+impl<E: JubjubEngine> ProofContext<E, Unchecked, Confidential> {
     fn new(
         proof: Proof<E>,
         rvk: PublicKey<E>,
@@ -224,7 +183,7 @@ impl<E: JubjubEngine> ConfidentialProofContext<E, Unchecked, Confidential> {
         g_epoch: edwards::Point<E, PrimeOrder>,
         nonce: edwards::Point<E, PrimeOrder>,
     ) -> Self {
-        ConfidentialProofContext {
+        ProofContext {
             proof,
             rvk,
             enc_key_sender,
@@ -240,7 +199,7 @@ impl<E: JubjubEngine> ConfidentialProofContext<E, Unchecked, Confidential> {
     fn check_proof(
         self,
         prepared_vk: &PreparedVerifyingKey<E>
-    ) -> Result<ConfidentialProofContext<E, Checked, Confidential>, SynthesisError> {
+    ) -> Result<ProofContext<E, Checked, Confidential>, SynthesisError> {
         let mut public_input = [E::Fr::zero(); 22];
 
         {
@@ -309,23 +268,8 @@ impl<E: JubjubEngine> ConfidentialProofContext<E, Unchecked, Confidential> {
     }
 }
 
-fn convert_to_checked<E: JubjubEngine, C1, C2, PC: PrivacyConfing>(from: ConfidentialProofContext<E, C1, PC>) -> ConfidentialProofContext<E, C2, PC> {
-    ConfidentialProofContext {
-        proof: from.proof,
-        rvk: from.rvk,
-        enc_key_sender: from.enc_key_sender,
-        enc_keys: from.enc_keys,
-        multi_ciphertexts: from.multi_ciphertexts,
-        encrypted_balance: from.encrypted_balance,
-        g_epoch: from.g_epoch,
-        nonce: from.nonce,
-        _marker: PhantomData,
-    }
-}
-
-impl<E: JubjubEngine> ConfidentialProofContext<E, Checked, Confidential> {
+impl<E: JubjubEngine> ProofContext<E, Checked, Confidential> {
     fn gen_xt(&self, spending_key: &SpendingKey<E>, alpha: E::Fs) -> io::Result<ConfidentialXt> {
-
         // Generate the re-randomized sign key
 		let mut rsk_bytes = [0u8; 32];
 		spending_key

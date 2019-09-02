@@ -142,7 +142,7 @@ fn testnet_genesis(initial_authorities: Vec<AuthorityId>, endowed_accounts: Vec<
 		}),
 		zk_system: Some(ZkSystemConfig {
 			last_epoch: 0,
-			epoch_length: 5,
+			epoch_length: 7,
 			nonce_pool: vec![],
 			confidential_vk: get_conf_vk(),
 			anonymous_vk: get_anony_vk()

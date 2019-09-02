@@ -6,7 +6,7 @@
 use support::{decl_module, decl_storage, decl_event, StorageMap, Parameter, StorageValue, ensure};
 use rstd::prelude::*;
 use rstd::result;
-use runtime_primitives::traits::{SimpleArithmetic, Zero, One};
+use runtime_primitives::traits::{SimpleArithmetic, Zero, One, As};
 use system::ensure_signed;
 use zprimitives::{
     EncKey, Proof,
@@ -97,6 +97,10 @@ decl_module! {
         ) {
             let rvk = ensure_signed(origin)?;
 
+            runtime_io::print("before g_epoch");
+            runtime_io::print(<zk_system::Module<T>>::last_epoch().as_());
+            runtime_io::print(<zk_system::Module<T>>::g_epoch().as_bytes());
+
             // Rollover and get sender's balance.
             // This function causes a storage mutation, but it's needed before `verify_proof` function is called.
             // No problem if errors occur after this function because
@@ -111,6 +115,10 @@ decl_module! {
 
             // Veridate the provided nonce isn't included in the nonce pool.
             ensure!(!<zk_system::Module<T>>::nonce_pool().contains(&nonce), "Provided nonce is already included in the nonce pool.");
+
+            runtime_io::print("after g_epoch");
+            runtime_io::print(<zk_system::Module<T>>::last_epoch().as_());
+            runtime_io::print(<zk_system::Module<T>>::g_epoch().as_bytes());
 
             // Verify the zk proof
             if !<zk_system::Module<T>>::verify_confidential_proof(

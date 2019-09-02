@@ -1,4 +1,3 @@
-use support::ensure;
 use jubjub::curve::JubjubEngine;
 use zprimitives::IntoXY;
 use pairing::io;
@@ -25,10 +24,6 @@ impl<E: JubjubEngine> PublicInputBuilder<E> {
         }
 
         Ok(())
-    }
-
-    pub fn ensure_length(&self, expected_length: usize) {
-        unimplemented!();
     }
 
     pub fn as_slice(&self) -> &[E::Fr] {

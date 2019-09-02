@@ -42,11 +42,13 @@ use crate::{
 use crate::crypto_components::{
     MultiEncKeys,
     MultiCiphertexts,
-    Confidential,
+    Anonymous,
     CiphertextTrait,
     PrivacyConfing,
     Submitter,
     Calls,
+    Unchecked,Checked,ProofChecking,
+    ProofContext, convert_to_checked,
 };
 use std::{
     io::{self, Write, BufWriter},
@@ -141,12 +143,60 @@ impl<E: JubjubEngine> ProofBuilder<E> for KeyContext<E> {
         };
         // Crate proof
         let proof = create_random_proof(instance, &self.proving_key, rng)?;
-        
+        let multi_ciphertexts = MultiCiphertexts::<E, Anonymous>::encrypt(
+            amount, 0, &enc_key_sender, &enc_keys, &randomness, params
+        );
+
+
 
         unimplemented!();
     }
 }
 
+impl<E: JubjubEngine, IsChecked> ProofContext<E, IsChecked, Anonymous> {
+    fn left_decoy_ciphertexts(&self) -> &[edwards::Point<E, PrimeOrder>] {
+        &self.multi_ciphertexts.get_decoys().iter().map(|c| c.left)
+    }
+}
+
+impl<E: JubjubEngine> ProofContext<E, Unchecked, Anonymous> {
+    fn new(
+        proof: Proof<E>,
+        rvk: PublicKey<E>,
+        enc_key_sender: EncryptionKey<E>,
+        enc_keys: MultiEncKeys<E, Confidential>,
+        multi_ciphertexts: MultiCiphertexts<E, Confidential>,
+        encrypted_balance: Ciphertext<E>,
+        g_epoch: edwards::Point<E, PrimeOrder>,
+        nonce: edwards::Point<E, PrimeOrder>,
+    ) -> Self {
+        ProofContext {
+            proof,
+            rvk,
+            enc_key_sender,
+            enc_keys,
+            multi_ciphertexts,
+            encrypted_balance,
+            g_epoch,
+            nonce,
+            _marker: PhantomData,
+        }
+    }
+
+    fn check_proof(
+        self,
+        prepared_vk: &PreparedVerifyingKey<E>
+    ) -> Result<ProofContext<E, Checked, Anonymous>, SynthesisError> {
+
+        Ok(convert_to_checked::<E, Unchecked, Checked, Anonymous>(self))
+    }
+}
+
+impl<E: JubjubEngine> ProofContext<E, Checked, Anonymous> {
+    fn gen_tx(&self, spending_key: &SpendingKey<E>, alpha: E::Fs) -> io::Result<AnonymousXt> {
+        unimplemented!();
+    }
+}
 
 pub struct AnonymousXt {
     pub proof: [u8; PROOF_SIZE],
@@ -158,3 +208,4 @@ impl Submitter for AnonymousXt {
         unimplemented!();
     }
 }
+
