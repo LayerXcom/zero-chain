@@ -2,9 +2,11 @@
 #![cfg_attr(not(feature = "std"), no_std)]
 
 use support::{decl_module, decl_storage, StorageValue, ensure};
-use rstd::prelude::*;
-use rstd::result;
-use rstd::convert::TryFrom;
+use rstd::{
+    prelude::*,
+    result,
+    convert::TryFrom,
+};
 use bellman_verifier::{verify_proof, PreparedVerifyingKey};
 use pairing::bls12_381::Bls12;
 use runtime_primitives::traits::{As, Zero};
@@ -38,7 +40,7 @@ decl_storage! {
         pub LastGEpoch get(g_epoch) build(|_| GEpoch::try_new().expect("Should init.")) : GEpoch;
 
         /// A nonce pool. All nonces are erasured at the time of starting each epochs.
-        // Consider chainging Vec to BtreeMap
+        // TODO: Change to BTreeSet once parity-codec is updated to parity-scale-codec
         pub NoncePool get(nonce_pool) config() : Vec<Nonce>;
 
         /// A verification key of zk proofs of confidential transfer(only readable)

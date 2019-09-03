@@ -93,6 +93,9 @@ decl_storage! {
 
         /// A last epoch for rollover
         pub LastRollOver get(last_rollover) config() : map EncKey => Option<T::BlockNumber>;
+
+        // TODO: Change to BTreeSet once parity-codec is updated to parity-scale-codec
+        pub EncKeySet get(enc_key_set) config() : Vec<EncKey>;
     }
 }
 

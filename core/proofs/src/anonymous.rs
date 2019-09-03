@@ -147,9 +147,19 @@ impl<E: JubjubEngine> ProofBuilder<E> for KeyContext<E> {
             amount, 0, &enc_key_sender, &enc_keys, &randomness, params
         );
 
-
-
-        unimplemented!();
+        ProofContext::new(
+            proof,
+            rvk,
+            enc_key_sender,
+            enc_keys,
+            multi_ciphertexts,
+            encrypted_balance.clone(),
+            g_epoch,
+            nonce
+        )
+        .check_proof(&self.prepared_vk)?
+        .gen_xt(&spending_key, alpha, s_index, t_index)
+        .map_err(|e| SynthesisError::IoError(e))
     }
 }
 
@@ -193,7 +203,14 @@ impl<E: JubjubEngine> ProofContext<E, Unchecked, Anonymous> {
 }
 
 impl<E: JubjubEngine> ProofContext<E, Checked, Anonymous> {
-    fn gen_tx(&self, spending_key: &SpendingKey<E>, alpha: E::Fs) -> io::Result<AnonymousXt> {
+    fn gen_xt(
+        &self,
+        spending_key: &SpendingKey<E>,
+        alpha: E::Fs,
+        s_index: usize,
+        t_index: usize
+    ) -> io::Result<AnonymousXt>
+    {
         // Generate the re-randomized sign key
 		let mut rsk_bytes = [0u8; 32];
 		spending_key
@@ -209,7 +226,9 @@ impl<E: JubjubEngine> ProofContext<E, Checked, Anonymous> {
 		self
 			.proof
 			.write(&mut proof_bytes[..])?;
-            
+
+
+
         unimplemented!();
     }
 }

@@ -144,6 +144,7 @@ fn testnet_genesis(initial_authorities: Vec<AuthorityId>, endowed_accounts: Vec<
 		anonymous_balances: Some(AnonymousBalancesConfig {
 			encrypted_balance: vec![balance_init.clone()],
 			last_rollover: vec![epoch_init],
+			enc_key_set: init_enc_keys(),
 			_genesis_phantom_data: Default::default(),
 		}),
 		zk_system: Some(ZkSystemConfig {
@@ -204,4 +205,21 @@ fn get_alice_enc_key() -> EncryptionKey<Bls12> {
 	let enc_key = EncryptionKey::<Bls12>::from_seed(&&alice_seed, &*PARAMS)
 		.expect("should be generated encryption key from seed.");
 	enc_key
+}
+
+fn init_enc_keys() -> Vec<EncKey> {
+	use rand::{OsRng, Rng};
+	let rng = &mut OsRng::new().expect("should be able to construct RNG");
+
+	let mut acc = vec![];
+	for _ in 0..100 {
+		let random_seed: [u8; 32] = rng.gen();
+		let enc_key = EncryptionKey::<Bls12>::from_seed(&random_seed, &*PARAMS)
+			.expect("should be generated encryption key from seed.");
+		acc.push(EncKey::try_from(enc_key).unwrap());
+	}
+	let i = rng.gen_range(0, 100);
+	acc.insert(i, alice_epoch_init().0);
+
+	acc
 }

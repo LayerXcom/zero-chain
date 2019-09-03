@@ -46,7 +46,7 @@ use crate::crypto_components::{
     CiphertextTrait,
     Submitter,
     Calls,
-    Unchecked,Checked,ProofChecking,
+    Unchecked,Checked,
     ProofContext, convert_to_checked,
 };
 use std::{
