@@ -56,9 +56,8 @@ use std::{
     marker::PhantomData,
 };
 
-impl<E: JubjubEngine> ProofBuilder<E> for KeyContext<E> {
+impl<E: JubjubEngine> ProofBuilder<E, Confidential> for KeyContext<E, Confidential> {
     type Submitter = ConfidentialXt;
-    type PC = Confidential;
 
     // TODO:
     fn setup<R: Rng>(_rng: &mut R) -> Self {
@@ -103,8 +102,8 @@ impl<E: JubjubEngine> ProofBuilder<E> for KeyContext<E> {
         fee: u32,
         remaining_balance: u32,
         spending_key: &SpendingKey<E>,
-        enc_keys: MultiEncKeys<E, Self::PC>,
-        encrypted_balance: &Ciphertext<E>,
+        enc_keys: MultiEncKeys<E, Confidential>,
+        encrypted_balance: &[Ciphertext<E>],
         g_epoch: edwards::Point<E, PrimeOrder>,
         rng: &mut R,
         params: &E::Params,
@@ -133,7 +132,7 @@ impl<E: JubjubEngine> ProofBuilder<E> for KeyContext<E> {
             proof_generation_key: Some(&pgk),
             dec_key_sender: Some(&dec_key),
             enc_key_recipient: Some(&enc_keys.get_recipient()),
-            encrypted_balance: Some(&encrypted_balance),
+            encrypted_balance: Some(&encrypted_balance[0]),
             fee: Some(fee),
             g_epoch: Some(&g_epoch),
         };
@@ -155,7 +154,7 @@ impl<E: JubjubEngine> ProofBuilder<E> for KeyContext<E> {
             enc_key_sender,
             enc_keys,
             multi_ciphertexts,
-            encrypted_balance.clone(), // TODO
+            encrypted_balance[0].clone(), // TODO
             g_epoch,
             nonce
         )
@@ -182,13 +181,14 @@ impl<E: JubjubEngine> ProofContext<E, Unchecked, Confidential> {
         g_epoch: edwards::Point<E, PrimeOrder>,
         nonce: edwards::Point<E, PrimeOrder>,
     ) -> Self {
+        let enc_balances = vec![encrypted_balance];
         ProofContext {
             proof,
             rvk,
             enc_key_sender,
             enc_keys,
             multi_ciphertexts,
-            encrypted_balance,
+            enc_balances,
             g_epoch,
             nonce,
             _marker: PhantomData,
@@ -231,13 +231,14 @@ impl<E: JubjubEngine> ProofContext<E, Unchecked, Confidential> {
             public_input[10] = x;
             public_input[11] = y;
         }
+        assert_eq!(self.enc_balances.len(), 1);
         {
-            let (x, y) = self.encrypted_balance.left.into_xy();
+            let (x, y) = self.enc_balances[0].left.into_xy();
             public_input[12] = x;
             public_input[13] = y;
         }
         {
-            let (x, y) = self.encrypted_balance.right.into_xy();
+            let (x, y) = self.enc_balances[0].right.into_xy();
             public_input[14] = x;
             public_input[15] = y;
         }
@@ -317,7 +318,7 @@ impl<E: JubjubEngine> ProofContext<E, Checked, Confidential> {
 
 		let mut enc_balance = [0u8; 64];
 		self
-            .encrypted_balance
+            .enc_balances[0]
 			.write(&mut enc_balance[..])?;
 
 		let mut nonce = [0u8; 32];
@@ -502,7 +503,7 @@ mod tests {
 
         let randomness = rng.gen();
         let enc_key = EncryptionKey::from_seed(&sender_seed[..], params).unwrap();
-        let encrypted_balance = Ciphertext::encrypt(balance, &randomness, &enc_key, p_g, params);
+        let enc_balance = vec![Ciphertext::encrypt(balance, &randomness, &enc_key, p_g, params)];
 
         let g_epoch = edwards::Point::rand(rng, params).mul_by_cofactor(params);
 
@@ -511,7 +512,7 @@ mod tests {
             .gen_proof(
                 amount, fee, remaining_balance, &spending_key,
                 MultiEncKeys::<Bls12, Confidential>::new(enc_key_recipient),
-                &encrypted_balance, g_epoch,
+                &enc_balance, g_epoch,
                 rng, params
             );
 

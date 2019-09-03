@@ -57,9 +57,8 @@ use std::{
     marker::PhantomData,
 };
 
-impl<E: JubjubEngine> ProofBuilder<E> for KeyContext<E> {
+impl<E: JubjubEngine> ProofBuilder<E, Anonymous> for KeyContext<E, Anonymous> {
     type Submitter = AnonymousXt;
-    type PC = Anonymous;
 
     fn setup<R: Rng>(_rng: &mut R) -> Self {
         unimplemented!();
@@ -103,8 +102,8 @@ impl<E: JubjubEngine> ProofBuilder<E> for KeyContext<E> {
         fee: u32,
         remaining_balance: u32,
         spending_key: &SpendingKey<E>,
-        enc_keys: MultiEncKeys<E, Self::PC>,
-        encrypted_balance: &Ciphertext<E>,
+        enc_keys: MultiEncKeys<E, Anonymous>,
+        enc_balances: &[Ciphertext<E>],
         g_epoch: edwards::Point<E, PrimeOrder>,
         rng: &mut R,
         params: &E::Params,
@@ -138,7 +137,7 @@ impl<E: JubjubEngine> ProofBuilder<E> for KeyContext<E> {
             dec_key: Some(&dec_key),
             enc_key_recipient: Some(&enc_keys.get_recipient()),
             enc_key_decoys: Some(&enc_keys.get_decoys()),
-            enc_balances: Some(&encrypted_balance),
+            enc_balances: Some(&enc_balances),
             g_epoch: Some(&g_epoch),
         };
         // Crate proof
@@ -153,7 +152,7 @@ impl<E: JubjubEngine> ProofBuilder<E> for KeyContext<E> {
             enc_key_sender,
             enc_keys,
             multi_ciphertexts,
-            encrypted_balance.clone(),
+            enc_balances,
             g_epoch,
             nonce
         )
@@ -164,8 +163,8 @@ impl<E: JubjubEngine> ProofBuilder<E> for KeyContext<E> {
 }
 
 impl<E: JubjubEngine, IsChecked> ProofContext<E, IsChecked, Anonymous> {
-    fn left_decoy_ciphertexts(&self) -> &[edwards::Point<E, PrimeOrder>] {
-        &self.multi_ciphertexts.get_decoys().iter().map(|c| c.left)
+    fn left_decoy_ciphertexts(self) -> Vec<edwards::Point<E, PrimeOrder>> {
+        self.multi_ciphertexts.get_decoys_left()
     }
 }
 
@@ -174,9 +173,9 @@ impl<E: JubjubEngine> ProofContext<E, Unchecked, Anonymous> {
         proof: Proof<E>,
         rvk: PublicKey<E>,
         enc_key_sender: EncryptionKey<E>,
-        enc_keys: MultiEncKeys<E, Confidential>,
-        multi_ciphertexts: MultiCiphertexts<E, Confidential>,
-        encrypted_balance: Ciphertext<E>,
+        enc_keys: MultiEncKeys<E, Anonymous>,
+        multi_ciphertexts: MultiCiphertexts<E, Anonymous>,
+        enc_balances: &[Ciphertext<E>],
         g_epoch: edwards::Point<E, PrimeOrder>,
         nonce: edwards::Point<E, PrimeOrder>,
     ) -> Self {
@@ -186,7 +185,7 @@ impl<E: JubjubEngine> ProofContext<E, Unchecked, Anonymous> {
             enc_key_sender,
             enc_keys,
             multi_ciphertexts,
-            encrypted_balance,
+            enc_balances: enc_balances.to_vec(),
             g_epoch,
             nonce,
             _marker: PhantomData,
@@ -212,30 +211,84 @@ impl<E: JubjubEngine> ProofContext<E, Checked, Anonymous> {
     ) -> io::Result<AnonymousXt>
     {
         // Generate the re-randomized sign key
-		let mut rsk_bytes = [0u8; 32];
+		let mut rsk = [0u8; POINT_SIZE];
 		spending_key
             .into_rsk(alpha)
-            .write(&mut rsk_bytes[..])?;
+            .write(&mut rsk[..])?;
 
-		let mut rvk_bytes = [0u8; 32];
+		let mut rvk = [0u8; POINT_SIZE];
 		self
 			.rvk
-			.write(&mut rvk_bytes[..])?;
+			.write(&mut rvk[..])?;
 
-		let mut proof_bytes = [0u8; 192];
+		let mut proof = [0u8; PROOF_SIZE];
 		self
 			.proof
-			.write(&mut proof_bytes[..])?;
+			.write(&mut proof[..])?;
 
+        let mut enc_keys = [[0u8; POINT_SIZE]; ANONIMITY_SIZE];
+        for i in 0..ANONIMITY_SIZE {
+            let mut e = [0u8; POINT_SIZE];
+            if i == s_index {
+                self.enc_key_sender.write(&mut e[..])?;
+            } else if i == t_index {
+                self.recipient().write(&mut e[..])?;
+            } else {
+                self.decoy(i).write(&mut e[..])?;
+            }
+            enc_keys[i] = e;
+        }
 
+        let mut left_ciphertexts = [[0u8; POINT_SIZE]; ANONIMITY_SIZE];
+        for i in 0..ANONIMITY_SIZE {
+            let mut c = [0u8; POINT_SIZE];
+            if i == s_index {
+                self.left_amount_sender().write(&mut c[..])?;
+            } else if i == t_index {
+                self.left_amount_recipient().write(&mut c[..])?;
+            } else {
+                self.left_ciphertext_decoy(i).write(&mut c[..])?;
+            }
+            left_ciphertexts[i] = c;
+        }
 
-        unimplemented!();
+        let mut right_ciphertext = [0u8; POINT_SIZE];
+        self.right_randomness()
+            .write(&mut right_ciphertext[..])?;
+
+        let mut nonce = [0u8; POINT_SIZE];
+		self
+			.nonce
+			.write(&mut nonce[..])?;
+
+        Ok(AnonymousXt {
+            proof,
+            enc_keys,
+            left_ciphertexts,
+            right_ciphertext,
+            nonce,
+            rsk,
+            rvk,
+        })
+    }
+
+    fn decoy(&self, index: usize) -> &EncryptionKey<E> {
+        &self.enc_keys.get_decoys()[index]
+    }
+
+    fn left_ciphertext_decoy(&self, index: usize) -> edwards::Point<E, PrimeOrder> {
+        self.multi_ciphertexts.get_decoys_left()[index].clone()
     }
 }
 
 pub struct AnonymousXt {
     pub proof: [u8; PROOF_SIZE],
-    // pub enc_keys: [u8]
+    pub enc_keys: [[u8; POINT_SIZE]; ANONIMITY_SIZE],
+    pub left_ciphertexts: [[u8; POINT_SIZE]; ANONIMITY_SIZE],
+    pub right_ciphertext: [u8; POINT_SIZE],
+    pub nonce: [u8; POINT_SIZE],
+    pub rsk: [u8; POINT_SIZE],
+	pub rvk: [u8; POINT_SIZE],
 }
 
 impl Submitter for AnonymousXt {
@@ -244,10 +297,12 @@ impl Submitter for AnonymousXt {
     }
 }
 
-impl AnonymousXt {
-    pub fn call_transfer(&self) -> Call {
-        Call::AnonymousBalances(AnonymousBalancesCall::anonymous_transfer(
-            zProof::from_slice(&self.proof[..]),
-        ))
-    }
-}
+// impl AnonymousXt {
+//     pub fn call_transfer(&self) -> Call {
+//         // let enc_keys = self.enc_keys.iter()
+//         Call::AnonymousBalances(AnonymousBalancesCall::anonymous_transfer(
+//             zProof::from_slice(&self.proof[..]),
+
+//         ))
+//     }
+// }

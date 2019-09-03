@@ -6,9 +6,9 @@ use bellman::groth16::{
 use rand::Rng;
 use crate::circuit::{ConfidentialTransfer, AnonymousTransfer};
 use crate::PARAMS;
-use crate::crypto_components::KeyContext;
+use crate::crypto_components::{KeyContext, Confidential, Anonymous};
 
-pub fn confidential_setup<R: Rng>(rng: &mut R) -> KeyContext<Bls12> {
+pub fn confidential_setup<R: Rng>(rng: &mut R) -> KeyContext<Bls12, Confidential> {
     // Create parameters for the confidential transfer circuit
     let proving_key = {
         let c = ConfidentialTransfer::<Bls12> {
@@ -36,7 +36,7 @@ pub fn confidential_setup<R: Rng>(rng: &mut R) -> KeyContext<Bls12> {
     KeyContext::new(proving_key, prepared_vk)
 }
 
-pub fn anonymous_setup<R: Rng>(rng: &mut R) -> KeyContext<Bls12> {
+pub fn anonymous_setup<R: Rng>(rng: &mut R) -> KeyContext<Bls12, Anonymous> {
     // Create parameters for the confidential transfer circuit
     let proving_key = {
         let c = AnonymousTransfer::<Bls12> {

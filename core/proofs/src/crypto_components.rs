@@ -151,8 +151,9 @@ impl<E: JubjubEngine> MultiCiphertexts<E, Anonymous> {
         }
     }
 
-    pub fn get_decoys(&self) -> &[Ciphertext<E>] {
-        &self.decoys.as_ref().expect("should have decoys enckeys")[..]
+    pub fn get_decoys_left(&self) -> Vec<edwards::Point<E, PrimeOrder>> {
+        self.decoys.as_ref().expect("should have decoys enckeys").iter()
+            .map(|c| c.left.clone()).collect::<Vec<edwards::Point<E, PrimeOrder>>>()
     }
 }
 
@@ -257,9 +258,8 @@ pub trait Submitter {
     fn submit<R: Rng>(&self, calls: Calls, api: &Api, rng: &mut R);
 }
 
-pub trait ProofBuilder<E: JubjubEngine>: Sized {
+pub trait ProofBuilder<E: JubjubEngine, PC: PrivacyConfing>: Sized {
     type Submitter: Submitter;
-    type PC: PrivacyConfing;
 
     fn setup<R: Rng>(rng: &mut R) -> Self;
 
@@ -273,24 +273,26 @@ pub trait ProofBuilder<E: JubjubEngine>: Sized {
         fee: u32,
         remaining_balance: u32,
         spending_key: &SpendingKey<E>,
-        enc_keys: MultiEncKeys<E, Self::PC>,
-        encrypted_balance: &Ciphertext<E>,
+        enc_keys: MultiEncKeys<E, PC>,
+        enc_balances: &[Ciphertext<E>],
         g_epoch: edwards::Point<E, PrimeOrder>,
         rng: &mut R,
         params: &E::Params,
     ) -> Result<Self::Submitter, SynthesisError>;
 }
 
-pub struct KeyContext<E: JubjubEngine> {
+pub struct KeyContext<E: JubjubEngine, PC: PrivacyConfing> {
     pub proving_key: Parameters<E>,
     pub prepared_vk: PreparedVerifyingKey<E>,
+    _marker: PhantomData<PC>,
 }
 
-impl<E: JubjubEngine> KeyContext<E> {
+impl<E: JubjubEngine, PC: PrivacyConfing> KeyContext<E, PC> {
     pub fn new(proving_key: Parameters<E>, prepared_vk: PreparedVerifyingKey<E>) -> Self {
         KeyContext {
             proving_key,
             prepared_vk,
+            _marker: PhantomData,
         }
     }
 
@@ -327,13 +329,13 @@ pub(crate) struct ProofContext<E: JubjubEngine, IsChecked, PC: PrivacyConfing> {
     pub(crate) enc_key_sender: EncryptionKey<E>,
     pub(crate) enc_keys: MultiEncKeys<E, PC>,
     pub(crate) multi_ciphertexts: MultiCiphertexts<E, PC>,
-    pub(crate) encrypted_balance: Ciphertext<E>,
+    pub(crate) enc_balances: Vec<Ciphertext<E>>,
     pub(crate) g_epoch: edwards::Point<E, PrimeOrder>,
     pub(crate) nonce: edwards::Point<E, PrimeOrder>,
     pub(crate) _marker: PhantomData<IsChecked>,
 }
 
-impl<E: JubjubEngine, IsChecked> ProofContext<E, IsChecked, Confidential> {
+impl<E: JubjubEngine, IsChecked, PC: PrivacyConfing> ProofContext<E, IsChecked, PC> {
     pub(crate) fn left_amount_sender(&self) -> &edwards::Point<E, PrimeOrder> {
         &self.multi_ciphertexts.get_sender().left
     }
@@ -365,7 +367,7 @@ pub(crate) fn convert_to_checked<E: JubjubEngine, C1, C2, PC: PrivacyConfing>(
         enc_key_sender: from.enc_key_sender,
         enc_keys: from.enc_keys,
         multi_ciphertexts: from.multi_ciphertexts,
-        encrypted_balance: from.encrypted_balance,
+        enc_balances: from.enc_balances,
         g_epoch: from.g_epoch,
         nonce: from.nonce,
         _marker: PhantomData,

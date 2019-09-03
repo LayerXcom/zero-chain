@@ -5,6 +5,7 @@ use scrypto::jubjub::JubjubBls12;
 use bellman::SynthesisError;
 pub mod circuit;
 pub mod confidential;
+pub mod anonymous;
 pub mod no_std_aliases;
 pub mod setup;
 pub mod crypto_components;
