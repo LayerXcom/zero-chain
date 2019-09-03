@@ -44,10 +44,9 @@ use crate::crypto_components::{
     MultiCiphertexts,
     Anonymous,
     CiphertextTrait,
-    PrivacyConfing,
     Submitter,
     Calls,
-    Unchecked,Checked,ProofChecking,
+    Unchecked,Checked,
     ProofContext, convert_to_checked,
 };
 use std::{
@@ -99,7 +98,7 @@ impl<E: JubjubEngine> ProofBuilder<E, Anonymous> for KeyContext<E, Anonymous> {
     fn gen_proof<R: Rng>(
         &self,
         amount: u32,
-        fee: u32,
+        _fee: u32,
         remaining_balance: u32,
         spending_key: &SpendingKey<E>,
         enc_keys: MultiEncKeys<E, Anonymous>,
@@ -293,16 +292,71 @@ pub struct AnonymousXt {
 
 impl Submitter for AnonymousXt {
     fn submit<R: Rng>(&self, calls: Calls, api: &Api, rng: &mut R) {
-        unimplemented!();
+        use zjubjub::{
+            curve::{fs::Fs as zFs, FixedGenerators as zFixedGenerators},
+            redjubjub,
+        };
+        use zpairing::{
+            bls12_381::Bls12 as zBls12,
+            PrimeField as zPrimeField,
+            PrimeFieldRepr as zPrimeFieldRepr
+        };
+        use parity_codec::{Compact, Encode};
+        use primitives::blake2_256;
+        use runtime_primitives::generic::Era;
+        use zprimitives::{PARAMS as ZPARAMS, SigVerificationKey, RedjubjubSignature};
+        use std::convert::TryFrom;
+
+        let p_g = zFixedGenerators::Diversifier; // 1
+
+        let mut rsk_repr = zFs::default().into_repr();
+        rsk_repr.read_le(&mut &self.rsk[..])
+            .expect("should be casted to Fs's repr type.");
+        let rsk = zFs::from_repr(rsk_repr)
+            .expect("should be casted to Fs type from repr type.");
+
+        let sig_sk = redjubjub::PrivateKey::<zBls12>(rsk);
+        let sig_vk = SigVerificationKey::from_slice(&self.rvk[..]);
+
+        let era = Era::Immortal;
+        let index = api.get_nonce(&sig_vk).expect("Nonce must be got.");
+        let checkpoint = api.get_genesis_blockhash()
+            .expect("should be fetched the genesis block hash from zerochain node.");
+
+        let raw_payload = match calls {
+            Calls::AnonymousTransfer => (Compact(index), self.call_transfer(), era, checkpoint),
+            _ => unreachable!(),
+        };
+
+        let sig = raw_payload.using_encoded(|payload| {
+            let msg = blake2_256(payload);
+            let sig = sig_sk.sign(&msg[..], rng, p_g, &*ZPARAMS);
+
+            let sig_vk = redjubjub::PublicKey::<zBls12>::try_from(sig_vk)
+                .expect("should be casted to redjubjub::PublicKey<Bls12> type.");
+            assert!(sig_vk.verify(&msg, &sig, p_g, &*ZPARAMS));
+
+            sig
+        });
+
+        let sig_repr = RedjubjubSignature::try_from(sig)
+            .expect("shoukd be casted from RedjubjubSignature.");
+        let uxt = UncheckedExtrinsic::new_signed(index, raw_payload.1, sig_vk.into(), sig_repr, era);
+        let _tx_hash = api.submit_extrinsic(&uxt)
+            .expect("Faild to submit a extrinsic to zerochain node.");
     }
 }
 
-// impl AnonymousXt {
-//     pub fn call_transfer(&self) -> Call {
-//         // let enc_keys = self.enc_keys.iter()
-//         Call::AnonymousBalances(AnonymousBalancesCall::anonymous_transfer(
-//             zProof::from_slice(&self.proof[..]),
-
-//         ))
-//     }
-// }
+impl AnonymousXt {
+    pub fn call_transfer(&self) -> Call {
+        let enc_keys = self.enc_keys.iter().map(|e| zEncKey::from_slice(e)).collect();
+        let left_ciphertexts = self.left_ciphertexts.iter().map(|e| zLeftCiphertext::from_slice(e)).collect();
+        Call::AnonymousBalances(AnonymousBalancesCall::anonymous_transfer(
+            zProof::from_slice(&self.proof[..]),
+            enc_keys,
+            left_ciphertexts,
+            zRightCiphertext::from_slice(&self.right_ciphertext[..]),
+            zNonce::from_slice(&self.nonce[..])
+        ))
+    }
+}

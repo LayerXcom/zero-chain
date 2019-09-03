@@ -12,6 +12,7 @@ use zjubjub::{curve::{FixedGenerators, fs}};
 use zpairing::{bls12_381::Bls12, Field};
 use zcrypto::elgamal;
 use zprimitives::PARAMS;
+use rand::{OsRng, Rng};
 use std::{
 	path::Path,
 	fs::File,
@@ -180,6 +181,7 @@ fn get_anony_vk() -> PreparedVerifyingKey<Bls12> {
 }
 
 fn alice_balance_init() -> (EncKey, Ciphertext) {
+	let rng = &mut OsRng::new().expect("should be able to construct RNG");
 	let enc_key = get_alice_enc_key();
 	let alice_value = 10_000 as u32;
 	let p_g = FixedGenerators::Diversifier; // 1 same as NoteCommitmentRandomness;
@@ -208,7 +210,6 @@ fn get_alice_enc_key() -> EncryptionKey<Bls12> {
 }
 
 fn init_enc_keys() -> Vec<EncKey> {
-	use rand::{OsRng, Rng};
 	let rng = &mut OsRng::new().expect("should be able to construct RNG");
 
 	let mut acc = vec![];

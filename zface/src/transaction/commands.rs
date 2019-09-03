@@ -33,7 +33,7 @@ pub fn asset_issue_tx<R: Rng>(
     let spending_key = spending_key_from_keystore(root_dir, &password[..])?;
     let issuer_address = EncryptionKey::<Bls12>::from_spending_key(&spending_key, &PARAMS)?;
 
-    let enc_amount = elgamal::Ciphertext::encrypt(amount, &Fs::rand(rng), &issuer_address, p_g, &PARAMS);
+    let enc_amount = vec![elgamal::Ciphertext::encrypt(amount, &Fs::rand(rng), &issuer_address, p_g, &PARAMS)];
     let multi_keys = MultiEncKeys::<Bls12, Confidential>::new(issuer_address.clone());
 
     println!("Computing zk proof...");
@@ -86,7 +86,7 @@ pub fn asset_transfer_tx<R: Rng>(
     assert!(balance_query.decrypted_balance >= amount + fee, "Not enough balance you have");
 
     let recipient_account_id = EncryptionKey::<Bls12>::read(&mut &recipient_enc_key[..], &PARAMS)?;
-    let encrypted_balance = elgamal::Ciphertext::read(&mut &balance_query.encrypted_balance[..], &*PARAMS)?;
+    let enc_balance = vec![elgamal::Ciphertext::read(&mut &balance_query.encrypted_balance[..], &*PARAMS)?];
     let multi_keys = MultiEncKeys::<Bls12, Confidential>::new(recipient_account_id.clone());
 
     println!("Computing zk proof...");
@@ -104,7 +104,7 @@ pub fn asset_transfer_tx<R: Rng>(
             remaining_balance,
             &spending_key,
             multi_keys,
-            &encrypted_balance,
+            &enc_balance,
             getter::g_epoch(&api)?,
             rng,
             &PARAMS
@@ -141,7 +141,7 @@ pub fn asset_burn_tx<R: Rng>(
 
     let amount = 0;
     let issuer_address = EncryptionKey::<Bls12>::from_spending_key(&spending_key, &PARAMS)?;
-    let enc_amount = elgamal::Ciphertext::encrypt(amount, &Fs::rand(rng), &issuer_address, p_g, &PARAMS);
+    let enc_amount =  vec![elgamal::Ciphertext::encrypt(amount, &Fs::rand(rng), &issuer_address, p_g, &PARAMS)];
     let multi_keys = MultiEncKeys::<Bls12, Confidential>::new(issuer_address);
 
     println!("Computing zk proof...");
@@ -169,7 +169,7 @@ pub fn asset_burn_tx<R: Rng>(
     Ok(())
 }
 
-pub fn transfer_tx<R: Rng>(
+pub fn confidential_transfer_tx<R: Rng>(
     term: &mut Term,
     root_dir: PathBuf,
     recipient_enc_key: &[u8],
@@ -181,7 +181,24 @@ pub fn transfer_tx<R: Rng>(
     let password = prompt_password(term)?;
     let spending_key = spending_key_from_keystore(root_dir, &password[..])?;
 
-    inner_transfer_tx(spending_key, recipient_enc_key, amount, url, rng)?;
+    inner_confidential_transfer_tx(spending_key, recipient_enc_key, amount, url, rng)?;
+
+    Ok(())
+}
+
+pub fn anonymous_transfer_tx<R: Rng>(
+    term: &mut Term,
+    root_dir: PathBuf,
+    recipient_enc_key: &[u8],
+    amount: u32,
+    url: Url,
+    rng: &mut R,
+) -> Result<()> {
+    // user can enter password first.
+    let password = prompt_password(term)?;
+    let spending_key = spending_key_from_keystore(root_dir, &password[..])?;
+
+    inner_anonymous_transfer_tx(spending_key, recipient_enc_key, amount, url, rng)?;
 
     Ok(())
 }
@@ -194,12 +211,12 @@ pub fn transfer_tx_for_debug<R: Rng>(
     rng: &mut R,
 ) -> Result<()> {
     let spending_key = SpendingKey::from_seed(seed);
-    inner_transfer_tx(spending_key, recipient_enc_key, amount, url, rng)?;
+    inner_confidential_transfer_tx(spending_key, recipient_enc_key, amount, url, rng)?;
 
     Ok(())
 }
 
-fn inner_transfer_tx<R: Rng>(
+fn inner_confidential_transfer_tx<R: Rng>(
     spending_key: SpendingKey::<Bls12>,
     recipient_enc_key: &[u8],
     amount: u32,
@@ -209,7 +226,6 @@ fn inner_transfer_tx<R: Rng>(
     println!("Preparing paramters...");
 
     let api = Api::init(url);
-
     let dec_key = ProofGenerationKey::<Bls12>::from_spending_key(&spending_key, &PARAMS)
         .into_decryption_key()?;
     let fee = getter::fee(&api)?;
@@ -219,7 +235,7 @@ fn inner_transfer_tx<R: Rng>(
     assert!(balance_query.decrypted_balance >= amount + fee, "Not enough balance you have");
 
     let recipient_account_id = EncryptionKey::<Bls12>::read(&mut &recipient_enc_key[..], &PARAMS)?;
-    let encrypted_balance = elgamal::Ciphertext::read(&mut &balance_query.encrypted_balance[..], &*PARAMS)?;
+    let enc_balance = vec![elgamal::Ciphertext::read(&mut &balance_query.encrypted_balance[..], &*PARAMS)?];
     let multi_keys = MultiEncKeys::<Bls12, Confidential>::new(recipient_account_id.clone());
 
     println!("Computing zk proof...");
@@ -237,7 +253,7 @@ fn inner_transfer_tx<R: Rng>(
             remaining_balance,
             &spending_key,
             multi_keys,
-            &encrypted_balance,
+            &enc_balance,
             getter::g_epoch(&api)?,
             rng,
             &PARAMS
@@ -247,6 +263,23 @@ fn inner_transfer_tx<R: Rng>(
             &api,
             rng
         );
+
+    Ok(())
+}
+
+fn inner_anonymous_transfer_tx<R: Rng>(
+    spending_key: SpendingKey::<Bls12>,
+    recipient_enc_key: &[u8],
+    amount: u32,
+    url: Url,
+    rng: &mut R
+) -> Result<()> {
+    println!("Preparing paramters...");
+
+    let api = Api::init(url);
+    let dec_key = ProofGenerationKey::<Bls12>::from_spending_key(&spending_key, &PARAMS)
+        .into_decryption_key()?;
+    
 
     Ok(())
 }

@@ -412,12 +412,12 @@ fn tx_arg_url_match<'a>(matches: &ArgMatches<'a>) -> Url {
 
 fn subcommand_tx<R: Rng>(mut term: term::Term, root_dir: PathBuf, matches: &ArgMatches, rng: &mut R) {
     let res = match matches.subcommand() {
-        ("transfer", Some(sub_matches)) => {
+        ("send", Some(sub_matches)) => {
             let recipient_enc_key = tx_arg_recipient_address_match(&sub_matches);
             let amount = tx_arg_amount_match(&sub_matches);
             let url = tx_arg_url_match(&sub_matches);
 
-            transfer_tx(&mut term, root_dir, &recipient_enc_key[..], amount, url, rng)
+            confidential_transfer_tx(&mut term, root_dir, &recipient_enc_key[..], amount, url, rng)
         },
         ("asset-issue", Some(sub_matches)) => {
             let amount = tx_arg_amount_match(&sub_matches);
@@ -425,7 +425,7 @@ fn subcommand_tx<R: Rng>(mut term: term::Term, root_dir: PathBuf, matches: &ArgM
 
             asset_issue_tx(&mut term, root_dir, amount, url, rng)
         },
-        ("asset-transfer", Some(sub_matches)) => {
+        ("asset-send", Some(sub_matches)) => {
             let recipient_enc_key = tx_arg_recipient_address_match(&sub_matches);
             let amount = tx_arg_amount_match(&sub_matches);
             let url = tx_arg_url_match(&sub_matches);
@@ -437,6 +437,13 @@ fn subcommand_tx<R: Rng>(mut term: term::Term, root_dir: PathBuf, matches: &ArgM
             let url = tx_arg_url_match(&sub_matches);
             let asset_id = wallet_arg_id_match(&sub_matches);
             asset_burn_tx(&mut term, root_dir, asset_id, url, rng)
+        },
+        ("anonymous-send",  Some(sub_matches)) => {
+            let recipient_enc_key = tx_arg_recipient_address_match(&sub_matches);
+            let amount = tx_arg_amount_match(&sub_matches);
+            let url = tx_arg_url_match(&sub_matches);
+
+            anonymous_transfer_tx(&mut term, root_dir, &recipient_enc_key[..], amount, url, rng)
         },
         _ => {
             term.error(matches.usage()).unwrap();
@@ -450,7 +457,7 @@ fn subcommand_tx<R: Rng>(mut term: term::Term, root_dir: PathBuf, matches: &ArgM
 fn tx_commands_definition<'a, 'b>() -> App<'a, 'b> {
     SubCommand::with_name(TX_COMMAND)
         .about("transaction operations")
-        .subcommand(SubCommand::with_name("transfer")
+        .subcommand(SubCommand::with_name("confidential-send")
             .about("Submit a transaction to zerochain nodes in order to call confidential_transfer function in encrypted-balances module.")
             .arg(Arg::with_name("amount")
                 .short("a")
@@ -491,7 +498,7 @@ fn tx_commands_definition<'a, 'b>() -> App<'a, 'b> {
                 .required(false)
             )
         )
-        .subcommand(SubCommand::with_name("asset-transfer")
+        .subcommand(SubCommand::with_name("asset-send")
             .about("Submit a transaction to zerochain nodes in order to call confidential_transfer function in encrypted-assets module.")
             .arg(Arg::with_name("amount")
                 .short("a")
@@ -535,6 +542,30 @@ fn tx_commands_definition<'a, 'b>() -> App<'a, 'b> {
                 .short("i")
                 .long("id")
                 .help("Asset id")
+                .takes_value(true)
+                .required(false)
+            )
+        )
+        .subcommand(SubCommand::with_name("anonymous-send")
+            .about("Submit a transaction to zerochain nodes in order to call anonymous_transfer function in encrypted-balances module.")
+            .arg(Arg::with_name("amount")
+                .short("a")
+                .long("amount")
+                .help("The coin amount for the anonymous transfer.")
+                .takes_value(true)
+                .required(false)
+            )
+            .arg(Arg::with_name("recipient-address")
+                .short("to")
+                .long("recipient-address")
+                .help("Recipient's SS58-encoded address")
+                .takes_value(true)
+                .required(false)
+            )
+            .arg(Arg::with_name("url")
+                .short("u")
+                .long("url")
+                .help("Endpoint to connect zerochain nodes")
                 .takes_value(true)
                 .required(false)
             )
@@ -604,7 +635,7 @@ fn subcommand_debug<R: Rng>(mut term: term::Term, matches: &ArgMatches, rng: &mu
 
             let ciphertext_balance_a = sub_matches.value_of("encrypted-balance").unwrap();
             let ciphertext_balance_v = hex::decode(ciphertext_balance_a).unwrap();
-            let ciphertext_balance = elgamal::Ciphertext::read(&mut &ciphertext_balance_v[..], &*PARAMS).unwrap();
+            let ciphertext_balance = vec![elgamal::Ciphertext::read(&mut &ciphertext_balance_v[..], &*PARAMS).unwrap()];
 
             let remaining_balance = balance - amount - fee;
 
