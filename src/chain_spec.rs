@@ -114,7 +114,7 @@ fn testnet_genesis(initial_authorities: Vec<AuthorityId>, endowed_accounts: Vec<
 		}),
 		system: None,
 		timestamp: Some(TimestampConfig {
-			minimum_period: 13,	// 13 second block time.
+			minimum_period: 30,
 		}),
 		indices: Some(IndicesConfig {
 			ids: endowed_accounts.clone(),

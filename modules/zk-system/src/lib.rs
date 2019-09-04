@@ -20,7 +20,7 @@ mod input_builder;
 pub trait Trait: system::Trait { }
 
 const CONFIDENTIAL_INPUT_SIZE: usize = 22;
-const ANONIMOUS_INPUT_SIZE: usize = 105;
+const ANONIMOUS_INPUT_SIZE: usize = 104;
 
 decl_module! {
     pub struct Module<T: Trait> for enum Call where origin: T::Origin { }

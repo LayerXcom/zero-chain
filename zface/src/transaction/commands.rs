@@ -320,9 +320,6 @@ fn inner_anonymous_transfer_tx<R: Rng>(
             j += 1;
         }
     }
-    // TODO: sender and recpinent index should be configured here.
-    enc_keys.push(enc_key_sender);
-    enc_keys.push(recipient_account_id.clone());
     let enc_balances = getter::get_enc_balances(&api, &enc_keys[..])?;
 
     println!("Computing zk proof...");
