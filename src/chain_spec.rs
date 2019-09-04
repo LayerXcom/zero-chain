@@ -105,7 +105,7 @@ impl Alternative {
 }
 
 fn testnet_genesis(initial_authorities: Vec<AuthorityId>, endowed_accounts: Vec<AccountId>, root_key: AccountId) -> GenesisConfig {
-	let balance_init = alice_balance_init();
+	let balance_init = balance_init();
 	let epoch_init = alice_epoch_init();
 	GenesisConfig {
 		consensus: Some(ConsensusConfig {
@@ -143,9 +143,9 @@ fn testnet_genesis(initial_authorities: Vec<AuthorityId>, endowed_accounts: Vec<
 			_genesis_phantom_data: Default::default(),
 		}),
 		anonymous_balances: Some(AnonymousBalancesConfig {
-			encrypted_balance: vec![balance_init.clone()],
+			encrypted_balance: init_anonymous_balances(),
 			last_rollover: vec![epoch_init],
-			enc_key_set: init_enc_keys(),
+			enc_key_set: init_anonymous_enc_keys(),
 			_genesis_phantom_data: Default::default(),
 		}),
 		zk_system: Some(ZkSystemConfig {
@@ -180,8 +180,7 @@ fn get_anony_vk() -> PreparedVerifyingKey<Bls12> {
 	PreparedVerifyingKey::<Bls12>::read(&mut &buf_vk[..]).unwrap()
 }
 
-fn alice_balance_init() -> (EncKey, Ciphertext) {
-	let rng = &mut OsRng::new().expect("should be able to construct RNG");
+fn balance_init() -> (EncKey, Ciphertext) {
 	let enc_key = get_alice_enc_key();
 	let alice_value = 10_000 as u32;
 	let p_g = FixedGenerators::Diversifier; // 1 same as NoteCommitmentRandomness;
@@ -209,7 +208,8 @@ fn get_alice_enc_key() -> EncryptionKey<Bls12> {
 	enc_key
 }
 
-fn init_enc_keys() -> Vec<EncKey> {
+
+fn init_typed_enc_keys() -> (Vec<EncryptionKey<Bls12>>, usize) {
 	let rng = &mut OsRng::new().expect("should be able to construct RNG");
 
 	let mut acc = vec![];
@@ -217,10 +217,32 @@ fn init_enc_keys() -> Vec<EncKey> {
 		let random_seed: [u8; 32] = rng.gen();
 		let enc_key = EncryptionKey::<Bls12>::from_seed(&random_seed, &*PARAMS)
 			.expect("should be generated encryption key from seed.");
-		acc.push(EncKey::try_from(enc_key).unwrap());
+		acc.push(enc_key);
 	}
 	let i = rng.gen_range(0, 100);
-	acc.insert(i, alice_epoch_init().0);
+	acc.insert(i, get_alice_enc_key());
 
+	(acc, i)
+}
+
+fn init_anonymous_enc_keys() -> Vec<EncKey> {
+	init_typed_enc_keys().0.into_iter().map(|e| EncKey::try_from(e).unwrap()).collect::<Vec<EncKey>>()
+}
+
+fn init_anonymous_balances() -> Vec<(EncKey, Ciphertext)> {
+	let enc_keys = init_typed_enc_keys();
+	let alice_value = 10_000 as u32;
+	let p_g = FixedGenerators::Diversifier; // 1 same as NoteCommitmentRandomness;
+
+	let mut acc = vec![];
+	for (i, e) in enc_keys.0.iter().enumerate() {
+		if i == enc_keys.1 {
+			let ciphertext = elgamal::Ciphertext::encrypt(alice_value, &fs::Fs::one(), &e, p_g, &PARAMS);
+			acc.push((EncKey::try_from(e.clone()).unwrap(), Ciphertext::try_from(ciphertext).unwrap()))
+		} else {
+			let ciphertext = elgamal::Ciphertext::encrypt(0, &fs::Fs::one(), e, p_g, &PARAMS);
+			acc.push((EncKey::try_from(e.clone()).unwrap(), Ciphertext::try_from(ciphertext).unwrap()))
+		}
+	}
 	acc
 }
