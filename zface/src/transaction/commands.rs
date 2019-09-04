@@ -4,6 +4,7 @@ use proofs::{
     SpendingKey, ProofGenerationKey, EncryptionKey, PARAMS, elgamal,
     crypto_components::{MultiEncKeys, Confidential, Anonymous},
     crypto_components::{ProofBuilder, KeyContext, Calls, Submitter},
+    constants::ANONIMITY_SIZE,
 };
 use pairing::bls12_381::Bls12;
 use parity_codec::Decode;
@@ -43,8 +44,7 @@ pub fn asset_issue_tx<R: Rng>(
     KeyContext::read_from_path(CONF_PK_PATH, CONF_VK_PATH)?
         .gen_proof(
             amount,
-            0,
-            0,
+            0,0,0,0,
             &spending_key,
             multi_keys,
             &enc_amount,
@@ -102,6 +102,8 @@ pub fn asset_transfer_tx<R: Rng>(
             amount,
             fee,
             remaining_balance,
+            0,
+            0,
             &spending_key,
             multi_keys,
             &enc_balance,
@@ -151,8 +153,7 @@ pub fn asset_burn_tx<R: Rng>(
     KeyContext::read_from_path(CONF_PK_PATH, CONF_VK_PATH)?
         .gen_proof(
             amount,
-            0,
-            0,
+            0, 0, 0, 0,
             &spending_key,
             multi_keys,
             &enc_amount,
@@ -264,6 +265,8 @@ fn inner_confidential_transfer_tx<R: Rng>(
             amount,
             fee,
             remaining_balance,
+            0,
+            0,
             &spending_key,
             multi_keys,
             &enc_balance,
@@ -298,10 +301,25 @@ fn inner_anonymous_transfer_tx<R: Rng>(
     let remaining_balance = balance_query.decrypted_balance - amount;
     assert!(balance_query.decrypted_balance >= amount, "Not enough balance you have");
 
+    let s_index: usize = rng.gen_range(0, ANONIMITY_SIZE);
+    let t_index: usize = rng.gen_range(0, ANONIMITY_SIZE);
+
     let recipient_account_id = EncryptionKey::<Bls12>::read(&mut &recipient_enc_key[..], &PARAMS)?;
     let decoys = getter::get_enc_keys(&api, rng)?;
-    let mut enc_keys = decoys.clone();
-    let multi_keys = MultiEncKeys::<Bls12, Anonymous>::new(recipient_account_id.clone(), decoys);
+    let multi_keys = MultiEncKeys::<Bls12, Anonymous>::new(recipient_account_id.clone(), decoys.clone());
+
+    let mut enc_keys = vec![];
+    let mut j = 0;
+    for i in 0..ANONIMITY_SIZE {
+        if i == s_index {
+            enc_keys.push(enc_key_sender.clone());
+        } else if i == t_index {
+            enc_keys.push(recipient_account_id.clone());
+        } else {
+            enc_keys.push(decoys[j].clone());
+            j += 1;
+        }
+    }
     // TODO: sender and recpinent index should be configured here.
     enc_keys.push(enc_key_sender);
     enc_keys.push(recipient_account_id.clone());
@@ -320,6 +338,8 @@ fn inner_anonymous_transfer_tx<R: Rng>(
             amount,
             0,
             remaining_balance,
+            s_index,
+            t_index,
             &spending_key,
             multi_keys,
             &enc_balances[..],

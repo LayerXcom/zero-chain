@@ -100,6 +100,8 @@ impl<E: JubjubEngine> ProofBuilder<E, Anonymous> for KeyContext<E, Anonymous> {
         amount: u32,
         _fee: u32,
         remaining_balance: u32,
+        s_index: usize,
+        t_index: usize,
         spending_key: &SpendingKey<E>,
         enc_keys: MultiEncKeys<E, Anonymous>,
         enc_balances: &[Ciphertext<E>],
@@ -107,10 +109,9 @@ impl<E: JubjubEngine> ProofBuilder<E, Anonymous> for KeyContext<E, Anonymous> {
         rng: &mut R,
         params: &E::Params,
     ) -> Result<Self::Submitter, SynthesisError> {
+        assert_eq!(enc_balances.len(), ANONIMITY_SIZE);
         let randomness = E::Fs::rand(rng);
         let alpha = E::Fs::rand(rng);
-        let s_index: usize = rng.gen_range(0, ANONIMITY_SIZE);
-        let t_index: usize = rng.gen_range(0, ANONIMITY_SIZE);
 
         let pgk = ProofGenerationKey::<E>::from_spending_key(&spending_key, params);
         let dec_key = pgk.into_decryption_key()?;
@@ -226,6 +227,7 @@ impl<E: JubjubEngine> ProofContext<E, Checked, Anonymous> {
 			.write(&mut proof[..])?;
 
         let mut enc_keys = [[0u8; POINT_SIZE]; ANONIMITY_SIZE];
+        let mut j = 0;
         for i in 0..ANONIMITY_SIZE {
             let mut e = [0u8; POINT_SIZE];
             if i == s_index {
@@ -233,12 +235,14 @@ impl<E: JubjubEngine> ProofContext<E, Checked, Anonymous> {
             } else if i == t_index {
                 self.recipient().write(&mut e[..])?;
             } else {
-                self.decoy(i).write(&mut e[..])?;
+                self.decoy(j).write(&mut e[..])?;
+                j += 1;
             }
             enc_keys[i] = e;
         }
 
         let mut left_ciphertexts = [[0u8; POINT_SIZE]; ANONIMITY_SIZE];
+        let mut j = 0;
         for i in 0..ANONIMITY_SIZE {
             let mut c = [0u8; POINT_SIZE];
             if i == s_index {
@@ -246,7 +250,8 @@ impl<E: JubjubEngine> ProofContext<E, Checked, Anonymous> {
             } else if i == t_index {
                 self.left_amount_recipient().write(&mut c[..])?;
             } else {
-                self.left_ciphertext_decoy(i).write(&mut c[..])?;
+                self.left_ciphertext_decoy(j).write(&mut c[..])?;
+                j += 1;
             }
             left_ciphertexts[i] = c;
         }

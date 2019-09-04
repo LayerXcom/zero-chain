@@ -1,7 +1,7 @@
 // All this code will be refactored once polkadot{.rs} is updated.
 
 use keys::EncryptionKey as zEncryptionKey;
-use rand::{Rng, Rand};
+use rand::Rng;
 use pairing::bls12_381::Bls12;
 use zprimitives::{EncKey, GEpoch};
 use zcrypto::elgamal as zelgamal;
@@ -34,21 +34,25 @@ pub fn get_enc_balances(api: &Api, enc_keys: &[EncryptionKey<Bls12>]) -> Result<
         let mut ciphertext = None;
         let mut p_ciphertext = None;
 
-        // TODO: remove unnecessary prefix. If it returns `0x00`, it will be panic.
-        for _ in 0..4 {
-            encrypted_balance_str.remove(2);
+        if encrypted_balance_str.as_str() != "0x00" {
+            // TODO: remove unnecessary prefix. If it returns `0x00`, it will be panic.
+            for _ in 0..4 {
+                encrypted_balance_str.remove(2);
+            }
+
+            let encrypted_balance = hexstr_to_vec(encrypted_balance_str.clone());
+            ciphertext = Some(zelgamal::Ciphertext::<zBls12>::read(&mut &encrypted_balance[..], &ZPARAMS)?);
         }
 
-        let encrypted_balance = hexstr_to_vec(encrypted_balance_str.clone());
-        ciphertext = Some(zelgamal::Ciphertext::<zBls12>::read(&mut &encrypted_balance[..], &ZPARAMS)?);
+        if pending_transfer_str.as_str() != "0x00" {
+            // TODO: remove unnecessary prefix. If it returns `0x00`, it will be panic.
+            for _ in 0..4 {
+                pending_transfer_str.remove(2);
+            }
 
-        // TODO: remove unnecessary prefix. If it returns `0x00`, it will be panic.
-        for _ in 0..4 {
-            pending_transfer_str.remove(2);
+            let pending_transfer = hexstr_to_vec(pending_transfer_str.clone());
+            p_ciphertext = Some(zelgamal::Ciphertext::<zBls12>::read(&mut &pending_transfer[..], &ZPARAMS)?);
         }
-
-        let pending_transfer = hexstr_to_vec(pending_transfer_str.clone());
-        p_ciphertext = Some(zelgamal::Ciphertext::<zBls12>::read(&mut &pending_transfer[..], &ZPARAMS)?);
 
         let zero = zelgamal::Ciphertext::<zBls12>::zero();
         let enc_total = ciphertext.unwrap_or(zero.clone()).add(&p_ciphertext.unwrap_or(zero), &*ZPARAMS);

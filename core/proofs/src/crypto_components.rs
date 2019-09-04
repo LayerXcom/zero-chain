@@ -272,6 +272,8 @@ pub trait ProofBuilder<E: JubjubEngine, PC: PrivacyConfing>: Sized {
         amount: u32,
         fee: u32,
         remaining_balance: u32,
+        s_index: usize,
+        t_index: usize, 
         spending_key: &SpendingKey<E>,
         enc_keys: MultiEncKeys<E, PC>,
         enc_balances: &[Ciphertext<E>],

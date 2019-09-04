@@ -657,6 +657,7 @@ fn subcommand_debug<R: Rng>(mut term: term::Term, matches: &ArgMatches, rng: &mu
                     amount,
                     fee,
                     remaining_balance,
+                    0, 0,
                     &SpendingKey::<Bls12>::from_seed(&sender_seed[..]),
                     MultiEncKeys::<Bls12, Confidential>::new(address_recipient.clone()),
                     &ciphertext_balance,

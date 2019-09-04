@@ -101,6 +101,8 @@ impl<E: JubjubEngine> ProofBuilder<E, Confidential> for KeyContext<E, Confidenti
         amount: u32,
         fee: u32,
         remaining_balance: u32,
+        _s_index: usize,
+        _t_index: usize,
         spending_key: &SpendingKey<E>,
         enc_keys: MultiEncKeys<E, Confidential>,
         encrypted_balance: &[Ciphertext<E>],
@@ -510,7 +512,7 @@ mod tests {
         let proofs = KeyContext::read_from_path("../../zface/params/test_conf_pk.dat", "../../zface/params/test_conf_vk.dat")
             .unwrap()
             .gen_proof(
-                amount, fee, remaining_balance, &spending_key,
+                amount, fee, remaining_balance, 0, 0, &spending_key,
                 MultiEncKeys::<Bls12, Confidential>::new(enc_key_recipient),
                 &enc_balance, g_epoch,
                 rng, params
