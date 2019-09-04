@@ -2,7 +2,7 @@ use std::path::PathBuf;
 use rand::{Rng, Rand};
 use proofs::{
     SpendingKey, ProofGenerationKey, EncryptionKey, PARAMS, elgamal,
-    crypto_components::{MultiEncKeys, Confidential},
+    crypto_components::{MultiEncKeys, Confidential, Anonymous},
     crypto_components::{ProofBuilder, KeyContext, Calls, Submitter},
 };
 use pairing::bls12_381::Bls12;
@@ -216,6 +216,19 @@ pub fn transfer_tx_for_debug<R: Rng>(
     Ok(())
 }
 
+pub fn anonymous_transfer_tx_for_debug<R: Rng>(
+    seed: &[u8],
+    recipient_enc_key: &[u8],
+    amount: u32,
+    url: Url,
+    rng: &mut R,
+) -> Result<()> {
+    let spending_key = SpendingKey::from_seed(seed);
+    inner_anonymous_transfer_tx(spending_key, recipient_enc_key, amount, url, rng)?;
+
+    Ok(())
+}
+
 fn inner_confidential_transfer_tx<R: Rng>(
     spending_key: SpendingKey::<Bls12>,
     recipient_enc_key: &[u8],
@@ -235,8 +248,8 @@ fn inner_confidential_transfer_tx<R: Rng>(
     assert!(balance_query.decrypted_balance >= amount + fee, "Not enough balance you have");
 
     let recipient_account_id = EncryptionKey::<Bls12>::read(&mut &recipient_enc_key[..], &PARAMS)?;
-    let enc_balance = vec![elgamal::Ciphertext::read(&mut &balance_query.encrypted_balance[..], &*PARAMS)?];
     let multi_keys = MultiEncKeys::<Bls12, Confidential>::new(recipient_account_id.clone());
+    let enc_balance = vec![elgamal::Ciphertext::read(&mut &balance_query.encrypted_balance[..], &*PARAMS)?];
 
     println!("Computing zk proof...");
     if recipient_account_id == EncryptionKey::from_decryption_key(&dec_key, &*PARAMS) {
@@ -279,7 +292,46 @@ fn inner_anonymous_transfer_tx<R: Rng>(
     let api = Api::init(url);
     let dec_key = ProofGenerationKey::<Bls12>::from_spending_key(&spending_key, &PARAMS)
         .into_decryption_key()?;
-    
+    let enc_key_sender = EncryptionKey::<Bls12>::from_decryption_key(&dec_key, &PARAMS);
+
+    let balance_query = BalanceQuery::get_encrypted_balance(&dec_key, api.clone())?;
+    let remaining_balance = balance_query.decrypted_balance - amount;
+    assert!(balance_query.decrypted_balance >= amount, "Not enough balance you have");
+
+    let recipient_account_id = EncryptionKey::<Bls12>::read(&mut &recipient_enc_key[..], &PARAMS)?;
+    let decoys = getter::get_enc_keys(&api, rng)?;
+    let mut enc_keys = decoys.clone();
+    let multi_keys = MultiEncKeys::<Bls12, Anonymous>::new(recipient_account_id.clone(), decoys);
+    // TODO: sender and recpinent index should be configured here.
+    enc_keys.push(enc_key_sender);
+    enc_keys.push(recipient_account_id.clone());
+    let enc_balances = getter::get_enc_balances(&api, &enc_keys[..])?;
+
+    println!("Computing zk proof...");
+    if recipient_account_id == EncryptionKey::from_decryption_key(&dec_key, &*PARAMS) {
+        subscribe_event(api.clone(), remaining_balance + amount);
+    } else {
+        subscribe_event(api.clone(), remaining_balance);
+    }
+
+    println!("Start submitting a transaction to Zerochain...");
+    KeyContext::read_from_path(ANONY_PK_PATH, ANONY_VK_PATH)?
+        .gen_proof(
+            amount,
+            0,
+            remaining_balance,
+            &spending_key,
+            multi_keys,
+            &enc_balances[..],
+            getter::g_epoch(&api)?,
+            rng,
+            &PARAMS
+        )?
+        .submit(
+            Calls::AnonymousTransfer,
+            &api,
+            rng
+        );
 
     Ok(())
 }
@@ -359,6 +411,16 @@ pub fn subscribe_event(api: Api, remaining_balance: u32) {
                                         encrypted_assets::RawEvent::InvalidZkProof() => println!("Invalid zk proof."),
                                     }
                                 },
+                                // Event::anonymous_balances(enc_be) => {
+                                //     match &enc_be {
+                                //         // anonymous_balances::RawEvent::AnonymousTransfer(
+
+                                //         // ) => ("Submitting transaction is completed successfully. \n Remaining balance is {}", remaining_balance),
+                                //         anonymous_balances::RawEvent::InvalidZkProof() => {
+                                //             println!("Invalid zk proof.");
+                                //         }
+                                //     }
+                                // }
                                 _ => /* warn!("ignoring unsupported module event: {:?}", event.event) */ {},
                             }
                         }

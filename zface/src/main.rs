@@ -600,6 +600,14 @@ fn subcommand_debug<R: Rng>(mut term: term::Term, matches: &ArgMatches, rng: &mu
 
             transfer_tx_for_debug(&seed[..], &recipient_enc_key[..], amount, url, rng).unwrap();
         },
+        ("anonymous-send", Some(sub_matches)) => {
+            let seed = debug_arg_seed_match(&sub_matches);
+            let recipient_enc_key = tx_arg_recipient_address_match(&sub_matches);
+            let amount = tx_arg_amount_match(&sub_matches);
+            let url = tx_arg_url_match(&sub_matches);
+
+            anonymous_transfer_tx_for_debug(&seed[..], &recipient_enc_key[..], amount, url, rng).unwrap();
+        },
         ("print-tx", Some(sub_matches)) => {
             println!("Generate transaction...");
 
@@ -714,6 +722,40 @@ fn debug_commands_definition<'a, 'b>() -> App<'a, 'b> {
             .about("Print a keypair")
         )
         .subcommand(SubCommand::with_name("send")
+            .about("(Debug) Submit extrinsic to the substrate nodes")
+            .arg(Arg::with_name("amount")
+                .short("a")
+                .long("amount")
+                .help("The coin amount for the confidential transfer. (default: 10)")
+                .takes_value(true)
+                .required(false)
+                .default_value(DEFAULT_AMOUNT)
+            )
+            .arg(Arg::with_name("sender-seed")
+                .short("s")
+                .long("sender-seed")
+                .help("Sender's seed. (default: Alice)")
+                .takes_value(true)
+                .required(false)
+                .default_value(ALICESEED)
+            )
+            .arg(Arg::with_name("recipient-address")
+                .short("t")
+                .long("recipient-address")
+                .help("Recipient's encryption key. (default: Bob)")
+                .takes_value(true)
+                .required(false)
+                .default_value(BOBACCOUNTID)
+            )
+            .arg(Arg::with_name("url")
+                .short("u")
+                .long("url")
+                .help("Endpoint to connect zerochain nodes")
+                .takes_value(true)
+                .required(false)
+            )
+        )
+        .subcommand(SubCommand::with_name("anonymous-send")
             .about("(Debug) Submit extrinsic to the substrate nodes")
             .arg(Arg::with_name("amount")
                 .short("a")
