@@ -359,25 +359,7 @@ mod tests {
     use rand::{SeedableRng, Rng, XorShiftRng, Rand};
     use crate::EncryptionKey;
     use crate::circuit::TestConstraintSystem;
-    use scrypto::jubjub::{JubjubBls12, fs::Fs, JubjubParams};
-
-    fn neg_encrypt(
-        amount: u32,
-        randomness: &Fs,
-        enc_key: &EncryptionKey<Bls12>,
-        p_g: FixedGenerators,
-        params: &JubjubBls12
-    ) -> elgamal::Ciphertext<Bls12> {
-        let right = params.generator(p_g).mul(*randomness, params);
-        let v_point = params.generator(p_g).mul(amount as u64, params).negate();
-        let r_point = enc_key.0.mul(*randomness, params);
-        let left = v_point.add(&r_point, params);
-
-        elgamal::Ciphertext {
-            left,
-            right,
-        }
-    }
+    use scrypto::jubjub::{JubjubBls12, fs::Fs};
 
     fn test_based_amount(amount: u32) {
         use crate::constants::DECOY_SIZE;

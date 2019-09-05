@@ -258,28 +258,6 @@ mod tests {
     impl zk_system::Trait for Test { }
     type AnonymousBalances = Module<Test>;
 
-    fn alice_balance_init() -> (EncKey, Ciphertext) {
-        let (alice_seed, enc_key) = get_alice_seed_ek();
-        let alice_amount = 100 as u32;
-        let params = &JubjubBls12::new();
-        let p_g = FixedGenerators::Diversifier; // 1 same as NoteCommitmentRandomness;
-
-        // The default balance is not encrypted with randomness.
-        let enc_alice_bal = elgamal::Ciphertext::encrypt(
-            alice_amount,
-            &fs::Fs::one(),
-            &enc_key,
-            p_g,
-            params
-        );
-
-        let decryption_key = ProofGenerationKey::<Bls12>::from_seed(&alice_seed[..], params).into_decryption_key().unwrap();
-
-        let dec_alice_bal = enc_alice_bal.decrypt(&decryption_key, p_g, params).unwrap();
-        assert_eq!(dec_alice_bal, alice_amount);
-
-        (EncKey::try_from(enc_key).unwrap(), Ciphertext::try_from(enc_alice_bal).unwrap())
-    }
 
     fn alice_epoch_init() -> (EncKey, u64) {
         let (_, enc_key) = get_alice_seed_ek();
@@ -348,7 +326,7 @@ mod tests {
                 let ciphertext = elgamal::Ciphertext::encrypt(alice_value, &fs::Fs::one(), &e, p_g, params);
                 acc.push((EncKey::try_from(e.clone()).unwrap(), Ciphertext::try_from(ciphertext).unwrap()))
             } else {
-                let ciphertext = elgamal::Ciphertext::encrypt(0, &fs::Fs::one(), e, p_g, params);
+                let ciphertext = elgamal::Ciphertext::encrypt(alice_value, &fs::Fs::one(), &e, p_g, params);
                 // let ciphertext = Ciphertext::zero();
                 acc.push((EncKey::try_from(e.clone()).unwrap(), Ciphertext::try_from(ciphertext).unwrap()))
             }
