@@ -542,20 +542,20 @@ mod tests {
             let enc_key = tEncryptionKey::from_seed(&seed[..], &*PARAMS).unwrap();
 
             let amount = 100;
-            let enc_balance = telgamal::Ciphertext::encrypt(
+            let enc_balance = vec![telgamal::Ciphertext::encrypt(
                 amount,
                 &tFs::one(),
                 &enc_key,
                 p_g,
                 &*PARAMS
-            );
+            )];
 
             let tx = KeyContext::read_from_path(PK_PATH, VK_PATH)
                 .unwrap()
                 .gen_proof(
                     amount,
                     0,
-                    0,
+                    0, 0, 0,
                     &spending_key,
                     MultiEncKeys::<tBls12, Confidential>::new(enc_key),
                     &enc_balance,
@@ -598,20 +598,20 @@ mod tests {
             let p_g = tFixedGenerators::NoteCommitmentRandomness;
 
             // The default balance is not encrypted with randomness.
-            let enc_alice_bal = telgamal::Ciphertext::encrypt(
+            let enc_alice_bal = vec![telgamal::Ciphertext::encrypt(
                 current_balance,
                 &tFs::one(),
                 &enc_key,
                 p_g,
                 &*PARAMS
-            );
+            )];
 
             let tx = KeyContext::read_from_path(PK_PATH, VK_PATH)
                 .unwrap()
                 .gen_proof(
                     amount,
                     fee,
-                    remaining_balance,
+                    remaining_balance, 0, 0,
                     &spending_key,
                     MultiEncKeys::<tBls12, Confidential>::new(recipient_account_id),
                     &enc_alice_bal,
@@ -645,20 +645,20 @@ mod tests {
             let enc_key = tEncryptionKey::<tBls12>::from_seed(&alice_seed[..], &PARAMS).unwrap();
             let p_g = tFixedGenerators::NoteCommitmentRandomness;
 
-            let dummy_balance  = telgamal::Ciphertext::encrypt(
+            let dummy_balance  = vec![telgamal::Ciphertext::encrypt(
                 0,
                 &tFs::one(),
                 &enc_key,
                 p_g,
                 &*PARAMS
-            );
+            )];
 
             let tx = KeyContext::read_from_path(PK_PATH, VK_PATH)
                 .unwrap()
                 .gen_proof(
                     0,
                     0,
-                    0,
+                    0, 0, 0,
                     &spending_key,
                     MultiEncKeys::<tBls12, Confidential>::new(enc_key),
                     &dummy_balance,

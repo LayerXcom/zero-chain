@@ -116,6 +116,10 @@ impl Ciphertext {
         elgamal::Ciphertext::zero().try_into()
             .expect("Should valid point.")
     }
+
+    pub fn as_bytes(&self) -> &[u8] {
+        &self.0[..]
+    }
 }
 
 #[cfg(test)]

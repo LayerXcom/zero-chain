@@ -395,13 +395,13 @@ pub mod tests {
             let p_g = tFixedGenerators::NoteCommitmentRandomness;
 
             // The default balance is not encrypted with randomness.
-            let enc_alice_bal = telgamal::Ciphertext::encrypt(
+            let enc_alice_bal = vec![telgamal::Ciphertext::encrypt(
                 current_balance,
                 &tFs::one(),
                 &enc_key,
                 p_g,
                 &*PARAMS
-            );
+            )];
 
             // G_epoch of block height one.
             let g_epoch_vec: [u8; 32] = hex!("0953f47325251a2f479c25527df6d977925bebafde84423b20ae6c903411665a");
@@ -412,7 +412,7 @@ pub mod tests {
                 .gen_proof(
                     amount,
                     fee,
-                    remaining_balance,
+                    remaining_balance, 0, 0,
                     &spending_key,
                     MultiEncKeys::<tBls12, Confidential>::new(recipient_account_id),
                     &enc_alice_bal,
