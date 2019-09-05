@@ -15,7 +15,6 @@ zcrypto = { package = "zerochain-crypto", path = "../../core/crypto", default-fe
 keys = { path = "../../core/keys", default-features = false }
 system = { package = "srml-system", path = "../system", default-features = false }
 zk-system = {path = "../zk-system", default-features = false }
-encrypted-balances = { path = "../encrypted-balances", default-features = false }
 
 [dev-dependencies]
 hex-literal = '0.1'
@@ -44,7 +43,6 @@ std = [
     'zcrypto/std',
     'system/std',
     'zk-system/std',
-    'encrypted-balances/std',
     'serde_derive',
     'serde',
 ]

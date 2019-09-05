@@ -295,7 +295,7 @@ impl<E: JubjubEngine> ProofContext<E, Checked, Confidential> {
 
 		let mut enc_key_recipient = [0u8; 32];
 		self
-			.recipient()
+			.enc_key_recipient()
 			.write(&mut enc_key_recipient[..])?;
 
         let mut left_amount_sender = [0u8; 32];
@@ -492,10 +492,10 @@ mod tests {
         let p_g = FixedGenerators::NoteCommitmentRandomness;
         let rng = &mut XorShiftRng::from_seed([0x5dbe6259, 0x8d313d76, 0x3237db17, 0xe5bc0654]);
 
-        let amount = 10 as u32;
-        let remaining_balance = 89 as u32;
-        let balance = 100 as u32;
-        let fee = 1 as u32;
+        let amount = 10;
+        let remaining_balance = 89;
+        let balance = 100;
+        let fee = 1;
 
         let sender_seed: [u8; 32] = rng.gen();
         let recipient_seed: [u8; 32] = rng.gen();

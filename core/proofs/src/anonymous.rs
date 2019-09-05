@@ -162,12 +162,6 @@ impl<E: JubjubEngine> ProofBuilder<E, Anonymous> for KeyContext<E, Anonymous> {
     }
 }
 
-impl<E: JubjubEngine, IsChecked> ProofContext<E, IsChecked, Anonymous> {
-    fn left_decoy_ciphertexts(self) -> Vec<edwards::Point<E, PrimeOrder>> {
-        self.multi_ciphertexts.get_decoys_left()
-    }
-}
-
 impl<E: JubjubEngine> ProofContext<E, Unchecked, Anonymous> {
     fn new(
         proof: Proof<E>,
@@ -196,7 +190,6 @@ impl<E: JubjubEngine> ProofContext<E, Unchecked, Anonymous> {
         self,
         prepared_vk: &PreparedVerifyingKey<E>
     ) -> Result<ProofContext<E, Checked, Anonymous>, SynthesisError> {
-
         Ok(convert_to_checked::<E, Unchecked, Checked, Anonymous>(self))
     }
 }
@@ -233,9 +226,9 @@ impl<E: JubjubEngine> ProofContext<E, Checked, Anonymous> {
             if i == s_index {
                 self.enc_key_sender.write(&mut e[..])?;
             } else if i == t_index {
-                self.recipient().write(&mut e[..])?;
+                self.enc_key_recipient().write(&mut e[..])?;
             } else {
-                self.decoy(j).write(&mut e[..])?;
+                self.enc_keys_decoy(j).write(&mut e[..])?;
                 j += 1;
             }
             enc_keys[i] = e;
@@ -276,7 +269,7 @@ impl<E: JubjubEngine> ProofContext<E, Checked, Anonymous> {
         })
     }
 
-    fn decoy(&self, index: usize) -> &EncryptionKey<E> {
+    fn enc_keys_decoy(&self, index: usize) -> &EncryptionKey<E> {
         &self.enc_keys.get_decoys()[index]
     }
 

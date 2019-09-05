@@ -178,7 +178,7 @@ impl<E: JubjubEngine> CiphertextTrait<E> for MultiCiphertexts<E, Anonymous> {
             params
         );
 
-        let cipher_recipient = Ciphertext::encrypt(
+        let cipher_recipient = Ciphertext::neg_encrypt(
             amount,
             randomness,
             &enc_keys.get_recipient(),
@@ -273,7 +273,7 @@ pub trait ProofBuilder<E: JubjubEngine, PC: PrivacyConfing>: Sized {
         fee: u32,
         remaining_balance: u32,
         s_index: usize,
-        t_index: usize, 
+        t_index: usize,
         spending_key: &SpendingKey<E>,
         enc_keys: MultiEncKeys<E, PC>,
         enc_balances: &[Ciphertext<E>],
@@ -346,7 +346,7 @@ impl<E: JubjubEngine, IsChecked, PC: PrivacyConfing> ProofContext<E, IsChecked, 
         &self.multi_ciphertexts.get_recipient().left
     }
 
-    pub(crate) fn recipient(&self) -> &EncryptionKey<E> {
+    pub(crate) fn enc_key_recipient(&self) -> &EncryptionKey<E> {
         self.enc_keys.get_recipient()
     }
 

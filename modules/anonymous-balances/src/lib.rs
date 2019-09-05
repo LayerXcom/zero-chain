@@ -10,7 +10,7 @@ use runtime_primitives::traits::Zero;
 use zprimitives::{EncKey, Proof, Nonce, RightCiphertext, LeftCiphertext, Ciphertext};
 use system::ensure_signed;
 
-pub trait Trait: system::Trait + zk_system::Trait + encrypted_balances::Trait {
+pub trait Trait: system::Trait + zk_system::Trait {
     // The overarching event type.
 	type Event: From<Event<Self>> + Into<<Self as system::Trait>::Event>;
 }
@@ -65,7 +65,7 @@ decl_module! {
             <zk_system::Module<T>>::nonce_pool().push(nonce);
 
             for (e, c) in enc_keys.iter().zip(left_ciphertexts.iter()) {
-                <encrypted_balances::Module<T>>::add_pending_transfer(e, c, &right_ciphertext)?;
+                Self::add_pending_transfer(e, c, &right_ciphertext)?;
             }
 
             Self::deposit_event(
@@ -87,13 +87,10 @@ decl_storage! {
     trait Store for Module<T: Trait> as AnonymousBalances {
         /// An encrypted balance for each account
         pub EncryptedBalance get(encrypted_balance) config() : map EncKey => Option<Ciphertext>;
-
         /// A pending transfer
         pub PendingTransfer get(pending_transfer) : map EncKey => Option<Ciphertext>;
-
         /// A last epoch for rollover
         pub LastRollOver get(last_rollover) config() : map EncKey => Option<T::BlockNumber>;
-
         // TODO: Change to BTreeSet once parity-codec is updated to parity-scale-codec
         pub EncKeySet get(enc_key_set) config() : Vec<EncKey>;
     }
@@ -155,6 +152,32 @@ impl<T: Trait> Module<T> {
 
         Ok(())
     }
+
+     /// Adding transferred amount to pending transfer.
+    pub fn add_pending_transfer(
+        address: &EncKey,
+        amount: &LeftCiphertext,
+        randomness: &RightCiphertext
+    ) -> result::Result<(), &'static str> {
+        let enc_amount = Ciphertext::from_left_right(*amount, *randomness)
+            .map_err(|_| "Faild to create amount ciphertext.")?;
+
+        <PendingTransfer<T>>::mutate(address, |pending_transfer| {
+            let new_pending_transfer = match pending_transfer.clone() {
+                Some(p) => p.add(&enc_amount),
+                None => Ok(enc_amount),
+            };
+
+            match new_pending_transfer {
+                Ok(np) => *pending_transfer = Some(np),
+                Err(_) => return Err("Faild to mutate pending transfer.")
+            }
+
+            Ok(())
+        })?;
+
+        Ok(())
+    }
 }
 
 #[cfg(feature = "std")]
@@ -193,10 +216,11 @@ mod tests {
         io::{BufReader, Read},
         convert::TryFrom,
     };
-    // use lazy_static::lazy;
+
+    const ALICE_BALANCE: u32 = 100;
 
     lazy_static! {
-        pub static ref ANONY_BALANCES: Vec<(EncKey, Ciphertext)> = { init_anonymous_balances() };
+        pub static ref ANONY_BALANCES: Vec<(EncKey, Ciphertext)> = { init_anonymous_balances(ALICE_BALANCE) };
         pub static ref ENC_KEYS: Vec<EncryptionKey<Bls12>> = { init_typed_enc_keys() };
     }
 
@@ -231,11 +255,7 @@ mod tests {
     impl Trait for Test {
         type Event = ();
     }
-
     impl zk_system::Trait for Test { }
-    impl encrypted_balances::Trait for Test {
-        type Event = ();
-    }
     type AnonymousBalances = Module<Test>;
 
     fn alice_balance_init() -> (EncKey, Ciphertext) {
@@ -318,9 +338,8 @@ mod tests {
         }).collect()
     }
 
-    fn init_anonymous_balances() -> Vec<(EncKey, Ciphertext)> {
+    fn init_anonymous_balances(alice_value: u32) -> Vec<(EncKey, Ciphertext)> {
         let params = &JubjubBls12::new();
-        let alice_value = 10_000 as u32;
         let p_g = FixedGenerators::Diversifier; // 1 same as NoteCommitmentRandomness;
 
         let mut acc = vec![];
@@ -330,6 +349,7 @@ mod tests {
                 acc.push((EncKey::try_from(e.clone()).unwrap(), Ciphertext::try_from(ciphertext).unwrap()))
             } else {
                 let ciphertext = elgamal::Ciphertext::encrypt(0, &fs::Fs::one(), e, p_g, params);
+                // let ciphertext = Ciphertext::zero();
                 acc.push((EncKey::try_from(e.clone()).unwrap(), Ciphertext::try_from(ciphertext).unwrap()))
             }
         }
@@ -368,13 +388,6 @@ mod tests {
             nonce_pool: vec![],
         }.assimilate_storage(&mut t, &mut c);
 
-        let _ = encrypted_balances::GenesisConfig::<Test>{
-            encrypted_balance: vec![alice_balance_init()],
-			last_rollover: vec![alice_epoch_init()],
-            transaction_base_fee: 1,
-            _genesis_phantom_data: Default::default()
-        }.assimilate_storage(&mut t, &mut c);
-
         let _ = GenesisConfig::<Test>{
             encrypted_balance: ANONY_BALANCES.to_vec(),
 			last_rollover: vec![alice_epoch_init()],
@@ -394,7 +407,6 @@ mod tests {
 
     #[test]
     fn test_call_from_zface() {
-
         with_externalities(&mut new_test_ext(), || {
             let alice_seed = b"Alice                           ".to_vec();
             let rng = &mut XorShiftRng::from_seed([0x3dbe6259, 0x8d313d76, 0x3237db17, 0xe5bc0654]);
@@ -403,7 +415,6 @@ mod tests {
             let bob_addr: [u8; 32] = hex!("45e66da531088b55dcb3b273ca825454d79d2d1d5c4fa2ba4a12c1fa1ccd6389");
             let enc_key_recipient = tEncryptionKey::<tBls12>::read(&mut &bob_addr[..], &PARAMS).unwrap();
 
-            let current_balance = 100;
             let remaining_balance = 91;
             let amount = 9;
 
@@ -414,8 +425,8 @@ mod tests {
             let g_epoch_vec: [u8; 32] = hex!("0953f47325251a2f479c25527df6d977925bebafde84423b20ae6c903411665a");
             let g_epoch = tedwards::Point::read(&g_epoch_vec[..], &*PARAMS).unwrap().as_prime_order(&*PARAMS).unwrap();
 
-            let s_index: usize = rng.gen_range(0, ANONIMITY_SIZE);
-            let t_index: usize = rng.gen_range(0, ANONIMITY_SIZE);
+            let s_index: usize = 0;
+            let t_index: usize = 1;
 
             let decoys = ENC_KEYS.iter().take(10).map(|e| no_std_e(e)).collect();
             let enc_balances = get_enc_balances();
@@ -436,16 +447,17 @@ mod tests {
                     &*PARAMS
                 ).unwrap();
 
-            // assert_ok!(AnonymousBalances::anonymous_transfer(
-            //     Origin::signed(SigVerificationKey::from_slice(&tx.rvk[..])),
-            //     Proof::from_slice(&tx.proof[..]),
-            //     EncKey::from_slice(&tx.e[..]),
-            //     LeftCiphertext::from_slice(&tx.left_amount_sender[..]),
-            //     LeftCiphertext::from_slice(&tx.left_amount_recipient[..]),
-            //     LeftCiphertext::from_slice(&tx.left_fee[..]),
-            //     RightCiphertext::from_slice(&tx.right_randomness[..]),
-            //     Nonce::from_slice(&tx.nonce[..])
-            // ));
+            let enc_keys = tx.enc_keys.iter().map(|e| EncKey::from_slice(e)).collect();
+            let left_ciphertexts = tx.left_ciphertexts.iter().map(|e| LeftCiphertext::from_slice(e)).collect();
+
+            assert_ok!(AnonymousBalances::anonymous_transfer(
+                Origin::signed(SigVerificationKey::from_slice(&tx.rvk[..])),
+                Proof::from_slice(&tx.proof[..]),
+                enc_keys,
+                left_ciphertexts,
+                RightCiphertext::from_slice(&tx.right_ciphertext[..]),
+                Nonce::from_slice(&tx.nonce[..])
+            ));
         })
     }
 }

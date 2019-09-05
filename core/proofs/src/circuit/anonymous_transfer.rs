@@ -425,7 +425,7 @@ mod tests {
 
         // ciphertexts
         let left_ciphertext_amount_sender = elgamal::Ciphertext::encrypt(amount, &randomness_amount, &enc_key_sender, p_g, params).left;
-        let left_ciphertext_amount_recipient = neg_encrypt(amount, &randomness_amount, &enc_key_recipient, p_g, params).left;
+        let left_ciphertext_amount_recipient = elgamal::Ciphertext::neg_encrypt(amount, &randomness_amount, &enc_key_recipient, p_g, params).left;
         let left_ciphertexts_amount_decoy = enc_keys_decoy.iter()
             .map(|e| elgamal::Ciphertext::encrypt(0, &randomness_amount, e, p_g, params).left)
             .collect::<Vec<edwards::Point<Bls12, PrimeOrder>>>();
