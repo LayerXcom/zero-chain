@@ -21,6 +21,7 @@ use crate::{
     elgamal::Ciphertext,
     EncryptionKey,
     SpendingKey,
+    constants::DECOY_SIZE,
 };
 use std::{
     io::{self, BufReader, Read},
@@ -170,7 +171,7 @@ impl<E: JubjubEngine> CiphertextTrait<E> for MultiCiphertexts<E, Anonymous> {
     ) -> Self {
         let p_g = FixedGenerators::NoteCommitmentRandomness;
 
-        let cipher_sender = Ciphertext::encrypt(
+        let cipher_sender = Ciphertext::neg_encrypt(
             amount,
             randomness,
             enc_key_sender,
@@ -178,7 +179,7 @@ impl<E: JubjubEngine> CiphertextTrait<E> for MultiCiphertexts<E, Anonymous> {
             params
         );
 
-        let cipher_recipient = Ciphertext::neg_encrypt(
+        let cipher_recipient = Ciphertext::encrypt(
             amount,
             randomness,
             &enc_keys.get_recipient(),
@@ -197,6 +198,8 @@ impl<E: JubjubEngine> CiphertextTrait<E> for MultiCiphertexts<E, Anonymous> {
             );
             acc_d.push(cipher_decoys);
         }
+
+        assert_eq!(acc_d.len(), DECOY_SIZE);
 
         MultiCiphertexts::<E, Self::PC>::new(
             cipher_sender,
@@ -306,9 +309,9 @@ impl<E: JubjubEngine, PC: PrivacyConfing> KeyContext<E, PC> {
         &self.prepared_vk
     }
 
+    // FIX: too heavy
     pub(crate) fn inner_read<P: AsRef<Path>>(path: P) -> io::Result<Vec<u8>> {
         let file = File::open(&path)?;
-
         let mut reader = BufReader::new(file);
         let mut buffer = vec![];
         reader.read_to_end(&mut buffer)?;

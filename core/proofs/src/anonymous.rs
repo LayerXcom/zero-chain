@@ -140,6 +140,7 @@ impl<E: JubjubEngine> ProofBuilder<E, Anonymous> for KeyContext<E, Anonymous> {
             enc_balances: Some(&enc_balances),
             g_epoch: Some(&g_epoch),
         };
+
         // Crate proof
         let proof = create_random_proof(instance, &self.proving_key, rng)?;
         let multi_ciphertexts = MultiCiphertexts::<E, Anonymous>::encrypt(

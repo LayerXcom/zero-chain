@@ -161,7 +161,7 @@ impl<T: Trait> Module<T> {
             &proof,
             public_input.as_slice()
         )
-        .map_err(|_| "Invalid proof.")
+        .map_err(|_| "Error occurred when valifying zkproof.")
     }
 
     /// Get current epoch based on current block height.

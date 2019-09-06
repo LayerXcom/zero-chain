@@ -352,14 +352,14 @@ impl<E: JubjubEngine> EncKeysMulRandom<E> {
 
         for i in 0..self.0.len() {
             if Some(i) == s_index {
-                let tmp = amount_g.add(
+                let tmp = neg_amount_g.add(
                     cs.namespace(|| "sender's left ciphertext"),
                     &self.0[i],
                     params
                 )?;
                 acc.push(tmp);
             } else if Some(i) == t_index {
-                let tmp = neg_amount_g.add(
+                let tmp = amount_g.add(
                     cs.namespace(|| "recipient's left ciphertext"),
                     &self.0[i],
                     params

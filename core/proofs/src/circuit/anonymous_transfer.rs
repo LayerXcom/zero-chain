@@ -1,6 +1,6 @@
 //! This module contains a circuit implementation for anonymous transfer.
 //! The statements are following:
-//! Amount check: \sum s_i * C_i = b_1 + \sum r * s_i * y_i ,where b_1: transferred amount
+//! Amount check: \sum t_i * C_i = b_1 + \sum r * t_i * y_i, where b_1: transferred amount
 //! Amount check: \sum (s_i + t_i) * C_i = \sum (s_i + t_i) * r * y_i
 //! Amount check: (1 - s_i)(1 - t_i) * C = (1 - s_i)(1 - t_i) * r * y_i
 //! Randomness check: D = r * G
@@ -93,6 +93,7 @@ impl<'a, E: JubjubEngine> Circuit<E> for AnonymousTransfer<'a, E> {
             cs.namespace(|| "range proof of remaining_balance"),
             self.remaining_balance
         )?;
+
         // Multiply the remaining balance to the base point same as FixedGenerators::ElGamal.
         let remaining_balance_g = ecc::fixed_base_multiplication(
             cs.namespace(|| format!("compute the remaining balance in the exponent")),
@@ -129,7 +130,8 @@ impl<'a, E: JubjubEngine> Circuit<E> for AnonymousTransfer<'a, E> {
                 self.s_index,
                 self.t_index,
                 params
-            )?;
+        )?;
+        assert_eq!(enc_key_set.0.len(), ANONIMITY_SIZE);
 
         let expected_enc_key_sender = s_bins.edwards_add_fold(
             cs.namespace(|| "add folded enc keys"),
@@ -138,6 +140,7 @@ impl<'a, E: JubjubEngine> Circuit<E> for AnonymousTransfer<'a, E> {
             params
         )?;
 
+        // Secret key check: sk * G = \sum s_i * y_i
         if let Some(i) = self.s_index {
             eq_edwards_points(
                 cs.namespace(|| "equal enc_key_sender"),
@@ -153,24 +156,9 @@ impl<'a, E: JubjubEngine> Circuit<E> for AnonymousTransfer<'a, E> {
             params
         )?;
 
-        // Evaluate by the s_i binaries: \sum s_i * r * y_i
-        let enc_keys_random_fold_s_i = s_bins.edwards_add_fold(
-            cs.namespace(|| "add folded enc keys mul random"),
-            &enc_keys_mul_random.0,
-            zero_p.clone(),
-            params
-        )?;
-
-        // Add amount * G: b_1 + \sum r * s_i * y_i
-        let expected_ciphertext_left_s_i = enc_keys_random_fold_s_i.add(
-            cs.namespace(|| "compute ciphertext left s_i"),
-            &amount_g,
-            params
-        )?;
-
         // Generate all ciphertexts of left components: \sum C_i
-        let ciphertext_left_set= enc_keys_mul_random.gen_left_ciphertexts(
-            cs.namespace(|| "compute left ciphertexts of s_i"),
+        let ciphertext_left_set = enc_keys_mul_random.gen_left_ciphertexts(
+            cs.namespace(|| "compute left ciphertexts of t_i"),
             &amount_g,
             &neg_amount_g,
             self.s_index,
@@ -179,20 +167,37 @@ impl<'a, E: JubjubEngine> Circuit<E> for AnonymousTransfer<'a, E> {
             params
         )?;
 
-        // Evaluate by the s_i binaries: \sum s_i * C_i
-        let ciphertext_left_s_i = s_bins.edwards_add_fold(
-            cs.namespace(|| "add folded left ciphertext based in s_i"),
-            &ciphertext_left_set.0,
-            zero_p.clone(),
-            params
-        )?;
+        {
+            // Evaluate by the t_i binaries: \sum t_i * r * y_i
+            let enc_keys_random_fold_t_i = t_bins.edwards_add_fold(
+                cs.namespace(|| "add folded enc keys mul random"),
+                &enc_keys_mul_random.0,
+                zero_p.clone(),
+                params
+            )?;
 
-        // Amount check: \sum s_i * C_i = b_1 + \sum r * s_i * y_i
-        eq_edwards_points(
-            cs.namespace(|| "left ciphertext equals based in s_i"),
-            &expected_ciphertext_left_s_i,
-            &ciphertext_left_s_i
-        )?;
+            // Add amount * G: b_1 + \sum r * t_i * y_i
+            let expected_ciphertext_left_t_i = enc_keys_random_fold_t_i.add(
+                cs.namespace(|| "compute ciphertext left t_i"),
+                &amount_g,
+                params
+            )?;
+
+            // Evaluate by the t_i binaries: \sum t_i * C_i
+            let ciphertext_left_t_i = t_bins.edwards_add_fold(
+                cs.namespace(|| "add folded left ciphertext based in t_i"),
+                &ciphertext_left_set.0,
+                zero_p.clone(),
+                params
+            )?;
+
+            // Amount check: \sum t_i * C_i = b_1 + \sum r * t_i * y_i
+            eq_edwards_points(
+                cs.namespace(|| "left ciphertext equals based in t_i"),
+                &expected_ciphertext_left_t_i,
+                &ciphertext_left_t_i
+            )?;
+        }
 
         {
             let xor_st_bins = s_bins.xor(cs.namespace(|| "s_i xor t_i"), &t_bins)?;
@@ -251,7 +256,7 @@ impl<'a, E: JubjubEngine> Circuit<E> for AnonymousTransfer<'a, E> {
             // Compute left balance ciphertexts minus left amount ciphertexts : C_li - C_i
             let added_lefts = left_balance_ciphertexts.add_each(
                 cs.namespace(|| "add each with left amount ciphertexts"),
-                &neg_left_amount_cipher,
+                &ciphertext_left_set,
                 params
             )?;
 
@@ -302,7 +307,7 @@ impl<'a, E: JubjubEngine> Circuit<E> for AnonymousTransfer<'a, E> {
             // Subtract right ciphertexts: \sum (s_i * C_ri) - D
             let cr_minus_d = right_balance_cipher_fold.add(
                 cs.namespace(|| "amount minus balance ciphertext"),
-                &neg_right_ciphertext,
+                &right_ciphertext,
                 params
             )?;
 
@@ -406,8 +411,8 @@ mod tests {
         enc_keys.insert(t_index, enc_key_recipient.clone());
 
         // ciphertexts
-        let left_ciphertext_amount_sender = elgamal::Ciphertext::encrypt(amount, &randomness_amount, &enc_key_sender, p_g, params).left;
-        let left_ciphertext_amount_recipient = elgamal::Ciphertext::neg_encrypt(amount, &randomness_amount, &enc_key_recipient, p_g, params).left;
+        let left_ciphertext_amount_sender = elgamal::Ciphertext::neg_encrypt(amount, &randomness_amount, &enc_key_sender, p_g, params).left;
+        let left_ciphertext_amount_recipient = elgamal::Ciphertext::encrypt(amount, &randomness_amount, &enc_key_recipient, p_g, params).left;
         let left_ciphertexts_amount_decoy = enc_keys_decoy.iter()
             .map(|e| elgamal::Ciphertext::encrypt(0, &randomness_amount, e, p_g, params).left)
             .collect::<Vec<edwards::Point<Bls12, PrimeOrder>>>();

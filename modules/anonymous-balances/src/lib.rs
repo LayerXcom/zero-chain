@@ -48,7 +48,7 @@ decl_module! {
             }
 
             // Verify the zk proof
-            if !<zk_system::Module<T>>::verify_anonymous_proof(
+            if <zk_system::Module<T>>::verify_anonymous_proof(
                     &zkproof,
                     &enc_keys[..],
                     &left_ciphertexts[..],
@@ -224,8 +224,8 @@ mod tests {
         pub static ref ENC_KEYS: Vec<EncryptionKey<Bls12>> = { init_typed_enc_keys() };
     }
 
-    const PK_PATH: &str = "../../zface/params/test_anony_pk.dat";
-    const VK_PATH: &str = "../../zface/params/test_anony_vk.dat";
+    const PK_PATH: &str = "../../zface/params/anony_pk.dat";
+    const VK_PATH: &str = "../../zface/params/anony_vk.dat";
 
     impl_outer_origin! {
         pub enum Origin for Test {}
@@ -257,7 +257,6 @@ mod tests {
     }
     impl zk_system::Trait for Test { }
     type AnonymousBalances = Module<Test>;
-
 
     fn alice_epoch_init() -> (EncKey, u64) {
         let (_, enc_key) = get_alice_seed_ek();
@@ -335,7 +334,7 @@ mod tests {
     }
 
     pub fn get_conf_vk() -> PreparedVerifyingKey<Bls12> {
-        let vk_path = Path::new("../../zface/params/test_conf_vk.dat");
+        let vk_path = Path::new("../../zface/params/conf_vk.dat");
         let vk_file = File::open(&vk_path).unwrap();
         let mut vk_reader = BufReader::new(vk_file);
 
@@ -346,7 +345,7 @@ mod tests {
     }
 
     pub fn get_anony_vk() -> PreparedVerifyingKey<Bls12> {
-        let vk_path = Path::new("../../zface/params/test_anony_vk.dat");
+        let vk_path = Path::new("../../zface/params/anony_vk.dat");
         let vk_file = File::open(&vk_path).unwrap();
         let mut vk_reader = BufReader::new(vk_file);
 
@@ -406,10 +405,15 @@ mod tests {
             let s_index: usize = 0;
             let t_index: usize = 1;
 
-            let decoys = ENC_KEYS.iter().take(10).map(|e| no_std_e(e)).collect();
+            assert_eq!(ENC_KEYS.len(), 12);
+            let decoys = ENC_KEYS.iter().skip(2).map(|e| no_std_e(e)).collect();
             let enc_balances = get_enc_balances();
 
-            let tx = KeyContext::read_from_path(PK_PATH, VK_PATH)
+            assert!(no_std_e(&ENC_KEYS[0]) ==  enc_key_sender);
+            assert!(no_std_e(&ENC_KEYS[1]) ==  enc_key_recipient);
+            assert_eq!(enc_balances.clone().len(), 12);
+
+            let tx = KeyContext::<tBls12, Anonymous>::read_from_path(PK_PATH, VK_PATH)
                 .unwrap()
                 .gen_proof(
                     amount,
