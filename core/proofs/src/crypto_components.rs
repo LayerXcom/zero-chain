@@ -255,6 +255,7 @@ pub enum Calls {
     AssetTransfer(u32),
     AssetBurn(u32),
     AnonymousTransfer,
+    AnonymousIssue,
 }
 
 pub trait Submitter {

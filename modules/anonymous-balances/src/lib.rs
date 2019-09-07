@@ -80,6 +80,58 @@ decl_module! {
 
             Ok(())
         }
+
+        /// Issue a new class of encrypted fungible assets. There are, and will only ever be, `total`
+		/// such assets and they'll all belong to the `issuer` initially. It will have an
+		/// identifier `AssetId` instance: this will be specified in the `Issued` event.
+        fn issue(
+            origin,
+            zkproof: Proof,
+            issuer: EncKey,
+            total: LeftCiphertext,
+            fee: LeftCiphertext,
+            balance: Ciphertext,
+            randomness: RightCiphertext,
+            nonce: Nonce
+        ) {
+            let rvk = ensure_signed(origin)?;
+
+            // Initialize a nonce pool
+            let current_epoch = <zk_system::Module<T>>::get_current_epoch();
+            <zk_system::Module<T>>::init_nonce_pool(current_epoch);
+
+            // Veridate the provided nonce isn't included in the nonce pool.
+            ensure!(!<zk_system::Module<T>>::nonce_pool().contains(&nonce), "Provided nonce is already included in the nonce pool.");
+
+            // Verify a zk proof
+            // 1. Spend authority verification
+            // 2. Range check of issued amount
+            // 3. Encryption integrity
+            if !<zk_system::Module<T>>::verify_confidential_proof(
+                &zkproof,
+                &issuer,
+                &issuer,
+                &total,
+                &total,
+                &balance,
+                &rvk,
+                &fee,
+                &randomness,
+                &nonce
+            )? {
+                Self::deposit_event(RawEvent::InvalidZkProof());
+                return Err("Invalid zkproof");
+            }
+
+            // Add a nonce into the nonce pool
+            <zk_system::Module<T>>::nonce_pool().push(nonce);
+
+            let total_ciphertext = Ciphertext::from_left_right(total, randomness)
+                .map_err(|_| "Faild to create ciphertext from left and right.")?;
+            <EncryptedBalance<T>>::insert(issuer.clone(), total_ciphertext.clone());
+
+            Self::deposit_event(RawEvent::Issued(issuer, total_ciphertext));
+        }
     }
 }
 
@@ -100,6 +152,7 @@ decl_event! (
     /// An event in this module.
     pub enum Event<T> where <T as system::Trait>::AccountId {
         AnonymousTransfer(Proof, Vec<EncKey>, Vec<LeftCiphertext>, RightCiphertext, AccountId),
+        Issued(EncKey, Ciphertext),
         InvalidZkProof(),
     }
 );

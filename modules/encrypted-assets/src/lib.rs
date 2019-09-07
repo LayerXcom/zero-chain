@@ -46,7 +46,7 @@ decl_module! {
             <zk_system::Module<T>>::init_nonce_pool(current_epoch);
 
             // Veridate the provided nonce isn't included in the nonce pool.
-            assert!(!<zk_system::Module<T>>::nonce_pool().contains(&nonce)); // TODO: use ensure!
+            ensure!(!<zk_system::Module<T>>::nonce_pool().contains(&nonce), "Provided nonce is already included in the nonce pool.");
 
             // Verify a zk proof
             // 1. Spend authority verification

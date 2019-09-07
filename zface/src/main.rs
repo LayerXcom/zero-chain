@@ -460,12 +460,18 @@ fn subcommand_tx<R: Rng>(mut term: term::Term, root_dir: PathBuf, matches: &ArgM
             let asset_id = wallet_arg_id_match(&sub_matches);
             asset_burn_tx(&mut term, root_dir, asset_id, url, rng)
         },
-        ("anonymous-send",  Some(sub_matches)) => {
+        ("anonymous-send", Some(sub_matches)) => {
             let recipient_enc_key = tx_arg_recipient_address_match(&sub_matches);
             let amount = tx_arg_amount_match(&sub_matches);
             let url = tx_arg_url_match(&sub_matches);
 
             anonymous_transfer_tx(&mut term, root_dir, &recipient_enc_key[..], amount, url, rng)
+        },
+        ("anonymous-issue", Some(sub_matches)) => {
+            let amount = tx_arg_amount_match(&sub_matches);
+            let url = tx_arg_url_match(&sub_matches);
+
+            
         },
         _ => {
             term.error(matches.usage()).unwrap();
@@ -581,6 +587,23 @@ fn tx_commands_definition<'a, 'b>() -> App<'a, 'b> {
                 .short("to")
                 .long("recipient-address")
                 .help("Recipient's SS58-encoded address")
+                .takes_value(true)
+                .required(false)
+            )
+            .arg(Arg::with_name("url")
+                .short("u")
+                .long("url")
+                .help("Endpoint to connect zerochain nodes")
+                .takes_value(true)
+                .required(false)
+            )
+        )
+        .subcommand(SubCommand::with_name("anonymous-issue")
+            .about("Submit a transaction in order to call issue function in anonymous-balances module.")
+            .arg(Arg::with_name("amount")
+                .short("a")
+                .long("amount")
+                .help("The issued coin amount")
                 .takes_value(true)
                 .required(false)
             )

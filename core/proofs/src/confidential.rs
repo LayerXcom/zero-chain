@@ -20,7 +20,13 @@ use scrypto::{
     redjubjub::PublicKey,
 };
 use polkadot_rs::Api;
-use zerochain_runtime::{UncheckedExtrinsic, Call, EncryptedBalancesCall, EncryptedAssetsCall};
+use zerochain_runtime::{
+    UncheckedExtrinsic,
+    EncryptedBalancesCall,
+    EncryptedAssetsCall,
+    AnonymousBalancesCall,
+    Call,
+};
 use zprimitives::{
     EncKey as zEncKey,
     Ciphertext as zCiphertext,
@@ -399,6 +405,7 @@ impl Submitter for ConfidentialXt {
             Calls::AssetIssue => (Compact(index), self.call_asset_issue(), era, checkpoint),
             Calls::AssetTransfer(asset_id) => (Compact(index), self.call_asset_transfer(asset_id), era, checkpoint),
             Calls::AssetBurn(asset_id) => (Compact(index), self.call_asset_burn(asset_id), era, checkpoint),
+            Calls::AnonymousIssue => (Compact(index), self.call_anonymous_issue(), era, checkpoint),
             _ => unreachable!(),
         };
 
@@ -466,6 +473,18 @@ impl ConfidentialXt {
             zProof::from_slice(&self.proof[..]),
             zEncKey::from_slice(&self.enc_key_recipient[..]),
             asset_id,
+            zLeftCiphertext::from_slice(&self.left_amount_recipient[..]),
+            zLeftCiphertext::from_slice(&self.left_fee[..]),
+            zCiphertext::from_slice(&self.enc_balance[..]),
+            zRightCiphertext::from_slice(&self.right_randomness[..]),
+            zNonce::from_slice(&self.nonce[..])
+        ))
+    }
+
+    pub fn call_anonymous_issue(&self) -> Call {
+        Call::AnonymousBalances(AnonymousBalancesCall::issue(
+            zProof::from_slice(&self.proof[..]),
+            zEncKey::from_slice(&self.enc_key_recipient[..]),
             zLeftCiphertext::from_slice(&self.left_amount_recipient[..]),
             zLeftCiphertext::from_slice(&self.left_fee[..]),
             zCiphertext::from_slice(&self.enc_balance[..]),

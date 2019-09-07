@@ -25,7 +25,7 @@ pub fn asset_issue_tx<R: Rng>(
     rng: &mut R,
 ) -> Result<()> {
     // user can enter password first.
-    let password = prompt_password(term).expect("Invalid password");
+    let password = prompt_password(term)?;
     println!("Preparing paramters...");
 
     let api = Api::init(url);
