@@ -113,6 +113,25 @@ impl BalanceQuery {
         Self::get_balance_from_decryption_key(encrypted_asset_str, pending_transfer_str, dec_key)
     }
 
+    pub fn get_anonymous_balance(dec_key: &DecryptionKey<Bls12>, api: Api) -> Result<Self> {
+        let encryption_key = zEncryptionKey::from_decryption_key(&no_std(&dec_key)?, &*ZPARAMS);
+        let account_id = EncKey::try_from(encryption_key)?;
+
+        let encrypted_balance_str = api.get_storage(
+            "AnonymousBalances",
+            "EncryptedBalance",
+            Some(account_id.encode())
+        )?;
+
+        let pending_transfer_str = api.get_storage(
+            "AnonymousBalances",
+            "PendingTransfer",
+            Some(account_id.encode())
+        )?;
+
+        Self::get_balance_from_decryption_key(encrypted_balance_str, pending_transfer_str, dec_key)
+    }
+
     fn get_balance_from_decryption_key(
         mut encrypted_balance_str: String,
         mut pending_transfer_str: String,

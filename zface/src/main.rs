@@ -249,7 +249,7 @@ fn subcommand_wallet<R: Rng>(mut term: term::Term, root_dir: PathBuf, matches: &
                 .expect("Invalid mnemonic to recover keystore.");
         },
         ("balance", Some(sub_matches)) => {
-            println!("Getting encrypted balance from zerochain");
+            println!("Getting encrypted balance...");
             let api = Api::init(tx_arg_url_match(&sub_matches));
 
             let dec_key = load_dec_key(&mut term, root_dir)
@@ -263,7 +263,7 @@ fn subcommand_wallet<R: Rng>(mut term: term::Term, root_dir: PathBuf, matches: &
             println!("Encrypted pending transfer: {}", balance_query.pending_transfer_str);
         },
         ("asset-balance", Some(sub_matches)) => {
-            println!("Getting encrypted asset from zerochain");
+            println!("Getting encrypted asset...");
             let api = Api::init(tx_arg_url_match(&sub_matches));
             let dec_key = load_dec_key(&mut term, root_dir)
                 .expect("loading decrption key failed.");
@@ -271,6 +271,18 @@ fn subcommand_wallet<R: Rng>(mut term: term::Term, root_dir: PathBuf, matches: &
 
             let balance_query = getter::BalanceQuery::get_encrypted_asset(asset_id, &dec_key, api)
                 .expect("Falid to get balance data.");;
+
+            println!("Decrypted balance: {}", balance_query.decrypted_balance);
+            println!("Encrypted balance: {}", balance_query.encrypted_balance_str);
+            println!("Encrypted pending transfer: {}", balance_query.pending_transfer_str);
+        },
+        ("anonymous-balance", Some(sub_matches)) => {
+            println!("Getting anonymous balance...");
+            let api = Api::init(tx_arg_url_match(&sub_matches));
+            let dec_key = load_dec_key(&mut term, root_dir)
+                .expect("loading decrption key failed.");
+            let balance_query = getter::BalanceQuery::get_anonymous_balance(&dec_key, api)
+                .expect("Falid to get balance data.");
 
             println!("Decrypted balance: {}", balance_query.decrypted_balance);
             println!("Encrypted balance: {}", balance_query.encrypted_balance_str);
@@ -367,6 +379,16 @@ fn wallet_commands_definition<'a, 'b>() -> App<'a, 'b> {
                 .takes_value(true)
                 .required(false)
             )
+            .arg(Arg::with_name("url")
+                .short("u")
+                .long("url")
+                .help("Endpoint to connect zerochain nodes")
+                .takes_value(true)
+                .required(false)
+            )
+        )
+        .subcommand(SubCommand::with_name("anonymous-balance")
+            .about("Get current balance stored in encrypted balances module")
             .arg(Arg::with_name("url")
                 .short("u")
                 .long("url")
@@ -692,7 +714,7 @@ fn subcommand_debug<R: Rng>(mut term: term::Term, matches: &ArgMatches, rng: &mu
             );
         },
         ("balance", Some(sub_matches)) => {
-            println!("Getting encrypted balance from zerochain");
+            println!("Getting encrypted balance...");
 
             let api = Api::init(tx_arg_url_match(&sub_matches));
             let decr_key_vec = hex::decode(sub_matches.value_of("decryption-key")
