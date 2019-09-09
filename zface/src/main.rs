@@ -471,7 +471,7 @@ fn subcommand_tx<R: Rng>(mut term: term::Term, root_dir: PathBuf, matches: &ArgM
             let amount = tx_arg_amount_match(&sub_matches);
             let url = tx_arg_url_match(&sub_matches);
 
-            
+            annonymous_issue_tx(&mut term, root_dir, amount, url, rng)
         },
         _ => {
             term.error(matches.usage()).unwrap();
@@ -485,7 +485,7 @@ fn subcommand_tx<R: Rng>(mut term: term::Term, root_dir: PathBuf, matches: &ArgM
 fn tx_commands_definition<'a, 'b>() -> App<'a, 'b> {
     SubCommand::with_name(TX_COMMAND)
         .about("transaction operations")
-        .subcommand(SubCommand::with_name("confidential-send")
+        .subcommand(SubCommand::with_name("send")
             .about("Submit a transaction to zerochain nodes in order to call confidential_transfer function in encrypted-balances module.")
             .arg(Arg::with_name("amount")
                 .short("a")

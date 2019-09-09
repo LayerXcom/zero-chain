@@ -11,11 +11,15 @@ use parity_codec::Decode;
 use polkadot_rs::{Api, Url, hexstr_to_vec};
 use scrypto::jubjub::{fs::Fs, FixedGenerators};
 use super::constants::*;
-use crate::error::Result;
-use crate::term::Term;
-use crate::wallet::DirOperations;
-use crate::wallet::commands::{wallet_keystore_dirs, get_default_keyfile_name};
-use crate::getter::{self, BalanceQuery};
+use crate::{
+    error::Result,
+    term::Term,
+    wallet::{
+        DirOperations,
+        commands::{wallet_keystore_dirs, get_default_keyfile_name}
+    },
+    getter,
+};
 
 pub fn asset_issue_tx<R: Rng>(
     term: &mut Term,
@@ -81,7 +85,7 @@ pub fn asset_transfer_tx<R: Rng>(
         .into_decryption_key()?;
     let fee = getter::fee(&api)?;
 
-    let balance_query = BalanceQuery::get_encrypted_asset(asset_id, &dec_key, api.clone())?;
+    let balance_query = getter::BalanceQuery::get_encrypted_asset(asset_id, &dec_key, api.clone())?;
     let remaining_balance = balance_query.decrypted_balance - amount - fee;
     assert!(balance_query.decrypted_balance >= amount + fee, "Not enough balance you have");
 
@@ -138,7 +142,7 @@ pub fn asset_burn_tx<R: Rng>(
     let spending_key = spending_key_from_keystore(root_dir, &password[..])?;
     let dec_key = ProofGenerationKey::<Bls12>::from_spending_key(&spending_key, &PARAMS)
         .into_decryption_key()?;
-    let balance_query = BalanceQuery::get_encrypted_asset(asset_id, &dec_key, api.clone())?;
+    let balance_query = getter::BalanceQuery::get_encrypted_asset(asset_id, &dec_key, api.clone())?;
     assert!(balance_query.decrypted_balance != 0, "You don't have the asset. Asset id may be incorrect.");
 
     let amount = 0;
@@ -183,6 +187,50 @@ pub fn confidential_transfer_tx<R: Rng>(
     let spending_key = spending_key_from_keystore(root_dir, &password[..])?;
 
     inner_confidential_transfer_tx(spending_key, recipient_enc_key, amount, url, rng)?;
+
+    Ok(())
+}
+
+pub fn annonymous_issue_tx<R: Rng>(
+    term: &mut Term,
+    root_dir: PathBuf,
+    amount: u32,
+    url: Url,
+    rng: &mut R,
+) -> Result<()> {
+    // user can enter password first.
+    let password = prompt_password(term)?;
+    println!("Preparing paramters...");
+
+    let api = Api::init(url);
+    let p_g = FixedGenerators::NoteCommitmentRandomness; // 1
+
+    let spending_key = spending_key_from_keystore(root_dir, &password[..])?;
+    let issuer_address = EncryptionKey::<Bls12>::from_spending_key(&spending_key, &PARAMS)?;
+
+    let enc_amount = vec![elgamal::Ciphertext::encrypt(amount, &Fs::rand(rng), &issuer_address, p_g, &PARAMS)];
+    let multi_keys = MultiEncKeys::<Bls12, Confidential>::new(issuer_address.clone());
+
+    println!("Computing zk proof...");
+    subscribe_event(api.clone(), amount);
+
+    println!("Start submitting a transaction to Zerochain...");
+    KeyContext::read_from_path(CONF_PK_PATH, CONF_VK_PATH)?
+        .gen_proof(
+            amount,
+            0,0,0,0,
+            &spending_key,
+            multi_keys,
+            &enc_amount,
+            getter::g_epoch(&api)?,
+            rng,
+            &PARAMS
+        )?
+        .submit(
+            Calls::AnonymousIssue,
+            &api,
+            rng
+        );
 
     Ok(())
 }
@@ -244,7 +292,7 @@ fn inner_confidential_transfer_tx<R: Rng>(
         .into_decryption_key()?;
     let fee = getter::fee(&api)?;
 
-    let balance_query = BalanceQuery::get_encrypted_balance(&dec_key, api.clone())?;
+    let balance_query = getter::BalanceQuery::get_encrypted_balance(&dec_key, api.clone())?;
     let remaining_balance = balance_query.decrypted_balance - amount - fee;
     assert!(balance_query.decrypted_balance >= amount + fee, "Not enough balance you have");
 
@@ -297,7 +345,7 @@ fn inner_anonymous_transfer_tx<R: Rng>(
         .into_decryption_key()?;
     let enc_key_sender = EncryptionKey::<Bls12>::from_decryption_key(&dec_key, &PARAMS);
 
-    let balance_query = BalanceQuery::get_encrypted_balance(&dec_key, api.clone())?;
+    let balance_query = getter::BalanceQuery::get_anonymous_balance(&dec_key, api.clone())?;
     let remaining_balance = balance_query.decrypted_balance - amount;
     assert!(balance_query.decrypted_balance >= amount, "Not enough balance you have");
 
@@ -428,17 +476,18 @@ pub fn subscribe_event(api: Api, remaining_balance: u32) {
                                         encrypted_assets::RawEvent::InvalidZkProof() => println!("Invalid zk proof."),
                                     }
                                 },
-                                // Event::anonymous_balances(enc_be) => {
-                                //     match &enc_be {
-                                //         // anonymous_balances::RawEvent::AnonymousTransfer(
-
-                                //         // ) => ("Submitting transaction is completed successfully. \n Remaining balance is {}", remaining_balance),
-                                //         anonymous_balances::RawEvent::InvalidZkProof() => {
-                                //             println!("Invalid zk proof.");
-                                //         }
-                                //     }
-                                // }
-                                _ => /* warn!("ignoring unsupported module event: {:?}", event.event) */ {},
+                                Event::anonymous_balances(annoy_be) => {
+                                    match &annoy_be {
+                                        anonymous_balances::RawEvent::Issued(
+                                            _enc_key_sender, _total
+                                        ) => println!("Submitting transaction is completed successfully. \nThe total issued coin is {}.", remaining_balance),
+                                        anonymous_balances::RawEvent::AnonymousTransfer(
+                                            _proof, _enc_keys, _left_ciphertexts, _right_ciphertext, _sig_vk,
+                                        ) => println!("Submitting transaction is completed successfully. \n Remaining balance is {}", remaining_balance),
+                                        anonymous_balances::RawEvent::InvalidZkProof() => println!("Invalid zk proof."),
+                                    }
+                                }
+                                _ => {},
                             }
                         }
                     },

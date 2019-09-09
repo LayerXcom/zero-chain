@@ -251,7 +251,7 @@ mod tests {
         testing::{Digest, DigestItem, Header}
     };
     use zprimitives::{Ciphertext, SigVerificationKey, PARAMS as ZPARAMS};
-    use keys::{ProofGenerationKey, EncryptionKey};
+    use keys::EncryptionKey;
     use jubjub::{curve::{JubjubBls12, FixedGenerators, fs}};
     use pairing::{Field, bls12_381::Bls12};
     use zcrypto::elgamal;
@@ -259,7 +259,7 @@ mod tests {
     use bellman_verifier::PreparedVerifyingKey;
     use test_proofs::{EncryptionKey as tEncryptionKey, SpendingKey as tSpendingKey,
             elgamal as telgamal, PARAMS, MultiEncKeys, KeyContext, ProofBuilder,
-            constants::ANONIMITY_SIZE, crypto_components::Anonymous,
+            crypto_components::Anonymous,
         };
     use test_pairing::{bls12_381::Bls12 as tBls12, Field as tField};
     use scrypto::jubjub::{FixedGenerators as tFixedGenerators, fs::Fs as tFs, edwards as tedwards};
@@ -449,7 +449,6 @@ mod tests {
             let amount = 9;
 
             let enc_key_sender = tEncryptionKey::<tBls12>::from_seed(&alice_seed[..], &PARAMS).unwrap();
-            let p_g = tFixedGenerators::NoteCommitmentRandomness;
 
             // G_epoch of block height one.
             let g_epoch_vec: [u8; 32] = hex!("0953f47325251a2f479c25527df6d977925bebafde84423b20ae6c903411665a");
