@@ -114,6 +114,15 @@ impl IntoXY<Bls12> for RightCiphertext {
     }
 }
 
+impl IntoXY<Bls12> for &RightCiphertext {
+    fn into_xy(&self) -> Result<(Fr, Fr), io::Error> {
+        let point = edwards::Point::<Bls12, PrimeOrder>::try_from(**self)?
+            .into_xy();
+
+        Ok(point)
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;

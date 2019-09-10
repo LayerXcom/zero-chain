@@ -3,10 +3,10 @@
 // Ensure we're `no_std` when compiling for Wasm.
 #![cfg_attr(not(feature = "std"), no_std)]
 
-use support::{decl_module, decl_storage, decl_event, StorageMap, Parameter, StorageValue};
+use support::{decl_module, decl_storage, decl_event, StorageMap, Parameter, StorageValue, ensure};
 use rstd::prelude::*;
 use rstd::result;
-use runtime_primitives::traits::{SimpleArithmetic, Zero, One};
+use runtime_primitives::traits::{SimpleArithmetic, Zero, One, As};
 use system::ensure_signed;
 use zprimitives::{
     EncKey, Proof,
@@ -46,13 +46,13 @@ decl_module! {
             <zk_system::Module<T>>::init_nonce_pool(current_epoch);
 
             // Veridate the provided nonce isn't included in the nonce pool.
-            assert!(!<zk_system::Module<T>>::nonce_pool().contains(&nonce));
+            ensure!(!<zk_system::Module<T>>::nonce_pool().contains(&nonce), "Provided nonce is already included in the nonce pool.");
 
             // Verify a zk proof
             // 1. Spend authority verification
-            // 2. Range proof of issued amount
+            // 2. Range check of issued amount
             // 3. Encryption integrity
-            if !<zk_system::Module<T>>::validate_confidential_proof(
+            if !<zk_system::Module<T>>::verify_confidential_proof(
                 &zkproof,
                 &issuer,
                 &issuer,
@@ -110,10 +110,10 @@ decl_module! {
             Self::rollover(&address_recipient, asset_id)?;
 
             // Veridate the provided nonce isn't included in the nonce pool.
-            assert!(!<zk_system::Module<T>>::nonce_pool().contains(&nonce));
+            ensure!(!<zk_system::Module<T>>::nonce_pool().contains(&nonce), "Provided nonce is already included in the nonce pool.");
 
             // Verify the zk proof
-            if !<zk_system::Module<T>>::validate_confidential_proof(
+            if !<zk_system::Module<T>>::verify_confidential_proof(
                 &zkproof,
                 &address_sender,
                 &address_recipient,
@@ -182,11 +182,11 @@ decl_module! {
             <zk_system::Module<T>>::init_nonce_pool(current_epoch);
 
             // Veridate the provided nonce isn't included in the nonce pool.
-            assert!(!<zk_system::Module<T>>::nonce_pool().contains(&nonce));
+            ensure!(!<zk_system::Module<T>>::nonce_pool().contains(&nonce), "Provided nonce is already included in the nonce pool.");
 
             // Verify the zk proof
             // 1. Spend authority verification
-            if !<zk_system::Module<T>>::validate_confidential_proof(
+            if !<zk_system::Module<T>>::verify_confidential_proof(
                 &zkproof,
                 &owner,
                 &owner,
@@ -390,8 +390,8 @@ mod tests {
         convert::TryFrom,
     };
 
-    const PK_PATH: &str = "../../zface/tests/proving.dat";
-    const VK_PATH: &str = "../../zface/tests/verification.dat";
+    const PK_PATH: &str = "../../zface/params/test_conf_pk.dat";
+    const VK_PATH: &str = "../../zface/params/test_conf_vk.dat";
 
     impl_outer_origin! {
         pub enum Origin for Test {}
@@ -468,8 +468,19 @@ mod tests {
             .expect("should be generated encryption key from seed."))
     }
 
-    pub fn get_pvk() -> PreparedVerifyingKey<Bls12> {
-        let vk_path = Path::new("../../zface/tests/verification.dat");
+    pub fn get_conf_vk() -> PreparedVerifyingKey<Bls12> {
+        let vk_path = Path::new("../../zface/params/test_conf_vk.dat");
+        let vk_file = File::open(&vk_path).unwrap();
+        let mut vk_reader = BufReader::new(vk_file);
+
+        let mut buf_vk = vec![];
+        vk_reader.read_to_end(&mut buf_vk).unwrap();
+
+        PreparedVerifyingKey::<Bls12>::read(&mut &buf_vk[..]).unwrap()
+    }
+
+    pub fn get_anony_vk() -> PreparedVerifyingKey<Bls12> {
+        let vk_path = Path::new("../../zface/params/test_anony_vk.dat");
         let vk_file = File::open(&vk_path).unwrap();
         let mut vk_reader = BufReader::new(vk_file);
 
@@ -487,7 +498,8 @@ mod tests {
         let _ = zk_system::GenesisConfig::<Test>{
             last_epoch: 1,
             epoch_length: 1,
-            verifying_key: get_pvk(),
+            confidential_vk: get_conf_vk(),
+            anonymous_vk: get_anony_vk(),
             nonce_pool: vec![],
         }.assimilate_storage(&mut t, &mut c);
         let _ = encrypted_balances::GenesisConfig::<Test>{
@@ -522,20 +534,20 @@ mod tests {
             let enc_key = tEncryptionKey::from_seed(&seed[..], &*PARAMS).unwrap();
 
             let amount = 100;
-            let enc_balance = telgamal::Ciphertext::encrypt(
+            let enc_balance = vec![telgamal::Ciphertext::encrypt(
                 amount,
                 &tFs::one(),
                 &enc_key,
                 p_g,
                 &*PARAMS
-            );
+            )];
 
             let tx = KeyContext::read_from_path(PK_PATH, VK_PATH)
                 .unwrap()
                 .gen_proof(
                     amount,
                     0,
-                    0,
+                    0, 0, 0,
                     &spending_key,
                     MultiEncKeys::<tBls12, Confidential>::new(enc_key),
                     &enc_balance,
@@ -578,20 +590,20 @@ mod tests {
             let p_g = tFixedGenerators::NoteCommitmentRandomness;
 
             // The default balance is not encrypted with randomness.
-            let enc_alice_bal = telgamal::Ciphertext::encrypt(
+            let enc_alice_bal = vec![telgamal::Ciphertext::encrypt(
                 current_balance,
                 &tFs::one(),
                 &enc_key,
                 p_g,
                 &*PARAMS
-            );
+            )];
 
             let tx = KeyContext::read_from_path(PK_PATH, VK_PATH)
                 .unwrap()
                 .gen_proof(
                     amount,
                     fee,
-                    remaining_balance,
+                    remaining_balance, 0, 0,
                     &spending_key,
                     MultiEncKeys::<tBls12, Confidential>::new(recipient_account_id),
                     &enc_alice_bal,
@@ -625,20 +637,20 @@ mod tests {
             let enc_key = tEncryptionKey::<tBls12>::from_seed(&alice_seed[..], &PARAMS).unwrap();
             let p_g = tFixedGenerators::NoteCommitmentRandomness;
 
-            let dummy_balance  = telgamal::Ciphertext::encrypt(
+            let dummy_balance  = vec![telgamal::Ciphertext::encrypt(
                 0,
                 &tFs::one(),
                 &enc_key,
                 p_g,
                 &*PARAMS
-            );
+            )];
 
             let tx = KeyContext::read_from_path(PK_PATH, VK_PATH)
                 .unwrap()
                 .gen_proof(
                     0,
                     0,
-                    0,
+                    0, 0, 0,
                     &spending_key,
                     MultiEncKeys::<tBls12, Confidential>::new(enc_key),
                     &dummy_balance,

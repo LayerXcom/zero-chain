@@ -55,6 +55,10 @@ impl Proof {
     pub fn from_slice(slice: &[u8]) -> Self {
         Proof(slice.to_vec())
     }
+
+    pub fn as_bytes(&self) -> &[u8] {
+        &self.0[..]
+    }
 }
 
 #[cfg(feature = "std")]

@@ -53,6 +53,28 @@ dependencies = [
 ]
 
 [[package]]
+name = "anonymous-balances"
+version = "0.1.0"
+dependencies = [
+ "bellman-verifier 0.1.0",
+ "jubjub 0.1.0",
+ "keys 0.1.0",
+ "parity-codec 3.5.4 (registry+https://github.com/rust-lang/crates.io-index)",
+ "serde 1.0.98 (registry+https://github.com/rust-lang/crates.io-index)",
+ "serde_derive 1.0.98 (registry+https://github.com/rust-lang/crates.io-index)",
+ "sr-io 1.0.0 (git+https://github.com/osuketh/substrate.git?branch=patch-zerochain)",
+ "sr-primitives 1.0.0 (git+https://github.com/osuketh/substrate.git?branch=patch-zerochain)",
+ "sr-std 1.0.0 (git+https://github.com/osuketh/substrate.git?branch=patch-zerochain)",
+ "srml-support 1.0.0 (git+https://github.com/osuketh/substrate.git?branch=patch-zerochain)",
+ "srml-system 1.0.0",
+ "substrate-primitives 1.0.0 (git+https://github.com/osuketh/substrate.git?branch=patch-zerochain)",
+ "zerochain-crypto 0.1.0",
+ "zerochain-pairing 0.14.2",
+ "zerochain-primitives 0.1.0",
+ "zk-system 0.1.0",
+]
+
+[[package]]
 name = "arc-swap"
 version = "0.3.11"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -3459,6 +3481,7 @@ dependencies = [
 name = "zerochain-runtime"
 version = "1.0.0"
 dependencies = [
+ "anonymous-balances 0.1.0",
  "bellman-verifier 0.1.0",
  "encrypted-assets 0.1.0",
  "encrypted-balances 0.1.0",

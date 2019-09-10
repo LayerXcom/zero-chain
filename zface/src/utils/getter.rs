@@ -1,17 +1,69 @@
+// All this code will be refactored once polkadot{.rs} is updated.
+
 use keys::EncryptionKey as zEncryptionKey;
+use rand::Rng;
 use pairing::bls12_381::Bls12;
 use zprimitives::{EncKey, GEpoch};
 use zcrypto::elgamal as zelgamal;
 use polkadot_rs::{Api, hexstr_to_vec, hexstr_to_u64};
 use parity_codec::Encode;
-use proofs::PARAMS;
+use proofs::{PARAMS, elgamal};
 use zprimitives::PARAMS as ZPARAMS;
 use zjubjub::curve::FixedGenerators as zFixedGenerators;
-use proofs::{EncryptionKey, DecryptionKey};
+use proofs::{EncryptionKey, DecryptionKey, constants::DECOY_SIZE};
 use zpairing::bls12_381::Bls12 as zBls12;
 use scrypto::jubjub::{edwards, PrimeOrder};
 use crate::error::Result;
 use std::convert::TryFrom;
+
+pub fn get_enc_balances(api: &Api, enc_keys: &[EncryptionKey<Bls12>]) -> Result<Vec<elgamal::Ciphertext<Bls12>>> {
+    let mut acc = vec![];
+    for e in enc_keys {
+        let mut encrypted_balance_str = api.get_storage(
+            "AnonymousBalances",
+            "EncryptedBalance",
+            Some(EncKey::try_from(no_std_e(e)?)?.encode())
+        )?;
+
+        let mut pending_transfer_str = api.get_storage(
+            "AnonymousBalances",
+            "PendingTransfer",
+            Some(EncKey::try_from(no_std_e(e)?)?.encode())
+        )?;
+
+        let mut ciphertext = None;
+        let mut p_ciphertext = None;
+
+        if encrypted_balance_str.as_str() != "0x00" {
+            // TODO: remove unnecessary prefix. If it returns `0x00`, it will be panic.
+            for _ in 0..4 {
+                encrypted_balance_str.remove(2);
+            }
+
+            let encrypted_balance = hexstr_to_vec(encrypted_balance_str.clone());
+            ciphertext = Some(zelgamal::Ciphertext::<zBls12>::read(&mut &encrypted_balance[..], &ZPARAMS)?);
+        }
+
+        if pending_transfer_str.as_str() != "0x00" {
+            // TODO: remove unnecessary prefix. If it returns `0x00`, it will be panic.
+            for _ in 0..4 {
+                pending_transfer_str.remove(2);
+            }
+
+            let pending_transfer = hexstr_to_vec(pending_transfer_str.clone());
+            p_ciphertext = Some(zelgamal::Ciphertext::<zBls12>::read(&mut &pending_transfer[..], &ZPARAMS)?);
+        }
+
+        let zero = zelgamal::Ciphertext::<zBls12>::zero();
+        let enc_total = ciphertext.unwrap_or(zero.clone()).add(&p_ciphertext.unwrap_or(zero), &*ZPARAMS);
+        let mut buf = vec![0u8; 64];
+        enc_total.write(&mut buf[..])?;
+        let tmp = elgamal::Ciphertext::<Bls12>::read(&mut &buf[..], &*PARAMS)?;
+        acc.push(tmp);
+    }
+
+    Ok(acc)
+}
 
 pub struct BalanceQuery {
     pub decrypted_balance: u32,
@@ -31,7 +83,7 @@ impl BalanceQuery {
             "EncryptedBalances",
             "EncryptedBalance",
             Some(account_id.encode())
-            )?;
+        )?;
 
         let pending_transfer_str = api.get_storage(
             "EncryptedBalances",
@@ -59,6 +111,25 @@ impl BalanceQuery {
         )?;
 
         Self::get_balance_from_decryption_key(encrypted_asset_str, pending_transfer_str, dec_key)
+    }
+
+    pub fn get_anonymous_balance(dec_key: &DecryptionKey<Bls12>, api: Api) -> Result<Self> {
+        let encryption_key = zEncryptionKey::from_decryption_key(&no_std(&dec_key)?, &*ZPARAMS);
+        let account_id = EncKey::try_from(encryption_key)?;
+
+        let encrypted_balance_str = api.get_storage(
+            "AnonymousBalances",
+            "EncryptedBalance",
+            Some(account_id.encode())
+        )?;
+
+        let pending_transfer_str = api.get_storage(
+            "AnonymousBalances",
+            "PendingTransfer",
+            Some(account_id.encode())
+        )?;
+
+        Self::get_balance_from_decryption_key(encrypted_balance_str, pending_transfer_str, dec_key)
     }
 
     fn get_balance_from_decryption_key(
@@ -130,7 +201,7 @@ pub fn g_epoch(api: &Api) -> Result<edwards::Point<Bls12, PrimeOrder>> {
 
     let point = edwards::Point::<Bls12, _>::read(&mut g_epoch.as_ref(), &PARAMS)?
             .as_prime_order(&PARAMS)
-            .unwrap();
+            .unwrap();    
 
     Ok(point)
 }
@@ -147,4 +218,34 @@ fn no_std(dec_key: &DecryptionKey<Bls12>) -> Result<keys::DecryptionKey<zBls12>>
     let key = keys::DecryptionKey::read(&mut &dec_key_vec[..])?;
 
     Ok(key)
+}
+
+fn no_std_e(enc_key: &EncryptionKey<Bls12>) -> Result<keys::EncryptionKey<zBls12>> {
+    let mut enc_key_vec = vec![];
+    enc_key.write(&mut enc_key_vec)?;
+    let key = keys::EncryptionKey::read(&mut &enc_key_vec[..], &*ZPARAMS)?;
+    Ok(key)
+}
+
+pub fn get_enc_keys<R: Rng>(api: &Api, rng: &mut R) -> Result<Vec<EncryptionKey<Bls12>>> {
+    let mut enc_keys_str = api.get_storage("AnonymousBalances", "EncKeySet", None)?;
+    // TODO: remove unnecessary prefix. If it returns `0x00`, it will be panic.
+    for _ in 0..4 {
+        enc_keys_str.remove(2);
+    }
+    let mut enc_keys_vec = hexstr_to_vec(enc_keys_str);
+
+    assert!(enc_keys_vec.len() % 32 == 0);
+    let mut tmp_acc = vec![];
+    while !enc_keys_vec.is_empty() {
+        let tmp = enc_keys_vec.drain(..32).collect::<Vec<u8>>();
+        tmp_acc.push(EncryptionKey::<Bls12>::read(&mut &tmp[..], &PARAMS)?)
+    }
+    let mut acc = vec![];
+    for _ in 0..DECOY_SIZE {
+        let random_i = rng.gen_range(0, tmp_acc.len());
+        acc.push(tmp_acc[random_i].clone());
+    }
+
+    Ok(acc)
 }

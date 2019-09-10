@@ -5,21 +5,20 @@ use scrypto::jubjub::JubjubBls12;
 use bellman::SynthesisError;
 pub mod circuit;
 pub mod confidential;
+pub mod anonymous;
 pub mod no_std_aliases;
 pub mod setup;
-pub mod nonce;
 pub mod crypto_components;
+pub mod constants;
 
-pub use self::setup::confidential_setup;
+pub use self::setup::{confidential_setup, anonymous_setup};
 pub use self::no_std_aliases::keys::{
     EncryptionKey, ProofGenerationKey,
     SpendingKey, DecryptionKey,
     prf_expand_vec, prf_expand
 };
 pub use self::no_std_aliases::elgamal;
-pub use self::nonce::Nonce;
-pub use self::crypto_components::{MultiEncKeys, Confidential};
-pub use self::confidential::{KeyContext, ProofBuilder};
+pub use self::crypto_components::{MultiEncKeys, Confidential, KeyContext, ProofBuilder};
 
 lazy_static! {
     pub static ref PARAMS: JubjubBls12 = { JubjubBls12::new() };

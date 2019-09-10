@@ -43,6 +43,7 @@ ws = "0.7"
 system = { package = "srml-system", path = "../modules/system" }
 encrypted-balances = { path = "../modules/encrypted-balances" }
 encrypted-assets = { path = "../modules/encrypted-assets" }
+anonymous-balances = { path = "../modules/anonymous-balances" }
 
 [dependencies.blake2-rfc]
 git = "https://github.com/gtank/blake2-rfc"

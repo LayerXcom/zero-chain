@@ -17,6 +17,7 @@ timestamp = { package = "srml-timestamp", path = "../modules/timestamp", default
 hex-literal = '0.1'
 encrypted-balances = { path = "../modules/encrypted-balances", default-features = false }
 encrypted-assets = { path = "../modules/encrypted-assets", default-features = false }
+anonymous-balances = { path = "../modules/anonymous-balances", default-features = false }
 zk-system = { path = "../modules/zk-system", default-features = false }
 
 [dependencies.client]
@@ -121,6 +122,7 @@ std = [
     'consensus-authorities/std',
     'encrypted-balances/std',
     'encrypted-assets/std',
+    'anonymous-balances/std',
     'zk-system/std',
     "pairing/std",
 	"bellman-verifier/std",

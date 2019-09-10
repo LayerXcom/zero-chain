@@ -64,6 +64,25 @@ impl<E: JubjubEngine> Ciphertext<E> {
         }
     }
 
+    // Encrypt with negative value
+    pub fn neg_encrypt(
+        amount: u32,
+        randomness: &E::Fs,
+        enc_key: &keys::EncryptionKey<E>,
+        p_g: FixedGenerators,
+        params: &E::Params
+    ) -> Self {
+        let right = params.generator(p_g).mul(*randomness, params);
+        let v_point = params.generator(p_g).mul(amount as u64, params).negate();
+        let r_point = enc_key.0.mul(*randomness, params);
+        let left = v_point.add(&r_point, params);
+
+        Ciphertext {
+            left,
+            right,
+        }
+    }
+
     /// Decryption of the ciphetext for the amount
     pub fn decrypt(
         &self,

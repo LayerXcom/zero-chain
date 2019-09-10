@@ -1,13 +1,11 @@
 #[cfg(feature = "std")]
-use ::std::{vec::Vec, fmt, write};
-#[cfg(feature = "std")]
-use substrate_primitives::hexdisplay::AsBytesRef;
+use ::std::vec::Vec;
 #[cfg(not(feature = "std"))]
 use crate::std::vec::Vec;
 use crate::{PARAMS, LeftCiphertext, RightCiphertext};
 use zcrypto::elgamal;
 use pairing::{
-    bls12_381::{Bls12, Fr},
+    bls12_381::Bls12,
     io
 };
 use parity_codec::{Encode, Decode};
@@ -102,43 +100,25 @@ impl Ciphertext {
     }
 }
 
-#[cfg(feature = "std")]
-impl fmt::Display for Ciphertext {
-    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        write!(f, "0x")?;
-        for i in &self.0 {
-            write!(f, "{:02x}", i)?;
-        }
-        Ok(())
-    }
-}
-
-#[cfg(feature = "std")]
-impl AsBytesRef for Ciphertext {
-    fn as_bytes_ref(&self) -> &[u8] {
-        self.0.as_slice()
-    }
-}
-
 impl Ciphertext {
-    pub fn into_xy_left(&self) -> Result<(Fr, Fr), io::Error> {
-        let left_point = elgamal::Ciphertext::<Bls12>::try_from(self)?
-            .left.into_xy();
-
-        Ok(left_point)
+    pub fn left(&self) -> Result<LeftCiphertext, io::Error> {
+        elgamal::Ciphertext::<Bls12>::try_from(self)?
+            .left.try_into()
     }
 
-    pub fn into_xy_right(&self) -> Result<(Fr, Fr), io::Error> {
-        let right_point = elgamal::Ciphertext::<Bls12>::try_from(self)?
-            .right.into_xy();
-
-        Ok(right_point)
+    pub fn right(&self) -> Result<RightCiphertext, io::Error> {
+        elgamal::Ciphertext::<Bls12>::try_from(self)?
+            .right.try_into()
     }
 
     // TODO: Make constant
     pub fn zero() ->Self {
         elgamal::Ciphertext::zero().try_into()
             .expect("Should valid point.")
+    }
+
+    pub fn as_bytes(&self) -> &[u8] {
+        &self.0[..]
     }
 }
 
@@ -192,7 +172,7 @@ mod tests {
         let mut buf = [0u8; 64];
         ciphertext.write(&mut &mut buf[..]).unwrap();
 
-        let ciphertext_a = Ciphertext(buf.to_vec());
+        let ciphertext_a = Ciphertext::from_slice(&buf[..]);
         let ciphertext_b = Ciphertext::try_from(&ciphertext).unwrap();
 
         assert_eq!(ciphertext_a, ciphertext_b);

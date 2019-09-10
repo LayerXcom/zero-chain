@@ -85,9 +85,18 @@ impl AsBytesRef for EncKey {
     }
 }
 
-impl IntoXY<Bls12> for  EncKey {
+impl IntoXY<Bls12> for EncKey {
     fn into_xy(&self) -> Result<(Fr, Fr), io::Error> {
         let point = EncryptionKey::<Bls12>::try_from(self)?
+            .into_xy();
+
+        Ok(point)
+    }
+}
+
+impl IntoXY<Bls12> for &EncKey {
+    fn into_xy(&self) -> Result<(Fr, Fr), io::Error> {
+        let point = EncryptionKey::<Bls12>::try_from(**self)?
             .into_xy();
 
         Ok(point)
