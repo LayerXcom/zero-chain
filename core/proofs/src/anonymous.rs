@@ -200,22 +200,26 @@ impl<E: JubjubEngine> ProofContext<E, Unchecked, Anonymous> {
     ) -> Result<ProofContext<E, Checked, Anonymous>, SynthesisError> {
 
         let mut public_inputs = PublicInputBuilder::new(ANONIMOUS_INPUT_SIZE);
+        let mut j = 0;
         for i in 0..ANONIMITY_SIZE {
             if Some(i) == self.s_index {
                 public_inputs.push(&self.enc_key_sender.0);
             } else if Some(i) == self.t_index {
                 public_inputs.push(&self.enc_key_recipient().0);
             } else {
-                public_inputs.push(&self.enc_keys_decoy(i).0);
+                public_inputs.push(&self.enc_keys_decoy(j).0);
+                j += 1;
             }
         }
+        let mut j = 0;
         for i in 0..ANONIMITY_SIZE {
             if Some(i) == self.s_index {
                 public_inputs.push(self.left_amount_sender());
             } else if Some(i) == self.t_index {
                 public_inputs.push(self.left_amount_recipient());
             } else {
-                public_inputs.push(&self.left_ciphertext_decoy(i));
+                public_inputs.push(&self.left_ciphertext_decoy(j));
+                j += 1;
             }
         }
         for lc in self.enc_balances.iter().map(|c| c.left.clone()) {
@@ -231,7 +235,7 @@ impl<E: JubjubEngine> ProofContext<E, Unchecked, Anonymous> {
 
         // This verification is just an error handling, not validate if it returns `true`,
         // because public input of encrypted balance needs to be updated on-chain.
-        if let Err(_) = verify_proof(prepared_vk, &self.proof, public_inputs.as_slice()) {
+        if let Err(e) = verify_proof(prepared_vk, &self.proof, public_inputs.as_slice()) {
             return Err(SynthesisError::MalformedVerifyingKey)
         }
 

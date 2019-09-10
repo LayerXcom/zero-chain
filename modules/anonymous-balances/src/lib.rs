@@ -445,8 +445,8 @@ mod tests {
             let bob_addr: [u8; 32] = hex!("45e66da531088b55dcb3b273ca825454d79d2d1d5c4fa2ba4a12c1fa1ccd6389");
             let enc_key_recipient = tEncryptionKey::<tBls12>::read(&mut &bob_addr[..], &PARAMS).unwrap();
 
-            let remaining_balance = 91;
-            let amount = 9;
+            let remaining_balance = 90;
+            let amount = 10;
 
             let enc_key_sender = tEncryptionKey::<tBls12>::from_seed(&alice_seed[..], &PARAMS).unwrap();
 
