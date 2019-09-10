@@ -13,6 +13,7 @@ use scrypto::{
         FixedGenerators,
         edwards,
         PrimeOrder,
+        Unknown,
     },
     redjubjub::PublicKey,
 };
@@ -338,6 +339,8 @@ pub(crate) struct ProofContext<E: JubjubEngine, IsChecked, PC: PrivacyConfing> {
     pub(crate) enc_balances: Vec<Ciphertext<E>>,
     pub(crate) g_epoch: edwards::Point<E, PrimeOrder>,
     pub(crate) nonce: edwards::Point<E, PrimeOrder>,
+    pub(crate) s_index: Option<usize>,
+    pub(crate) t_index: Option<usize>,
     pub(crate) _marker: PhantomData<IsChecked>,
 }
 
@@ -376,6 +379,36 @@ pub(crate) fn convert_to_checked<E: JubjubEngine, C1, C2, PC: PrivacyConfing>(
         enc_balances: from.enc_balances,
         g_epoch: from.g_epoch,
         nonce: from.nonce,
+        s_index: from.s_index,
+        t_index: from.t_index,
         _marker: PhantomData,
+    }
+}
+
+pub struct PublicInputBuilder<E: JubjubEngine>(Vec<E::Fr>);
+
+impl<E: JubjubEngine> PublicInputBuilder<E> {
+    pub fn new(capacity: usize) -> Self {
+        PublicInputBuilder(Vec::with_capacity(capacity))
+    }
+
+    pub fn push(&mut self, input: &edwards::Point<E, PrimeOrder>) {
+        let (x, y) = input.into_xy();
+        self.0.push(x);
+        self.0.push(y);
+    }
+
+    pub fn unknown_push(&mut self, input: &edwards::Point<E, Unknown>) {
+        let (x, y) = input.into_xy();
+        self.0.push(x);
+        self.0.push(y);
+    }
+
+    pub fn as_slice(&self) -> &[E::Fr] {
+        &self.0[..]
+    }
+
+    pub fn len(&self) -> usize {
+        self.0.len()
     }
 }

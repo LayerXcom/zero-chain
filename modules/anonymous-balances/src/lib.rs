@@ -378,7 +378,7 @@ mod tests {
                 let ciphertext = elgamal::Ciphertext::encrypt(alice_value, &fs::Fs::one(), &e, p_g, params);
                 acc.push((EncKey::try_from(e.clone()).unwrap(), Ciphertext::try_from(ciphertext).unwrap()))
             } else {
-                let ciphertext = elgamal::Ciphertext::encrypt(alice_value, &fs::Fs::one(), &e, p_g, params);
+                let ciphertext = elgamal::Ciphertext::encrypt(0, &fs::Fs::one(), &e, p_g, params);
                 // let ciphertext = Ciphertext::zero();
                 acc.push((EncKey::try_from(e.clone()).unwrap(), Ciphertext::try_from(ciphertext).unwrap()))
             }

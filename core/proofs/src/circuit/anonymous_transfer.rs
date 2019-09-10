@@ -241,10 +241,10 @@ impl<'a, E: JubjubEngine> Circuit<E> for AnonymousTransfer<'a, E> {
         // balance integrity
         {
             // Negate amount ciphertexts of left components
-            let neg_left_amount_cipher = ciphertext_left_set.neg_each(
-                cs.namespace(|| "negate left amount ciphertexts"),
-                params
-            )?;
+            // let neg_left_amount_cipher = ciphertext_left_set.neg_each(
+            //     cs.namespace(|| "negate left amount ciphertexts"),
+            //     params
+            // )?;
 
             // Witness current balance ciphertexts of left components
             let left_balance_ciphertexts = LeftBalanceCiphertexts::witness::<PrimeOrder, _>(
@@ -298,11 +298,11 @@ impl<'a, E: JubjubEngine> Circuit<E> for AnonymousTransfer<'a, E> {
             )?;
 
             // Negate amount ciphertexts of right components
-            let neg_right_ciphertext = negate_point(
-                cs.namespace(|| "negate right ciphertext"),
-                &right_ciphertext,
-                params
-            )?;
+            // let neg_right_ciphertext = negate_point(
+            //     cs.namespace(|| "negate right ciphertext"),
+            //     &right_ciphertext,
+            //     params
+            // )?;
 
             // Subtract right ciphertexts: \sum (s_i * C_ri) - D
             let cr_minus_d = right_balance_cipher_fold.add(

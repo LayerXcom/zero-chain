@@ -3,3 +3,4 @@ pub const DECOY_SIZE: usize = ANONIMITY_SIZE - 2;
 pub const PROOF_SIZE: usize = 192;
 pub const POINT_SIZE: usize = 32;
 pub const CIPHERTEXT_SIZE: usize = 64;
+pub const ANONIMOUS_INPUT_SIZE: usize = 104;

@@ -48,6 +48,7 @@ use crate::crypto_components::{
     Calls,
     Unchecked,Checked,
     ProofContext, convert_to_checked,
+    PublicInputBuilder,
 };
 use std::{
     io::{self, Write, BufWriter},
@@ -155,10 +156,12 @@ impl<E: JubjubEngine> ProofBuilder<E, Anonymous> for KeyContext<E, Anonymous> {
             multi_ciphertexts,
             enc_balances,
             g_epoch,
-            nonce
+            nonce,
+            s_index,
+            t_index,
         )
         .check_proof(&self.prepared_vk)?
-        .gen_xt(&spending_key, alpha, s_index, t_index)
+        .gen_xt(&spending_key, alpha)
         .map_err(|e| SynthesisError::IoError(e))
     }
 }
@@ -173,6 +176,8 @@ impl<E: JubjubEngine> ProofContext<E, Unchecked, Anonymous> {
         enc_balances: &[Ciphertext<E>],
         g_epoch: edwards::Point<E, PrimeOrder>,
         nonce: edwards::Point<E, PrimeOrder>,
+        s_index: usize,
+        t_index: usize,
     ) -> Self {
         ProofContext {
             proof,
@@ -183,15 +188,64 @@ impl<E: JubjubEngine> ProofContext<E, Unchecked, Anonymous> {
             enc_balances: enc_balances.to_vec(),
             g_epoch,
             nonce,
+            s_index: Some(s_index),
+            t_index: Some(t_index),
             _marker: PhantomData,
         }
     }
 
     fn check_proof(
         self,
-        prepared_vk: &PreparedVerifyingKey<E>
+        prepared_vk: &PreparedVerifyingKey<E>,
     ) -> Result<ProofContext<E, Checked, Anonymous>, SynthesisError> {
+
+        let mut public_inputs = PublicInputBuilder::new(ANONIMOUS_INPUT_SIZE);
+        for i in 0..ANONIMITY_SIZE {
+            if Some(i) == self.s_index {
+                public_inputs.push(&self.enc_key_sender.0);
+            } else if Some(i) == self.t_index {
+                public_inputs.push(&self.enc_key_recipient().0);
+            } else {
+                public_inputs.push(&self.enc_keys_decoy(i).0);
+            }
+        }
+        for i in 0..ANONIMITY_SIZE {
+            if Some(i) == self.s_index {
+                public_inputs.push(self.left_amount_sender());
+            } else if Some(i) == self.t_index {
+                public_inputs.push(self.left_amount_recipient());
+            } else {
+                public_inputs.push(&self.left_ciphertext_decoy(i));
+            }
+        }
+        for lc in self.enc_balances.iter().map(|c| c.left.clone()) {
+            public_inputs.push(&lc);
+        }
+        for rc in self.enc_balances.iter().map(|c| c.right.clone()) {
+            public_inputs.push(&rc);
+        }
+        public_inputs.push(self.right_randomness());
+        public_inputs.unknown_push(&self.rvk.0);
+        public_inputs.push(&self.g_epoch);
+        public_inputs.push(&self.nonce);
+
+        // This verification is just an error handling, not validate if it returns `true`,
+        // because public input of encrypted balance needs to be updated on-chain.
+        if let Err(_) = verify_proof(prepared_vk, &self.proof, public_inputs.as_slice()) {
+            return Err(SynthesisError::MalformedVerifyingKey)
+        }
+
         Ok(convert_to_checked::<E, Unchecked, Checked, Anonymous>(self))
+    }
+}
+
+impl<E: JubjubEngine, C> ProofContext<E, C, Anonymous> {
+    fn enc_keys_decoy(&self, index: usize) -> &EncryptionKey<E> {
+        &self.enc_keys.get_decoys()[index]
+    }
+
+    fn left_ciphertext_decoy(&self, index: usize) -> edwards::Point<E, PrimeOrder> {
+        self.multi_ciphertexts.get_decoys_left()[index].clone()
     }
 }
 
@@ -200,8 +254,6 @@ impl<E: JubjubEngine> ProofContext<E, Checked, Anonymous> {
         &self,
         spending_key: &SpendingKey<E>,
         alpha: E::Fs,
-        s_index: usize,
-        t_index: usize
     ) -> io::Result<AnonymousXt>
     {
         // Generate the re-randomized sign key
@@ -224,9 +276,9 @@ impl<E: JubjubEngine> ProofContext<E, Checked, Anonymous> {
         let mut j = 0;
         for i in 0..ANONIMITY_SIZE {
             let mut e = [0u8; POINT_SIZE];
-            if i == s_index {
+            if Some(i) == self.s_index {
                 self.enc_key_sender.write(&mut e[..])?;
-            } else if i == t_index {
+            } else if Some(i) == self.t_index {
                 self.enc_key_recipient().write(&mut e[..])?;
             } else {
                 self.enc_keys_decoy(j).write(&mut e[..])?;
@@ -239,9 +291,9 @@ impl<E: JubjubEngine> ProofContext<E, Checked, Anonymous> {
         let mut j = 0;
         for i in 0..ANONIMITY_SIZE {
             let mut c = [0u8; POINT_SIZE];
-            if i == s_index {
+            if Some(i) == self.s_index {
                 self.left_amount_sender().write(&mut c[..])?;
-            } else if i == t_index {
+            } else if Some(i) == self.t_index {
                 self.left_amount_recipient().write(&mut c[..])?;
             } else {
                 self.left_ciphertext_decoy(j).write(&mut c[..])?;
@@ -268,14 +320,6 @@ impl<E: JubjubEngine> ProofContext<E, Checked, Anonymous> {
             rsk,
             rvk,
         })
-    }
-
-    fn enc_keys_decoy(&self, index: usize) -> &EncryptionKey<E> {
-        &self.enc_keys.get_decoys()[index]
-    }
-
-    fn left_ciphertext_decoy(&self, index: usize) -> edwards::Point<E, PrimeOrder> {
-        self.multi_ciphertexts.get_decoys_left()[index].clone()
     }
 }
 

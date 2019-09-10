@@ -199,6 +199,8 @@ impl<E: JubjubEngine> ProofContext<E, Unchecked, Confidential> {
             enc_balances,
             g_epoch,
             nonce,
+            s_index: None,
+            t_index: None,
             _marker: PhantomData,
         }
     }
