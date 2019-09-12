@@ -117,7 +117,7 @@ fn hash_lc<E: Engine>(
             }
         }
 
-        coeff.into_repr().write_be(&mut buf[9..]).unwrap();
+        coeff.into_repr().write_be(&mut &mut buf[9..]).unwrap();
 
         h.update(&buf);
     }

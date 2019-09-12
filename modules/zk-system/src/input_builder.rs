@@ -33,12 +33,4 @@ impl<E: JubjubEngine> PublicInputBuilder<E> {
     pub fn len(&self) -> usize {
         self.0.len()
     }
-
-    pub fn unsafe_write<W: io::Write>(&self, writer: &mut W) -> io::Result<()> {
-        use pairing::{PrimeField, PrimeFieldRepr};
-        for r in &self.0 {
-            r.into_repr().write_le(writer)?;
-        }
-        Ok(())
-    }
 }
