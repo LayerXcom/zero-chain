@@ -233,10 +233,18 @@ impl<E: JubjubEngine> ProofContext<E, Unchecked, Anonymous> {
         public_inputs.push(&self.g_epoch);
         public_inputs.push(&self.nonce);
 
-        // This verification is just an error handling, not validate if it returns `true`,
-        // because public input of encrypted balance needs to be updated on-chain.
-        if let Err(e) = verify_proof(prepared_vk, &self.proof, public_inputs.as_slice()) {
-            return Err(SynthesisError::MalformedVerifyingKey)
+        use pairing::{PrimeField, PrimeFieldRepr};
+        let mut buf = vec![];
+        for r in public_inputs.as_slice() {
+            r.into_repr().write_le(&mut &mut buf).map_err(|_| "write error").unwrap();
+        }
+        println!("{:?}", hex::encode(buf.clone()));
+        println!("{:?}", buf.len());
+
+        match verify_proof(prepared_vk, &self.proof, public_inputs.as_slice()) {
+            Ok(e) if !e => return Err(SynthesisError::Unsatisfiable),
+            Err(e) => return Err(e),
+            _ => { },
         }
 
         Ok(convert_to_checked::<E, Unchecked, Checked, Anonymous>(self))

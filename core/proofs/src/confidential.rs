@@ -268,10 +268,10 @@ impl<E: JubjubEngine> ProofContext<E, Unchecked, Confidential> {
             public_input[21] = y;
         }
 
-        // This verification is just an error handling, not validate if it returns `true`,
-        // because public input of encrypted balance needs to be updated on-chain.
-        if let Err(_) = verify_proof(prepared_vk, &self.proof, &public_input[..]) {
-            return Err(SynthesisError::MalformedVerifyingKey)
+        match verify_proof(prepared_vk, &self.proof, &public_input[..]) {
+            Ok(e) if !e => return Err(SynthesisError::Unsatisfiable),
+            Err(e) => return Err(e),
+            _ => { },
         }
 
         Ok(convert_to_checked::<E, Unchecked, Checked, Confidential>(self))
