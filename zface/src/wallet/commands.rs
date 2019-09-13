@@ -7,7 +7,7 @@ use crate::error::{Result, KeystoreError};
 use super::{WalletDirectory, KeystoreDirectory, DirOperations};
 use super::keyfile::{KeyFile, IndexFile};
 use super::config::*;
-use bip39::{Mnemonic, Language, MnemonicType, Seed};
+pub use bip39::{Mnemonic, Language, MnemonicType, Seed};
 use rand::Rng;
 use proofs::DecryptionKey;
 use pairing::bls12_381::Bls12;
@@ -226,7 +226,7 @@ fn get_new_keyfile<R: Rng>(
 }
 
 /// Create a new index file in wallet directory.
-fn new_indexfile(wallet_dir: &WalletDirectory, keyfile_name: &str, account_name: &str) -> Result<()> {
+pub fn new_indexfile(wallet_dir: &WalletDirectory, keyfile_name: &str, account_name: &str) -> Result<()> {
     let mut map_account_keyfile = HashMap::new();
     map_account_keyfile.insert(account_name.to_string(), (keyfile_name.to_string(), 0));
 

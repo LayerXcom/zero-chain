@@ -1,3 +1,5 @@
+#![allow(dead_code)]
+
 use dirs;
 use clap::{Arg, ArgMatches};
 use super::term;

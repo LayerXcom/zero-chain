@@ -2,7 +2,7 @@ use rand::Rng;
 use smallvec::SmallVec;
 
 pub mod commands;
-mod config;
+pub mod config;
 mod keyfile;
 mod disk;
 pub use self::keyfile::KeyFile;
