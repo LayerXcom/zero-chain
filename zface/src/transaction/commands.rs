@@ -186,7 +186,7 @@ pub fn confidential_transfer_tx<R: Rng>(
     let password = prompt_password(term)?;
     let spending_key = spending_key_from_keystore(root_dir, &password[..])?;
 
-    inner_confidential_transfer_tx(spending_key, recipient_enc_key, amount, url, rng)?;
+    inner_confidential_transfer_tx(spending_key, recipient_enc_key, amount, url, CONF_PK_PATH, CONF_VK_PATH, rng)?;
 
     Ok(())
 }
@@ -260,7 +260,7 @@ pub fn transfer_tx_for_debug<R: Rng>(
     rng: &mut R,
 ) -> Result<()> {
     let spending_key = SpendingKey::from_seed(seed);
-    inner_confidential_transfer_tx(spending_key, recipient_enc_key, amount, url, rng)?;
+    inner_confidential_transfer_tx(spending_key, recipient_enc_key, amount, url, CONF_PK_PATH, CONF_VK_PATH, rng)?;
 
     Ok(())
 }
@@ -278,11 +278,13 @@ pub fn anonymous_transfer_tx_for_debug<R: Rng>(
     Ok(())
 }
 
-fn inner_confidential_transfer_tx<R: Rng>(
+pub fn inner_confidential_transfer_tx<R: Rng>(
     spending_key: SpendingKey::<Bls12>,
     recipient_enc_key: &[u8],
     amount: u32,
     url: Url,
+    conf_pk_path: &str,
+    conf_vk_path: &str,
     rng: &mut R
 ) -> Result<()> {
     println!("Preparing paramters...");
@@ -308,7 +310,7 @@ fn inner_confidential_transfer_tx<R: Rng>(
     }
 
     println!("Start submitting a transaction to Zerochain...");
-    KeyContext::read_from_path(CONF_PK_PATH, CONF_VK_PATH)?
+    KeyContext::read_from_path(conf_pk_path, conf_vk_path)?
         .gen_proof(
             amount,
             fee,
