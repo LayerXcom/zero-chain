@@ -15,7 +15,7 @@ pub const ALICEDECRYPTIONKEY: &str = "b0451b0bfab2830a75216779e010e0bfd2e6d0b4e4
 pub const DEFAULT_ENCRYPTED_BALANCE: &str = "6f4962da776a391c3b03f3e14e8156d2545f39a3ebbed675ea28859252cb006fac776c796563fcd44cc49cfaea8bb796952c266e47779d94574c10ad01754b11";
 
 /// root directory configuration
-pub(crate) fn get_default_root_dir() -> PathBuf {
+pub fn get_default_root_dir() -> PathBuf {
     match dirs::data_local_dir() {
         Some(dir) => dir.join(APPLICATION_DIRECTORY_NAME),
         None => panic!("Undefined the local data directory."),

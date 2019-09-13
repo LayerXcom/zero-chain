@@ -5,6 +5,7 @@ pub mod term;
 pub mod utils;
 pub mod transaction;
 pub mod error;
+pub mod config;
 
 #[macro_use]
 extern crate serde_derive;
