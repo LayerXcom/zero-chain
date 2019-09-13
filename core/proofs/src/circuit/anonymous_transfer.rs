@@ -83,7 +83,6 @@ impl<'a, E: JubjubEngine> Circuit<E> for AnonymousTransfer<'a, E> {
             params
         )?;
 
-
         // Ensure the remaining balance is u32.
         let remaining_balance_bits = u32_into_bit_vec_le(
             cs.namespace(|| "range proof of remaining_balance"),
@@ -234,12 +233,6 @@ impl<'a, E: JubjubEngine> Circuit<E> for AnonymousTransfer<'a, E> {
 
         // balance integrity
         {
-            // Negate amount ciphertexts of left components
-            // let neg_left_amount_cipher = ciphertext_left_set.neg_each(
-            //     cs.namespace(|| "negate left amount ciphertexts"),
-            //     params
-            // )?;
-
             // Witness current balance ciphertexts of left components
             let left_balance_ciphertexts = LeftBalanceCiphertexts::witness::<PrimeOrder, _>(
                 cs.namespace(|| "left balance ciphertexts witness"),
@@ -290,13 +283,6 @@ impl<'a, E: JubjubEngine> Circuit<E> for AnonymousTransfer<'a, E> {
                 &randomness_bits,
                 params
             )?;
-
-            // Negate amount ciphertexts of right components
-            // let neg_right_ciphertext = negate_point(
-            //     cs.namespace(|| "negate right ciphertext"),
-            //     &right_ciphertext,
-            //     params
-            // )?;
 
             // Subtract right ciphertexts: \sum (s_i * C_ri) - D
             let cr_minus_d = right_balance_cipher_fold.add(

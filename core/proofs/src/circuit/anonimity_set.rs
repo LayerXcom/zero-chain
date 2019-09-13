@@ -66,14 +66,6 @@ impl Binary {
             }
         }
 
-        // for (i, b) in binaries.into_iter().enumerate() {
-        //     let tmp = Boolean::from(AllocatedBit::alloc(
-        //         cs.namespace(|| format!("{} binary {}", st, i)),
-        //         Some(*b))?
-        //     );
-        //     acc.push(tmp);
-        // }
-
         let res = Binary(acc);
         let mut check = res.clone();
         // if let Some(i) = index {

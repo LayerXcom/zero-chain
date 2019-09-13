@@ -48,7 +48,7 @@ decl_module! {
             }
 
             // Verify the zk proof
-            if <zk_system::Module<T>>::verify_anonymous_proof(
+            if !<zk_system::Module<T>>::verify_anonymous_proof(
                     &zkproof,
                     &enc_keys[..],
                     &left_ciphertexts[..],
