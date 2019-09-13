@@ -49,8 +49,9 @@ pub fn anonymous_setup<R: Rng>(rng: &mut R) -> KeyContext<Bls12, Anonymous> {
             alpha: None,
             proof_generation_key: None,
             dec_key: None,
-            enc_key_recipient: None,
-            enc_key_decoys: None,
+            enc_keys: None,
+            left_ciphertexts: None,
+            right_ciphertext: None,
             enc_balances: None,
             g_epoch: None,
         };

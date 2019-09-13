@@ -545,16 +545,12 @@ mod tests {
     #[test]
     fn test_read_proving_key() {
         let pk_path = Path::new("../../zface/params/test_conf_pk.dat");
-
         let pk_file = File::open(&pk_path).unwrap();
 
         let mut pk_reader = BufReader::new(pk_file);
-        println!("{:?}", pk_reader);
         let mut buf = vec![];
 
         pk_reader.read_to_end(&mut buf).unwrap();
-        println!("{:?}", buf.len());
-
         let _proving_key = Parameters::<Bls12>::read(&mut &buf[..], true).unwrap();
     }
 

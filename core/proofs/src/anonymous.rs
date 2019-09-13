@@ -117,6 +117,9 @@ impl<E: JubjubEngine> ProofBuilder<E, Anonymous> for KeyContext<E, Anonymous> {
         let pgk = ProofGenerationKey::<E>::from_spending_key(&spending_key, params);
         let dec_key = pgk.into_decryption_key()?;
         let enc_key_sender = pgk.into_encryption_key(params)?;
+        let mut enc_keys_vec = enc_keys.get_decoys().to_vec();
+        enc_keys_vec.insert(s_index, enc_key_sender.clone());
+        enc_keys_vec.insert(t_index, enc_keys.get_recipient().clone());
 
         let rvk = PublicKey(pgk.0.clone().into())
             .randomize(
@@ -125,6 +128,13 @@ impl<E: JubjubEngine> ProofBuilder<E, Anonymous> for KeyContext<E, Anonymous> {
                 params,
         );
         let nonce = g_epoch.mul(dec_key.0, params);
+
+        let multi_ciphertexts = MultiCiphertexts::<E, Anonymous>::encrypt(
+            amount, 0, &enc_key_sender, &enc_keys, &randomness, params
+        );
+        let mut left_ciphertexts = multi_ciphertexts.get_decoys_left();
+        left_ciphertexts.insert(s_index, multi_ciphertexts.get_sender().left.clone());
+        left_ciphertexts.insert(t_index, multi_ciphertexts.get_recipient().left.clone());
 
         let instance = AnonymousTransfer {
             params,
@@ -136,17 +146,15 @@ impl<E: JubjubEngine> ProofBuilder<E, Anonymous> for KeyContext<E, Anonymous> {
             alpha: Some(&alpha),
             proof_generation_key: Some(&pgk),
             dec_key: Some(&dec_key),
-            enc_key_recipient: Some(&enc_keys.get_recipient()),
-            enc_key_decoys: Some(&enc_keys.get_decoys()),
+            enc_keys: Some(&enc_keys_vec[..]),
+            left_ciphertexts: Some(&left_ciphertexts[..]),
+            right_ciphertext: Some(multi_ciphertexts.get_right()),
             enc_balances: Some(&enc_balances),
             g_epoch: Some(&g_epoch),
         };
 
         // Crate proof
         let proof = create_random_proof(instance, &self.proving_key, rng)?;
-        let multi_ciphertexts = MultiCiphertexts::<E, Anonymous>::encrypt(
-            amount, 0, &enc_key_sender, &enc_keys, &randomness, params
-        );
 
         ProofContext::new(
             proof,
@@ -413,5 +421,66 @@ impl AnonymousXt {
             zRightCiphertext::from_slice(&self.right_ciphertext[..]),
             zNonce::from_slice(&self.nonce[..])
         ))
+    }
+}
+
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use rand::{SeedableRng, XorShiftRng, Rng};
+    use scrypto::jubjub::{JubjubBls12, fs::Fs};
+    use pairing::bls12_381::Bls12;
+
+    #[test]
+    fn test_gen_anonymous_proof() {
+        let params = &JubjubBls12::new();
+        let p_g = FixedGenerators::NoteCommitmentRandomness;
+        let rng = &mut XorShiftRng::from_seed([0x5dbe6259, 0x8d313d76, 0x3237db17, 0xe5bc0654]);
+
+        let amount = 10;
+        let remaining_balance = 90;
+        let current_balance = 100;
+
+        let s_index = 0;
+        let t_index = 1;
+
+        let sender_seed: [u8; 32] = rng.gen();
+        let recipient_seed: [u8; 32] = rng.gen();
+
+        let spending_key = SpendingKey::<Bls12>::from_seed(&sender_seed);
+        let enc_key_sender = EncryptionKey::<Bls12>::from_seed(&sender_seed, params).unwrap();
+        let enc_key_recipient = EncryptionKey::<Bls12>::from_seed(&recipient_seed, params).unwrap();
+
+        let mut decoys = vec![];
+        for _ in 0..10 {
+            let random_seed: [u8; 32] = rng.gen();
+            let enc_key = EncryptionKey::<Bls12>::from_seed(&random_seed, params)
+                .expect("should be generated encryption key from seed.");
+            decoys.push(enc_key);
+        }
+
+        let mut enc_keys = decoys.clone();
+        enc_keys.insert(s_index, enc_key_sender);
+        enc_keys.insert(t_index, enc_key_recipient.clone());
+
+        let mut enc_balances = vec![];
+        for e in enc_keys.iter() {
+            let ciphertext = Ciphertext::encrypt(current_balance, &Fs::one(), &e, p_g, params);
+            enc_balances.push(ciphertext);
+        }
+
+        let g_epoch = edwards::Point::rand(rng, params).mul_by_cofactor(params);
+
+        let proofs = KeyContext::read_from_path("../../zface/params/anony_pk.dat", "../../zface/params/anony_vk.dat")
+            .unwrap()
+            .gen_proof(
+                amount, 0, remaining_balance, s_index, t_index, &spending_key,
+                MultiEncKeys::<Bls12, Anonymous>::new(enc_key_recipient, decoys),
+                &enc_balances, g_epoch,
+                rng, params
+            );
+
+        assert!(proofs.is_ok());
     }
 }

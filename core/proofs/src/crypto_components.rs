@@ -58,6 +58,12 @@ impl<E: JubjubEngine, PC: PrivacyConfing> MultiCiphertexts<E, PC> {
     pub fn get_recipient(&self) -> &Ciphertext<E> {
         &self.recipient
     }
+
+    pub fn get_right(&self) -> &edwards::Point<E, PrimeOrder> {
+        let res = &self.get_sender().right;
+        assert!(res == &self.get_recipient().right);
+        res
+    }
 }
 
 pub trait CiphertextTrait<E: JubjubEngine> {

@@ -3,7 +3,7 @@ use scrypto::circuit::{
     boolean::{self, Boolean, AllocatedBit},
     ecc::{self, EdwardsPoint},
 };
-use scrypto::jubjub::{JubjubEngine, FixedGenerators, PrimeOrder};
+use scrypto::jubjub::{JubjubEngine, FixedGenerators, PrimeOrder, edwards};
 use crate::{EncryptionKey, elgamal, constants::{ANONIMITY_SIZE, DECOY_SIZE}};
 use super::utils::{eq_edwards_points, negate_point};
 use std::fmt;
@@ -42,24 +42,43 @@ impl Binary {
         CS: ConstraintSystem<E>,
     {
         let mut binaries = [false; ANONIMITY_SIZE];
-        if let Some(i) = index {
-            binaries[i] = true;
+        let mut acc = Vec::with_capacity(ANONIMITY_SIZE);
+
+        match index {
+            Some(id) => {
+                binaries[id] = true;
+                for (i, b) in binaries.into_iter().enumerate() {
+                    let tmp = Boolean::from(AllocatedBit::alloc(
+                        cs.namespace(|| format!("{} binary {}", st, i)),
+                        Some(*b))?
+                    );
+                    acc.push(tmp);
+                }
+            },
+            None => {
+                for i in 0..ANONIMITY_SIZE {
+                    let tmp = Boolean::from(AllocatedBit::alloc(
+                        cs.namespace(|| format!("{} binary {}", st, i)),
+                        None)?
+                    );
+                    acc.push(tmp);
+                }
+            }
         }
 
-        let mut acc = Vec::with_capacity(ANONIMITY_SIZE);
-        for (i, b) in binaries.into_iter().enumerate() {
-            let tmp = Boolean::from(AllocatedBit::alloc(
-                cs.namespace(|| format!("{} binary {}", st, i)),
-                Some(*b))?
-            );
-            acc.push(tmp);
-        }
+        // for (i, b) in binaries.into_iter().enumerate() {
+        //     let tmp = Boolean::from(AllocatedBit::alloc(
+        //         cs.namespace(|| format!("{} binary {}", st, i)),
+        //         Some(*b))?
+        //     );
+        //     acc.push(tmp);
+        // }
 
         let res = Binary(acc);
         let mut check = res.clone();
-        if let Some(i) = index {
-            check.ensure_total_one(cs.namespace(|| format!("{} total one {}", st, i)), i)?;
-        }
+        // if let Some(i) = index {
+        //     check.ensure_total_one(cs.namespace(|| format!("{} total one {}", st, i)), i)?;
+        // }
 
         Ok(res)
     }
@@ -217,75 +236,37 @@ impl<E: JubjubEngine> EncKeySet<E> {
     pub fn push_enckeys<CS: ConstraintSystem<E>>(
         &mut self,
         mut cs: CS,
-        dec_key_bits: &[Boolean],
-        enc_key_recipient: Option<&EncryptionKey<E>>,
-        enc_keys_decoy: Option<&[EncryptionKey<E>]>,
-        s_index: Option<usize>,
-        t_index: Option<usize>,
+        enc_keys: Option<&[EncryptionKey<E>]>,
         params: &E::Params,
     ) -> Result<(), SynthesisError> {
-        // Ensure the validity of enc_key_sender
-        let enc_key_sender_bits = ecc::fixed_base_multiplication(
-            cs.namespace(|| format!("compute enc_key_sender")),
-            FixedGenerators::NoteCommitmentRandomness,
-            dec_key_bits,
-            params
-        )?;
-
-        // Ensures recipient enc_key is on the curve
-        let enc_key_recipient_bits = ecc::EdwardsPoint::witness(
-            cs.namespace(|| "recipient enc_key witness"),
-            enc_key_recipient.as_ref().map(|e| e.0.clone()),
-            params
-        )?;
-
-        // Check the recipient enc_key is not small order
-        enc_key_recipient_bits.assert_not_small_order(
-            cs.namespace(|| "val_gl not small order"),
-            params
-        )?;
-
-        // TODO: Return boxed enc_keys_decoy
-        match enc_keys_decoy {
+        match enc_keys {
             Some(e) => {
                 let mut iter = e.clone().iter().enumerate().map(|(i, e)| {
                     ecc::EdwardsPoint::witness(
-                        cs.namespace(|| format!("decoy {} enc_key witness", i)),
+                        cs.namespace(|| format!("{} enc_key witness", i)),
                         Some(e.0.clone()),
                         params
                     ).expect("Faild to witness edwards point.")
                 });
                 // TODO: Rmove clone and unwrap
-                for i in 0..ANONIMITY_SIZE {
-                    if Some(i) == s_index {
-                        self.0.push(enc_key_sender_bits.clone());
-                    } else if Some(i) == t_index {
-                        self.0.push(enc_key_recipient_bits.clone());
-                    } else {
-                        self.0.push(iter.next().unwrap())
-                    }
+                for _ in 0..ANONIMITY_SIZE {
+                    self.0.push(iter.next().unwrap())
                 }
             },
             None => {
                 let mut iter = (0..ANONIMITY_SIZE).map(|i| {
                     ecc::EdwardsPoint::witness::<PrimeOrder, _>(
-                        cs.namespace(|| format!("decoy {} enc_key witness", i)),
+                        cs.namespace(|| format!("{} enc_key witness", i)),
                         None,
                         params
                     ).expect("Faild to witness edwards point.")
                 });
                 // TODO: Rmove clone and unwrap
-                for i in 0..ANONIMITY_SIZE {
-                    if Some(i) == s_index {
-                        self.0.push(enc_key_sender_bits.clone());
-                    } else if Some(i) == t_index {
-                        self.0.push(enc_key_recipient_bits.clone());
-                    } else {
-                        self.0.push(iter.next().unwrap())
-                    }
+                for _ in 0..ANONIMITY_SIZE {
+                    self.0.push(iter.next().unwrap())
                 }
             }
-        };
+        }
 
         Ok(())
     }
@@ -382,6 +363,41 @@ impl<E: JubjubEngine> EncKeysMulRandom<E> {
 pub struct LeftAmountCiphertexts<E: JubjubEngine>(pub(crate) Vec<EdwardsPoint<E>>);
 
 impl<E: JubjubEngine> LeftAmountCiphertexts<E> {
+    pub fn new<CS>(
+        left_ciphertexts: Option<&[edwards::Point<E, PrimeOrder>]>,
+        mut cs: CS,
+        params: &E::Params
+    ) -> Result<Self, SynthesisError>
+    where
+        CS: ConstraintSystem<E>
+    {
+        let mut acc = Vec::with_capacity(ANONIMITY_SIZE);
+        match left_ciphertexts {
+            Some(lcs) => {
+                for (i, lc) in lcs.iter().enumerate() {
+                    let tmp = EdwardsPoint::<E>::witness::<PrimeOrder, _>(
+                        cs.namespace(|| format!("witness lc {}", i)),
+                        Some(lc.clone()),
+                        params,
+                    )?;
+                    acc.push(tmp)
+                }
+            },
+            None => {
+                for i in 0..ANONIMITY_SIZE {
+                    let tmp = EdwardsPoint::<E>::witness::<PrimeOrder, _>(
+                        cs.namespace(|| format!("witness lc {}", i)),
+                        None,
+                        params,
+                    )?;
+                    acc.push(tmp)
+                }
+            }
+        }
+
+        Ok(LeftAmountCiphertexts(acc))
+    }
+
     pub fn neg_each<CS>(&self, mut cs: CS, params: &E::Params) -> Result<Self, SynthesisError>
     where
         CS: ConstraintSystem<E>
