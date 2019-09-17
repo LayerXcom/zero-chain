@@ -166,7 +166,6 @@ impl<T: Trait> Module<T> {
     /// To achieve this, we define a separate (internal) method for rolling over,
     /// and the first thing every other method does is to call this method.
     /// More details in Section 3.1: https://crypto.stanford.edu/~buenz/papers/zether.pdf
-
     pub fn rollover(addr: &EncKey) -> result::Result<(), &'static str> {
         let current_epoch = <zk_system::Module<T>>::get_current_epoch();
 

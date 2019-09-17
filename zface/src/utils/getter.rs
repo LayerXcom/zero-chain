@@ -138,12 +138,9 @@ impl BalanceQuery {
         dec_key: &DecryptionKey<Bls12>
     ) -> Result<Self> {
         let p_g = zFixedGenerators::Diversifier; // 1
-        let decrypted_balance;
-        let p_decrypted_balance;
         let mut ciphertext = None;
         let mut p_ciphertext = None;
 
-        // TODO: redundant code
         if encrypted_balance_str.as_str() != "0x00" {
             // TODO: remove unnecessary prefix. If it returns `0x00`, it will be panic.
             for _ in 0..4 {
@@ -152,11 +149,7 @@ impl BalanceQuery {
 
             let encrypted_balance = hexstr_to_vec(encrypted_balance_str.clone());
             ciphertext = Some(zelgamal::Ciphertext::<zBls12>::read(&mut &encrypted_balance[..], &ZPARAMS)?);
-            decrypted_balance = ciphertext.clone().unwrap().decrypt(&no_std(&dec_key)?, p_g, &ZPARAMS).unwrap();
-        } else {
-            decrypted_balance = 0;
         }
-
         if pending_transfer_str.as_str() != "0x00" {
             // TODO: remove unnecessary prefix. If it returns `0x00`, it will be panic.
             for _ in 0..4 {
@@ -165,18 +158,16 @@ impl BalanceQuery {
 
             let pending_transfer = hexstr_to_vec(pending_transfer_str.clone());
             p_ciphertext = Some(zelgamal::Ciphertext::<zBls12>::read(&mut &pending_transfer[..], &ZPARAMS)?);
-            p_decrypted_balance = p_ciphertext.clone().unwrap().decrypt(&no_std(&dec_key)?, p_g, &ZPARAMS).unwrap();
-        } else {
-            p_decrypted_balance = 0;
         }
 
         let zero = zelgamal::Ciphertext::<zBls12>::zero();
         let enc_total = ciphertext.unwrap_or(zero.clone()).add(&p_ciphertext.unwrap_or(zero), &*ZPARAMS);
+        let dec_balance = enc_total.decrypt(&no_std(&dec_key)?, p_g, &ZPARAMS).unwrap();
         let mut buf = vec![0u8; 64];
         enc_total.write(&mut buf[..])?;
 
         Ok(BalanceQuery {
-            decrypted_balance: decrypted_balance + p_decrypted_balance,
+            decrypted_balance: dec_balance,
             encrypted_balance: buf,
             encrypted_balance_str,
             pending_transfer_str,
@@ -201,7 +192,7 @@ pub fn g_epoch(api: &Api) -> Result<edwards::Point<Bls12, PrimeOrder>> {
 
     let point = edwards::Point::<Bls12, _>::read(&mut g_epoch.as_ref(), &PARAMS)?
             .as_prime_order(&PARAMS)
-            .unwrap();    
+            .unwrap();
 
     Ok(point)
 }

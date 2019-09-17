@@ -224,7 +224,7 @@ impl<T: Trait> Module<T> {
 
 impl<T: Trait> IsDeadAccount<T::AccountId> for Module<T>
 {
-    fn is_dead_account(who: &T::AccountId) -> bool {
+    fn is_dead_account(_who: &T::AccountId) -> bool {
         unimplemented!();
     }
 }

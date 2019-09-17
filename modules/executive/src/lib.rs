@@ -26,7 +26,7 @@ use primitives::traits::{
 	self, Header, Zero, One, Checkable, Applyable, CheckEqual, OnFinalize,
 	OnInitialize, Hash, As, Digest, NumberFor, Block as BlockT, OffchainWorker
 };
-use srml_support::{Dispatchable, traits::MakePayment};
+use srml_support::Dispatchable;
 use parity_codec::{Codec, Encode};
 use system::extrinsics_root;
 use primitives::{ApplyOutcome, ApplyError};
