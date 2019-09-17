@@ -425,7 +425,7 @@ mod tests {
     use super::*;
     use rand::{SeedableRng, XorShiftRng, Rng};
     use scrypto::jubjub::{JubjubBls12, fs::Fs};
-    use pairing::bls12_381::Bls12;
+    use pairing::{Field, bls12_381::Bls12};
 
     #[test]
     fn test_gen_anonymous_proof() {
@@ -467,7 +467,7 @@ mod tests {
 
         let g_epoch = edwards::Point::rand(rng, params).mul_by_cofactor(params);
 
-        let proofs = KeyContext::read_from_path("../../zface/params/anony_pk.dat", "../../zface/params/anony_vk.dat")
+        let proofs = KeyContext::read_from_path("../../zface/params/test_anony_pk.dat", "../../zface/params/test_anony_vk.dat")
             .unwrap()
             .gen_proof(
                 amount, 0, remaining_balance, s_index, t_index, &spending_key,

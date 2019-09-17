@@ -277,8 +277,8 @@ mod tests {
         pub static ref ENC_KEYS: Vec<EncryptionKey<Bls12>> = { init_typed_enc_keys() };
     }
 
-    const PK_PATH: &str = "../../zface/params/anony_pk.dat";
-    const VK_PATH: &str = "../../zface/params/anony_vk.dat";
+    const PK_PATH: &str = "../../zface/params/test_anony_pk.dat";
+    const VK_PATH: &str = "../../zface/params/test_anony_vk.dat";
 
     impl_outer_origin! {
         pub enum Origin for Test {}
@@ -387,7 +387,7 @@ mod tests {
     }
 
     pub fn get_conf_vk() -> PreparedVerifyingKey<Bls12> {
-        let vk_path = Path::new("../../zface/params/conf_vk.dat");
+        let vk_path = Path::new("../../zface/params/test_conf_vk.dat");
         let vk_file = File::open(&vk_path).unwrap();
         let mut vk_reader = BufReader::new(vk_file);
 
@@ -398,7 +398,7 @@ mod tests {
     }
 
     pub fn get_anony_vk() -> PreparedVerifyingKey<Bls12> {
-        let vk_path = Path::new("../../zface/params/anony_vk.dat");
+        let vk_path = Path::new("../../zface/params/test_anony_vk.dat");
         let vk_file = File::open(&vk_path).unwrap();
         let mut vk_reader = BufReader::new(vk_file);
 
