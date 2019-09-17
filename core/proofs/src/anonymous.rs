@@ -8,7 +8,6 @@ use bellman::{
         },
         SynthesisError,
 };
-use pairing::Field;
 use rand::{Rand, Rng};
 use scrypto::{
     jubjub::{
@@ -23,7 +22,6 @@ use polkadot_rs::Api;
 use zerochain_runtime::{UncheckedExtrinsic, Call, AnonymousBalancesCall};
 use zprimitives::{
     EncKey as zEncKey,
-    Ciphertext as zCiphertext,
     LeftCiphertext as zLeftCiphertext,
     RightCiphertext as zRightCiphertext,
     Nonce as zNonce,
@@ -246,8 +244,6 @@ impl<E: JubjubEngine> ProofContext<E, Unchecked, Anonymous> {
         for r in public_inputs.as_slice() {
             r.into_repr().write_le(&mut &mut buf).map_err(|_| "write error").unwrap();
         }
-        println!("{:?}", hex::encode(buf.clone()));
-        println!("{:?}", buf.len());
 
         match verify_proof(prepared_vk, &self.proof, public_inputs.as_slice()) {
             Ok(e) if !e => return Err(SynthesisError::Unsatisfiable),
@@ -423,7 +419,6 @@ impl AnonymousXt {
         ))
     }
 }
-
 
 #[cfg(test)]
 mod tests {

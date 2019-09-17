@@ -1,7 +1,7 @@
 use bellman::{SynthesisError, ConstraintSystem};
 use scrypto::circuit::{
     boolean::{self, Boolean, AllocatedBit},
-    ecc::{self, EdwardsPoint},
+    ecc::EdwardsPoint,
 };
 use scrypto::jubjub::{JubjubEngine, FixedGenerators, PrimeOrder, edwards};
 use crate::{EncryptionKey, elgamal, constants::{ANONIMITY_SIZE, DECOY_SIZE}};
@@ -65,13 +65,7 @@ impl Binary {
                 }
             }
         }
-
         let res = Binary(acc);
-        let mut check = res.clone();
-        // if let Some(i) = index {
-        //     check.ensure_total_one(cs.namespace(|| format!("{} total one {}", st, i)), i)?;
-        // }
-
         Ok(res)
     }
 
@@ -192,27 +186,6 @@ impl Binary {
         Ok(acc)
     }
 
-    fn ensure_total_one<E, CS>(
-        &mut self,
-        mut cs: CS,
-        true_index: usize
-    ) -> Result<(), SynthesisError>
-    where
-        E: JubjubEngine,
-        CS: ConstraintSystem<E>
-    {
-        let tb = Boolean::from(AllocatedBit::alloc(cs.namespace(|| "tb"), Some(true))?);
-        let fb = Boolean::from(AllocatedBit::alloc(cs.namespace(|| "fb"), Some(false))?);
-        let t = self.0.remove(true_index);
-
-        Boolean::enforce_equal(cs.namespace(|| "eq true"), &tb, &t)?;
-        for (i, f) in self.0.iter().enumerate() {
-            Boolean::enforce_equal(cs.namespace(|| format!("eq false {}", i)), &fb, &f)?;
-        }
-
-        Ok(())
-    }
-
     fn len(&self) -> usize {
         self.0.len()
     }
@@ -232,33 +205,28 @@ impl<E: JubjubEngine> EncKeySet<E> {
         params: &E::Params,
     ) -> Result<(), SynthesisError> {
         match enc_keys {
-            Some(e) => {
-                let mut iter = e.clone().iter().enumerate().map(|(i, e)| {
-                    ecc::EdwardsPoint::witness(
+            Some(ekeys) => {
+                for (i, e) in ekeys.iter().enumerate() {
+                    let tmp = EdwardsPoint::witness(
                         cs.namespace(|| format!("{} enc_key witness", i)),
                         Some(e.0.clone()),
                         params
-                    ).expect("Faild to witness edwards point.")
-                });
-                // TODO: Rmove clone and unwrap
-                for _ in 0..ANONIMITY_SIZE {
-                    self.0.push(iter.next().unwrap())
+                    )?;
+                    self.0.push(tmp);
                 }
             },
             None => {
-                let mut iter = (0..ANONIMITY_SIZE).map(|i| {
-                    ecc::EdwardsPoint::witness::<PrimeOrder, _>(
+                for i in 0..ANONIMITY_SIZE {
+                    let tmp = EdwardsPoint::witness::<PrimeOrder, _>(
                         cs.namespace(|| format!("{} enc_key witness", i)),
                         None,
                         params
-                    ).expect("Faild to witness edwards point.")
-                });
-                // TODO: Rmove clone and unwrap
-                for _ in 0..ANONIMITY_SIZE {
-                    self.0.push(iter.next().unwrap())
+                    )?;
+                    self.0.push(tmp);
                 }
             }
         }
+        assert_eq!(self.0.len(), ANONIMITY_SIZE);
 
         Ok(())
     }
@@ -372,7 +340,7 @@ impl<E: JubjubEngine> LeftAmountCiphertexts<E> {
                         Some(lc.clone()),
                         params,
                     )?;
-                    acc.push(tmp)
+                    acc.push(tmp);
                 }
             },
             None => {
@@ -382,7 +350,7 @@ impl<E: JubjubEngine> LeftAmountCiphertexts<E> {
                         None,
                         params,
                     )?;
-                    acc.push(tmp)
+                    acc.push(tmp);
                 }
             }
         }
