@@ -94,7 +94,9 @@ impl<E: JubjubEngine> ProofBuilder<E, Confidential> for KeyContext<E, Confidenti
 
     fn read_from_path<P: AsRef<Path>>(pk_path: P, vk_path: P) -> io::Result<Self>{
         let pk_buf = Self::inner_read(pk_path)?;
+        println!("===============Done pk_path==============");
         let vk_buf = Self::inner_read(vk_path)?;
+        println!("===============Done vk_path==============");
 
         let pk = Parameters::read(&pk_buf[..], true)?;
         let vk = PreparedVerifyingKey::read(&vk_buf[..])?;

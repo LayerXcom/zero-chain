@@ -319,10 +319,13 @@ impl<E: JubjubEngine, PC: PrivacyConfing> KeyContext<E, PC> {
 
     // FIX: too heavy
     pub(crate) fn inner_read<P: AsRef<Path>>(path: P) -> io::Result<Vec<u8>> {
+        println!("===============Start reading file opening==============");
         let file = File::open(&path)?;
+        println!("===============Opened file==============");
         let mut reader = BufReader::new(file);
         let mut buffer = vec![];
         reader.read_to_end(&mut buffer)?;
+        println!("===============Read file to end==============");
 
         Ok(buffer)
     }
