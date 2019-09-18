@@ -116,8 +116,13 @@ impl<E: JubjubEngine> ProofBuilder<E, Anonymous> for KeyContext<E, Anonymous> {
         let dec_key = pgk.into_decryption_key()?;
         let enc_key_sender = pgk.into_encryption_key(params)?;
         let mut enc_keys_vec = enc_keys.get_decoys().to_vec();
-        enc_keys_vec.insert(s_index, enc_key_sender.clone());
-        enc_keys_vec.insert(t_index, enc_keys.get_recipient().clone());
+        if s_index < t_index {
+            enc_keys_vec.insert(s_index, enc_key_sender.clone());
+            enc_keys_vec.insert(t_index, enc_keys.get_recipient().clone());
+        } else {
+            enc_keys_vec.insert(t_index, enc_keys.get_recipient().clone());
+            enc_keys_vec.insert(s_index, enc_key_sender.clone());
+        }
 
         let rvk = PublicKey(pgk.0.clone().into())
             .randomize(
@@ -131,8 +136,13 @@ impl<E: JubjubEngine> ProofBuilder<E, Anonymous> for KeyContext<E, Anonymous> {
             amount, 0, &enc_key_sender, &enc_keys, &randomness, params
         );
         let mut left_ciphertexts = multi_ciphertexts.get_decoys_left();
-        left_ciphertexts.insert(s_index, multi_ciphertexts.get_sender().left.clone());
-        left_ciphertexts.insert(t_index, multi_ciphertexts.get_recipient().left.clone());
+        if s_index < t_index {
+            left_ciphertexts.insert(s_index, multi_ciphertexts.get_sender().left.clone());
+            left_ciphertexts.insert(t_index, multi_ciphertexts.get_recipient().left.clone());
+        } else {
+            left_ciphertexts.insert(t_index, multi_ciphertexts.get_recipient().left.clone());
+            left_ciphertexts.insert(s_index, multi_ciphertexts.get_sender().left.clone());
+        }
 
         let instance = AnonymousTransfer {
             params,
@@ -204,7 +214,8 @@ impl<E: JubjubEngine> ProofContext<E, Unchecked, Anonymous> {
         self,
         prepared_vk: &PreparedVerifyingKey<E>,
     ) -> Result<ProofContext<E, Checked, Anonymous>, SynthesisError> {
-
+println!("s_index: {:?}", self.s_index);
+println!("t_index: {:?}", self.t_index);
         let mut public_inputs = PublicInputBuilder::new(ANONIMOUS_INPUT_SIZE);
         let mut j = 0;
         for i in 0..ANONIMITY_SIZE {

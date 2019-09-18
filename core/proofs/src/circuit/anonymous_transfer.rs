@@ -363,7 +363,7 @@ mod tests {
         let randomness_balanace_sender = Fs::rand(rng);
         let randomness_balanace_recipient = Fs::rand(rng);
         let current_balance_recipient: u32 = rng.gen();
-        let s_index: usize = rng.gen_range(0, ANONIMITY_SIZE); // TODO: check over 12
+        let s_index: usize = rng.gen_range(0, ANONIMITY_SIZE);
         let mut t_index: usize;
         loop {
             t_index = rng.gen_range(0, ANONIMITY_SIZE);

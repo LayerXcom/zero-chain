@@ -3,7 +3,7 @@ use scrypto::circuit::{
     boolean::{self, Boolean, AllocatedBit},
     ecc::EdwardsPoint,
 };
-use scrypto::jubjub::{JubjubEngine, FixedGenerators, PrimeOrder, edwards};
+use scrypto::jubjub::{JubjubEngine, PrimeOrder, edwards};
 use crate::{EncryptionKey, elgamal, constants::{ANONIMITY_SIZE, DECOY_SIZE}};
 use super::utils::{eq_edwards_points, negate_point};
 use std::fmt;

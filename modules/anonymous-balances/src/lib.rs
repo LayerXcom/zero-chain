@@ -261,7 +261,7 @@ mod tests {
             crypto_components::Anonymous,
         };
     use test_pairing::{bls12_381::Bls12 as tBls12, Field as tField};
-    use scrypto::jubjub::{FixedGenerators as tFixedGenerators, fs::Fs as tFs, edwards as tedwards};
+    use scrypto::jubjub::edwards as tedwards;
     use std::{
         path::Path,
         fs::File,
@@ -460,8 +460,8 @@ mod tests {
             let decoys = ENC_KEYS.iter().skip(2).map(|e| no_std_e(e)).collect();
             let enc_balances = get_enc_balances();
 
-            assert!(no_std_e(&ENC_KEYS[0]) ==  enc_key_sender);
-            assert!(no_std_e(&ENC_KEYS[1]) ==  enc_key_recipient);
+            assert!(no_std_e(&ENC_KEYS[s_index]) ==  enc_key_sender);
+            assert!(no_std_e(&ENC_KEYS[t_index]) ==  enc_key_recipient);
             assert_eq!(enc_balances.clone().len(), 12);
 
             let tx = KeyContext::<tBls12, Anonymous>::read_from_path(PK_PATH, VK_PATH)
