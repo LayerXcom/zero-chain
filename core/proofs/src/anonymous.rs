@@ -214,8 +214,6 @@ impl<E: JubjubEngine> ProofContext<E, Unchecked, Anonymous> {
         self,
         prepared_vk: &PreparedVerifyingKey<E>,
     ) -> Result<ProofContext<E, Checked, Anonymous>, SynthesisError> {
-println!("s_index: {:?}", self.s_index);
-println!("t_index: {:?}", self.t_index);
         let mut public_inputs = PublicInputBuilder::new(ANONIMOUS_INPUT_SIZE);
         let mut j = 0;
         for i in 0..ANONIMITY_SIZE {
