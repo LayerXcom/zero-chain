@@ -111,7 +111,7 @@ impl<E: Engine> Proof<E> {
 }
 
 #[cfg_attr(feature = "std", derive(Debug))]
-#[derive(Clone)]
+#[derive(Clone, PartialEq)]
 pub struct PreparedVerifyingKey<E: Engine> {
     /// Pairing result of alpha*beta
     alpha_g1_beta_g2: E::Fqk,
@@ -421,5 +421,28 @@ mod test_proof_write_read {
 
         let de_proof = Proof::read(&v[..]).unwrap();
         assert!(proof == de_proof);
+    }
+
+    #[test]
+    fn prepared_vk_read_write() {
+        use std::path::Path;
+        use std::fs::File;
+        use std::io::{BufReader, Read};
+
+        let vk_path = Path::new("./src/tests/verification.params");
+        let vk_file = File::open(&vk_path).unwrap();
+        let mut vk_reader = BufReader::new(vk_file);
+
+        let mut buf_vk = vec![];
+        vk_reader.read_to_end(&mut buf_vk).unwrap();
+
+        let prepared_vk_a = PreparedVerifyingKey::<Bls12>::read(&mut &buf_vk[..]).unwrap();
+
+        let mut buf = vec![];
+        prepared_vk_a.write(&mut &mut buf).unwrap();
+
+        let prepared_vk_b = PreparedVerifyingKey::<Bls12>::read(&mut &buf[..]).unwrap();
+
+        assert!(prepared_vk_a == prepared_vk_b);
     }
 }

@@ -4,7 +4,7 @@ use proofs::{
     SpendingKey, ProofGenerationKey, EncryptionKey, PARAMS, elgamal,
     crypto_components::{MultiEncKeys, Confidential, Anonymous},
     crypto_components::{ProofBuilder, KeyContext, Calls, Submitter},
-    constants::ANONIMITY_SIZE,
+    constants::{ANONIMITY_SIZE, DECOY_SIZE},
 };
 use pairing::bls12_381::Bls12;
 use parity_codec::Decode;
@@ -349,11 +349,18 @@ fn inner_anonymous_transfer_tx<R: Rng>(
     let remaining_balance = balance_query.decrypted_balance - amount;
     assert!(balance_query.decrypted_balance >= amount, "Not enough balance you have");
 
-    let s_index: usize = rng.gen_range(0, ANONIMITY_SIZE);
-    let t_index: usize = rng.gen_range(0, ANONIMITY_SIZE);
+    let s_index: usize = rng.gen_range(0, DECOY_SIZE-1);
+    let mut t_index: usize;
+    loop {
+        t_index = rng.gen_range(0, DECOY_SIZE);
+        if t_index != s_index {
+            break;
+        }
+    }
 
     let recipient_account_id = EncryptionKey::<Bls12>::read(&mut &recipient_enc_key[..], &PARAMS)?;
     let decoys = getter::get_enc_keys(&api, rng)?;
+    assert_eq!(decoys.len(), DECOY_SIZE);
     let multi_keys = MultiEncKeys::<Bls12, Anonymous>::new(recipient_account_id.clone(), decoys.clone());
 
     let mut enc_keys = vec![];

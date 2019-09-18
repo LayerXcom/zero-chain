@@ -199,6 +199,8 @@ impl<E: JubjubEngine> ProofContext<E, Unchecked, Confidential> {
             enc_balances,
             g_epoch,
             nonce,
+            s_index: None,
+            t_index: None,
             _marker: PhantomData,
         }
     }
@@ -266,10 +268,10 @@ impl<E: JubjubEngine> ProofContext<E, Unchecked, Confidential> {
             public_input[21] = y;
         }
 
-        // This verification is just an error handling, not validate if it returns `true`,
-        // because public input of encrypted balance needs to be updated on-chain.
-        if let Err(_) = verify_proof(prepared_vk, &self.proof, &public_input[..]) {
-            return Err(SynthesisError::MalformedVerifyingKey)
+        match verify_proof(prepared_vk, &self.proof, &public_input[..]) {
+            Ok(e) if !e => return Err(SynthesisError::Unsatisfiable),
+            Err(e) => return Err(e),
+            _ => { },
         }
 
         Ok(convert_to_checked::<E, Unchecked, Checked, Confidential>(self))
@@ -543,16 +545,74 @@ mod tests {
     #[test]
     fn test_read_proving_key() {
         let pk_path = Path::new("../../zface/params/test_conf_pk.dat");
-
         let pk_file = File::open(&pk_path).unwrap();
 
         let mut pk_reader = BufReader::new(pk_file);
-        println!("{:?}", pk_reader);
         let mut buf = vec![];
 
         pk_reader.read_to_end(&mut buf).unwrap();
-        println!("{:?}", buf.len());
-
         let _proving_key = Parameters::<Bls12>::read(&mut &buf[..], true).unwrap();
+    }
+
+    #[test]
+    fn nostd_to_std_read_write() {
+        use std::path::Path;
+        use std::fs::File;
+        use std::io::{BufReader, Read};
+        use bellman_verifier::PreparedVerifyingKey as zPreparedVerifyingKey;
+        use zpairing::{
+            bls12_381::Bls12 as zBls12,
+        };
+
+        let vk_path = Path::new("../../core/bellman-verifier/src/tests/verification.params");
+        let vk_file = File::open(&vk_path).unwrap();
+        let mut vk_reader = BufReader::new(vk_file);
+
+        let mut buf_vk = vec![];
+        vk_reader.read_to_end(&mut buf_vk).unwrap();
+
+        let prepared_vk_a = zPreparedVerifyingKey::<zBls12>::read(&mut &buf_vk[..]).unwrap();
+
+        let mut buf = vec![];
+        prepared_vk_a.write(&mut &mut buf).unwrap();
+
+        let prepared_vk_b = PreparedVerifyingKey::<Bls12>::read(&mut &buf[..]).unwrap();
+
+        let mut buf_b = vec![];
+        prepared_vk_b.write(&mut &mut buf_b).unwrap();
+
+        assert!(buf_vk == buf);
+        assert!(buf_vk == buf_b);
+        assert!(buf == buf_b);
+    }
+
+    #[test]
+    fn std_to_nostd_read_write() {
+        use std::path::Path;
+        use std::fs::File;
+        use std::io::{BufReader, Read};
+        use bellman_verifier::PreparedVerifyingKey as zPreparedVerifyingKey;
+        use zpairing::{
+            bls12_381::Bls12 as zBls12,
+        };
+
+        let vk_path = Path::new("../../core/bellman-verifier/src/tests/verification.params");
+        let vk_file = File::open(&vk_path).unwrap();
+        let mut vk_reader = BufReader::new(vk_file);
+
+        let mut buf_vk = vec![];
+        vk_reader.read_to_end(&mut buf_vk).unwrap();
+
+        let prepared_vk_a = PreparedVerifyingKey::<Bls12>::read(&mut &buf_vk[..]).unwrap();
+
+        let mut buf = vec![];
+        prepared_vk_a.write(&mut &mut buf).unwrap();
+
+        let prepared_vk_b = zPreparedVerifyingKey::<zBls12>::read(&mut &buf[..]).unwrap();
+
+        let mut buf_b = vec![];
+        prepared_vk_b.write(&mut &mut buf_b).unwrap();
+
+        assert!(buf == buf_b);
     }
 }

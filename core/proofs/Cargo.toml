@@ -15,6 +15,7 @@ zpairing = { package = "zerochain-pairing", path = "../pairing"}
 zprimitives = { package = "zerochain-primitives", path = "../primitives" }
 polkadot-rs = { git = "https://github.com/LayerXcom/polkadot.rs" }
 hex-literal = '0.1'
+hex = "0.3.2"
 keys = { path = "../keys"}
 zjubjub = { package = "jubjub", path = "../jubjub" }
 zerochain-runtime = { path = "../../runtime" }

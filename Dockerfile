@@ -29,7 +29,8 @@ LABEL description="This is the 2nd stage: a very small image where we copy the Z
 ARG PROFILE=release
 
 COPY --from=builder /zerochain/target/$PROFILE/zerochain /usr/local/bin
-COPY --from=builder /zerochain/zface/verification.params /usr/local/bin/zface/verification.params
+COPY --from=builder /zerochain/zface/params/conf_vk.dat /usr/local/bin/zface/conf_vk.dat
+COPY --from=builder /zerochain/zface/params/anony_vk.dat /usr/local/bin/zface/anony_vk.dat
 
 RUN rm -rf /usr/lib/python* && \
     mkdir -p /root/.local/share && \

@@ -6,7 +6,7 @@
 use support::{decl_module, decl_storage, decl_event, StorageMap, Parameter, StorageValue, ensure};
 use rstd::prelude::*;
 use rstd::result;
-use runtime_primitives::traits::{SimpleArithmetic, Zero, One, As};
+use runtime_primitives::traits::{SimpleArithmetic, Zero, One};
 use system::ensure_signed;
 use zprimitives::{
     EncKey, Proof,

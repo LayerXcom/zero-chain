@@ -48,7 +48,7 @@ decl_module! {
             }
 
             // Verify the zk proof
-            if <zk_system::Module<T>>::verify_anonymous_proof(
+            if !<zk_system::Module<T>>::verify_anonymous_proof(
                     &zkproof,
                     &enc_keys[..],
                     &left_ciphertexts[..],
@@ -166,7 +166,6 @@ impl<T: Trait> Module<T> {
     /// To achieve this, we define a separate (internal) method for rolling over,
     /// and the first thing every other method does is to call this method.
     /// More details in Section 3.1: https://crypto.stanford.edu/~buenz/papers/zether.pdf
-
     pub fn rollover(addr: &EncKey) -> result::Result<(), &'static str> {
         let current_epoch = <zk_system::Module<T>>::get_current_epoch();
 
@@ -262,7 +261,7 @@ mod tests {
             crypto_components::Anonymous,
         };
     use test_pairing::{bls12_381::Bls12 as tBls12, Field as tField};
-    use scrypto::jubjub::{FixedGenerators as tFixedGenerators, fs::Fs as tFs, edwards as tedwards};
+    use scrypto::jubjub::edwards as tedwards;
     use std::{
         path::Path,
         fs::File,
@@ -277,8 +276,8 @@ mod tests {
         pub static ref ENC_KEYS: Vec<EncryptionKey<Bls12>> = { init_typed_enc_keys() };
     }
 
-    const PK_PATH: &str = "../../zface/params/anony_pk.dat";
-    const VK_PATH: &str = "../../zface/params/anony_vk.dat";
+    const PK_PATH: &str = "../../zface/params/test_anony_pk.dat";
+    const VK_PATH: &str = "../../zface/params/test_anony_vk.dat";
 
     impl_outer_origin! {
         pub enum Origin for Test {}
@@ -378,7 +377,7 @@ mod tests {
                 let ciphertext = elgamal::Ciphertext::encrypt(alice_value, &fs::Fs::one(), &e, p_g, params);
                 acc.push((EncKey::try_from(e.clone()).unwrap(), Ciphertext::try_from(ciphertext).unwrap()))
             } else {
-                let ciphertext = elgamal::Ciphertext::encrypt(alice_value, &fs::Fs::one(), &e, p_g, params);
+                let ciphertext = elgamal::Ciphertext::encrypt(0, &fs::Fs::one(), &e, p_g, params);
                 // let ciphertext = Ciphertext::zero();
                 acc.push((EncKey::try_from(e.clone()).unwrap(), Ciphertext::try_from(ciphertext).unwrap()))
             }
@@ -387,7 +386,7 @@ mod tests {
     }
 
     pub fn get_conf_vk() -> PreparedVerifyingKey<Bls12> {
-        let vk_path = Path::new("../../zface/params/conf_vk.dat");
+        let vk_path = Path::new("../../zface/params/test_conf_vk.dat");
         let vk_file = File::open(&vk_path).unwrap();
         let mut vk_reader = BufReader::new(vk_file);
 
@@ -398,7 +397,7 @@ mod tests {
     }
 
     pub fn get_anony_vk() -> PreparedVerifyingKey<Bls12> {
-        let vk_path = Path::new("../../zface/params/anony_vk.dat");
+        let vk_path = Path::new("../../zface/params/test_anony_vk.dat");
         let vk_file = File::open(&vk_path).unwrap();
         let mut vk_reader = BufReader::new(vk_file);
 
@@ -445,8 +444,8 @@ mod tests {
             let bob_addr: [u8; 32] = hex!("45e66da531088b55dcb3b273ca825454d79d2d1d5c4fa2ba4a12c1fa1ccd6389");
             let enc_key_recipient = tEncryptionKey::<tBls12>::read(&mut &bob_addr[..], &PARAMS).unwrap();
 
-            let remaining_balance = 91;
-            let amount = 9;
+            let remaining_balance = 90;
+            let amount = 10;
 
             let enc_key_sender = tEncryptionKey::<tBls12>::from_seed(&alice_seed[..], &PARAMS).unwrap();
 
@@ -461,8 +460,8 @@ mod tests {
             let decoys = ENC_KEYS.iter().skip(2).map(|e| no_std_e(e)).collect();
             let enc_balances = get_enc_balances();
 
-            assert!(no_std_e(&ENC_KEYS[0]) ==  enc_key_sender);
-            assert!(no_std_e(&ENC_KEYS[1]) ==  enc_key_recipient);
+            assert!(no_std_e(&ENC_KEYS[s_index]) ==  enc_key_sender);
+            assert!(no_std_e(&ENC_KEYS[t_index]) ==  enc_key_recipient);
             assert_eq!(enc_balances.clone().len(), 12);
 
             let tx = KeyContext::<tBls12, Anonymous>::read_from_path(PK_PATH, VK_PATH)
