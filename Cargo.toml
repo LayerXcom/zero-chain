@@ -106,15 +106,16 @@ path = 'src/main.rs'
 
 [workspace]
 members = [
+    "zface",
     "core/bellman-verifier",
     "core/crypto",
-    "zface",
     "core/jubjub",
     "core/pairing",
     "core/primitives",
     "core/proofs",
-    "runtime",
+    "core/musig",
     "core/keys",
+    "runtime",
     "modules/aura",
     "modules/balances",
     "modules/consensus",
