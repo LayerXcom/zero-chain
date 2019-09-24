@@ -113,7 +113,7 @@ members = [
     "core/pairing",
     "core/primitives",
     "core/proofs",
-    "core/musig",
+    "core/multi-reddsa",
     "core/keys",
     "runtime",
     "modules/aura",

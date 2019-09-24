@@ -1,5 +1,5 @@
 [package]
-name = "musig"
+name = "multi-reddsa"
 version = "0.1.0"
 authors = ["osuketh <dish230@gmail.com>"]
 edition = "2018"
@@ -8,6 +8,7 @@ edition = "2018"
 
 [dependencies]
 jubjub = { path = "../jubjub", default-features = false }
+pairing = { package = "zerochain-pairing", path = "../pairing", default-features = false }
 rand = { version = "0.4", default-features = false }
 merlin = { version = "1", default-features = false }
 
@@ -15,6 +16,7 @@ merlin = { version = "1", default-features = false }
 default = ["std"]
 std = [
     "jubjub/std",
+    "pairing/std",
     "rand/std",
     "merlin/std",
 ]
