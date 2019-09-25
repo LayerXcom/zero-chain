@@ -240,7 +240,7 @@ pub fn new_indexfile(wallet_dir: &WalletDirectory, keyfile_name: &str, account_n
 }
 
 /// Increment max index in indexfile and set default the new one.
-fn increment_indexfile(wallet_dir: &WalletDirectory, filename: &str, account_name: &str) -> Result<()> {
+pub fn increment_indexfile(wallet_dir: &WalletDirectory, filename: &str, account_name: &str) -> Result<()> {
     let indexfile = wallet_dir.load_indexfile()?;
     let mut incremented_indexfile = indexfile.next_index(filename, account_name);
     wallet_dir.update_indexfile(&mut incremented_indexfile)
