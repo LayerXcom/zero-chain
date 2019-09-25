@@ -14,7 +14,7 @@ pub struct Signers<E: JubjubEngine>{
 impl<E: JubjubEngine> Signers<E> {
     pub fn new<T>(pub_keys: Vec<PublicKey<E>>, t: T) -> Self
     where
-        T: TranscriptProtocol<E>,
+        T: TranscriptProtocol,
     {
         unimplemented!();
     }
