@@ -11,7 +11,7 @@ pub trait TranscriptProtocol {
 
     fn challenge_scalar<PF: PrimeField>(&mut self, label: &'static [u8]) -> io::Result<PF>;
 
-    fn witness_scalar<PF: PrimeField, R: Rng>(&self, label: &'static [u8], witness: &[u8], rng: &mut R) -> PF;
+    fn witness_scalar<PF: PrimeField>(&self, label: &'static [u8], witness: &PF) -> io::Result<PF>;
 }
 
 impl TranscriptProtocol for Transcript {
@@ -45,10 +45,9 @@ impl TranscriptProtocol for Transcript {
     }
 
     // TODO: Update `rand` to v0.6 to use `merlin::TranscriptRngBuilder`.
-    fn witness_scalar<PF, R>(&self, label: &'static [u8], witness: &[u8], rng: &mut R) -> io::Result<PF>
+    fn witness_scalar<PF>(&self, label: &'static [u8], witness: &PF) -> io::Result<PF>
     where
         PF: PrimeField,
-        R: Rng,
     {
         unimplemented!();
     }

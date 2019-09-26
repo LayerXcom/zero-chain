@@ -12,6 +12,9 @@ pairing = { package = "zerochain-pairing", path = "../pairing", default-features
 rand = { version = "0.4", default-features = false }
 merlin = { version = "1", default-features = false }
 
+[dev-dependencies]
+zprimitives = { package = "zerochain-primitives", path = "../primitives", default-features = false }
+
 [features]
 default = ["std"]
 std = [

@@ -2186,6 +2186,7 @@ dependencies = [
  "merlin 1.2.0 (registry+https://github.com/rust-lang/crates.io-index)",
  "rand 0.4.6 (registry+https://github.com/rust-lang/crates.io-index)",
  "zerochain-pairing 0.14.2",
+ "zerochain-primitives 0.1.0",
 ]
 
 [[package]]
