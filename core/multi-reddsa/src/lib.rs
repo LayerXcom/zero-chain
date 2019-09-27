@@ -8,16 +8,14 @@ use commitment::*;
 mod transcript;
 mod commitment;
 
-pub struct Signers<E: JubjubEngine>{
+#[derive(Clone)]
+pub struct SignerKeys<E: JubjubEngine>{
     pub_keys: Vec<Point<E, PrimeOrder>>,
     aggregated_pub_key: Point<E, PrimeOrder>,
 }
 
-impl<E: JubjubEngine> Signers<E> {
-    pub fn new<T>(pub_keys: Vec<Point<E, PrimeOrder>>, t: T, params: &E::Params) -> io::Result<Self>
-    where
-        T: TranscriptProtocol,
-    {
+impl<E: JubjubEngine> SignerKeys<E> {
+    pub fn new(pub_keys: Vec<Point<E, PrimeOrder>>, params: &E::Params) -> io::Result<Self> {
         assert!(pub_keys.len() > 1);
 
         let mut t = Transcript::new(b"aggregated-pub-key");
@@ -31,19 +29,34 @@ impl<E: JubjubEngine> Signers<E> {
             aggregated_pub_key = aggregated_pub_key.add(&pk.mul(a_i, params), params);
         }
 
-        Ok(Signers {
+        Ok(SignerKeys {
             pub_keys,
             aggregated_pub_key,
         })
     }
 
-    pub fn commit<T>(&self, t: T, x_i: E::Fs, p_g: FixedGenerators, params: &E::Params) -> io::Result<CommitmentStage>
+    #[allow(non_snake_case)]
+    pub fn commit<'t, T>(
+        &self,
+        // The message `m` has already been fed into the transcript
+        transcript: &'t mut T,
+        x_i: E::Fs,
+        p_g: FixedGenerators,
+        params: &E::Params
+    ) -> io::Result<CommitmentStage<'t, E, T>>
     where
         T: TranscriptProtocol,
     {
-        let r_i = t.witness_scalar(b"", &x_i)?;
+        let r_i = transcript.witness_scalar(b"", &x_i)?;
         let R_i = params.generator(p_g).mul(r_i, params);
-        unimplemented!();
+        let commitment = Commitment::from_R(&R_i)?;
+
+        Ok(CommitmentStage {
+            r_i,
+            R_i,
+            commitment,
+            transcript,
+        })
     }
 
     /// Compute `a_i` factors for aggregated key.
@@ -53,12 +66,20 @@ impl<E: JubjubEngine> Signers<E> {
     }
 }
 
-pub struct CommitmentStage{
-
+#[allow(non_snake_case)]
+pub struct CommitmentStage<'t, E: JubjubEngine, T: TranscriptProtocol>{
+    commitment: Commitment,
+    r_i: E::Fs,
+    R_i: Point<E, PrimeOrder>,
+    transcript: &'t mut T,
+    // signers: Vec<>,
 }
 
-impl CommitmentStage {
-    pub fn reveal(&self) -> RevealStage {
+impl<'t, E: JubjubEngine, T: TranscriptProtocol> CommitmentStage<'t, E, T> {
+    #[allow(non_snake_case)]
+    pub fn reveal(&self, reveals: Vec<Point<E, PrimeOrder>>, params: &E::Params) -> RevealStage {
+        let sum_R = sum_commitment(&reveals[..], params);
+
         unimplemented!();
     }
 }
