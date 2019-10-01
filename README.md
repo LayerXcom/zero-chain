@@ -7,7 +7,7 @@
 </div>
 </br>
 
-Zerochain is a generic parivacy-protecting layer on top of Substrate. It provides some useful substrate modules and toolkit for protecting user's privacy and sensitive data stored on chain.
+Zerochain is a generic privacy-protecting layer on top of Substrate. It provides some useful substrate modules and toolkit for protecting user's privacy and sensitive data stored on chain.
 It is designed to get efficient zero-knowledge proving, reduce the on-chain storage cost and bring the flexibility for developing applications.
 
 Have a look at [Zerochain Book](https://layerxcom.github.io/zerochain-book/) for usage and more information about using Zerochain.
