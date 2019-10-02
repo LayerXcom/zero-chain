@@ -59,15 +59,18 @@ impl<E: JubjubEngine> CosignersRevealed<E> {
     pub fn verify_share(
         self,
         share: E::Fs,
-        signer_keys: SignerKeys<E>,
+        signer_keys: &SignerKeys<E>,
         transcript: &Transcript,
         p_g: FixedGenerators,
-        params: &E::Params) -> io::Result<E::Fs>
-    {
+        params: &E::Params
+    ) -> io::Result<E::Fs> {
         let S_i = params.generator(p_g).mul(share, params);
-        let c_i = signer_keys.challenge(&mut transcript.clone(), self.pos);
+        let c_i = signer_keys.challenge(&mut transcript.clone(), self.pos)?;
         let X_i = self.pub_key;
 
-        unimplemented!();
+        if S_i == X_i.mul(c_i, params).add(&self.reveal, params) {
+            return Err(io::Error::InvalidData)
+        }
+        Ok(share)
     }
 }

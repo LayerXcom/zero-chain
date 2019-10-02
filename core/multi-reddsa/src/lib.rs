@@ -1,3 +1,5 @@
+#![allow(non_snake_case)]
+
 use pairing::{io, Field};
 use jubjub::curve::{JubjubEngine, edwards::Point, PrimeOrder, FixedGenerators, JubjubParams};
 use merlin::Transcript;
@@ -22,6 +24,7 @@ pub struct CommitmentStage<'t, E: JubjubEngine>{
 }
 
 impl<'t, E: JubjubEngine> CommitmentStage<'t, E> {
+    #[allow(non_snake_case)]
     pub fn new(
         // The message `m` has already been fed into the transcript
         transcript: &'t mut Transcript,
@@ -120,10 +123,18 @@ pub struct ShareStage<E: JubjubEngine> {
 }
 
 impl<E: JubjubEngine> ShareStage<E> {
-    pub fn share(&self, shares: Vec<E::Fs>) -> AggSignature<E> {
+    pub fn share(self, shares: Vec<E::Fs>, p_g: FixedGenerators, params: &E::Params) -> AggSignature<E> {
+        let signer_keys = &self.signer_keys;
         let transcript = &self.transcript;
 
-        unimplemented!();
+        let s = self.cosigners.into_iter().zip(shares)
+            .map(|(signer, share)| signer.verify_share(share, signer_keys, transcript, p_g, params).unwrap()) // TODO
+            .fold(E::Fs::zero(), |mut sum, s| { sum.add_assign(&s); sum });
+
+        AggSignature {
+            s,
+            R: self.sum_R,
+        }
     }
 }
 
