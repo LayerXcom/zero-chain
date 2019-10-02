@@ -44,7 +44,7 @@ impl<E: JubjubEngine> CosignersCommited<E> {
         Ok(CosignersRevealed {
             pos: self.pos,
             pub_key: self.pub_key,
-            reveal: *R,
+            reveal: R.clone(),
         })
     }
 }

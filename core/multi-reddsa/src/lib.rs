@@ -121,7 +121,7 @@ pub struct ShareStage<E: JubjubEngine> {
 
 impl<E: JubjubEngine> ShareStage<E> {
     pub fn share(&self, shares: Vec<E::Fs>) -> AggSignature<E> {
-        let transcript = self.transcript;
+        let transcript = &self.transcript;
 
         unimplemented!();
     }

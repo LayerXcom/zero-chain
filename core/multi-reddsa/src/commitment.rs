@@ -87,7 +87,7 @@ impl<E: JubjubEngine> SignerKeys<E> {
     }
 
     pub fn get_pub_key(&self, index: usize) -> Point<E, PrimeOrder> {
-        self.pub_keys[index]
+        self.pub_keys[index].clone()
     }
 
     /// Compute `a_i` factors for aggregated key.
