@@ -142,4 +142,3 @@ pub struct AggSignature<E: JubjubEngine>{
     s: E::Fs,
     R: Point<E, PrimeOrder>,
 }
-
