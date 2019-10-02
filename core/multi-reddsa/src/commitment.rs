@@ -56,8 +56,8 @@ impl<E: JubjubEngine> SignerKeys<E> {
         }
 
         let mut aggregated_pub_key = Point::<E, PrimeOrder>::zero();
-        for pk in &pub_keys {
-            let a_i = Self::a_factor(&transcript, pk)?;
+        for (i, pk) in pub_keys.iter().enumerate() {
+            let a_i = Self::a_factor(&transcript, i)?;
             aggregated_pub_key = aggregated_pub_key.add(&pk.mul(a_i, params), params);
         }
 
@@ -72,11 +72,11 @@ impl<E: JubjubEngine> SignerKeys<E> {
         transcript.commit_point(b"X", &self.aggregated_pub_key)
     }
 
-    pub fn challenge(&self, transcript: &mut Transcript, pk: &Point<E, PrimeOrder>) -> io::Result<E::Fs> {
+    pub fn challenge(&self, transcript: &mut Transcript, index: usize) -> io::Result<E::Fs> {
         // Compute c = H(X, R, m).
         let mut c: E::Fs = transcript.challenge_scalar(b"c")?;
         // Compute a_i = H(<L>, X_i).
-        let a_i = Self::a_factor(&self.transcript, &pk)?;
+        let a_i = Self::a_factor(&self.transcript, index)?;
         c.mul_assign(&a_i);
 
         Ok(c)
@@ -91,9 +91,9 @@ impl<E: JubjubEngine> SignerKeys<E> {
     }
 
     /// Compute `a_i` factors for aggregated key.
-    fn a_factor(t: &Transcript, pk: &Point<E, PrimeOrder>) -> io::Result<E::Fs> {
+    fn a_factor(t: &Transcript, index: usize) -> io::Result<E::Fs> {
         let mut t = t.clone();
-        t.commit_point(b"commit-pk", pk)?;
+        t.append_u64(b"i", index as u64);
         t.challenge_scalar(b"challenge-a_i")
     }
 }

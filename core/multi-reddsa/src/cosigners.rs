@@ -2,7 +2,7 @@ use jubjub::curve::{JubjubEngine, edwards::Point, PrimeOrder, FixedGenerators, J
 use pairing::io;
 use merlin::Transcript;
 use crate::transcript::*;
-use crate::commitment::Commitment;
+use crate::commitment::{Commitment, SignerKeys};
 
 pub struct Cosigners<E: JubjubEngine> {
     pos: usize,
@@ -56,7 +56,18 @@ pub struct CosignersRevealed<E: JubjubEngine> {
 }
 
 impl<E: JubjubEngine> CosignersRevealed<E> {
-    pub fn verify_share(self, share: E::Fs, transcript: &Transcript) -> io::Result<E::Fs> {
+    pub fn verify_share(
+        self,
+        share: E::Fs,
+        signer_keys: SignerKeys<E>,
+        transcript: &Transcript,
+        p_g: FixedGenerators,
+        params: &E::Params) -> io::Result<E::Fs>
+    {
+        let S_i = params.generator(p_g).mul(share, params);
+        let c_i = signer_keys.challenge(&mut transcript.clone(), self.pos);
+        let X_i = self.pub_key;
+
         unimplemented!();
     }
 }
