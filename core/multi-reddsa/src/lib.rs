@@ -1,61 +1,53 @@
 use pairing::{io, Field};
-use jubjub::redjubjub::{PrivateKey, PublicKey};
 use jubjub::curve::{JubjubEngine, edwards::Point, PrimeOrder, FixedGenerators, JubjubParams};
 use merlin::Transcript;
 use transcript::*;
 use commitment::*;
+use cosigners::*;
 
 mod transcript;
 mod commitment;
+mod cosigners;
+mod error;
 
-#[derive(Clone)]
-pub struct SignerKeys<E: JubjubEngine>{
-    pub_keys: Vec<Point<E, PrimeOrder>>,
-    aggregated_pub_key: Point<E, PrimeOrder>,
-    transcript: Transcript,
+pub struct NewStage<'t, E: JubjubEngine> {
+    commitment: Commitment,
+    x_i: E::Fs,
+    r_i: E::Fs,
+    R_i: Point<E, PrimeOrder>,
+    signer_keys: SignerKeys<E>,
+    cosigners: Vec<Cosigners<E>>,
+    transcript: &'t mut Transcript,
 }
 
-impl<E: JubjubEngine> SignerKeys<E> {
-    pub fn new(pub_keys: Vec<Point<E, PrimeOrder>>, params: &E::Params) -> io::Result<Self> {
-        assert!(pub_keys.len() > 1);
+impl<'t, E: JubjubEngine> NewStage<'t, E> {
+    pub fn new(
+        // The message `m` has already been fed into the transcript
+        transcript: &'t mut Transcript,
+        x_i: E::Fs,
+        pos: usize,
+        signer_keys: SignerKeys<E>,
+        p_g: FixedGenerators,
+        params: &E::Params,
+    ) -> io::Result<NewStage<'t, E>>
+    {
+        let r_i = transcript.witness_scalar(b"", &x_i)?;
+        let R_i = params.generator(p_g).mul(r_i, params);
+        let commitment = Commitment::from_R(&R_i)?;
 
-        let mut transcript = Transcript::new(b"aggregated-pub-key");
-        for pk in &pub_keys {
-            transcript.commit_point(b"pub-key", pk)?;
-        }
+        let cosigners = (0..signer_keys.len())
+            .map(|i| Cosigners::new(i, signer_keys.get_pub_key(i)))
+            .collect();
 
-        let mut aggregated_pub_key = Point::<E, PrimeOrder>::zero();
-        for pk in &pub_keys {
-            let a_i = Self::a_factor(&transcript, pk)?;
-            aggregated_pub_key = aggregated_pub_key.add(&pk.mul(a_i, params), params);
-        }
-
-        Ok(SignerKeys {
-            pub_keys,
-            aggregated_pub_key,
+        Ok(NewStage {
+            commitment,
+            x_i,
+            r_i,
+            R_i,
+            signer_keys,
+            cosigners,
             transcript,
         })
-    }
-
-    pub fn commit(&self, transcript: &mut Transcript) -> io::Result<()> {
-        transcript.commit_point(b"X", &self.aggregated_pub_key)
-    }
-
-    pub fn challenge(&self, transcript: &mut Transcript, pk: &Point<E, PrimeOrder>) -> io::Result<E::Fs> {
-        // Compute c = H(X, R, m).
-        let mut c: E::Fs = transcript.challenge_scalar(b"c")?;
-        // Compute a_i = H(<L>, X_i).
-        let a_i = Self::a_factor(&self.transcript, &pk)?;
-        c.mul_assign(&a_i);
-
-        Ok(c)
-    }
-
-    /// Compute `a_i` factors for aggregated key.
-    fn a_factor(t: &Transcript, pk: &Point<E, PrimeOrder>) -> io::Result<E::Fs> {
-        let mut t = t.clone();
-        t.commit_point(b"commit-pk", pk)?;
-        t.challenge_scalar(b"challenge-a_i")
     }
 }
 
@@ -64,26 +56,19 @@ pub struct CommitmentStage<'t, E: JubjubEngine>{
     commitment: Commitment,
     x_i: E::Fs,
     r_i: E::Fs,
-    R_i: Point<E, PrimeOrder>,
     signer_keys: SignerKeys<E>,
+    cosigners: Vec<CosignersCommited<E>>,
     transcript: &'t mut Transcript,
-    // signers: Vec<>,
 }
 
 impl<'t, E: JubjubEngine> CommitmentStage<'t, E> {
     #[allow(non_snake_case)]
     pub fn commit(
-        // The message `m` has already been fed into the transcript
-        transcript: &'t mut Transcript,
-        x_i: E::Fs,
-        signer_keys: SignerKeys<E>,
-        p_g: FixedGenerators,
-        params: &E::Params
+        self,
+        commitment: Vec<Commitment>,
     ) -> io::Result<CommitmentStage<'t, E>>
     {
-        let r_i = transcript.witness_scalar(b"", &x_i)?;
-        let R_i = params.generator(p_g).mul(r_i, params);
-        let commitment = Commitment::from_R(&R_i)?;
+        let
 
         Ok(CommitmentStage {
             commitment,
@@ -91,6 +76,7 @@ impl<'t, E: JubjubEngine> CommitmentStage<'t, E> {
             r_i,
             R_i,
             signer_keys,
+            cosigners,
             transcript,
         })
     }
@@ -108,12 +94,15 @@ impl<'t, E: JubjubEngine> CommitmentStage<'t, E> {
         let c_i = self.signer_keys.challenge(&mut self.transcript, &self.R_i)?;
         let mut s_i = c_i;
         s_i.mul_assign(&self.x_i);
+        let X_i = s_i.clone();
         s_i.add_assign(&self.r_i);
 
         Ok(RevealStage {
             transcript,
             s_i,
             sum_R,
+            X_i,
+            signer_keys: self.signer_keys
         })
     }
 }
@@ -122,15 +111,29 @@ pub struct RevealStage<E: JubjubEngine>{
     transcript: Transcript,
     s_i: E::Fs,
     sum_R: Point<E, PrimeOrder>,
+    X_i: Point<E, PrimeOrder>,
+    signer_keys: SignerKeys<E>,
+    cosigners: Vec<CosignersRevealed<E>>,
 }
 
 impl<E: JubjubEngine> RevealStage<E> {
-    pub fn share(&self) -> ShareStage {
+    pub fn share(&self, shares: Vec< E::Fs>) -> AggSignature<E> {
+
+        let transcript = self.transcript;
+
         unimplemented!();
+    }
+
+    fn verify_share(&self, share: E::Fs, transcript: &mut Transcript, params: &E::Params, p_g: FixedGenerators) {
+        let S_i = params.generator(p_g).mul(share, params);
+        let c_i = self.signer_keys.challenge(transcript, &self.X_i);
+        let X_i = self.X_i;
+
     }
 }
 
-pub struct ShareStage{
-
+pub struct AggSignature<E: JubjubEngine>{
+    s: E::Fs,
+    R: Point<E, PrimeOrder>,
 }
 

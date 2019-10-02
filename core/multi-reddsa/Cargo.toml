@@ -11,6 +11,7 @@ jubjub = { path = "../jubjub", default-features = false }
 pairing = { package = "zerochain-pairing", path = "../pairing", default-features = false }
 rand = { version = "0.4", default-features = false }
 merlin = { version = "1", default-features = false }
+subtle = { version = "2.1", default-features = false }
 
 [dev-dependencies]
 zprimitives = { package = "zerochain-primitives", path = "../primitives", default-features = false }
@@ -22,4 +23,5 @@ std = [
     "pairing/std",
     "rand/std",
     "merlin/std",
+    "subtle/std",
 ]
