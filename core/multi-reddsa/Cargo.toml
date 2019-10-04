@@ -9,7 +9,7 @@ edition = "2018"
 [dependencies]
 jubjub = { path = "../jubjub", default-features = false }
 pairing = { package = "zerochain-pairing", path = "../pairing", default-features = false }
-rand = { version = "0.4", default-features = false }
+rand = { version = "0.6", default-features = false }
 merlin = { version = "1", default-features = false }
 subtle = { version = "2.1", default-features = false }
 

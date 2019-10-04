@@ -1,11 +1,13 @@
 #![allow(non_snake_case)]
 
-use pairing::{io, Field};
+use pairing::{io, Field, PrimeField, PrimeFieldRepr};
 use jubjub::curve::{JubjubEngine, edwards::Point, PrimeOrder, FixedGenerators, JubjubParams};
+use jubjub::redjubjub::Signature;
 use merlin::Transcript;
 use transcript::*;
 use commitment::*;
 use cosigners::*;
+use core::convert::TryFrom;
 
 mod transcript;
 mod commitment;
@@ -35,7 +37,7 @@ impl<'t, E: JubjubEngine> CommitmentStage<'t, E> {
         params: &E::Params,
     ) -> io::Result<(CommitmentStage<'t, E>, Commitment)>
     {
-        let r_i = transcript.witness_scalar(b"", &x_i)?;
+        let r_i = transcript.witness_scalar(b"r_i", &x_i)?;
         let R_i = params.generator(p_g).mul(r_i, params);
         let commitment = Commitment::from_R(&R_i)?;
 
@@ -141,4 +143,46 @@ impl<E: JubjubEngine> ShareStage<E> {
 pub struct AggSignature<E: JubjubEngine>{
     s: E::Fs,
     R: Point<E, PrimeOrder>,
+}
+
+impl<E: JubjubEngine> TryFrom<AggSignature<E>> for Signature {
+    type Error = io::Error;
+
+    fn try_from(agg_sig: AggSignature<E>) -> Result<Self, io::Error> {
+        let mut s_buf = [0u8; 32];
+        agg_sig.s.into_repr().write_le(&mut &mut s_buf[..])?;
+
+        let mut r_buf = [0u8; 32];
+        agg_sig.R.write(&mut &mut r_buf[..])?;
+
+        Ok(Signature {
+            sbar: s_buf,
+            rbar: r_buf,
+        })
+    }
+}
+
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use jubjub::curve::{fs::Fs, JubjubBls12};
+    use pairing::bls12_381::Bls12;
+    use core::convert::TryInto;
+
+    fn sign_helper(secrets: &[Fs], signer_keys: SignerKeys<Bls12>, transcript: Transcript) {
+        let params = &JubjubBls12::new();
+        let p_g = FixedGenerators::Diversifier;
+        let pub_keys: Vec<Point<Bls12, PrimeOrder>> = secrets.iter().map(|s| params.generator(p_g).mul::<Fs>(*s, params)).collect();
+        let mut transcript: Vec<_> = pub_keys.iter().map(|_| transcript.clone()).collect();
+
+        let (cosigners, comms): (Vec<_>, Vec<_>) = secrets.clone().into_iter().zip(transcript.iter_mut()).enumerate()
+            .map(|(i, (x_i, transcript))| CommitmentStage::new(transcript, *x_i, i, signer_keys.clone(), p_g, params).unwrap())
+            .unzip();
+
+        let (cosigners, reveals): (Vec<_>, Vec<_>) = cosigners.into_iter().map(|c| c.commit(comms.clone()).unwrap()).unzip();
+        let (cosigners, shares): (Vec<_>, Vec<_>) = cosigners.into_iter().map(|c| c.reveal(reveals.clone(), params).unwrap()).unzip();
+        let sigs: Vec<Signature> = cosigners.into_iter().map(|c| c.share(shares.clone(), p_g, params).try_into().unwrap()).collect();
+
+    }
 }

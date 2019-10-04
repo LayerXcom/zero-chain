@@ -1,7 +1,7 @@
 use merlin::Transcript;
 use pairing::{io, PrimeField, PrimeFieldRepr};
 // use jubjub::redjubjub::{PrivateKey, PublicKey};
-use jubjub::curve::{JubjubEngine, edwards::Point, PrimeOrder};
+use jubjub::curve::{JubjubEngine, edwards::Point, PrimeOrder, fs::{FsRepr, Fs}};
 use rand::Rng;
 
 pub trait TranscriptProtocol {
@@ -49,7 +49,21 @@ impl TranscriptProtocol for Transcript {
     where
         PF: PrimeField,
     {
-        unimplemented!();
+        let mut buf = [0u8; 32];
+        witness.into_repr().write_le(&mut &mut buf[..])?;
+        let mut rng = self
+            .build_rng()
+            .rekey_with_witness_bytes(label, &buf[..])
+            .finalize(&mut rand::thread_rng());
+
+        loop {
+            let mut repr: PF::Repr = Default::default();
+            let buf: [u8; 32] = rng.gen();
+            repr.read_be(&mut &buf[..])?;
+            if let Ok(res) = PF::from_repr(repr) {
+                return Ok(res)
+            }
+        }
     }
 }
 
