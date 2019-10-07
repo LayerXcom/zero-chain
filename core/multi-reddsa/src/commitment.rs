@@ -1,5 +1,6 @@
 use merlin::Transcript;
-use jubjub::curve::{JubjubEngine, edwards::Point, PrimeOrder, JubjubParams};
+use jubjub::curve::{JubjubEngine, edwards::Point, PrimeOrder, Unknown};
+use jubjub::redjubjub::PublicKey;
 use pairing::{io, Field};
 use crate::transcript::TranscriptProtocol;
 
@@ -88,6 +89,11 @@ impl<E: JubjubEngine> SignerKeys<E> {
 
     pub fn get_pub_key(&self, index: usize) -> Point<E, PrimeOrder> {
         self.pub_keys[index].clone()
+    }
+
+    pub fn get_agg_pub_key(self) -> PublicKey<E> {
+        let a = self.aggregated_pub_key;
+        PublicKey(a.into())
     }
 
     /// Compute `a_i` factors for aggregated key.

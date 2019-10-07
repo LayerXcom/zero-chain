@@ -68,7 +68,8 @@ impl<E: JubjubEngine> CosignersRevealed<E> {
         let c_i = signer_keys.challenge(&mut transcript.clone(), self.pos)?;
         let X_i = self.pub_key;
 
-        if S_i == X_i.mul(c_i, params).add(&self.reveal, params) {
+        // Check s_i * G == R_i + c_i * X_i.
+        if S_i != X_i.mul(c_i, params).add(&self.reveal, params) {
             return Err(io::Error::InvalidData)
         }
         Ok(share)

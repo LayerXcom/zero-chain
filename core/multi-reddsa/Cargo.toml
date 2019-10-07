@@ -14,7 +14,7 @@ merlin = { version = "1", default-features = false }
 subtle = { version = "2.1", default-features = false }
 
 [dev-dependencies]
-zprimitives = { package = "zerochain-primitives", path = "../primitives", default-features = false }
+zprimitives = { package = "zerochain-primitives", path = "../primitives" }
 
 [features]
 default = ["std"]

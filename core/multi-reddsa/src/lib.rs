@@ -140,6 +140,7 @@ impl<E: JubjubEngine> ShareStage<E> {
     }
 }
 
+#[derive(Clone)]
 pub struct AggSignature<E: JubjubEngine>{
     s: E::Fs,
     R: Point<E, PrimeOrder>,
@@ -170,7 +171,7 @@ mod tests {
     use pairing::bls12_381::Bls12;
     use core::convert::TryInto;
 
-    fn sign_helper(secrets: &[Fs], signer_keys: SignerKeys<Bls12>, transcript: Transcript) {
+    fn sign_helper(secrets: &[Fs], signer_keys: &SignerKeys<Bls12>, transcript: Transcript) -> Signature {
         let params = &JubjubBls12::new();
         let p_g = FixedGenerators::Diversifier;
         let pub_keys: Vec<Point<Bls12, PrimeOrder>> = secrets.iter().map(|s| params.generator(p_g).mul::<Fs>(*s, params)).collect();
@@ -184,5 +185,33 @@ mod tests {
         let (cosigners, shares): (Vec<_>, Vec<_>) = cosigners.into_iter().map(|c| c.reveal(reveals.clone(), params).unwrap()).unzip();
         let sigs: Vec<Signature> = cosigners.into_iter().map(|c| c.share(shares.clone(), p_g, params).try_into().unwrap()).collect();
 
+        let cmp = &sigs[0];
+        for s in &sigs {
+            assert_eq!(cmp, s);
+        }
+
+        sigs[0]
+    }
+
+    fn signer_keys_helper(secrets: &[Fs]) -> SignerKeys<Bls12> {
+        let params = &JubjubBls12::new();
+        let p_g = FixedGenerators::Diversifier;
+        let pub_keys = secrets.iter().map(|s| params.generator(p_g).mul(*s, params)).collect();
+        SignerKeys::new(pub_keys, params).unwrap()
+    }
+
+    #[test]
+    fn test_multi_verify() {
+        let params = &JubjubBls12::new();
+        let p_g = FixedGenerators::Diversifier;
+        let secrets = vec![
+            Fs::from_str("1").unwrap(),
+            Fs::from_str("2").unwrap(),
+            Fs::from_str("3").unwrap(),
+        ];
+
+        let signer_keys = signer_keys_helper(&secrets[..]);
+        let sig = sign_helper(&secrets[..], &signer_keys, Transcript::new(b"test-sign"));
+        // assert!(signer_keys.get_agg_pub_key().verify(b"test-sign", &sig, p_g, params));
     }
 }
