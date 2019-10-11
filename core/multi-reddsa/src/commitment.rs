@@ -1,6 +1,6 @@
 use merlin::Transcript;
 use jubjub::curve::{JubjubEngine, edwards::Point, PrimeOrder, Unknown};
-use jubjub::redjubjub::PublicKey;
+use jubjub::redjubjub::{PublicKey, h_star};
 use pairing::{io, Field};
 use crate::transcript::TranscriptProtocol;
 
@@ -52,6 +52,7 @@ impl<E: JubjubEngine> SignerKeys<E> {
         assert!(pub_keys.len() > 1);
 
         let mut transcript = Transcript::new(b"aggregated-pub-key");
+        transcript.append_u64(b"n", pub_keys.len() as u64);
         for pk in &pub_keys {
             transcript.commit_point(b"pub-key", pk)?;
         }
@@ -73,15 +74,15 @@ impl<E: JubjubEngine> SignerKeys<E> {
         transcript.commit_point(b"X", &self.aggregated_pub_key)
     }
 
-    pub fn challenge(&self, transcript: &mut Transcript, index: usize) -> io::Result<E::Fs> {
-        // Compute c = H(X, R, m).
-        let mut c: E::Fs = transcript.challenge_scalar(b"c")?;
-        // Compute a_i = H(<L>, X_i).
-        let a_i = Self::a_factor(&self.transcript, index)?;
-        c.mul_assign(&a_i);
+    // pub fn challenge(&self, transcript: &mut Transcript, index: usize) -> io::Result<E::Fs> {
+    //     // Compute c = H(X, R, m).
+    //     let mut c: E::Fs = transcript.challenge_scalar(b"c")?;
+    //     // Compute a_i = H(<L>, X_i).
+    //     let a_i = Self::a_factor(&self.transcript, index)?;
+    //     c.mul_assign(&a_i);
 
-        Ok(c)
-    }
+    //     Ok(c)
+    // }
 
     pub fn len(&self) -> usize {
         self.pub_keys.len()

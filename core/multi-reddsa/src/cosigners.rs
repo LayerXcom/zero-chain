@@ -1,4 +1,5 @@
 use jubjub::curve::{JubjubEngine, edwards::Point, PrimeOrder, FixedGenerators, JubjubParams};
+use jubjub::redjubjub::h_star;
 use pairing::io;
 use merlin::Transcript;
 use crate::transcript::*;
@@ -49,6 +50,7 @@ impl<E: JubjubEngine> CosignersCommited<E> {
     }
 }
 
+#[derive(Clone)]
 pub struct CosignersRevealed<E: JubjubEngine> {
     pos: usize,
     pub_key: Point<E, PrimeOrder>,
@@ -58,14 +60,16 @@ pub struct CosignersRevealed<E: JubjubEngine> {
 impl<E: JubjubEngine> CosignersRevealed<E> {
     pub fn verify_share(
         self,
+        msg: &[u8],
         share: E::Fs,
-        signer_keys: &SignerKeys<E>,
-        transcript: &Transcript,
+        // signer_keys: &SignerKeys<E>,
+        R_buf: &[u8],
         p_g: FixedGenerators,
         params: &E::Params
     ) -> io::Result<E::Fs> {
         let S_i = params.generator(p_g).mul(share, params);
-        let c_i = signer_keys.challenge(&mut transcript.clone(), self.pos)?;
+        // let c_i = signer_keys.challenge(&mut transcript.clone(), self.pos)?;
+        let c_i = h_star::<E>(&R_buf[..], msg);
         let X_i = self.pub_key;
 
         // Check s_i * G == R_i + c_i * X_i.
