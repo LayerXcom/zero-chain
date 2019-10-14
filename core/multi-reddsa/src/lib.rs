@@ -21,9 +21,9 @@ pub struct CommitmentStage<'m, E: JubjubEngine>{
     x_i: E::Fs,
     r_i: E::Fs,
     R_i: Point<E, PrimeOrder>,
-    pos: usize,
-    signer_keys: SignerKeys<E>,
     cosigners: Vec<Cosigners<E>>,
+    signer_keys: SignerKeys<E>,
+    pos: usize,
 }
 
 impl<'m, E: JubjubEngine> CommitmentStage<'m, E> {
@@ -31,8 +31,8 @@ impl<'m, E: JubjubEngine> CommitmentStage<'m, E> {
     pub fn new<R: Rng>(
         msg: &'m [u8],
         x_i: E::Fs,
-        pos: usize,
         signer_keys: SignerKeys<E>,
+        pos: usize,
         p_g: FixedGenerators,
         params: &E::Params,
         rng: &mut R,
@@ -48,7 +48,7 @@ impl<'m, E: JubjubEngine> CommitmentStage<'m, E> {
         let commitment = Commitment::from_R(&R_i)?;
 
         let cosigners = (0..signer_keys.len())
-            .map(|i| Cosigners::new(i, signer_keys.get_pub_key(i)))
+            .map(|i| Cosigners::new(signer_keys.get_pub_key(i)))
             .collect();
 
         Ok((CommitmentStage {
@@ -56,9 +56,9 @@ impl<'m, E: JubjubEngine> CommitmentStage<'m, E> {
             x_i,
             r_i,
             R_i,
-            pos,
-            signer_keys,
             cosigners,
+            signer_keys,
+            pos,
         }, commitment))
     }
 
@@ -76,8 +76,9 @@ impl<'m, E: JubjubEngine> CommitmentStage<'m, E> {
             x_i: self.x_i,
             r_i: self.r_i,
             R_i: self.R_i.clone(),
-            signer_keys: self.signer_keys,
             cosigners,
+            signer_keys: self.signer_keys,
+            pos: self.pos,
         }, self.R_i))
     }
 }
@@ -87,8 +88,9 @@ pub struct RevealStage<'m, E: JubjubEngine>{
     x_i: E::Fs,
     r_i: E::Fs,
     R_i: Point<E, PrimeOrder>,
-    signer_keys: SignerKeys<E>,
     cosigners: Vec<CosignersCommited<E>>,
+    signer_keys: SignerKeys<E>,
+    pos: usize,
 }
 
 impl<'m, E: JubjubEngine> RevealStage<'m, E> {
@@ -105,27 +107,26 @@ impl<'m, E: JubjubEngine> RevealStage<'m, E> {
             .map(|(signer, reveal)| signer.verify_witness(&reveal))
             .collect::<Result<_, _>>()?;
 
-        let mut R_buf = [0u8; 32];
-        self.R_i.write(&mut &mut R_buf[..])
-            .expect("Jubjub points should serialize to 32 bytes");
+        let mut X_bar_R_buf = [0u8; 64];
+        self.R_i.write(&mut &mut X_bar_R_buf[..32])?;
+        self.signer_keys.clone().get_agg_pub_key().write(&mut &mut X_bar_R_buf[32..])?;
 
-        let mut s_i = h_star::<E>(&R_buf[..], self.msg);
-
-        // self.signer_keys.commit(&mut self.transcript)?;
-        // self.transcript.commit_point(b"R", &sum_R)?;
-        // let transcript = self.transcript.clone();
-
-        // let c_i = self.signer_keys.challenge(&mut self.transcript, self.pos)?;
-        // let mut s_i = c_i;
+        // c = H*(X_bar, R, m)
+        let mut s_i = h_star::<E>(&X_bar_R_buf[..], self.msg);
+        // c * a
+        s_i.mul_assign(&self.signer_keys.get_a(&self.signer_keys.get_pub_key(self.pos))?);
+        // c * a * x
         s_i.mul_assign(&self.x_i);
+        // r + c * a * x
         s_i.add_assign(&self.r_i);
 
         Ok((ShareStage {
             msg: self.msg,
-            R_buf,
+            X_bar_R_buf,
             sum_R,
-            signer_keys: self.signer_keys,
             cosigners,
+            signer_keys: self.signer_keys,
+            pos: self.pos,
         }, s_i))
     }
 }
@@ -133,10 +134,11 @@ impl<'m, E: JubjubEngine> RevealStage<'m, E> {
 #[derive(Clone)]
 pub struct ShareStage<'m, E: JubjubEngine> {
     msg: &'m [u8],
-    R_buf: [u8; 32],
-    signer_keys: SignerKeys<E>,
+    X_bar_R_buf: [u8; 64],
     sum_R: Point<E, PrimeOrder>,
     cosigners: Vec<CosignersRevealed<E>>,
+    signer_keys: SignerKeys<E>,
+    pos: usize,
 }
 
 impl<'m, E: JubjubEngine> ShareStage<'m, E> {
@@ -146,10 +148,16 @@ impl<'m, E: JubjubEngine> ShareStage<'m, E> {
         p_g: FixedGenerators,
         params: &E::Params,
     ) -> AggSignature<E> {
-        let signer_keys = &self.signer_keys;
-
         let s = self.clone().cosigners.into_iter().zip(shares)
-            .map(|(signer, share)| signer.verify_share(self.msg, share, &self.R_buf[..], p_g, params).unwrap()) // TODO
+            .map(|(signer, share)| signer.verify_share(
+                self.msg,
+                share,
+                &self.X_bar_R_buf[..],
+                &self.signer_keys,
+                self.pos,
+                p_g,
+                params
+            ).unwrap()) // TODO
             .fold(E::Fs::zero(), |mut sum, s| { sum.add_assign(&s); sum });
 
         AggSignature {
@@ -190,15 +198,14 @@ mod tests {
     use pairing::bls12_381::Bls12;
     use core::convert::TryInto;
 
-    fn sign_helper(msg: &[u8], secrets: &[Fs], signer_keys: &SignerKeys<Bls12>, transcript: Transcript) -> Signature {
+    fn sign_helper(msg: &[u8], secrets: &[Fs], signer_keys: &SignerKeys<Bls12>) -> Signature {
         let rng = &mut rand::thread_rng();
         let params = &JubjubBls12::new();
         let p_g = FixedGenerators::Diversifier;
         let pub_keys: Vec<Point<Bls12, PrimeOrder>> = secrets.iter().map(|s| params.generator(p_g).mul::<Fs>(*s, params)).collect();
-        let mut transcript: Vec<_> = pub_keys.iter().map(|_| transcript.clone()).collect();
 
-        let (cosigners, comms): (Vec<_>, Vec<_>) = secrets.clone().into_iter().zip(transcript.iter_mut()).enumerate()
-            .map(|(i, (x_i, transcript))| CommitmentStage::new(msg, *x_i, i, signer_keys.clone(), p_g, params, rng).unwrap())
+        let (cosigners, comms): (Vec<_>, Vec<_>) = secrets.clone().into_iter().enumerate()
+            .map(|(i, x_i)| CommitmentStage::new(msg, *x_i, signer_keys.clone(), i, p_g, params, rng).unwrap())
             .unzip();
 
         let (cosigners, reveals): (Vec<_>, Vec<_>) = cosigners.into_iter().map(|c| c.commit(comms.clone()).unwrap()).unzip();
@@ -231,7 +238,7 @@ mod tests {
         ];
 
         let signer_keys = signer_keys_helper(&secrets[..]);
-        let sig = sign_helper(b"test-sign", &secrets[..], &signer_keys, Transcript::new(b"test-sign"));
+        let sig = sign_helper(b"test-sign", &secrets[..], &signer_keys);
 
         assert!(signer_keys.get_agg_pub_key().verify(b"test-sign", &sig, p_g, params));
     }

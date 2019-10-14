@@ -44,45 +44,31 @@ pub(super) fn sum_commitment<E: JubjubEngine>(
 pub struct SignerKeys<E: JubjubEngine>{
     pub_keys: Vec<Point<E, PrimeOrder>>,
     aggregated_pub_key: Point<E, PrimeOrder>,
-    transcript: Transcript,
 }
 
 impl<E: JubjubEngine> SignerKeys<E> {
     pub fn new(pub_keys: Vec<Point<E, PrimeOrder>>, params: &E::Params) -> io::Result<Self> {
         assert!(pub_keys.len() > 1);
 
-        let mut transcript = Transcript::new(b"aggregated-pub-key");
-        transcript.append_u64(b"n", pub_keys.len() as u64);
+        let mut L = vec![];
         for pk in &pub_keys {
-            transcript.commit_point(b"pub-key", pk)?;
+            let mut tmp = [0u8; 32];
+            pk.write(&mut &mut tmp[..])?;
+            L.append(&mut tmp[..].to_vec());
         }
+        assert_eq!(L.len(), 32*pub_keys.len());
 
         let mut aggregated_pub_key = Point::<E, PrimeOrder>::zero();
         for (i, pk) in pub_keys.iter().enumerate() {
-            let a_i = Self::a_factor(&transcript, i)?;
+            let a_i = Self::a_factor(&L[..], &pk)?;
             aggregated_pub_key = aggregated_pub_key.add(&pk.mul(a_i, params), params);
         }
 
         Ok(SignerKeys {
             pub_keys,
             aggregated_pub_key,
-            transcript,
         })
     }
-
-    pub fn commit(&self, transcript: &mut Transcript) -> io::Result<()> {
-        transcript.commit_point(b"X", &self.aggregated_pub_key)
-    }
-
-    // pub fn challenge(&self, transcript: &mut Transcript, index: usize) -> io::Result<E::Fs> {
-    //     // Compute c = H(X, R, m).
-    //     let mut c: E::Fs = transcript.challenge_scalar(b"c")?;
-    //     // Compute a_i = H(<L>, X_i).
-    //     let a_i = Self::a_factor(&self.transcript, index)?;
-    //     c.mul_assign(&a_i);
-
-    //     Ok(c)
-    // }
 
     pub fn len(&self) -> usize {
         self.pub_keys.len()
@@ -97,10 +83,27 @@ impl<E: JubjubEngine> SignerKeys<E> {
         PublicKey(a.into())
     }
 
+    pub fn get_a(&self, pk: &Point<E, PrimeOrder>) -> io::Result<E::Fs> {
+        let L = self.get_L()?;
+        Self::a_factor(&L[..], pk)
+    }
+
+    fn get_L(&self) -> io::Result<Vec<u8>> {
+        let mut L = vec![];
+        for pk in &self.pub_keys {
+            let mut tmp = [0u8; 32];
+            pk.write(&mut &mut tmp[..])?;
+            L.append(&mut tmp[..].to_vec());
+        }
+        assert_eq!(L.len(), 32*self.pub_keys.len());
+
+        Ok(L)
+    }
+
     /// Compute `a_i` factors for aggregated key.
-    fn a_factor(t: &Transcript, index: usize) -> io::Result<E::Fs> {
-        let mut t = t.clone();
-        t.append_u64(b"i", index as u64);
-        t.challenge_scalar(b"challenge-a_i")
+    fn a_factor(L: &[u8], pk: &Point<E, PrimeOrder>) -> io::Result<E::Fs> {
+        let mut buf = [0u8; 32];
+        pk.write(&mut &mut buf[..])?;
+        Ok(h_star::<E>(L, &buf[..]))
     }
 }

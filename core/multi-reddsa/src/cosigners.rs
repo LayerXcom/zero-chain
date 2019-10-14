@@ -1,26 +1,23 @@
 use jubjub::curve::{JubjubEngine, edwards::Point, PrimeOrder, FixedGenerators, JubjubParams};
 use jubjub::redjubjub::h_star;
-use pairing::io;
+use pairing::{io, Field};
 use merlin::Transcript;
 use crate::transcript::*;
 use crate::commitment::{Commitment, SignerKeys};
 
 pub struct Cosigners<E: JubjubEngine> {
-    pos: usize,
     pub_key: Point<E, PrimeOrder>,
 }
 
 impl<E: JubjubEngine> Cosigners<E> {
-    pub fn new(pos: usize, pub_key: Point<E, PrimeOrder>) -> Self {
+    pub fn new(pub_key: Point<E, PrimeOrder>) -> Self {
         Cosigners {
-            pos,
             pub_key,
         }
     }
 
     pub fn commit(self, commitment: Commitment) -> CosignersCommited<E> {
         CosignersCommited {
-            pos: self.pos,
             pub_key: self.pub_key,
             commitment,
         }
@@ -28,7 +25,6 @@ impl<E: JubjubEngine> Cosigners<E> {
 }
 
 pub struct CosignersCommited<E: JubjubEngine> {
-    pos: usize,
     pub_key: Point<E, PrimeOrder>,
     commitment: Commitment,
 }
@@ -43,7 +39,6 @@ impl<E: JubjubEngine> CosignersCommited<E> {
         }
 
         Ok(CosignersRevealed {
-            pos: self.pos,
             pub_key: self.pub_key,
             reveal: R.clone(),
         })
@@ -52,7 +47,6 @@ impl<E: JubjubEngine> CosignersCommited<E> {
 
 #[derive(Clone)]
 pub struct CosignersRevealed<E: JubjubEngine> {
-    pos: usize,
     pub_key: Point<E, PrimeOrder>,
     reveal: Point<E, PrimeOrder>,
 }
@@ -62,17 +56,18 @@ impl<E: JubjubEngine> CosignersRevealed<E> {
         self,
         msg: &[u8],
         share: E::Fs,
-        // signer_keys: &SignerKeys<E>,
-        R_buf: &[u8],
+        X_bar_R_buf: &[u8],
+        signer_keys: &SignerKeys<E>,
+        pos: usize,
         p_g: FixedGenerators,
         params: &E::Params
     ) -> io::Result<E::Fs> {
         let S_i = params.generator(p_g).mul(share, params);
-        // let c_i = signer_keys.challenge(&mut transcript.clone(), self.pos)?;
-        let c_i = h_star::<E>(&R_buf[..], msg);
+        let mut c_i = h_star::<E>(&X_bar_R_buf[..], msg);
+        c_i.mul_assign(&signer_keys.get_a(&signer_keys.get_pub_key(pos))?);
         let X_i = self.pub_key;
 
-        // Check s_i * G == R_i + c_i * X_i.
+        // Check s_i * G == R_i + c_i * a_i * X_i.
         if S_i != X_i.mul(c_i, params).add(&self.reveal, params) {
             return Err(io::Error::InvalidData)
         }
