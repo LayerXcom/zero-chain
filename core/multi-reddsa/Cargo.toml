@@ -1,0 +1,27 @@
+[package]
+name = "multi-reddsa"
+version = "0.1.0"
+authors = ["osuketh <dish230@gmail.com>"]
+edition = "2018"
+
+# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
+
+[dependencies]
+jubjub = { path = "../jubjub", default-features = false }
+pairing = { package = "zerochain-pairing", path = "../pairing", default-features = false }
+rand = { version = "0.6", default-features = false }
+merlin = { version = "1", default-features = false }
+subtle = { version = "2.1", default-features = false }
+
+[dev-dependencies]
+zprimitives = { package = "zerochain-primitives", path = "../primitives" }
+
+[features]
+default = ["std"]
+std = [
+    "jubjub/std",
+    "pairing/std",
+    "rand/std",
+    "merlin/std",
+    "subtle/std",
+]
