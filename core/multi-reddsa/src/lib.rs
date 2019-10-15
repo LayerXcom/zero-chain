@@ -3,8 +3,6 @@
 use pairing::{io, Field, PrimeField, PrimeFieldRepr};
 use jubjub::curve::{JubjubEngine, edwards::Point, PrimeOrder, FixedGenerators, JubjubParams};
 use jubjub::redjubjub::{Signature, h_star};
-use merlin::Transcript;
-use transcript::*;
 use commitment::*;
 use cosigners::*;
 use core::convert::TryFrom;
@@ -13,7 +11,7 @@ use rand::Rng;
 mod transcript;
 mod commitment;
 mod cosigners;
-mod error;
+mod mr_pubkey;
 
 #[allow(non_snake_case)]
 pub struct CommitmentStage<'m, E: JubjubEngine>{
@@ -75,7 +73,6 @@ impl<'m, E: JubjubEngine> CommitmentStage<'m, E> {
             msg: self.msg,
             x_i: self.x_i,
             r_i: self.r_i,
-            R_i: self.R_i.clone(),
             cosigners,
             signer_keys: self.signer_keys,
             pos: self.pos,
@@ -87,7 +84,6 @@ pub struct RevealStage<'m, E: JubjubEngine>{
     msg: &'m [u8],
     x_i: E::Fs,
     r_i: E::Fs,
-    R_i: Point<E, PrimeOrder>,
     cosigners: Vec<CosignersCommited<E>>,
     signer_keys: SignerKeys<E>,
     pos: usize,
@@ -154,7 +150,6 @@ impl<'m, E: JubjubEngine> ShareStage<'m, E> {
                 share,
                 &self.X_bar_R_buf[..],
                 &self.signer_keys,
-                self.pos,
                 p_g,
                 params
             ).unwrap()) // TODO
@@ -239,6 +234,6 @@ mod tests {
         let signer_keys = signer_keys_helper(&secrets[..]);
         let sig = sign_helper(b"test-sign", &secrets[..], &signer_keys);
 
-        assert!(signer_keys.get_agg_pub_key().verify(b"test-sign", &sig, p_g, params));
+        assert!(signer_keys.get_mr_pub_key().verify(b"test-sign", &sig, p_g, params));
     }
 }

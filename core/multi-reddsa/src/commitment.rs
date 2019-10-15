@@ -1,7 +1,8 @@
 use merlin::Transcript;
-use jubjub::curve::{JubjubEngine, edwards::Point, PrimeOrder, Unknown};
-use jubjub::redjubjub::{PublicKey, h_star};
-use pairing::{io, Field};
+use jubjub::curve::{JubjubEngine, edwards::Point, PrimeOrder};
+use jubjub::redjubjub::h_star;
+use pairing::io;
+use crate::mr_pubkey::MRPubkey;
 use crate::transcript::TranscriptProtocol;
 
 const COMMITMENT_SIZE: usize = 32;
@@ -59,7 +60,7 @@ impl<E: JubjubEngine> SignerKeys<E> {
         assert_eq!(L.len(), 32*pub_keys.len());
 
         let mut aggregated_pub_key = Point::<E, PrimeOrder>::zero();
-        for (i, pk) in pub_keys.iter().enumerate() {
+        for pk in pub_keys.iter() {
             let a_i = Self::a_factor(&L[..], &pk)?;
             aggregated_pub_key = aggregated_pub_key.add(&pk.mul(a_i, params), params);
         }
@@ -78,9 +79,13 @@ impl<E: JubjubEngine> SignerKeys<E> {
         self.pub_keys[index].clone()
     }
 
-    pub fn get_agg_pub_key(self) -> PublicKey<E> {
+    pub fn get_agg_pub_key(&self) -> &Point<E, PrimeOrder> {
+        &self.aggregated_pub_key
+    }
+
+    pub fn get_mr_pub_key(self) -> MRPubkey<E> {
         let a = self.aggregated_pub_key;
-        PublicKey(a.into())
+        MRPubkey::new(a.into())
     }
 
     pub fn get_a(&self, pk: &Point<E, PrimeOrder>) -> io::Result<E::Fs> {

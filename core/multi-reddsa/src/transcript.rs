@@ -1,7 +1,6 @@
 use merlin::Transcript;
 use pairing::{io, PrimeField, PrimeFieldRepr};
-// use jubjub::redjubjub::{PrivateKey, PublicKey};
-use jubjub::curve::{JubjubEngine, edwards::Point, PrimeOrder, fs::{FsRepr, Fs}};
+use jubjub::curve::{JubjubEngine, edwards::Point, PrimeOrder};
 use rand::Rng;
 
 pub trait TranscriptProtocol {
@@ -9,7 +8,7 @@ pub trait TranscriptProtocol {
 
     fn commit_scalar<PF: PrimeField>(&mut self, label: &'static [u8], scalar: &PF) -> io::Result<()>;
 
-    fn challenge_scalar<PF: PrimeField>(&mut self, label: &'static [u8]) -> io::Result<PF>;
+    fn challenge_scalar<PF: PrimeField>(&mut self) -> io::Result<PF>;
 
     fn witness_scalar<PF: PrimeField>(&self, label: &'static [u8], witness: &PF) -> io::Result<PF>;
 }
@@ -31,7 +30,7 @@ impl TranscriptProtocol for Transcript {
         Ok(())
     }
 
-    fn challenge_scalar<PF: PrimeField>(&mut self, label: &'static [u8]) -> io::Result<PF> {
+    fn challenge_scalar<PF: PrimeField>(&mut self) -> io::Result<PF> {
         // TODO: Avoid infinite loop
         loop {
             let mut repr: PF::Repr = Default::default();

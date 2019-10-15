@@ -1,8 +1,6 @@
 use jubjub::curve::{JubjubEngine, edwards::Point, PrimeOrder, FixedGenerators, JubjubParams};
 use jubjub::redjubjub::h_star;
 use pairing::{io, Field};
-use merlin::Transcript;
-use crate::transcript::*;
 use crate::commitment::{Commitment, SignerKeys};
 
 pub struct Cosigners<E: JubjubEngine> {
@@ -64,7 +62,6 @@ impl<E: JubjubEngine> CosignersRevealed<E> {
         share: E::Fs,
         X_bar_R_buf: &[u8],
         signer_keys: &SignerKeys<E>,
-        pos: usize,
         p_g: FixedGenerators,
         params: &E::Params
     ) -> io::Result<E::Fs> {
