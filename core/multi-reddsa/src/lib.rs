@@ -48,7 +48,7 @@ impl<'m, E: JubjubEngine> CommitmentStage<'m, E> {
         let commitment = Commitment::from_R(&R_i)?;
 
         let cosigners = (0..signer_keys.len())
-            .map(|i| Cosigners::new(signer_keys.get_pub_key(i)))
+            .map(|i| Cosigners::new(i, signer_keys.get_pub_key(i)))
             .collect();
 
         Ok((CommitmentStage {
@@ -96,7 +96,7 @@ pub struct RevealStage<'m, E: JubjubEngine>{
 impl<'m, E: JubjubEngine> RevealStage<'m, E> {
     #[allow(non_snake_case)]
     pub fn reveal(
-        mut self,
+        self,
         reveals: Vec<Point<E, PrimeOrder>>,
         params: &E::Params
     ) -> io::Result<(ShareStage<'m, E>, E::Fs)> {
@@ -108,8 +108,8 @@ impl<'m, E: JubjubEngine> RevealStage<'m, E> {
             .collect::<Result<_, _>>()?;
 
         let mut X_bar_R_buf = [0u8; 64];
-        self.R_i.write(&mut &mut X_bar_R_buf[..32])?;
-        self.signer_keys.clone().get_agg_pub_key().write(&mut &mut X_bar_R_buf[32..])?;
+        self.signer_keys.clone().get_agg_pub_key().write(&mut &mut X_bar_R_buf[..32])?;
+        sum_R.write(&mut &mut X_bar_R_buf[32..])?;
 
         // c = H*(X_bar, R, m)
         let mut s_i = h_star::<E>(&X_bar_R_buf[..], self.msg);
@@ -202,7 +202,6 @@ mod tests {
         let rng = &mut rand::thread_rng();
         let params = &JubjubBls12::new();
         let p_g = FixedGenerators::Diversifier;
-        let pub_keys: Vec<Point<Bls12, PrimeOrder>> = secrets.iter().map(|s| params.generator(p_g).mul::<Fs>(*s, params)).collect();
 
         let (cosigners, comms): (Vec<_>, Vec<_>) = secrets.clone().into_iter().enumerate()
             .map(|(i, x_i)| CommitmentStage::new(msg, *x_i, signer_keys.clone(), i, p_g, params, rng).unwrap())

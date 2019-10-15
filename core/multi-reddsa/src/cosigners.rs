@@ -6,18 +6,21 @@ use crate::transcript::*;
 use crate::commitment::{Commitment, SignerKeys};
 
 pub struct Cosigners<E: JubjubEngine> {
+    pos: usize,
     pub_key: Point<E, PrimeOrder>,
 }
 
 impl<E: JubjubEngine> Cosigners<E> {
-    pub fn new(pub_key: Point<E, PrimeOrder>) -> Self {
+    pub fn new(pos: usize, pub_key: Point<E, PrimeOrder>) -> Self {
         Cosigners {
+            pos,
             pub_key,
         }
     }
 
     pub fn commit(self, commitment: Commitment) -> CosignersCommited<E> {
         CosignersCommited {
+            pos: self.pos,
             pub_key: self.pub_key,
             commitment,
         }
@@ -25,6 +28,7 @@ impl<E: JubjubEngine> Cosigners<E> {
 }
 
 pub struct CosignersCommited<E: JubjubEngine> {
+    pos: usize,
     pub_key: Point<E, PrimeOrder>,
     commitment: Commitment,
 }
@@ -39,6 +43,7 @@ impl<E: JubjubEngine> CosignersCommited<E> {
         }
 
         Ok(CosignersRevealed {
+            pos: self.pos,
             pub_key: self.pub_key,
             reveal: R.clone(),
         })
@@ -47,6 +52,7 @@ impl<E: JubjubEngine> CosignersCommited<E> {
 
 #[derive(Clone)]
 pub struct CosignersRevealed<E: JubjubEngine> {
+    pos: usize,
     pub_key: Point<E, PrimeOrder>,
     reveal: Point<E, PrimeOrder>,
 }
@@ -64,7 +70,7 @@ impl<E: JubjubEngine> CosignersRevealed<E> {
     ) -> io::Result<E::Fs> {
         let S_i = params.generator(p_g).mul(share, params);
         let mut c_i = h_star::<E>(&X_bar_R_buf[..], msg);
-        c_i.mul_assign(&signer_keys.get_a(&signer_keys.get_pub_key(pos))?);
+        c_i.mul_assign(&signer_keys.get_a(&signer_keys.get_pub_key(self.pos))?);
         let X_i = self.pub_key;
 
         // Check s_i * G == R_i + c_i * a_i * X_i.
