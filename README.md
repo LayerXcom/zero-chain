@@ -70,6 +70,7 @@ Documented in [Zerochain Book](https://layerxcom.github.io/zerochain-book/).
 - (Work in progress) [Zerochain Book](https://layerxcom.github.io/zerochain-book/)
 - [Announcing Zerochain: Applying zk-SNARKs to Substrate](https://medium.com/layerx/announcing-zerochain-5b08e158355d)
 - [(Slide) Zerochain: A privacy-protecting layer on top of Substrate](https://speakerdeck.com/osuke/zerochain-a-privacy-protecting-layer-on-top-of-substrate)
+- [(Slide) Zerochain: A privacy layer for blockchain ](https://speakerdeck.com/osuke/zerochain-a-privacy-layer-for-blockchain)
 
 ### References
 - [Substrate repo](https://github.com/paritytech/substrate)
