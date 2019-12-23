@@ -1,5 +1,4 @@
 #![cfg_attr(not(feature = "std"), no_std)]
-#![cfg_attr(not(feature = "std"), feature(alloc))]
 
 // `clippy` is a code linting tool for improving code quality by catching
 // common mistakes or strange code patterns. If the `clippy` feature is
