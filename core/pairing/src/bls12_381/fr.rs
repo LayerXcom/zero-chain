@@ -66,9 +66,9 @@ impl ::rand::Rand for FrRepr {
 
 impl ::std::fmt::Display for FrRepr {
     fn fmt(&self, f: &mut ::std::fmt::Formatter) -> ::std::fmt::Result {
-        try!(write!(f, "0x"));
+        (write!(f, "0x"))?;
         for i in self.0.iter().rev() {
-            try!(write!(f, "{:016x}", *i));
+            (write!(f, "{:016x}", *i))?;
         }
 
         Ok(())

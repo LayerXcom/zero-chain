@@ -519,9 +519,9 @@ impl ::rand::Rand for FqRepr {
 
 impl ::std::fmt::Display for FqRepr {
     fn fmt(&self, f: &mut ::std::fmt::Formatter) -> ::std::fmt::Result {
-        try!(write!(f, "0x"));
+        (write!(f, "0x"))?;
         for i in self.0.iter().rev() {
-            try!(write!(f, "{:016x}", *i));
+            (write!(f, "{:016x}", *i))?;
         }
 
         Ok(())
