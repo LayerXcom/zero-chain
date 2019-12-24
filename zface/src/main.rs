@@ -270,7 +270,7 @@ fn subcommand_wallet<R: Rng>(mut term: term::Term, root_dir: PathBuf, matches: &
             let asset_id = wallet_arg_id_match(&sub_matches);
 
             let balance_query = getter::BalanceQuery::get_encrypted_asset(asset_id, &dec_key, api)
-                .expect("Falid to get balance data.");;
+                .expect("Falid to get balance data.");
 
             println!("Decrypted balance: {}", balance_query.decrypted_balance);
             println!("Encrypted balance: {}", balance_query.encrypted_balance_str);

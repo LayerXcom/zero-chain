@@ -47,7 +47,7 @@ impl Binary {
         match index {
             Some(id) => {
                 binaries[id] = true;
-                for (i, b) in binaries.into_iter().enumerate() {
+                for (i, b) in binaries.iter().enumerate() {
                     let tmp = Boolean::from(AllocatedBit::alloc(
                         cs.namespace(|| format!("{} binary {}", st, i)),
                         Some(*b))?

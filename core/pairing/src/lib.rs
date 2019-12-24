@@ -1,5 +1,4 @@
 #![cfg_attr(not(feature = "std"), no_std)]
-#![cfg_attr(not(feature = "std"), feature(alloc))]
 
 // `clippy` is a code linting tool for improving code quality by catching
 // common mistakes or strange code patterns. If the `clippy` feature is
@@ -121,7 +120,7 @@ pub trait Engine: Sized + 'static + Clone {
         G2: Into<Self::G2Affine>,
     {
         Self::final_exponentiation(&Self::miller_loop(
-            [(&(p.into().prepare()), &(q.into().prepare()))].into_iter(),
+            [(&(p.into().prepare()), &(q.into().prepare()))].iter(),
         )).unwrap()
     }
 }
