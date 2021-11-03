@@ -125,7 +125,7 @@ impl<T: Trait> Module<T> {
 	pub fn can_reclaim(try_index: T::AccountIndex) -> bool {
 		let enum_set_size = Self::enum_set_size();
 		let try_set = Self::enum_set(try_index / enum_set_size);
-		let i = (try_index % enum_set_size).as_();
+		let i: usize = (try_index % enum_set_size).as_();
 		i < try_set.len() && T::IsDeadAccount::is_dead_account(&try_set[i])
 	}
 
@@ -153,7 +153,7 @@ impl<T: Trait> OnNewAccount<T::AccountId> for Module<T> {
 			// then check to see if this account id identifies a dead account index.
 			let set_index = try_index / enum_set_size;
 			let mut try_set = Self::enum_set(set_index);
-			let item_index = (try_index % enum_set_size).as_();
+			let item_index: usize = (try_index % enum_set_size).as_();
 			if item_index < try_set.len() {
 				if T::IsDeadAccount::is_dead_account(&try_set[item_index]) {
 					// yup - this index refers to a dead account. can be reused.
