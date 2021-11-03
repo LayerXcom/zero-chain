@@ -1,20 +1,17 @@
-#[cfg(feature = "std")]
-use serde::{Serialize, Serializer, Deserialize, Deserializer};
-#[cfg(feature = "std")]
-use substrate_primitives::hexdisplay::AsBytesRef;
-#[cfg(feature = "std")]
-use substrate_primitives::bytes;
-use jubjub::{
-    redjubjub,
-    curve::FixedGenerators
-};
-use runtime_primitives::traits::{Verify, Lazy};
-use fixed_hash::construct_fixed_hash;
-use pairing::{bls12_381::Bls12, io};
 use crate::{SigVerificationKey, PARAMS};
 use core::convert::TryFrom;
+use fixed_hash::construct_fixed_hash;
+use jubjub::{curve::FixedGenerators, redjubjub};
+use pairing::{bls12_381::Bls12, io};
+use runtime_primitives::traits::{Lazy, Verify};
+#[cfg(feature = "std")]
+use serde::{Deserialize, Deserializer, Serialize, Serializer};
+#[cfg(feature = "std")]
+use substrate_primitives::bytes;
+#[cfg(feature = "std")]
+use substrate_primitives::hexdisplay::AsBytesRef;
 
-use parity_codec::{Encode, Decode, Input};
+use parity_codec::{Decode, Encode, Input};
 
 const SIZE: usize = 64;
 
@@ -27,7 +24,8 @@ pub type RedjubjubSignature = H512;
 #[cfg(feature = "std")]
 impl Serialize for H512 {
     fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
-        where S: Serializer
+    where
+        S: Serializer,
     {
         bytes::serialize(&self.0, serializer)
     }
@@ -36,7 +34,8 @@ impl Serialize for H512 {
 #[cfg(feature = "std")]
 impl<'de> Deserialize<'de> for RedjubjubSignature {
     fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
-        where D: Deserializer<'de>
+    where
+        D: Deserializer<'de>,
     {
         bytes::deserialize_check_len(deserializer, bytes::ExpectedLen::Exact(SIZE))
             .map(|x| H512::from_slice(&x))
@@ -68,16 +67,15 @@ impl Verify for RedjubjubSignature {
     fn verify<L: Lazy<[u8]>>(&self, mut msg: L, signer: &Self::Signer) -> bool {
         let sig = match redjubjub::Signature::try_from(*self) {
             Ok(s) => s,
-            Err(_) => return false
+            Err(_) => return false,
         };
 
         let p_g = FixedGenerators::Diversifier;
 
         match redjubjub::PublicKey::<Bls12>::try_from(*signer) {
             Ok(vk) => return vk.verify(msg.get(), &sig, p_g, &PARAMS),
-            Err(_) => return false
+            Err(_) => return false,
         }
-
     }
 }
 
@@ -103,10 +101,10 @@ impl TryFrom<RedjubjubSignature> for redjubjub::Signature {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use rand::{Rng, SeedableRng, XorShiftRng};
+    use core::convert::TryInto;
     use jubjub::curve::{FixedGenerators, JubjubBls12};
     use jubjub::redjubjub::PublicKey;
-    use core::convert::TryInto;
+    use rand::{Rng, SeedableRng, XorShiftRng};
 
     #[test]
     fn test_sig_into_from() {

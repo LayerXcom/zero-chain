@@ -1,6 +1,6 @@
-use dirs;
-use clap::{Arg, ArgMatches};
 use super::term;
+use clap::{Arg, ArgMatches};
+use dirs;
 use std::path::PathBuf;
 
 const APPLICATION_DIRECTORY_NAME: &'static str = "zface";
@@ -11,7 +11,8 @@ pub const DEFAULT_BALANCE: &str = "100";
 pub const ALICESEED: &str = "416c696365202020202020202020202020202020202020202020202020202020";
 pub const BOBSEED: &str = "426f622020202020202020202020202020202020202020202020202020202020";
 pub const BOBACCOUNTID: &str = "45e66da531088b55dcb3b273ca825454d79d2d1d5c4fa2ba4a12c1fa1ccd6389";
-pub const ALICEDECRYPTIONKEY: &str = "b0451b0bfab2830a75216779e010e0bfd2e6d0b4e4b1270dfcdfd0d538509e02";
+pub const ALICEDECRYPTIONKEY: &str =
+    "b0451b0bfab2830a75216779e010e0bfd2e6d0b4e4b1270dfcdfd0d538509e02";
 pub const DEFAULT_ENCRYPTED_BALANCE: &str = "6f4962da776a391c3b03f3e14e8156d2545f39a3ebbed675ea28859252cb006fac776c796563fcd44cc49cfaea8bb796952c266e47779d94574c10ad01754b11";
 
 /// root directory configuration
@@ -105,8 +106,5 @@ pub(crate) fn config_terminal(matches: &ArgMatches) -> term::Config {
             .init();
     }
 
-    term::Config {
-        color,
-        quiet,
-    }
+    term::Config { color, quiet }
 }

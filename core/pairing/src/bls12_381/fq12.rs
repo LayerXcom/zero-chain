@@ -29,7 +29,7 @@ impl Rand for Fq12 {
 impl RW for Fq12 {
     fn write<W: ::io::Write>(&self, writer: &mut W) -> ::io::Result<()> {
         self.c0.write(writer)?;
-        self.c1.write(writer)?;        
+        self.c1.write(writer)?;
         Ok(())
     }
 
@@ -37,14 +37,11 @@ impl RW for Fq12 {
         let a = Fq6::read(reader)?;
         let b = Fq6::read(reader)?;
 
-        Ok(Fq12{
-            c0: a,
-            c1: b,
-        })
+        Ok(Fq12 { c0: a, c1: b })
     }
 }
 
-impl Fq12 {    
+impl Fq12 {
     pub fn conjugate(&mut self) {
         self.c1.negate();
     }
@@ -164,7 +161,6 @@ impl Field for Fq12 {
             tmp
         })
     }
-    
 }
 
 #[cfg(test)]

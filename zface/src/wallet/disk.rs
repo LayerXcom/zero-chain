@@ -1,16 +1,16 @@
 //! Implementation of file disk operations to store keyfiles.
 
-use crate::error::{Result, KeystoreError};
-use super::DirOperations;
-use super::keyfile::{KeyFile, IndexFile};
 use super::config::*;
-use std::path::{PathBuf, Path};
-use std::fs;
-use std::io::{Write, BufReader};
-use std::collections::BTreeMap;
-use rand::Rng;
+use super::keyfile::{IndexFile, KeyFile};
+use super::DirOperations;
+use crate::error::{KeystoreError, Result};
 use chrono::Utc;
+use rand::Rng;
 use serde_json;
+use std::collections::BTreeMap;
+use std::fs;
+use std::io::{BufReader, Write};
+use std::path::{Path, PathBuf};
 
 /// Root directory of wallet
 #[derive(Clone, Debug, PartialEq, Eq)]
@@ -79,7 +79,7 @@ impl WalletDirectory {
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub struct KeystoreDirectory(pub PathBuf);
 
-impl DirOperations for KeystoreDirectory{
+impl DirOperations for KeystoreDirectory {
     fn insert<R: Rng>(&self, keyfile: &mut KeyFile, rng: &mut R) -> Result<()> {
         let filename = get_unique_filename(&self.0, rng)?;
         let keyfile_path = self.0.join(filename.as_str());
@@ -87,11 +87,11 @@ impl DirOperations for KeystoreDirectory{
     }
 
     fn load_all(&self) -> Result<Vec<KeyFile>> {
-        Ok(self.get_all_keyfiles()?
+        Ok(self
+            .get_all_keyfiles()?
             .into_iter()
             .map(|(_, keyfile)| keyfile)
-            .collect()
-        )
+            .collect())
     }
 
     fn load(&self, keyfile_name: &str) -> Result<KeyFile> {
@@ -99,13 +99,14 @@ impl DirOperations for KeystoreDirectory{
     }
 
     fn remove(&self, keyfile: &mut KeyFile) -> Result<()> {
-        let removed_file = self.get_all_keyfiles()?
+        let removed_file = self
+            .get_all_keyfiles()?
             .into_iter()
             .find(|(_, file)| file.ss58_address == keyfile.ss58_address);
 
         match removed_file {
             None => Err(KeystoreError::InvalidKeyfile),
-            Some((path, _)) => fs::remove_file(path).map_err(From::from)
+            Some((path, _)) => fs::remove_file(path).map_err(From::from),
         }
     }
 }
@@ -120,9 +121,7 @@ impl KeystoreDirectory {
 
     fn from_path<P: AsRef<Path>>(path: P) -> Option<Self> {
         if path.as_ref().to_path_buf().exists() {
-            Some(
-                KeystoreDirectory(path.as_ref().to_path_buf())
-            )
+            Some(KeystoreDirectory(path.as_ref().to_path_buf()))
         } else {
             None
         }
@@ -141,17 +140,15 @@ impl KeystoreDirectory {
         Ok(fs::read_dir(&self.0)?
             .flat_map(|entry| {
                 let path = entry?.path();
-                fs::File::open(path.clone())
-                    .map(|file| {
-                        let reader = BufReader::new(file);
-                        let keyfile = serde_json::from_reader(reader)
-                            .expect("Should deserialize from json file.");
+                fs::File::open(path.clone()).map(|file| {
+                    let reader = BufReader::new(file);
+                    let keyfile = serde_json::from_reader(reader)
+                        .expect("Should deserialize from json file.");
 
-                        (path, keyfile)
-                    })
+                    (path, keyfile)
+                })
             })
-            .collect()
-        )
+            .collect())
     }
 }
 
@@ -227,11 +224,7 @@ pub fn replace_file(path: &Path) -> Result<fs::File> {
 }
 
 /// Get a unique filename by appending random suffix.
-pub fn get_unique_filename<R: Rng>(
-    directory_path: &Path,
-    rng: &mut R
-) -> Result<String>
-{
+pub fn get_unique_filename<R: Rng>(directory_path: &Path, rng: &mut R) -> Result<String> {
     let mut filename = Utc::now().format("%Y-%m-%dT%H-%M-%S").to_string();
     let mut path = directory_path.join(filename.as_str());
 
@@ -257,9 +250,9 @@ pub fn get_unique_filename<R: Rng>(
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::derive::{Derivation, ExtendedSpendingKey};
+    use rand::{SeedableRng, XorShiftRng};
     use std::env;
-    use rand::{XorShiftRng, SeedableRng};
-    use crate::derive::{ExtendedSpendingKey, Derivation};
 
     #[test]
     fn test_manage_keyfile() {

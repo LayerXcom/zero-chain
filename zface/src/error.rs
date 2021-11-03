@@ -1,6 +1,6 @@
 use parity_crypto as crypto;
 use serde_json;
-use std::{error::Error, fmt, io, convert};
+use std::{convert, error::Error, fmt, io};
 
 /// Defined keystore errors
 #[derive(Debug)]
@@ -65,7 +65,9 @@ impl fmt::Display for KeystoreError {
         match *self {
             KeystoreError::InvalidPassword => write!(f, "Invalid password"),
             KeystoreError::InvalidKeyfile => write!(f, "Invalid keyfile"),
-            KeystoreError::OverRetries => write!(f, "Exceeded maximum retries when deduplicating filename."),
+            KeystoreError::OverRetries => {
+                write!(f, "Exceeded maximum retries when deduplicating filename.")
+            }
             KeystoreError::InvalidPath => write!(f, "Invalid path"),
             KeystoreError::IoError(ref err) => write!(f, "I/O error: {}", err),
             KeystoreError::CryptoError(ref err) => write!(f, "crypto error: {}", err),

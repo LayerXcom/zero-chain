@@ -1,16 +1,16 @@
-#[cfg(feature = "std")]
-use serde::{Serialize, Serializer, Deserialize, Deserializer};
-#[cfg(feature = "std")]
-use substrate_primitives::hexdisplay::AsBytesRef;
-#[cfg(feature = "std")]
-use substrate_primitives::bytes;
-use keys::EncryptionKey;
+use crate::{IntoXY, PARAMS};
+use core::convert::TryFrom;
 use fixed_hash::construct_fixed_hash;
+use keys::EncryptionKey;
 use pairing::bls12_381::{Bls12, Fr};
 use pairing::io;
-use parity_codec::{Encode, Decode, Input};
-use crate::{PARAMS, IntoXY};
-use core::convert::TryFrom;
+use parity_codec::{Decode, Encode, Input};
+#[cfg(feature = "std")]
+use serde::{Deserialize, Deserializer, Serialize, Serializer};
+#[cfg(feature = "std")]
+use substrate_primitives::bytes;
+#[cfg(feature = "std")]
+use substrate_primitives::hexdisplay::AsBytesRef;
 
 const SIZE: usize = 32;
 
@@ -23,7 +23,8 @@ pub type EncKey = H256;
 #[cfg(feature = "std")]
 impl Serialize for EncKey {
     fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
-        where S: Serializer
+    where
+        S: Serializer,
     {
         bytes::serialize(&self.0, serializer)
     }
@@ -32,7 +33,8 @@ impl Serialize for EncKey {
 #[cfg(feature = "std")]
 impl<'de> Deserialize<'de> for EncKey {
     fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
-        where D: Deserializer<'de>
+    where
+        D: Deserializer<'de>,
     {
         bytes::deserialize_check_len(deserializer, bytes::ExpectedLen::Exact(SIZE))
             .map(|x| EncKey::from_slice(&x))
@@ -87,8 +89,7 @@ impl AsBytesRef for EncKey {
 
 impl IntoXY<Bls12> for EncKey {
     fn into_xy(&self) -> Result<(Fr, Fr), io::Error> {
-        let point = EncryptionKey::<Bls12>::try_from(self)?
-            .into_xy();
+        let point = EncryptionKey::<Bls12>::try_from(self)?.into_xy();
 
         Ok(point)
     }
@@ -96,8 +97,7 @@ impl IntoXY<Bls12> for EncKey {
 
 impl IntoXY<Bls12> for &EncKey {
     fn into_xy(&self) -> Result<(Fr, Fr), io::Error> {
-        let point = EncryptionKey::<Bls12>::try_from(**self)?
-            .into_xy();
+        let point = EncryptionKey::<Bls12>::try_from(**self)?.into_xy();
 
         Ok(point)
     }
@@ -106,8 +106,8 @@ impl IntoXY<Bls12> for &EncKey {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use rand::{Rng, SeedableRng, XorShiftRng};
     use core::convert::TryInto;
+    use rand::{Rng, SeedableRng, XorShiftRng};
 
     #[test]
     fn test_addr_into_from() {

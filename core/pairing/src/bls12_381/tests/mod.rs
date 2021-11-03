@@ -53,7 +53,9 @@ fn test_pairing_result_against_relic() {
 }
 
 fn test_vectors<G: CurveProjective, E: EncodedPoint<Affine = G::Affine>>(expected: &[u8])
-    where G: ::std::fmt::Debug, G::Affine: ::std::fmt::Debug
+where
+    G: ::std::fmt::Debug,
+    G::Affine: ::std::fmt::Debug,
 {
     let mut e = G::zero();
 
@@ -335,10 +337,18 @@ fn test_g2_uncompressed_invalid_vectors() {
 
             if let Some(y) = x3b.sqrt() {
                 // We know this is on the curve, but it's likely not going to be in the correct subgroup.
-                x.c1.into_repr().write_be(&mut &mut o.as_mut()[0..]).unwrap();
-                x.c0.into_repr().write_be(&mut &mut o.as_mut()[48..]).unwrap();
-                y.c1.into_repr().write_be(&mut &mut o.as_mut()[96..]).unwrap();
-                y.c0.into_repr().write_be(&mut &mut o.as_mut()[144..]).unwrap();
+                x.c1.into_repr()
+                    .write_be(&mut &mut o.as_mut()[0..])
+                    .unwrap();
+                x.c0.into_repr()
+                    .write_be(&mut &mut o.as_mut()[48..])
+                    .unwrap();
+                y.c1.into_repr()
+                    .write_be(&mut &mut o.as_mut()[96..])
+                    .unwrap();
+                y.c0.into_repr()
+                    .write_be(&mut &mut o.as_mut()[144..])
+                    .unwrap();
 
                 if let Err(GroupDecodingError::NotInSubgroup) = o.into_affine() {
                     break;
@@ -563,8 +573,12 @@ fn test_g2_compressed_invalid_vectors() {
             if let Some(_) = x3b.sqrt() {
                 x.add_assign(&Fq2::one());
             } else {
-                x.c1.into_repr().write_be(&mut &mut o.as_mut()[0..]).unwrap();
-                x.c0.into_repr().write_be(&mut &mut o.as_mut()[48..]).unwrap();
+                x.c1.into_repr()
+                    .write_be(&mut &mut o.as_mut()[0..])
+                    .unwrap();
+                x.c0.into_repr()
+                    .write_be(&mut &mut o.as_mut()[48..])
+                    .unwrap();
                 o.as_mut()[0] |= 0b1000_0000;
 
                 if let Err(GroupDecodingError::NotOnCurve) = o.into_affine() {
@@ -594,8 +608,12 @@ fn test_g2_compressed_invalid_vectors() {
 
             if let Some(_) = x3b.sqrt() {
                 // We know this is on the curve, but it's likely not going to be in the correct subgroup.
-                x.c1.into_repr().write_be(&mut &mut o.as_mut()[0..]).unwrap();
-                x.c0.into_repr().write_be(&mut &mut o.as_mut()[48..]).unwrap();
+                x.c1.into_repr()
+                    .write_be(&mut &mut o.as_mut()[0..])
+                    .unwrap();
+                x.c0.into_repr()
+                    .write_be(&mut &mut o.as_mut()[48..])
+                    .unwrap();
                 o.as_mut()[0] |= 0b1000_0000;
 
                 if let Err(GroupDecodingError::NotInSubgroup) = o.into_affine() {

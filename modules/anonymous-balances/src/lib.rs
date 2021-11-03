@@ -1,24 +1,21 @@
 //! A module for dealing with anonymous transfer
 #![cfg_attr(not(feature = "std"), no_std)]
 
-use support::{decl_module, decl_storage, decl_event, StorageMap, dispatch::Result, ensure};
-use rstd::{
-    prelude::*,
-    result,
-};
+use rstd::{prelude::*, result};
 use runtime_primitives::traits::Zero;
-use zprimitives::{EncKey, Proof, Nonce, RightCiphertext, LeftCiphertext, Ciphertext};
+use support::{decl_event, decl_module, decl_storage, dispatch::Result, ensure, StorageMap};
 use system::ensure_signed;
+use zprimitives::{Ciphertext, EncKey, LeftCiphertext, Nonce, Proof, RightCiphertext};
 
 pub trait Trait: system::Trait + zk_system::Trait {
     // The overarching event type.
-	type Event: From<Event<Self>> + Into<<Self as system::Trait>::Event>;
+    type Event: From<Event<Self>> + Into<<Self as system::Trait>::Event>;
 }
 
 decl_module! {
     pub struct Module<T: Trait> for enum Call where origin: T::Origin {
         // Initializing events
-		fn deposit_event<T>() = default;
+        fn deposit_event<T>() = default;
 
         pub fn anonymous_transfer(
             origin,
@@ -82,8 +79,8 @@ decl_module! {
         }
 
         /// Issue a new class of encrypted fungible assets. There are, and will only ever be, `total`
-		/// such assets and they'll all belong to the `issuer` initially. It will have an
-		/// identifier `AssetId` instance: this will be specified in the `Issued` event.
+        /// such assets and they'll all belong to the `issuer` initially. It will have an
+        /// identifier `AssetId` instance: this will be specified in the `Issued` event.
         fn issue(
             origin,
             zkproof: Proof,
@@ -169,12 +166,10 @@ impl<T: Trait> Module<T> {
     pub fn rollover(addr: &EncKey) -> result::Result<(), &'static str> {
         let current_epoch = <zk_system::Module<T>>::get_current_epoch();
 
-        let last_rollover = Self::last_rollover(addr)
-            .map_or(T::BlockNumber::zero(), |e| e);
+        let last_rollover = Self::last_rollover(addr).map_or(T::BlockNumber::zero(), |e| e);
 
         // Get balance with the type
-        let enc_pending_transfer = Self::pending_transfer(addr)
-            .map_or(Ciphertext::zero(), |e| e);
+        let enc_pending_transfer = Self::pending_transfer(addr).map_or(Ciphertext::zero(), |e| e);
 
         // Checks if the last roll over was in an older epoch.
         // If so, some storage changes are happend here.
@@ -205,11 +200,11 @@ impl<T: Trait> Module<T> {
         Ok(())
     }
 
-     /// Adding transferred amount to pending transfer.
+    /// Adding transferred amount to pending transfer.
     pub fn add_pending_transfer(
         address: &EncKey,
         amount: &LeftCiphertext,
-        randomness: &RightCiphertext
+        randomness: &RightCiphertext,
     ) -> result::Result<(), &'static str> {
         let enc_amount = Ciphertext::from_left_right(*amount, *randomness)
             .map_err(|_| "Faild to create amount ciphertext.")?;
@@ -222,7 +217,7 @@ impl<T: Trait> Module<T> {
 
             match new_pending_transfer {
                 Ok(np) => *pending_transfer = Some(np),
-                Err(_) => return Err("Faild to mutate pending transfer.")
+                Err(_) => return Err("Faild to mutate pending transfer."),
             }
 
             Ok(())
@@ -241,38 +236,40 @@ extern crate lazy_static;
 #[cfg(test)]
 mod tests {
     use super::*;
-    use rand::{SeedableRng, XorShiftRng, Rng};
-    use runtime_io::with_externalities;
-    use support::{impl_outer_origin, assert_ok};
-    use primitives::{H256, Blake2Hasher};
-    use runtime_primitives::{
-        BuildStorage, traits::{BlakeTwo256, IdentityLookup},
-        testing::{Digest, DigestItem, Header}
-    };
-    use zprimitives::{Ciphertext, SigVerificationKey, PARAMS as ZPARAMS};
-    use keys::EncryptionKey;
-    use jubjub::{curve::{JubjubBls12, FixedGenerators, fs}};
-    use pairing::{Field, bls12_381::Bls12};
-    use zcrypto::elgamal;
-    use hex_literal::{hex, hex_impl};
     use bellman_verifier::PreparedVerifyingKey;
-    use test_proofs::{EncryptionKey as tEncryptionKey, SpendingKey as tSpendingKey,
-            elgamal as telgamal, PARAMS, MultiEncKeys, KeyContext, ProofBuilder,
-            crypto_components::Anonymous,
-        };
-    use test_pairing::{bls12_381::Bls12 as tBls12, Field as tField};
+    use hex_literal::{hex, hex_impl};
+    use jubjub::curve::{fs, FixedGenerators, JubjubBls12};
+    use keys::EncryptionKey;
+    use pairing::{bls12_381::Bls12, Field};
+    use primitives::{Blake2Hasher, H256};
+    use rand::{Rng, SeedableRng, XorShiftRng};
+    use runtime_io::with_externalities;
+    use runtime_primitives::{
+        testing::{Digest, DigestItem, Header},
+        traits::{BlakeTwo256, IdentityLookup},
+        BuildStorage,
+    };
     use scrypto::jubjub::edwards as tedwards;
     use std::{
-        path::Path,
+        convert::TryFrom,
         fs::File,
         io::{BufReader, Read},
-        convert::TryFrom,
+        path::Path,
     };
+    use support::{assert_ok, impl_outer_origin};
+    use test_pairing::{bls12_381::Bls12 as tBls12, Field as tField};
+    use test_proofs::{
+        crypto_components::Anonymous, elgamal as telgamal, EncryptionKey as tEncryptionKey,
+        KeyContext, MultiEncKeys, ProofBuilder, SpendingKey as tSpendingKey, PARAMS,
+    };
+    use zcrypto::elgamal;
+    use zprimitives::{Ciphertext, SigVerificationKey, PARAMS as ZPARAMS};
 
     const ALICE_BALANCE: u32 = 100;
 
     lazy_static! {
-        pub static ref ANONY_BALANCES: Vec<(EncKey, Ciphertext)> = { init_anonymous_balances(ALICE_BALANCE) };
+        pub static ref ANONY_BALANCES: Vec<(EncKey, Ciphertext)> =
+            { init_anonymous_balances(ALICE_BALANCE) };
         pub static ref ENC_KEYS: Vec<EncryptionKey<Bls12>> = { init_typed_enc_keys() };
     }
 
@@ -284,8 +281,8 @@ mod tests {
     }
 
     // For testing the module, we construct most of a mock runtime. This means
-	// first constructing a configuration type (`Test`) which `impl`s each of the
-	// configuration traits of modules we want to use.
+    // first constructing a configuration type (`Test`) which `impl`s each of the
+    // configuration traits of modules we want to use.
     #[derive(Clone, Eq, PartialEq)]
     pub struct Test;
 
@@ -307,7 +304,7 @@ mod tests {
     impl Trait for Test {
         type Event = ();
     }
-    impl zk_system::Trait for Test { }
+    impl zk_system::Trait for Test {}
     type AnonymousBalances = Module<Test>;
 
     fn alice_epoch_init() -> (EncKey, u64) {
@@ -320,8 +317,11 @@ mod tests {
         let params = &JubjubBls12::new();
         let alice_seed = b"Alice                           ".to_vec();
 
-        (alice_seed.clone(), EncryptionKey::<Bls12>::from_seed(&alice_seed[..], params)
-            .expect("should be generated encryption key from seed."))
+        (
+            alice_seed.clone(),
+            EncryptionKey::<Bls12>::from_seed(&alice_seed[..], params)
+                .expect("should be generated encryption key from seed."),
+        )
     }
 
     fn get_alice_enc_key() -> EncryptionKey<Bls12> {
@@ -333,7 +333,8 @@ mod tests {
     }
 
     fn get_bob_enc_key() -> EncryptionKey<Bls12> {
-        let bob_addr: [u8; 32] = hex!("45e66da531088b55dcb3b273ca825454d79d2d1d5c4fa2ba4a12c1fa1ccd6389");
+        let bob_addr: [u8; 32] =
+            hex!("45e66da531088b55dcb3b273ca825454d79d2d1d5c4fa2ba4a12c1fa1ccd6389");
         let enc_key_recipient = EncryptionKey::<Bls12>::read(&mut &bob_addr[..], &ZPARAMS).unwrap();
         enc_key_recipient
     }
@@ -356,15 +357,23 @@ mod tests {
     }
 
     fn init_anonymous_enc_keys() -> Vec<EncKey> {
-        ENC_KEYS.clone().into_iter().map(|e| EncKey::try_from(e).unwrap()).collect::<Vec<EncKey>>()
+        ENC_KEYS
+            .clone()
+            .into_iter()
+            .map(|e| EncKey::try_from(e).unwrap())
+            .collect::<Vec<EncKey>>()
     }
 
     fn get_enc_balances() -> Vec<telgamal::Ciphertext<tBls12>> {
-        ANONY_BALANCES.clone().into_iter().map(|(_, c)| {
-            let mut r = c.as_bytes();
-            let c_1 = telgamal::Ciphertext::read(&mut r, &*PARAMS).unwrap();
-            c_1
-        }).collect()
+        ANONY_BALANCES
+            .clone()
+            .into_iter()
+            .map(|(_, c)| {
+                let mut r = c.as_bytes();
+                let c_1 = telgamal::Ciphertext::read(&mut r, &*PARAMS).unwrap();
+                c_1
+            })
+            .collect()
     }
 
     fn init_anonymous_balances(alice_value: u32) -> Vec<(EncKey, Ciphertext)> {
@@ -374,12 +383,19 @@ mod tests {
         let mut acc = vec![];
         for (i, e) in ENC_KEYS.iter().enumerate() {
             if i == 0 {
-                let ciphertext = elgamal::Ciphertext::encrypt(alice_value, &fs::Fs::one(), &e, p_g, params);
-                acc.push((EncKey::try_from(e.clone()).unwrap(), Ciphertext::try_from(ciphertext).unwrap()))
+                let ciphertext =
+                    elgamal::Ciphertext::encrypt(alice_value, &fs::Fs::one(), &e, p_g, params);
+                acc.push((
+                    EncKey::try_from(e.clone()).unwrap(),
+                    Ciphertext::try_from(ciphertext).unwrap(),
+                ))
             } else {
                 let ciphertext = elgamal::Ciphertext::encrypt(0, &fs::Fs::one(), &e, p_g, params);
                 // let ciphertext = Ciphertext::zero();
-                acc.push((EncKey::try_from(e.clone()).unwrap(), Ciphertext::try_from(ciphertext).unwrap()))
+                acc.push((
+                    EncKey::try_from(e.clone()).unwrap(),
+                    Ciphertext::try_from(ciphertext).unwrap(),
+                ))
             }
         }
         acc
@@ -408,21 +424,25 @@ mod tests {
     }
 
     fn new_test_ext() -> runtime_io::TestExternalities<Blake2Hasher> {
-        let (mut t, mut c) = system::GenesisConfig::<Test>::default().build_storage().unwrap();
-        let _ = zk_system::GenesisConfig::<Test>{
+        let (mut t, mut c) = system::GenesisConfig::<Test>::default()
+            .build_storage()
+            .unwrap();
+        let _ = zk_system::GenesisConfig::<Test> {
             last_epoch: 1,
             epoch_length: 1,
             confidential_vk: get_conf_vk(),
             anonymous_vk: get_anony_vk(),
             nonce_pool: vec![],
-        }.assimilate_storage(&mut t, &mut c);
+        }
+        .assimilate_storage(&mut t, &mut c);
 
-        let _ = GenesisConfig::<Test>{
+        let _ = GenesisConfig::<Test> {
             encrypted_balance: ANONY_BALANCES.to_vec(),
-			last_rollover: vec![alice_epoch_init()],
-			enc_key_set: init_anonymous_enc_keys(),
-            _genesis_phantom_data: Default::default()
-        }.assimilate_storage(&mut t, &mut c);
+            last_rollover: vec![alice_epoch_init()],
+            enc_key_set: init_anonymous_enc_keys(),
+            _genesis_phantom_data: Default::default(),
+        }
+        .assimilate_storage(&mut t, &mut c);
 
         t.into()
     }
@@ -441,17 +461,24 @@ mod tests {
             let rng = &mut XorShiftRng::from_seed([0x3dbe6259, 0x8d313d76, 0x3237db17, 0xe5bc0654]);
 
             let spending_key = tSpendingKey::<tBls12>::from_seed(&alice_seed);
-            let bob_addr: [u8; 32] = hex!("45e66da531088b55dcb3b273ca825454d79d2d1d5c4fa2ba4a12c1fa1ccd6389");
-            let enc_key_recipient = tEncryptionKey::<tBls12>::read(&mut &bob_addr[..], &PARAMS).unwrap();
+            let bob_addr: [u8; 32] =
+                hex!("45e66da531088b55dcb3b273ca825454d79d2d1d5c4fa2ba4a12c1fa1ccd6389");
+            let enc_key_recipient =
+                tEncryptionKey::<tBls12>::read(&mut &bob_addr[..], &PARAMS).unwrap();
 
             let remaining_balance = 90;
             let amount = 10;
 
-            let enc_key_sender = tEncryptionKey::<tBls12>::from_seed(&alice_seed[..], &PARAMS).unwrap();
+            let enc_key_sender =
+                tEncryptionKey::<tBls12>::from_seed(&alice_seed[..], &PARAMS).unwrap();
 
             // G_epoch of block height one.
-            let g_epoch_vec: [u8; 32] = hex!("0953f47325251a2f479c25527df6d977925bebafde84423b20ae6c903411665a");
-            let g_epoch = tedwards::Point::read(&g_epoch_vec[..], &*PARAMS).unwrap().as_prime_order(&*PARAMS).unwrap();
+            let g_epoch_vec: [u8; 32] =
+                hex!("0953f47325251a2f479c25527df6d977925bebafde84423b20ae6c903411665a");
+            let g_epoch = tedwards::Point::read(&g_epoch_vec[..], &*PARAMS)
+                .unwrap()
+                .as_prime_order(&*PARAMS)
+                .unwrap();
 
             let s_index: usize = 0;
             let t_index: usize = 1;
@@ -460,8 +487,8 @@ mod tests {
             let decoys = ENC_KEYS.iter().skip(2).map(|e| no_std_e(e)).collect();
             let enc_balances = get_enc_balances();
 
-            assert!(no_std_e(&ENC_KEYS[s_index]) ==  enc_key_sender);
-            assert!(no_std_e(&ENC_KEYS[t_index]) ==  enc_key_recipient);
+            assert!(no_std_e(&ENC_KEYS[s_index]) == enc_key_sender);
+            assert!(no_std_e(&ENC_KEYS[t_index]) == enc_key_recipient);
             assert_eq!(enc_balances.clone().len(), 12);
 
             let tx = KeyContext::<tBls12, Anonymous>::read_from_path(PK_PATH, VK_PATH)
@@ -477,11 +504,16 @@ mod tests {
                     &enc_balances,
                     g_epoch,
                     rng,
-                    &*PARAMS
-                ).unwrap();
+                    &*PARAMS,
+                )
+                .unwrap();
 
             let enc_keys = tx.enc_keys.iter().map(|e| EncKey::from_slice(e)).collect();
-            let left_ciphertexts = tx.left_ciphertexts.iter().map(|e| LeftCiphertext::from_slice(e)).collect();
+            let left_ciphertexts = tx
+                .left_ciphertexts
+                .iter()
+                .map(|e| LeftCiphertext::from_slice(e))
+                .collect();
 
             assert_ok!(AnonymousBalances::anonymous_transfer(
                 Origin::signed(SigVerificationKey::from_slice(&tx.rvk[..])),

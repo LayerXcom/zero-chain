@@ -1,11 +1,12 @@
-
-use zprimitives::PARAMS as ZPARAMS;
 use crate::ss58::EncryptionKeyBytes;
+use bip39::{Language, Mnemonic};
 use primitives::crypto::Ss58Codec;
-use zpairing::{bls12_381::Bls12 as zBls12, PrimeField as zPrimeField, PrimeFieldRepr as zPrimeFieldRepr, io};
 use rand::{OsRng, Rng};
-use bip39::{Mnemonic, Language};
 use substrate_bip39::mini_secret_from_entropy;
+use zpairing::{
+    bls12_381::Bls12 as zBls12, io, PrimeField as zPrimeField, PrimeFieldRepr as zPrimeFieldRepr,
+};
+use zprimitives::PARAMS as ZPARAMS;
 
 pub struct PrintKeys {
     pub phrase: Option<String>,
@@ -43,10 +44,9 @@ impl PrintKeys {
 pub fn phrase_to_seed(phrase: &str, password: Option<&str>, lang: Language) -> [u8; 32] {
     mini_secret_from_entropy(
         Mnemonic::from_phrase(phrase, lang)
-            .unwrap_or_else(|_|
-                panic!("Phrase is not a valid BIP-39 phrase: \n {}", phrase)
-            ).entropy(),
-        password.unwrap_or("")
+            .unwrap_or_else(|_| panic!("Phrase is not a valid BIP-39 phrase: \n {}", phrase))
+            .entropy(),
+        password.unwrap_or(""),
     )
     .expect("32 bytes can always build a key; qed")
     .to_bytes()
@@ -57,7 +57,10 @@ fn gen_from_seed(seed: [u8; 32], phrase: Option<&str>) -> io::Result<PrintKeys> 
     let decryption_key = pgk.into_decryption_key()?;
 
     let mut dk_buf = [0u8; 32];
-    decryption_key.0.into_repr().write_le(&mut &mut dk_buf[..])?;
+    decryption_key
+        .0
+        .into_repr()
+        .write_le(&mut &mut dk_buf[..])?;
 
     let encryption_key = pgk.into_encryption_key(&ZPARAMS)?;
 

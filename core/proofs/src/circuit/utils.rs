@@ -1,10 +1,10 @@
-use bellman::{SynthesisError, ConstraintSystem};
-use scrypto::circuit::{
-    boolean::{Boolean, field_into_boolean_vec_le},
-    ecc::{EdwardsPoint, fixed_base_multiplication},
-};
-use scrypto::jubjub::{JubjubEngine, FixedGenerators, edwards, PrimeOrder};
 use crate::ProofGenerationKey;
+use bellman::{ConstraintSystem, SynthesisError};
+use scrypto::circuit::{
+    boolean::{field_into_boolean_vec_le, Boolean},
+    ecc::{fixed_base_multiplication, EdwardsPoint},
+};
+use scrypto::jubjub::{edwards, FixedGenerators, JubjubEngine, PrimeOrder};
 
 /// This performs equal veficiation of two edward points.
 pub fn eq_edwards_points<E, CS>(
@@ -23,14 +23,14 @@ where
         || "equal x nums",
         |lc| lc + a_x.get_variable(),
         |lc| lc + CS::one(),
-        |lc| lc + b_x.get_variable()
+        |lc| lc + b_x.get_variable(),
     );
 
     cs.enforce(
         || "equal y nums",
         |lc| lc + a_y.get_variable(),
         |lc| lc + CS::one(),
-        |lc| lc + b_y.get_variable()
+        |lc| lc + b_y.get_variable(),
     );
 
     Ok(())
@@ -39,31 +39,28 @@ where
 pub fn negate_point<E, CS>(
     mut cs: CS,
     point: &EdwardsPoint<E>,
-    params: &E::Params
+    params: &E::Params,
 ) -> Result<EdwardsPoint<E>, SynthesisError>
 where
     E: JubjubEngine,
     CS: ConstraintSystem<E>,
 {
-    use scrypto::circuit::num::AllocatedNum;
-    use pairing::Field;
     use crate::Assignment;
+    use pairing::Field;
+    use scrypto::circuit::num::AllocatedNum;
 
-    let neg_x = AllocatedNum::alloc(
-        cs.namespace(|| "negate x"),
-        || {
-            let x_value = point.get_x().get_value();
-            let mut x = *x_value.get()?;
-            x.negate();
-            Ok(x)
-        }
-    )?;
+    let neg_x = AllocatedNum::alloc(cs.namespace(|| "negate x"), || {
+        let x_value = point.get_x().get_value();
+        let mut x = *x_value.get()?;
+        x.negate();
+        Ok(x)
+    })?;
 
     EdwardsPoint::interpret(
         cs.namespace(|| "interpret negate point"),
         &neg_x,
         point.get_y(),
-        params
+        params,
     )
 }
 
@@ -72,7 +69,7 @@ pub fn rvk_inputize<E, CS>(
     mut cs: CS,
     proof_gen_key: Option<&ProofGenerationKey<E>>,
     alpha: Option<&E::Fs>,
-    params: &E::Params
+    params: &E::Params,
 ) -> Result<(), SynthesisError>
 where
     E: JubjubEngine,
@@ -82,41 +79,28 @@ where
     let pgk = EdwardsPoint::witness(
         cs.namespace(|| "pgk"),
         proof_gen_key.as_ref().map(|k| k.0.clone()),
-        params
+        params,
     )?;
 
     // Ensure pgk is large order.
-    pgk.assert_not_small_order(
-        cs.namespace(|| "pgk not small order"),
-        params
-    )?;
+    pgk.assert_not_small_order(cs.namespace(|| "pgk not small order"), params)?;
 
     // Re-randomized parameter for pgk
-    let alpha = field_into_boolean_vec_le(
-        cs.namespace(|| "alpha"),
-        alpha.map(|e| *e)
-    )?;
+    let alpha = field_into_boolean_vec_le(cs.namespace(|| "alpha"), alpha.map(|e| *e))?;
 
     // Make the alpha on the curve
     let alpha_g = fixed_base_multiplication(
         cs.namespace(|| "computation of randomiation for the signing key"),
         FixedGenerators::NoteCommitmentRandomness,
         &alpha,
-        params
+        params,
     )?;
 
     // Ensure re-randomaized sig-verification key is computed by the addition of ak and alpha_g
-    let rvk = pgk.add(
-        cs.namespace(|| "computation of rvk"),
-        &alpha_g,
-        params
-    )?;
+    let rvk = pgk.add(cs.namespace(|| "computation of rvk"), &alpha_g, params)?;
 
     // Ensure rvk is large order.
-    rvk.assert_not_small_order(
-        cs.namespace(|| "rvk not small order"),
-        params
-    )?;
+    rvk.assert_not_small_order(cs.namespace(|| "rvk not small order"), params)?;
 
     rvk.inputize(cs.namespace(|| "rvk"))?;
 
@@ -137,14 +121,14 @@ where
     let g_epoch = EdwardsPoint::witness(
         cs.namespace(|| "g_epoch"),
         g_epoch.map(|e| e.clone()),
-        params
+        params,
     )?;
 
     // Ensure that nonce = dec_key * g_epoch
     let nonce = g_epoch.mul(
         cs.namespace(|| format!("g_epoch mul by dec_key")),
         dec_key_bits,
-        params
+        params,
     )?;
 
     g_epoch.inputize(cs.namespace(|| "inputize g_epoch"))?;
@@ -156,11 +140,11 @@ where
 #[cfg(test)]
 mod tests {
     use super::*;
-    use rand::{SeedableRng, XorShiftRng};
-    use scrypto::jubjub::JubjubBls12;
-    use pairing::bls12_381::Bls12;
     use crate::circuit::TestConstraintSystem;
+    use pairing::bls12_381::Bls12;
+    use rand::{SeedableRng, XorShiftRng};
     use scrypto::circuit::num::AllocatedNum;
+    use scrypto::jubjub::JubjubBls12;
 
     #[test]
     fn test_eq_points() {
@@ -170,20 +154,12 @@ mod tests {
 
         let p = edwards::Point::<Bls12, _>::rand(rng, params);
         let (x, y) = p.into_xy();
-        let numx = AllocatedNum::alloc(cs.namespace(|| "x"), || {
-            Ok(x)
-        }).unwrap();
-        let numy = AllocatedNum::alloc(cs.namespace(|| "y"), || {
-            Ok(y)
-        }).unwrap();
+        let numx = AllocatedNum::alloc(cs.namespace(|| "x"), || Ok(x)).unwrap();
+        let numy = AllocatedNum::alloc(cs.namespace(|| "y"), || Ok(y)).unwrap();
         let p1 = EdwardsPoint::interpret(&mut cs, &numx, &numy, &params).unwrap();
         let p2 = p1.clone();
 
-        eq_edwards_points(
-            cs.namespace(|| "eq_edwards_points"),
-            &p1,
-            &p2
-        ).unwrap();
+        eq_edwards_points(cs.namespace(|| "eq_edwards_points"), &p1, &p2).unwrap();
 
         assert!(cs.is_satisfied());
     }
@@ -197,19 +173,11 @@ mod tests {
         let p = edwards::Point::<Bls12, _>::rand(rng, params);
         let (expected_x, expected_y) = p.negate().into_xy();
         let (x, y) = p.into_xy();
-        let numx = AllocatedNum::alloc(cs.namespace(|| "x"), || {
-            Ok(x)
-        }).unwrap();
-        let numy = AllocatedNum::alloc(cs.namespace(|| "y"), || {
-            Ok(y)
-        }).unwrap();
+        let numx = AllocatedNum::alloc(cs.namespace(|| "x"), || Ok(x)).unwrap();
+        let numy = AllocatedNum::alloc(cs.namespace(|| "y"), || Ok(y)).unwrap();
         let p = EdwardsPoint::interpret(&mut cs, &numx, &numy, &params).unwrap();
 
-        let neg_p = negate_point(
-            cs.namespace(|| "negate point"),
-            &p,
-            params
-        ).unwrap();
+        let neg_p = negate_point(cs.namespace(|| "negate point"), &p, params).unwrap();
 
         assert!(cs.is_satisfied());
         assert!(neg_p.get_x().get_value().unwrap() == expected_x);

@@ -2,8 +2,10 @@ use rand::{Rand, Rng, SeedableRng, XorShiftRng};
 
 use {CurveAffine, CurveProjective, EncodedPoint, Field};
 
-pub fn curve_tests<G: CurveProjective>() 
-    where G: ::std::fmt::Debug, G::Affine: ::std::fmt::Debug
+pub fn curve_tests<G: CurveProjective>()
+where
+    G: ::std::fmt::Debug,
+    G::Affine: ::std::fmt::Debug,
 {
     let mut rng = XorShiftRng::from_seed([0x5dbe6259, 0x8d313d76, 0x3237db17, 0xe5bc0654]);
 
@@ -67,8 +69,10 @@ pub fn curve_tests<G: CurveProjective>()
     random_encoding_tests::<G::Affine>();
 }
 
-fn random_wnaf_tests<G: CurveProjective>() 
-    where G: ::std::fmt::Debug, G::Affine: ::std::fmt::Debug
+fn random_wnaf_tests<G: CurveProjective>()
+where
+    G: ::std::fmt::Debug,
+    G::Affine: ::std::fmt::Debug,
 {
     use wnaf::*;
     use PrimeField;
@@ -182,8 +186,10 @@ fn random_wnaf_tests<G: CurveProjective>()
     }
 }
 
-fn random_negation_tests<G: CurveProjective>() 
-    where G: ::std::fmt::Debug, G::Affine: ::std::fmt::Debug
+fn random_negation_tests<G: CurveProjective>()
+where
+    G: ::std::fmt::Debug,
+    G::Affine: ::std::fmt::Debug,
 {
     let mut rng = XorShiftRng::from_seed([0x5dbe6259, 0x8d313d76, 0x3237db17, 0xe5bc0654]);
 
@@ -213,8 +219,10 @@ fn random_negation_tests<G: CurveProjective>()
     }
 }
 
-fn random_doubling_tests<G: CurveProjective>() 
-    where G: ::std::fmt::Debug, G::Affine: ::std::fmt::Debug
+fn random_doubling_tests<G: CurveProjective>()
+where
+    G: ::std::fmt::Debug,
+    G::Affine: ::std::fmt::Debug,
 {
     let mut rng = XorShiftRng::from_seed([0x5dbe6259, 0x8d313d76, 0x3237db17, 0xe5bc0654]);
 
@@ -242,8 +250,10 @@ fn random_doubling_tests<G: CurveProjective>()
     }
 }
 
-fn random_multiplication_tests<G: CurveProjective>() 
-    where G: ::std::fmt::Debug, G::Affine: ::std::fmt::Debug
+fn random_multiplication_tests<G: CurveProjective>()
+where
+    G: ::std::fmt::Debug,
+    G::Affine: ::std::fmt::Debug,
 {
     let mut rng = XorShiftRng::from_seed([0x5dbe6259, 0x8d313d76, 0x3237db17, 0xe5bc0654]);
 
@@ -277,7 +287,9 @@ fn random_multiplication_tests<G: CurveProjective>()
 }
 
 fn random_addition_tests<G: CurveProjective>()
-    where G: ::std::fmt::Debug, G::Affine: ::std::fmt::Debug
+where
+    G: ::std::fmt::Debug,
+    G::Affine: ::std::fmt::Debug,
 {
     let mut rng = XorShiftRng::from_seed([0x5dbe6259, 0x8d313d76, 0x3237db17, 0xe5bc0654]);
 
@@ -356,8 +368,10 @@ fn random_addition_tests<G: CurveProjective>()
     }
 }
 
-fn random_transformation_tests<G: CurveProjective>() 
-    where G: ::std::fmt::Debug, G::Affine: ::std::fmt::Debug
+fn random_transformation_tests<G: CurveProjective>()
+where
+    G: ::std::fmt::Debug,
+    G::Affine: ::std::fmt::Debug,
 {
     let mut rng = XorShiftRng::from_seed([0x5dbe6259, 0x8d313d76, 0x3237db17, 0xe5bc0654]);
 
@@ -402,7 +416,8 @@ fn random_transformation_tests<G: CurveProjective>()
 }
 
 fn random_encoding_tests<G: CurveAffine>()
-    where G: ::std::fmt::Debug
+where
+    G: ::std::fmt::Debug,
 {
     let mut rng = XorShiftRng::from_seed([0x5dbe6259, 0x8d313d76, 0x3237db17, 0xe5bc0654]);
 

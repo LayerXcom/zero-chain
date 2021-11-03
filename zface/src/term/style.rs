@@ -1,5 +1,5 @@
-use console::{self, set_colors_enabled};
 use super::config::ColorChoice;
+use console::{self, set_colors_enabled};
 
 pub struct Style {
     pub error: console::Style,
@@ -11,7 +11,7 @@ pub struct Style {
 impl Style {
     pub fn new(color_choice: &ColorChoice) -> Self {
         match color_choice {
-            ColorChoice::Auto => {},
+            ColorChoice::Auto => {}
             ColorChoice::Never => set_colors_enabled(false),
             ColorChoice::Always => set_colors_enabled(true),
         };

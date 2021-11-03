@@ -1,17 +1,17 @@
+use crate::{IntoXY, PARAMS};
+use core::convert::TryFrom;
+use fixed_hash::construct_fixed_hash;
+use jubjub::curve::{edwards, PrimeOrder, Unknown};
+use pairing::bls12_381::{Bls12, Fr};
+use pairing::io;
+use parity_codec::{Decode, Encode, Input};
 #[cfg(feature = "std")]
-use serde::{Serialize, Serializer, Deserialize, Deserializer};
+use serde::{Deserialize, Deserializer, Serialize, Serializer};
 #[cfg(feature = "std")]
 use substrate_primitives::bytes;
 #[cfg(feature = "std")]
 use substrate_primitives::hexdisplay::AsBytesRef;
-use crate::{PARAMS, IntoXY};
-use fixed_hash::construct_fixed_hash;
-use pairing::bls12_381::{Bls12, Fr};
-use jubjub::curve::{edwards, PrimeOrder, Unknown};
 use zcrypto::elgamal;
-use pairing::io;
-use parity_codec::{Encode, Decode, Input};
-use core::convert::TryFrom;
 
 const SIZE: usize = 32;
 
@@ -24,7 +24,8 @@ pub type RightCiphertext = H256;
 #[cfg(feature = "std")]
 impl Serialize for RightCiphertext {
     fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
-        where S: Serializer
+    where
+        S: Serializer,
     {
         bytes::serialize(&self.0, serializer)
     }
@@ -33,7 +34,8 @@ impl Serialize for RightCiphertext {
 #[cfg(feature = "std")]
 impl<'de> Deserialize<'de> for RightCiphertext {
     fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
-        where D: Deserializer<'de>
+    where
+        D: Deserializer<'de>,
     {
         bytes::deserialize_check_len(deserializer, bytes::ExpectedLen::Exact(SIZE))
             .map(|x| RightCiphertext::from_slice(&x))
@@ -107,8 +109,7 @@ impl AsBytesRef for RightCiphertext {
 
 impl IntoXY<Bls12> for RightCiphertext {
     fn into_xy(&self) -> Result<(Fr, Fr), io::Error> {
-        let point = edwards::Point::<Bls12, PrimeOrder>::try_from(self)?
-            .into_xy();
+        let point = edwards::Point::<Bls12, PrimeOrder>::try_from(self)?.into_xy();
 
         Ok(point)
     }
@@ -116,8 +117,7 @@ impl IntoXY<Bls12> for RightCiphertext {
 
 impl IntoXY<Bls12> for &RightCiphertext {
     fn into_xy(&self) -> Result<(Fr, Fr), io::Error> {
-        let point = edwards::Point::<Bls12, PrimeOrder>::try_from(**self)?
-            .into_xy();
+        let point = edwards::Point::<Bls12, PrimeOrder>::try_from(**self)?.into_xy();
 
         Ok(point)
     }
@@ -132,11 +132,15 @@ mod tests {
     #[test]
     fn test_convert_types() {
         let params = &JubjubBls12::new();
-        let rng_right = &mut XorShiftRng::from_seed([0x3dbe6258, 0x8d313d76, 0x3237db17, 0xe5bc0654]);
-        let rng_left = &mut XorShiftRng::from_seed([0x33be6558, 0x8d313576, 0x3237db13, 0xe5dc0654]);
+        let rng_right =
+            &mut XorShiftRng::from_seed([0x3dbe6258, 0x8d313d76, 0x3237db17, 0xe5bc0654]);
+        let rng_left =
+            &mut XorShiftRng::from_seed([0x33be6558, 0x8d313576, 0x3237db13, 0xe5dc0654]);
 
-        let right_point = edwards::Point::<Bls12, Unknown>::rand(rng_right, params).mul_by_cofactor(params);
-        let left_point = edwards::Point::<Bls12, Unknown>::rand(rng_left, params).mul_by_cofactor(params);
+        let right_point =
+            edwards::Point::<Bls12, Unknown>::rand(rng_right, params).mul_by_cofactor(params);
+        let left_point =
+            edwards::Point::<Bls12, Unknown>::rand(rng_left, params).mul_by_cofactor(params);
 
         let ciphertext = elgamal::Ciphertext::new(left_point.clone(), right_point.clone());
         let right_ciphertext = RightCiphertext::try_from(ciphertext).unwrap();

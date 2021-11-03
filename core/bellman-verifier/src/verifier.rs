@@ -1,21 +1,8 @@
-use pairing::{
-    Engine,
-    CurveProjective,
-    CurveAffine,
-    PrimeField
-};
+use pairing::{CurveAffine, CurveProjective, Engine, PrimeField};
 
-use super::{
-    Proof,
-    VerifyingKey,
-    PreparedVerifyingKey,
-    SynthesisError
-};
+use super::{PreparedVerifyingKey, Proof, SynthesisError, VerifyingKey};
 
-pub fn prepare_verifying_key<E: Engine>(
-    vk: &VerifyingKey<E>
-) -> PreparedVerifyingKey<E>
-{
+pub fn prepare_verifying_key<E: Engine>(vk: &VerifyingKey<E>) -> PreparedVerifyingKey<E> {
     let mut gamma = vk.gamma_g2;
     gamma.negate();
     let mut delta = vk.delta_g2;
@@ -25,16 +12,15 @@ pub fn prepare_verifying_key<E: Engine>(
         alpha_g1_beta_g2: E::pairing(vk.alpha_g1, vk.beta_g2),
         neg_gamma_g2: gamma.prepare(),
         neg_delta_g2: delta.prepare(),
-        ic: vk.ic.clone()
+        ic: vk.ic.clone(),
     }
 }
 
 pub fn verify_proof<'a, E: Engine>(
     pvk: &'a PreparedVerifyingKey<E>,
     proof: &Proof<E>,
-    public_inputs: &[E::Fr]
-) -> Result<bool, SynthesisError>
-{
+    public_inputs: &[E::Fr],
+) -> Result<bool, SynthesisError> {
     if (public_inputs.len() + 1) != pvk.ic.len() {
         return Err(SynthesisError::MalformedVerifyingKey);
     }
@@ -53,23 +39,26 @@ pub fn verify_proof<'a, E: Engine>(
     // A * B + inputs * (-gamma) + C * (-delta) = alpha * beta
     // which allows us to do a single final exponentiation.
 
-    Ok(E::final_exponentiation(
-        &E::miller_loop([
+    Ok(E::final_exponentiation(&E::miller_loop(
+        [
             (&proof.a.prepare(), &proof.b.prepare()),
             (&acc.into_affine().prepare(), &pvk.neg_gamma_g2),
-            (&proof.c.prepare(), &pvk.neg_delta_g2)
-        ].iter())
-    ).unwrap() == pvk.alpha_g1_beta_g2)
+            (&proof.c.prepare(), &pvk.neg_delta_g2),
+        ]
+        .iter(),
+    ))
+    .unwrap()
+        == pvk.alpha_g1_beta_g2)
 }
 
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::tests::dummy_engine::{Fr, DummyEngine};
-    #[cfg(feature = "std")]
-    use ::std::num::Wrapping;
     #[cfg(not(feature = "std"))]
     use crate::std::num::Wrapping;
+    use crate::tests::dummy_engine::{DummyEngine, Fr};
+    #[cfg(feature = "std")]
+    use ::std::num::Wrapping;
 
     #[test]
     fn test_verify() {

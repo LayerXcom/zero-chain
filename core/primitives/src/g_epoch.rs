@@ -1,18 +1,18 @@
-#[cfg(feature = "std")]
-use serde::{Serialize, Serializer, Deserialize, Deserializer};
-#[cfg(feature = "std")]
-use substrate_primitives::bytes;
-use crate::{PARAMS, IntoXY};
+use crate::{IntoXY, PARAMS};
+use byteorder::{ByteOrder, LittleEndian};
+use core::convert::TryFrom;
 use fixed_hash::construct_fixed_hash;
-use jubjub::curve::{JubjubBls12, edwards, PrimeOrder, Unknown};
+use jubjub::curve::{edwards, JubjubBls12, PrimeOrder, Unknown};
 use jubjub::group_hash::group_hash;
 use pairing::{
     bls12_381::{Bls12, Fr},
-    io
+    io,
 };
-use parity_codec::{Encode, Decode, Input};
-use byteorder::{ByteOrder, LittleEndian};
-use core::convert::TryFrom;
+use parity_codec::{Decode, Encode, Input};
+#[cfg(feature = "std")]
+use serde::{Deserialize, Deserializer, Serialize, Serializer};
+#[cfg(feature = "std")]
+use substrate_primitives::bytes;
 
 const SIZE: usize = 32;
 const GEPOCH_PERSONALIZATION: &[u8; 8] = b"zcgepoch";
@@ -26,7 +26,8 @@ pub type GEpoch = H256;
 #[cfg(feature = "std")]
 impl Serialize for GEpoch {
     fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
-        where S: Serializer
+    where
+        S: Serializer,
     {
         bytes::serialize(&self.0, serializer)
     }
@@ -35,7 +36,8 @@ impl Serialize for GEpoch {
 #[cfg(feature = "std")]
 impl<'de> Deserialize<'de> for GEpoch {
     fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
-        where D: Deserializer<'de>
+    where
+        D: Deserializer<'de>,
     {
         bytes::deserialize_check_len(deserializer, bytes::ExpectedLen::Exact(SIZE))
             .map(|x| GEpoch::from_slice(&x))
@@ -111,8 +113,7 @@ impl GEpoch {
 
 impl IntoXY<Bls12> for GEpoch {
     fn into_xy(&self) -> Result<(Fr, Fr), io::Error> {
-        let point = edwards::Point::<Bls12, PrimeOrder>::try_from(self)?
-            .into_xy();
+        let point = edwards::Point::<Bls12, PrimeOrder>::try_from(self)?.into_xy();
 
         Ok(point)
     }
@@ -121,19 +122,14 @@ impl IntoXY<Bls12> for GEpoch {
 fn find_group_hash(
     m: &[u8],
     personalization: &[u8; 8],
-    params: &JubjubBls12
-) -> edwards::Point<Bls12, PrimeOrder>
-{
+    params: &JubjubBls12,
+) -> edwards::Point<Bls12, PrimeOrder> {
     let mut tag = m.to_vec();
     let i = tag.len();
     tag.push(0u8);
 
     loop {
-        let gh = group_hash(
-            &tag,
-            personalization,
-            params
-        );
+        let gh = group_hash(&tag, personalization, params);
 
         // We don't want to overflow and start reusing generators
         assert!(tag[i] != u8::max_value());

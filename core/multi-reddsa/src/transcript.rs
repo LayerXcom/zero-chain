@@ -1,12 +1,20 @@
+use jubjub::curve::{edwards::Point, JubjubEngine, PrimeOrder};
 use merlin::Transcript;
 use pairing::{io, PrimeField, PrimeFieldRepr};
-use jubjub::curve::{JubjubEngine, edwards::Point, PrimeOrder};
 use rand::Rng;
 
 pub trait TranscriptProtocol {
-    fn commit_point<E: JubjubEngine>(&mut self, label: &'static [u8], point: &Point<E, PrimeOrder>)  -> io::Result<()>;
+    fn commit_point<E: JubjubEngine>(
+        &mut self,
+        label: &'static [u8],
+        point: &Point<E, PrimeOrder>,
+    ) -> io::Result<()>;
 
-    fn commit_scalar<PF: PrimeField>(&mut self, label: &'static [u8], scalar: &PF) -> io::Result<()>;
+    fn commit_scalar<PF: PrimeField>(
+        &mut self,
+        label: &'static [u8],
+        scalar: &PF,
+    ) -> io::Result<()>;
 
     fn challenge_scalar<PF: PrimeField>(&mut self) -> io::Result<PF>;
 
@@ -14,7 +22,11 @@ pub trait TranscriptProtocol {
 }
 
 impl TranscriptProtocol for Transcript {
-    fn commit_point<E: JubjubEngine>(&mut self, label: &'static [u8], point: &Point<E, PrimeOrder>) -> io::Result<()> {
+    fn commit_point<E: JubjubEngine>(
+        &mut self,
+        label: &'static [u8],
+        point: &Point<E, PrimeOrder>,
+    ) -> io::Result<()> {
         let mut buf = [0u8; 32];
         point.write(&mut &mut buf[..])?;
         self.append_message(label, &buf);
@@ -22,7 +34,11 @@ impl TranscriptProtocol for Transcript {
         Ok(())
     }
 
-    fn commit_scalar<PF: PrimeField>(&mut self, label: &'static [u8], scalar: &PF) -> io::Result<()> {
+    fn commit_scalar<PF: PrimeField>(
+        &mut self,
+        label: &'static [u8],
+        scalar: &PF,
+    ) -> io::Result<()> {
         let mut buf = [0u8; 32];
         scalar.into_repr().write_le(&mut &mut buf[..])?;
         self.append_message(label, &buf);
@@ -38,7 +54,7 @@ impl TranscriptProtocol for Transcript {
             repr.read_be(&mut TranscriptReader(self))?;
 
             if let Ok(res) = PF::from_repr(repr) {
-                return Ok(res)
+                return Ok(res);
             }
         }
     }
@@ -60,7 +76,7 @@ impl TranscriptProtocol for Transcript {
             let buf: [u8; 32] = rng.gen();
             repr.read_be(&mut &buf[..])?;
             if let Ok(res) = PF::from_repr(repr) {
-                return Ok(res)
+                return Ok(res);
             }
         }
     }

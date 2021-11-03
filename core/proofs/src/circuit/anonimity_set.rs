@@ -1,17 +1,20 @@
-use bellman::{SynthesisError, ConstraintSystem};
+use super::utils::{eq_edwards_points, negate_point};
+use crate::{
+    constants::{ANONIMITY_SIZE, DECOY_SIZE},
+    elgamal, EncryptionKey,
+};
+use bellman::{ConstraintSystem, SynthesisError};
 use scrypto::circuit::{
-    boolean::{self, Boolean, AllocatedBit},
+    boolean::{self, AllocatedBit, Boolean},
     ecc::EdwardsPoint,
 };
-use scrypto::jubjub::{JubjubEngine, PrimeOrder, edwards};
-use crate::{EncryptionKey, elgamal, constants::{ANONIMITY_SIZE, DECOY_SIZE}};
-use super::utils::{eq_edwards_points, negate_point};
+use scrypto::jubjub::{edwards, JubjubEngine, PrimeOrder};
 use std::fmt;
 
 pub enum AnonimityIndexes {
     Sender(usize),
     Recipient(usize),
-    Decoys([usize; DECOY_SIZE])
+    Decoys([usize; DECOY_SIZE]),
 }
 
 pub enum ST {
@@ -32,11 +35,7 @@ impl fmt::Display for ST {
 pub struct Binary(Vec<Boolean>);
 
 impl Binary {
-    pub fn new<E, CS>(
-        mut cs: CS,
-        st: ST,
-        index: Option<usize>
-    ) -> Result<Self, SynthesisError>
+    pub fn new<E, CS>(mut cs: CS, st: ST, index: Option<usize>) -> Result<Self, SynthesisError>
     where
         E: JubjubEngine,
         CS: ConstraintSystem<E>,
@@ -50,17 +49,17 @@ impl Binary {
                 for (i, b) in binaries.iter().enumerate() {
                     let tmp = Boolean::from(AllocatedBit::alloc(
                         cs.namespace(|| format!("{} binary {}", st, i)),
-                        Some(*b))?
-                    );
+                        Some(*b),
+                    )?);
                     acc.push(tmp);
                 }
-            },
+            }
             None => {
                 for i in 0..ANONIMITY_SIZE {
                     let tmp = Boolean::from(AllocatedBit::alloc(
                         cs.namespace(|| format!("{} binary {}", st, i)),
-                        None)?
-                    );
+                        None,
+                    )?);
                     acc.push(tmp);
                 }
             }
@@ -88,7 +87,7 @@ impl Binary {
             let tmp = Boolean::and(
                 cs.namespace(|| format!("{} nor binary", i)),
                 &self.0[i].not(),
-                &other.0[i].not()
+                &other.0[i].not(),
             )?;
             acc.push(tmp);
         }
@@ -113,7 +112,7 @@ impl Binary {
             let tmp = Boolean::xor(
                 cs.namespace(|| format!("{} xor binary", i)),
                 &self.0[i],
-                &other.0[i]
+                &other.0[i],
             )?;
             acc.push(tmp);
         }
@@ -125,7 +124,7 @@ impl Binary {
         &self,
         mut cs: CS,
         a_points: &[EdwardsPoint<E>],
-        b_points: &[EdwardsPoint<E>]
+        b_points: &[EdwardsPoint<E>],
     ) -> Result<(), SynthesisError>
     where
         E: JubjubEngine,
@@ -137,17 +136,17 @@ impl Binary {
         for (i, (a, b)) in a_points.iter().zip(b_points.iter()).enumerate() {
             let c_a = a.conditionally_select(
                 cs.namespace(|| format!("conditionally select a_{}", i)),
-                &self.0[i]
+                &self.0[i],
             )?;
             let c_b = b.conditionally_select(
                 cs.namespace(|| format!("conditionally select b_{}", i)),
-                &self.0[i]
+                &self.0[i],
             )?;
 
             eq_edwards_points(
                 cs.namespace(|| format!("equal ca_{} and cb", i)),
                 &c_a,
-                &c_b
+                &c_b,
             )?;
         }
 
@@ -171,7 +170,7 @@ impl Binary {
         for (i, (b, p)) in self.0.iter().zip(points.iter()).enumerate() {
             let selected_point = p.conditionally_select(
                 cs.namespace(|| format!("conditionally select p_{} depending on b", i)),
-                b
+                b,
             )?;
 
             let tmp = acc.add(
@@ -210,17 +209,17 @@ impl<E: JubjubEngine> EncKeySet<E> {
                     let tmp = EdwardsPoint::witness(
                         cs.namespace(|| format!("{} enc_key witness", i)),
                         Some(e.0.clone()),
-                        params
+                        params,
                     )?;
                     self.0.push(tmp);
                 }
-            },
+            }
             None => {
                 for i in 0..ANONIMITY_SIZE {
                     let tmp = EdwardsPoint::witness::<PrimeOrder, _>(
                         cs.namespace(|| format!("{} enc_key witness", i)),
                         None,
-                        params
+                        params,
                     )?;
                     self.0.push(tmp);
                 }
@@ -235,15 +234,15 @@ impl<E: JubjubEngine> EncKeySet<E> {
         &self,
         mut cs: CS,
         randomness: Option<&E::Fs>,
-        params: &E::Params
+        params: &E::Params,
     ) -> Result<EncKeysMulRandom<E>, SynthesisError>
     where
-        CS: ConstraintSystem<E>
+        CS: ConstraintSystem<E>,
     {
         // Generate the randomness for elgamal encryption into the circuit
         let randomness_bits = boolean::field_into_boolean_vec_le(
             cs.namespace(|| format!("randomness_bits")),
-            randomness.map(|e| *e)
+            randomness.map(|e| *e),
         )?;
 
         let mut acc = Vec::with_capacity(ANONIMITY_SIZE);
@@ -252,7 +251,7 @@ impl<E: JubjubEngine> EncKeySet<E> {
             let tmp = self.0[i].mul(
                 cs.namespace(|| format!("randomness mul enc_key_{}", i)),
                 &randomness_bits,
-                params
+                params,
             )?;
             acc.push(tmp);
         }
@@ -262,7 +261,7 @@ impl<E: JubjubEngine> EncKeySet<E> {
 
     pub fn inputize<CS>(&self, mut cs: CS) -> Result<(), SynthesisError>
     where
-        CS: ConstraintSystem<E>
+        CS: ConstraintSystem<E>,
     {
         for (i, e) in self.0.iter().enumerate() {
             e.inputize(cs.namespace(|| format!("inputize enc keys {}", i)))?;
@@ -286,7 +285,7 @@ impl<E: JubjubEngine> EncKeysMulRandom<E> {
         params: &E::Params,
     ) -> Result<LeftAmountCiphertexts<E>, SynthesisError>
     where
-        CS: ConstraintSystem<E>
+        CS: ConstraintSystem<E>,
     {
         assert_eq!(self.0.len(), ANONIMITY_SIZE);
         let mut acc = Vec::with_capacity(ANONIMITY_SIZE);
@@ -296,21 +295,21 @@ impl<E: JubjubEngine> EncKeysMulRandom<E> {
                 let tmp = neg_amount_g.add(
                     cs.namespace(|| "sender's left ciphertext"),
                     &self.0[i],
-                    params
+                    params,
                 )?;
                 acc.push(tmp);
             } else if Some(i) == t_index {
                 let tmp = amount_g.add(
                     cs.namespace(|| "recipient's left ciphertext"),
                     &self.0[i],
-                    params
+                    params,
                 )?;
                 acc.push(tmp);
             } else {
                 let tmp = zero_p.add(
                     cs.namespace(|| format!("decoy_{} left ciphertext", i)),
                     &self.0[i],
-                    params
+                    params,
                 )?;
                 acc.push(tmp);
             }
@@ -326,10 +325,10 @@ impl<E: JubjubEngine> LeftAmountCiphertexts<E> {
     pub fn new<CS>(
         left_ciphertexts: Option<&[edwards::Point<E, PrimeOrder>]>,
         mut cs: CS,
-        params: &E::Params
+        params: &E::Params,
     ) -> Result<Self, SynthesisError>
     where
-        CS: ConstraintSystem<E>
+        CS: ConstraintSystem<E>,
     {
         let mut acc = Vec::with_capacity(ANONIMITY_SIZE);
         match left_ciphertexts {
@@ -342,7 +341,7 @@ impl<E: JubjubEngine> LeftAmountCiphertexts<E> {
                     )?;
                     acc.push(tmp);
                 }
-            },
+            }
             None => {
                 for i in 0..ANONIMITY_SIZE {
                     let tmp = EdwardsPoint::<E>::witness::<PrimeOrder, _>(
@@ -360,7 +359,7 @@ impl<E: JubjubEngine> LeftAmountCiphertexts<E> {
 
     pub fn neg_each<CS>(&self, mut cs: CS, params: &E::Params) -> Result<Self, SynthesisError>
     where
-        CS: ConstraintSystem<E>
+        CS: ConstraintSystem<E>,
     {
         assert_eq!(self.0.len(), ANONIMITY_SIZE);
 
@@ -369,7 +368,7 @@ impl<E: JubjubEngine> LeftAmountCiphertexts<E> {
             let tmp = negate_point(
                 cs.namespace(|| format!("negate left amount ciphertexts {}", i)),
                 &self.0[i],
-                params
+                params,
             )?;
             acc.push(tmp);
         }
@@ -379,7 +378,7 @@ impl<E: JubjubEngine> LeftAmountCiphertexts<E> {
 
     pub fn inputize<CS>(&self, mut cs: CS) -> Result<(), SynthesisError>
     where
-        CS: ConstraintSystem<E>
+        CS: ConstraintSystem<E>,
     {
         for (i, e) in self.0.iter().enumerate() {
             e.inputize(cs.namespace(|| format!("inputize left ciphertexts {}", i)))?;
@@ -396,10 +395,10 @@ impl<E: JubjubEngine> LeftBalanceCiphertexts<E> {
     pub fn witness<Order, CS>(
         mut cs: CS,
         c: Option<&[elgamal::Ciphertext<E>]>,
-        params: &E::Params
+        params: &E::Params,
     ) -> Result<Self, SynthesisError>
     where
-        CS: ConstraintSystem<E>
+        CS: ConstraintSystem<E>,
     {
         if let Some(i) = c {
             assert_eq!(i.len(), ANONIMITY_SIZE);
@@ -410,7 +409,7 @@ impl<E: JubjubEngine> LeftBalanceCiphertexts<E> {
             let tmp = EdwardsPoint::witness(
                 cs.namespace(|| format!("left ciphertext {} witness", i)),
                 c.map(|e| e[i].left.clone()),
-                params
+                params,
             )?;
             acc.push(tmp);
         }
@@ -422,10 +421,10 @@ impl<E: JubjubEngine> LeftBalanceCiphertexts<E> {
         &self,
         mut cs: CS,
         left_ac: &LeftAmountCiphertexts<E>,
-        params: &E::Params
+        params: &E::Params,
     ) -> Result<Self, SynthesisError>
     where
-        CS: ConstraintSystem<E>
+        CS: ConstraintSystem<E>,
     {
         assert_eq!(self.0.len(), left_ac.0.len());
 
@@ -434,7 +433,7 @@ impl<E: JubjubEngine> LeftBalanceCiphertexts<E> {
             let tmp = self.0[i].add(
                 cs.namespace(|| format!("add each left ciphertexts {}", i)),
                 &left_ac.0[i],
-                params
+                params,
             )?;
             acc.push(tmp);
         }
@@ -444,7 +443,7 @@ impl<E: JubjubEngine> LeftBalanceCiphertexts<E> {
 
     pub fn inputize<CS>(&self, mut cs: CS) -> Result<(), SynthesisError>
     where
-        CS: ConstraintSystem<E>
+        CS: ConstraintSystem<E>,
     {
         for (i, e) in self.0.iter().enumerate() {
             e.inputize(cs.namespace(|| format!("inputize left balance ciphertexts {}", i)))?;
@@ -458,10 +457,10 @@ impl<E: JubjubEngine> RightBalanceCiphertexts<E> {
     pub fn witness<Order, CS>(
         mut cs: CS,
         c: Option<&[elgamal::Ciphertext<E>]>,
-        params: &E::Params
+        params: &E::Params,
     ) -> Result<Self, SynthesisError>
     where
-        CS: ConstraintSystem<E>
+        CS: ConstraintSystem<E>,
     {
         if let Some(i) = c {
             assert_eq!(i.len(), ANONIMITY_SIZE);
@@ -472,7 +471,7 @@ impl<E: JubjubEngine> RightBalanceCiphertexts<E> {
             let tmp = EdwardsPoint::witness(
                 cs.namespace(|| format!("right ciphertext {} witness", i)),
                 c.map(|e| e[i].right.clone()),
-                params
+                params,
             )?;
             acc.push(tmp);
         }
@@ -482,7 +481,7 @@ impl<E: JubjubEngine> RightBalanceCiphertexts<E> {
 
     pub fn inputize<CS>(&self, mut cs: CS) -> Result<(), SynthesisError>
     where
-        CS: ConstraintSystem<E>
+        CS: ConstraintSystem<E>,
     {
         for (i, e) in self.0.iter().enumerate() {
             e.inputize(cs.namespace(|| format!("inputize right balance ciphertexts {}", i)))?;

@@ -3,10 +3,10 @@ use smallvec::SmallVec;
 
 pub mod commands;
 mod config;
-mod keyfile;
 mod disk;
-pub use self::keyfile::KeyFile;
+mod keyfile;
 pub use self::disk::{KeystoreDirectory, WalletDirectory};
+pub use self::keyfile::KeyFile;
 use crate::error::Result;
 
 /// Operations in a keystore directory
@@ -26,10 +26,7 @@ pub trait DirOperations {
 
 /// Serializable and deserializable bytes
 #[derive(Deserialize, Serialize, PartialEq, Eq, Debug, Clone)]
-pub struct SerdeBytes(
-    #[serde(with = "serde_bytes")]
-    pub Vec<u8>
-);
+pub struct SerdeBytes(#[serde(with = "serde_bytes")] pub Vec<u8>);
 
 impl From<Vec<u8>> for SerdeBytes {
     fn from(v: Vec<u8>) -> Self {

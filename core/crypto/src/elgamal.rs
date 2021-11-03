@@ -1,18 +1,10 @@
-#[cfg(feature = "std")]
-use ::std::u32;
 #[cfg(not(feature = "std"))]
 use crate::std::u32;
+#[cfg(feature = "std")]
+use ::std::u32;
 
-use jubjub::curve::{
-        JubjubEngine,
-        JubjubParams,
-        edwards,
-        PrimeOrder,
-        FixedGenerators,
-};
-use blake2_rfc::{
-    blake2b::{Blake2b, Blake2bResult}
-};
+use blake2_rfc::blake2b::{Blake2b, Blake2bResult};
+use jubjub::curve::{edwards, FixedGenerators, JubjubEngine, JubjubParams, PrimeOrder};
 use pairing::io;
 
 /// The constant personalization for elgamal extending function
@@ -27,21 +19,14 @@ pub struct Ciphertext<E: JubjubEngine> {
 }
 
 impl<E: JubjubEngine> Ciphertext<E> {
-    pub fn new(
-        left: edwards::Point<E, PrimeOrder>,
-        right: edwards::Point<E, PrimeOrder>
-    ) -> Self
-    {
-        Ciphertext {
-            left,
-            right,
-        }
+    pub fn new(left: edwards::Point<E, PrimeOrder>, right: edwards::Point<E, PrimeOrder>) -> Self {
+        Ciphertext { left, right }
     }
 
     pub fn zero() -> Self {
         Ciphertext {
             left: edwards::Point::zero(),
-            right: edwards::Point::zero()
+            right: edwards::Point::zero(),
         }
     }
 
@@ -50,18 +35,14 @@ impl<E: JubjubEngine> Ciphertext<E> {
         randomness: &E::Fs,
         enc_key: &keys::EncryptionKey<E>,
         p_g: FixedGenerators,
-        params: &E::Params
-    ) -> Self
-    {
+        params: &E::Params,
+    ) -> Self {
         let right = params.generator(p_g).mul(*randomness, params);
         let v_point = params.generator(p_g).mul(amount as u64, params);
         let r_point = enc_key.0.mul(*randomness, params);
         let left = v_point.add(&r_point, params);
 
-        Ciphertext {
-            left,
-            right,
-        }
+        Ciphertext { left, right }
     }
 
     // Encrypt with negative value
@@ -70,17 +51,14 @@ impl<E: JubjubEngine> Ciphertext<E> {
         randomness: &E::Fs,
         enc_key: &keys::EncryptionKey<E>,
         p_g: FixedGenerators,
-        params: &E::Params
+        params: &E::Params,
     ) -> Self {
         let right = params.generator(p_g).mul(*randomness, params);
         let v_point = params.generator(p_g).mul(amount as u64, params).negate();
         let r_point = enc_key.0.mul(*randomness, params);
         let left = v_point.add(&r_point, params);
 
-        Ciphertext {
-            left,
-            right,
-        }
+        Ciphertext { left, right }
     }
 
     /// Decryption of the ciphetext for the amount
@@ -88,9 +66,8 @@ impl<E: JubjubEngine> Ciphertext<E> {
         &self,
         decryption_key: &keys::DecryptionKey<E>,
         p_g: FixedGenerators,
-        params: &E::Params
-    ) -> Option<u32>
-    {
+        params: &E::Params,
+    ) -> Option<u32> {
         let sr_point = self.right.mul(decryption_key.0, params);
         let neg_sr_point = sr_point.negate();
         let v_point = self.left.add(&neg_sr_point, params);
@@ -101,7 +78,7 @@ impl<E: JubjubEngine> Ciphertext<E> {
         // Brute-force decryption
         for i in 0..1_000_000 {
             if acc == v_point {
-                return Some(i)
+                return Some(i);
             }
             acc = acc.add(&one, params);
         }
@@ -129,10 +106,7 @@ impl<E: JubjubEngine> Ciphertext<E> {
             None => return Err(io::Error::NotOnCurve),
         };
 
-        Ok(Ciphertext {
-            left,
-            right,
-        })
+        Ok(Ciphertext { left, right })
     }
 
     /// Addition of elgamal ciphertext
@@ -140,10 +114,7 @@ impl<E: JubjubEngine> Ciphertext<E> {
         let left = self.left.add(&other.left, params);
         let right = self.right.add(&other.right, params);
 
-        Ciphertext {
-            left,
-            right,
-        }
+        Ciphertext { left, right }
     }
 
     /// Addition of elgamal ciphertext without params
@@ -151,10 +122,7 @@ impl<E: JubjubEngine> Ciphertext<E> {
         let left = self.left.add_no_params(&other.left);
         let right = self.right.add_no_params(&other.right);
 
-        Ciphertext {
-            left,
-            right,
-        }
+        Ciphertext { left, right }
     }
 
     /// Subtraction of elgamal ciphertext
@@ -162,10 +130,7 @@ impl<E: JubjubEngine> Ciphertext<E> {
         let left = self.left.add(&other.left.negate(), params);
         let right = self.right.add(&other.right.negate(), params);
 
-        Ciphertext {
-            left,
-            right,
-        }
+        Ciphertext { left, right }
     }
 
     /// Subtraction of elgamal ciphertext without params
@@ -173,10 +138,7 @@ impl<E: JubjubEngine> Ciphertext<E> {
         let left = self.left.add_no_params(&other.left.negate());
         let right = self.right.add_no_params(&other.right.negate());
 
-        Ciphertext {
-            left,
-            right
-        }
+        Ciphertext { left, right }
     }
 }
 
@@ -190,10 +152,10 @@ pub fn elgamal_extend(sk: &[u8]) -> Blake2bResult {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use rand::{SeedableRng, XorShiftRng, Rand};
-    use jubjub::curve::{JubjubBls12, fs::Fs};
+    use jubjub::curve::{fs::Fs, JubjubBls12};
+    use keys::{DecryptionKey, EncryptionKey, ProofGenerationKey};
     use pairing::bls12_381::Bls12;
-    use keys::{ProofGenerationKey, EncryptionKey, DecryptionKey};
+    use rand::{Rand, SeedableRng, XorShiftRng};
 
     #[test]
     fn test_elgamal_enc_dec() {
@@ -208,7 +170,9 @@ mod tests {
         let enc_key = EncryptionKey(params.generator(p_g).mul(sk_fs, params));
 
         let ciphetext = Ciphertext::encrypt(amount, &r_fs, &enc_key, p_g, params);
-        let decrypted_amount = ciphetext.decrypt(&DecryptionKey(sk_fs), p_g, params).unwrap();
+        let decrypted_amount = ciphetext
+            .decrypt(&DecryptionKey(sk_fs), p_g, params)
+            .unwrap();
 
         assert_eq!(amount, decrypted_amount);
     }
@@ -225,12 +189,14 @@ mod tests {
         let r_fs = Fs::rand(rng);
 
         let address = EncryptionKey::<Bls12>::from_seed(alice_seed, params).unwrap();
-	    let enc_alice_val = Ciphertext::encrypt(alice_amount, &r_fs, &address, p_g, params);
+        let enc_alice_val = Ciphertext::encrypt(alice_amount, &r_fs, &address, p_g, params);
 
-        let bdk = ProofGenerationKey::<Bls12>::from_seed(alice_seed, params).into_decryption_key().unwrap();
+        let bdk = ProofGenerationKey::<Bls12>::from_seed(alice_seed, params)
+            .into_decryption_key()
+            .unwrap();
 
         let dec_alice_val = enc_alice_val.decrypt(&bdk, p_g, params).unwrap();
-	    assert_eq!(dec_alice_val, alice_amount);
+        assert_eq!(dec_alice_val, alice_amount);
     }
 
     #[test]
@@ -255,7 +221,9 @@ mod tests {
 
         let decryption_key = DecryptionKey(sk_fs);
 
-        let decrypted_amount7 = homo_ciphetext7.decrypt(&decryption_key, p_g, params).unwrap();
+        let decrypted_amount7 = homo_ciphetext7
+            .decrypt(&decryption_key, p_g, params)
+            .unwrap();
         assert_eq!(decrypted_amount7, amount7);
     }
 
@@ -282,8 +250,12 @@ mod tests {
 
         let decryption_key = DecryptionKey(sk_fs);
 
-        let decrypted_amount19 = homo_ciphetext19.decrypt(&decryption_key, p_g, params).unwrap();
-        let decrypted_amount19_params = homo_ciphetext19_params.decrypt(&decryption_key, p_g, params).unwrap();
+        let decrypted_amount19 = homo_ciphetext19
+            .decrypt(&decryption_key, p_g, params)
+            .unwrap();
+        let decrypted_amount19_params = homo_ciphetext19_params
+            .decrypt(&decryption_key, p_g, params)
+            .unwrap();
 
         assert_eq!(decrypted_amount19, amount19);
         assert!(homo_ciphetext19 == homo_ciphetext19_params);
@@ -315,7 +287,9 @@ mod tests {
 
         let decryption_key = DecryptionKey(sk_fs1);
 
-        let expected_amount7 = homo_ciphetext7.decrypt(&decryption_key, p_g, params).unwrap();
+        let expected_amount7 = homo_ciphetext7
+            .decrypt(&decryption_key, p_g, params)
+            .unwrap();
         assert_eq!(expected_amount7, amount7);
     }
 

@@ -1,18 +1,18 @@
+use crate::{IntoXY, PARAMS};
+use core::convert::TryFrom;
+use fixed_hash::construct_fixed_hash;
+use jubjub::redjubjub;
+use pairing::{
+    bls12_381::{Bls12, Fr},
+    io,
+};
+use parity_codec::{Decode, Encode, Input};
 #[cfg(feature = "std")]
-use serde::{Serialize, Serializer, Deserialize, Deserializer};
+use serde::{Deserialize, Deserializer, Serialize, Serializer};
 #[cfg(feature = "std")]
 use substrate_primitives::bytes;
 #[cfg(feature = "std")]
 use substrate_primitives::hexdisplay::AsBytesRef;
-use fixed_hash::construct_fixed_hash;
-use parity_codec::{Encode, Decode, Input};
-use jubjub::redjubjub;
-use pairing::{
-    bls12_381::{Bls12, Fr},
-    io
-};
-use crate::{PARAMS, IntoXY};
-use core::convert::TryFrom;
 
 const SIZE: usize = 32;
 
@@ -25,7 +25,8 @@ pub type SigVerificationKey = H256;
 #[cfg(feature = "std")]
 impl Serialize for SigVerificationKey {
     fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
-        where S: Serializer
+    where
+        S: Serializer,
     {
         bytes::serialize(&self.0, serializer)
     }
@@ -34,7 +35,8 @@ impl Serialize for SigVerificationKey {
 #[cfg(feature = "std")]
 impl<'de> Deserialize<'de> for SigVerificationKey {
     fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
-        where D: Deserializer<'de>
+    where
+        D: Deserializer<'de>,
     {
         bytes::deserialize_check_len(deserializer, bytes::ExpectedLen::Exact(SIZE))
             .map(|x| SigVerificationKey::from_slice(&x))
@@ -111,19 +113,19 @@ impl AsBytesRef for SigVerificationKey {
     }
 }
 
-pub trait SigVk { }
-impl SigVk for SigVerificationKey { }
-impl SigVk for &SigVerificationKey { }
-impl SigVk for u64 { }
+pub trait SigVk {}
+impl SigVk for SigVerificationKey {}
+impl SigVk for &SigVerificationKey {}
+impl SigVk for u64 {}
 
 #[cfg(test)]
 mod tests {
     use super::*;
-    use rand::{Rng, SeedableRng, XorShiftRng};
-    use pairing::bls12_381::Bls12;
+    use core::convert::TryInto;
     use jubjub::curve::{FixedGenerators, JubjubBls12};
     use jubjub::redjubjub::PublicKey;
-    use core::convert::TryInto;
+    use pairing::bls12_381::Bls12;
+    use rand::{Rng, SeedableRng, XorShiftRng};
 
     #[test]
     fn test_vk_into_from() {

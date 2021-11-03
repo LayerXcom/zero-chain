@@ -16,47 +16,48 @@
 
 //! Executive: Handles all of the top-level stuff; essentially just executing blocks/extrinsics.
 
-
 #![cfg_attr(not(feature = "std"), no_std)]
 
-use rstd::prelude::*;
-use rstd::marker::PhantomData;
-use rstd::result;
-use primitives::traits::{
-	self, Header, Zero, One, Checkable, Applyable, CheckEqual, OnFinalize,
-	OnInitialize, Hash, As, Digest, NumberFor, Block as BlockT, OffchainWorker
-};
-use srml_support::Dispatchable;
 use parity_codec::{Codec, Encode};
+use primitives::traits::{
+    self, Applyable, As, Block as BlockT, CheckEqual, Checkable, Digest, Hash, Header, NumberFor,
+    OffchainWorker, OnFinalize, OnInitialize, One, Zero,
+};
+use primitives::transaction_validity::{
+    TransactionLongevity, TransactionPriority, TransactionValidity,
+};
+use primitives::{ApplyError, ApplyOutcome};
+use rstd::marker::PhantomData;
+use rstd::prelude::*;
+use rstd::result;
+use srml_support::Dispatchable;
 use system::extrinsics_root;
-use primitives::{ApplyOutcome, ApplyError};
-use primitives::transaction_validity::{TransactionValidity, TransactionPriority, TransactionLongevity};
 
 mod internal {
-	pub const MAX_TRANSACTIONS_SIZE: u32 = 4 * 1024 * 1024;
+    pub const MAX_TRANSACTIONS_SIZE: u32 = 4 * 1024 * 1024;
 
-	pub enum ApplyError {
-		BadSignature(&'static str),
-		Stale,
-		Future,
-		CantPay,
-		FullBlock,
-	}
+    pub enum ApplyError {
+        BadSignature(&'static str),
+        Stale,
+        Future,
+        CantPay,
+        FullBlock,
+    }
 
-	pub enum ApplyOutcome {
-		Success,
-		Fail(&'static str),
-	}
+    pub enum ApplyOutcome {
+        Success,
+        Fail(&'static str),
+    }
 }
 
 /// Something that can be used to execute a block.
 pub trait ExecuteBlock<Block: BlockT> {
-	/// Actually execute all transitioning for `block`.
-	fn execute_block(block: Block);
+    /// Actually execute all transitioning for `block`.
+    fn execute_block(block: Block);
 }
 
 pub struct Executive<System, Block, Context, AllModules>(
-	PhantomData<(System, Block, Context, AllModules)>
+    PhantomData<(System, Block, Context, AllModules)>,
 );
 
 impl<

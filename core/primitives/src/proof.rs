@@ -1,13 +1,13 @@
-#[cfg(feature = "std")]
-use ::std::{vec::Vec, fmt, write};
 #[cfg(not(feature = "std"))]
 use crate::std::vec::Vec;
 #[cfg(feature = "std")]
-use substrate_primitives::hexdisplay::AsBytesRef;
-use pairing::{bls12_381::Bls12, io};
+use ::std::{fmt, vec::Vec, write};
 use bellman_verifier;
-use parity_codec::{Encode, Decode};
 use core::convert::TryFrom;
+use pairing::{bls12_381::Bls12, io};
+use parity_codec::{Decode, Encode};
+#[cfg(feature = "std")]
+use substrate_primitives::hexdisplay::AsBytesRef;
 
 #[derive(Eq, PartialEq, Clone, Default, Encode, Decode)]
 #[cfg_attr(feature = "std", derive(Debug, Serialize, Deserialize))]

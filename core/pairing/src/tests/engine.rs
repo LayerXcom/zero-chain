@@ -3,7 +3,9 @@ use rand::{Rand, SeedableRng, XorShiftRng};
 use {CurveAffine, CurveProjective, Engine, Field, PrimeField};
 
 pub fn engine_tests<E: Engine>()
-    where E: ::std::fmt::Debug, E::Fqk: ::std::fmt::Debug 
+where
+    E: ::std::fmt::Debug,
+    E::Fqk: ::std::fmt::Debug,
 {
     let mut rng = XorShiftRng::from_seed([0x5dbe6259, 0x8d313d76, 0x3237db17, 0xe5bc0654]);
 
@@ -50,7 +52,9 @@ pub fn engine_tests<E: Engine>()
 }
 
 fn random_miller_loop_tests<E: Engine>()
-    where E: ::std::fmt::Debug, E::Fqk: ::std::fmt::Debug
+where
+    E: ::std::fmt::Debug,
+    E::Fqk: ::std::fmt::Debug,
 {
     let mut rng = XorShiftRng::from_seed([0x5dbe6259, 0x8d313d76, 0x3237db17, 0xe5bc0654]);
 
@@ -95,7 +99,9 @@ fn random_miller_loop_tests<E: Engine>()
 }
 
 fn random_bilinearity_tests<E: Engine>()
-    where E: ::std::fmt::Debug, E::Fqk: ::std::fmt::Debug 
+where
+    E: ::std::fmt::Debug,
+    E::Fqk: ::std::fmt::Debug,
 {
     let mut rng = XorShiftRng::from_seed([0x5dbe6259, 0x8d313d76, 0x3237db17, 0xe5bc0654]);
 

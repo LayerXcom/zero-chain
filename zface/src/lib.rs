@@ -1,10 +1,10 @@
-pub mod ss58;
 pub mod derive;
-pub mod wallet;
-pub mod term;
-pub mod utils;
-pub mod transaction;
 pub mod error;
+pub mod ss58;
+pub mod term;
+pub mod transaction;
+pub mod utils;
+pub mod wallet;
 
 #[macro_use]
 extern crate serde_derive;

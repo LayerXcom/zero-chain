@@ -1,7 +1,7 @@
-use jubjub::curve::{JubjubEngine, edwards::Point, PrimeOrder, FixedGenerators, JubjubParams};
+use crate::commitment::{Commitment, SignerKeys};
+use jubjub::curve::{edwards::Point, FixedGenerators, JubjubEngine, JubjubParams, PrimeOrder};
 use jubjub::redjubjub::h_star;
 use pairing::{io, Field};
-use crate::commitment::{Commitment, SignerKeys};
 
 pub struct Cosigners<E: JubjubEngine> {
     pos: usize,
@@ -10,10 +10,7 @@ pub struct Cosigners<E: JubjubEngine> {
 
 impl<E: JubjubEngine> Cosigners<E> {
     pub fn new(pos: usize, pub_key: Point<E, PrimeOrder>) -> Self {
-        Cosigners {
-            pos,
-            pub_key,
-        }
+        Cosigners { pos, pub_key }
     }
 
     pub fn commit(self, commitment: Commitment) -> CosignersCommited<E> {
@@ -37,7 +34,7 @@ impl<E: JubjubEngine> CosignersCommited<E> {
         let eq = self.commitment.ct_eq(&received_comm);
 
         if !eq {
-            return Err(io::Error::InvalidData)
+            return Err(io::Error::InvalidData);
         }
 
         Ok(CosignersRevealed {
@@ -63,7 +60,7 @@ impl<E: JubjubEngine> CosignersRevealed<E> {
         X_bar_R_buf: &[u8],
         signer_keys: &SignerKeys<E>,
         p_g: FixedGenerators,
-        params: &E::Params
+        params: &E::Params,
     ) -> io::Result<E::Fs> {
         let S_i = params.generator(p_g).mul(share, params);
         let mut c_i = h_star::<E>(&X_bar_R_buf[..], msg);
@@ -72,7 +69,7 @@ impl<E: JubjubEngine> CosignersRevealed<E> {
 
         // Check s_i * G == R_i + c_i * a_i * X_i.
         if S_i != X_i.mul(c_i, params).add(&self.reveal, params) {
-            return Err(io::Error::InvalidData)
+            return Err(io::Error::InvalidData);
         }
         Ok(share)
     }

@@ -1,58 +1,31 @@
-use bellman::{
-        groth16::{
-            create_random_proof,
-            verify_proof,
-            Parameters,
-            PreparedVerifyingKey,
-            Proof,
-        },
-        SynthesisError,
-};
-use rand::{Rand, Rng};
-use scrypto::{
-    jubjub::{
-        JubjubEngine,
-        FixedGenerators,
-        edwards,
-        PrimeOrder,
-    },
-    redjubjub::PublicKey,
-};
-use polkadot_rs::Api;
-use zerochain_runtime::{UncheckedExtrinsic, Call, AnonymousBalancesCall};
-use zprimitives::{
-    EncKey as zEncKey,
-    LeftCiphertext as zLeftCiphertext,
-    RightCiphertext as zRightCiphertext,
-    Nonce as zNonce,
-    Proof as zProof
+use crate::crypto_components::{
+    convert_to_checked, Anonymous, Calls, Checked, CiphertextTrait, MultiCiphertexts, MultiEncKeys,
+    ProofContext, PublicInputBuilder, Submitter, Unchecked,
 };
 use crate::{
-    circuit::AnonymousTransfer,
-    elgamal::Ciphertext,
-    EncryptionKey,
-    ProofGenerationKey,
-    SpendingKey,
-    KeyContext,
-    ProofBuilder,
-    constants::*,
+    circuit::AnonymousTransfer, constants::*, elgamal::Ciphertext, EncryptionKey, KeyContext,
+    ProofBuilder, ProofGenerationKey, SpendingKey,
 };
-use crate::crypto_components::{
-    MultiEncKeys,
-    MultiCiphertexts,
-    Anonymous,
-    CiphertextTrait,
-    Submitter,
-    Calls,
-    Unchecked,Checked,
-    ProofContext, convert_to_checked,
-    PublicInputBuilder,
+use bellman::{
+    groth16::{create_random_proof, verify_proof, Parameters, PreparedVerifyingKey, Proof},
+    SynthesisError,
+};
+use polkadot_rs::Api;
+use rand::{Rand, Rng};
+use scrypto::{
+    jubjub::{edwards, FixedGenerators, JubjubEngine, PrimeOrder},
+    redjubjub::PublicKey,
 };
 use std::{
-    io::{self, Write, BufWriter},
-    path::Path,
     fs::File,
+    io::{self, BufWriter, Write},
     marker::PhantomData,
+    path::Path,
+};
+use zerochain_runtime::{AnonymousBalancesCall, Call, UncheckedExtrinsic};
+use zprimitives::{
+    EncKey as zEncKey, LeftCiphertext as zLeftCiphertext, Nonce as zNonce, Proof as zProof,
+    RightCiphertext as zRightCiphertext,
 };
 
 impl<E: JubjubEngine> ProofBuilder<E, Anonymous> for KeyContext<E, Anonymous> {
@@ -84,7 +57,7 @@ impl<E: JubjubEngine> ProofBuilder<E, Anonymous> for KeyContext<E, Anonymous> {
         Ok(())
     }
 
-    fn read_from_path<P: AsRef<Path>>(pk_path: P, vk_path: P) -> io::Result<Self>{
+    fn read_from_path<P: AsRef<Path>>(pk_path: P, vk_path: P) -> io::Result<Self> {
         let pk_buf = Self::inner_read(pk_path)?;
         let vk_buf = Self::inner_read(vk_path)?;
 
@@ -124,16 +97,20 @@ impl<E: JubjubEngine> ProofBuilder<E, Anonymous> for KeyContext<E, Anonymous> {
             enc_keys_vec.insert(s_index, enc_key_sender.clone());
         }
 
-        let rvk = PublicKey(pgk.0.clone().into())
-            .randomize(
-                alpha,
-                FixedGenerators::NoteCommitmentRandomness,
-                params,
+        let rvk = PublicKey(pgk.0.clone().into()).randomize(
+            alpha,
+            FixedGenerators::NoteCommitmentRandomness,
+            params,
         );
         let nonce = g_epoch.mul(dec_key.0, params);
 
         let multi_ciphertexts = MultiCiphertexts::<E, Anonymous>::encrypt(
-            amount, 0, &enc_key_sender, &enc_keys, &randomness, params
+            amount,
+            0,
+            &enc_key_sender,
+            &enc_keys,
+            &randomness,
+            params,
         );
         let mut left_ciphertexts = multi_ciphertexts.get_decoys_left();
         if s_index < t_index {
@@ -251,13 +228,16 @@ impl<E: JubjubEngine> ProofContext<E, Unchecked, Anonymous> {
         use pairing::{PrimeField, PrimeFieldRepr};
         let mut buf = vec![];
         for r in public_inputs.as_slice() {
-            r.into_repr().write_le(&mut &mut buf).map_err(|_| "write error").unwrap();
+            r.into_repr()
+                .write_le(&mut &mut buf)
+                .map_err(|_| "write error")
+                .unwrap();
         }
 
         match verify_proof(prepared_vk, &self.proof, public_inputs.as_slice()) {
             Ok(e) if !e => return Err(SynthesisError::Unsatisfiable),
             Err(e) => return Err(e),
-            _ => { },
+            _ => {}
         }
 
         Ok(convert_to_checked::<E, Unchecked, Checked, Anonymous>(self))
@@ -275,27 +255,16 @@ impl<E: JubjubEngine, C> ProofContext<E, C, Anonymous> {
 }
 
 impl<E: JubjubEngine> ProofContext<E, Checked, Anonymous> {
-    fn gen_xt(
-        &self,
-        spending_key: &SpendingKey<E>,
-        alpha: E::Fs,
-    ) -> io::Result<AnonymousXt>
-    {
+    fn gen_xt(&self, spending_key: &SpendingKey<E>, alpha: E::Fs) -> io::Result<AnonymousXt> {
         // Generate the re-randomized sign key
-		let mut rsk = [0u8; POINT_SIZE];
-		spending_key
-            .into_rsk(alpha)
-            .write(&mut rsk[..])?;
+        let mut rsk = [0u8; POINT_SIZE];
+        spending_key.into_rsk(alpha).write(&mut rsk[..])?;
 
-		let mut rvk = [0u8; POINT_SIZE];
-		self
-			.rvk
-			.write(&mut rvk[..])?;
+        let mut rvk = [0u8; POINT_SIZE];
+        self.rvk.write(&mut rvk[..])?;
 
-		let mut proof = [0u8; PROOF_SIZE];
-		self
-			.proof
-			.write(&mut proof[..])?;
+        let mut proof = [0u8; PROOF_SIZE];
+        self.proof.write(&mut proof[..])?;
 
         let mut enc_keys = [[0u8; POINT_SIZE]; ANONIMITY_SIZE];
         let mut j = 0;
@@ -328,13 +297,10 @@ impl<E: JubjubEngine> ProofContext<E, Checked, Anonymous> {
         }
 
         let mut right_ciphertext = [0u8; POINT_SIZE];
-        self.right_randomness()
-            .write(&mut right_ciphertext[..])?;
+        self.right_randomness().write(&mut right_ciphertext[..])?;
 
         let mut nonce = [0u8; POINT_SIZE];
-		self
-			.nonce
-			.write(&mut nonce[..])?;
+        self.nonce.write(&mut nonce[..])?;
 
         Ok(AnonymousXt {
             proof,
@@ -355,40 +321,40 @@ pub struct AnonymousXt {
     pub right_ciphertext: [u8; POINT_SIZE],
     pub nonce: [u8; POINT_SIZE],
     pub rsk: [u8; POINT_SIZE],
-	pub rvk: [u8; POINT_SIZE],
+    pub rvk: [u8; POINT_SIZE],
 }
 
 impl Submitter for AnonymousXt {
     fn submit<R: Rng>(&self, calls: Calls, api: &Api, rng: &mut R) {
+        use parity_codec::{Compact, Encode};
+        use primitives::blake2_256;
+        use runtime_primitives::generic::Era;
+        use std::convert::TryFrom;
         use zjubjub::{
             curve::{fs::Fs as zFs, FixedGenerators as zFixedGenerators},
             redjubjub,
         };
         use zpairing::{
-            bls12_381::Bls12 as zBls12,
-            PrimeField as zPrimeField,
-            PrimeFieldRepr as zPrimeFieldRepr
+            bls12_381::Bls12 as zBls12, PrimeField as zPrimeField,
+            PrimeFieldRepr as zPrimeFieldRepr,
         };
-        use parity_codec::{Compact, Encode};
-        use primitives::blake2_256;
-        use runtime_primitives::generic::Era;
-        use zprimitives::{PARAMS as ZPARAMS, SigVerificationKey, RedjubjubSignature};
-        use std::convert::TryFrom;
+        use zprimitives::{RedjubjubSignature, SigVerificationKey, PARAMS as ZPARAMS};
 
         let p_g = zFixedGenerators::Diversifier; // 1
 
         let mut rsk_repr = zFs::default().into_repr();
-        rsk_repr.read_le(&mut &self.rsk[..])
+        rsk_repr
+            .read_le(&mut &self.rsk[..])
             .expect("should be casted to Fs's repr type.");
-        let rsk = zFs::from_repr(rsk_repr)
-            .expect("should be casted to Fs type from repr type.");
+        let rsk = zFs::from_repr(rsk_repr).expect("should be casted to Fs type from repr type.");
 
         let sig_sk = redjubjub::PrivateKey::<zBls12>(rsk);
         let sig_vk = SigVerificationKey::from_slice(&self.rvk[..]);
 
         let era = Era::Immortal;
         let index = api.get_nonce(&sig_vk).expect("Nonce must be got.");
-        let checkpoint = api.get_genesis_blockhash()
+        let checkpoint = api
+            .get_genesis_blockhash()
             .expect("should be fetched the genesis block hash from zerochain node.");
 
         let raw_payload = match calls {
@@ -407,24 +373,34 @@ impl Submitter for AnonymousXt {
             sig
         });
 
-        let sig_repr = RedjubjubSignature::try_from(sig)
-            .expect("shoukd be casted from RedjubjubSignature.");
-        let uxt = UncheckedExtrinsic::new_signed(index, raw_payload.1, sig_vk.into(), sig_repr, era);
-        let _tx_hash = api.submit_extrinsic(&uxt)
+        let sig_repr =
+            RedjubjubSignature::try_from(sig).expect("shoukd be casted from RedjubjubSignature.");
+        let uxt =
+            UncheckedExtrinsic::new_signed(index, raw_payload.1, sig_vk.into(), sig_repr, era);
+        let _tx_hash = api
+            .submit_extrinsic(&uxt)
             .expect("Faild to submit a extrinsic to zerochain node.");
     }
 }
 
 impl AnonymousXt {
     pub fn call_transfer(&self) -> Call {
-        let enc_keys = self.enc_keys.iter().map(|e| zEncKey::from_slice(e)).collect();
-        let left_ciphertexts = self.left_ciphertexts.iter().map(|e| zLeftCiphertext::from_slice(e)).collect();
+        let enc_keys = self
+            .enc_keys
+            .iter()
+            .map(|e| zEncKey::from_slice(e))
+            .collect();
+        let left_ciphertexts = self
+            .left_ciphertexts
+            .iter()
+            .map(|e| zLeftCiphertext::from_slice(e))
+            .collect();
         Call::AnonymousBalances(AnonymousBalancesCall::anonymous_transfer(
             zProof::from_slice(&self.proof[..]),
             enc_keys,
             left_ciphertexts,
             zRightCiphertext::from_slice(&self.right_ciphertext[..]),
-            zNonce::from_slice(&self.nonce[..])
+            zNonce::from_slice(&self.nonce[..]),
         ))
     }
 }
@@ -432,9 +408,9 @@ impl AnonymousXt {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use rand::{SeedableRng, XorShiftRng, Rng};
-    use scrypto::jubjub::{JubjubBls12, fs::Fs};
-    use pairing::{Field, bls12_381::Bls12};
+    use pairing::{bls12_381::Bls12, Field};
+    use rand::{Rng, SeedableRng, XorShiftRng};
+    use scrypto::jubjub::{fs::Fs, JubjubBls12};
 
     #[test]
     fn test_gen_anonymous_proof() {
@@ -476,14 +452,24 @@ mod tests {
 
         let g_epoch = edwards::Point::rand(rng, params).mul_by_cofactor(params);
 
-        let proofs = KeyContext::read_from_path("../../zface/params/test_anony_pk.dat", "../../zface/params/test_anony_vk.dat")
-            .unwrap()
-            .gen_proof(
-                amount, 0, remaining_balance, s_index, t_index, &spending_key,
-                MultiEncKeys::<Bls12, Anonymous>::new(enc_key_recipient, decoys),
-                &enc_balances, g_epoch,
-                rng, params
-            );
+        let proofs = KeyContext::read_from_path(
+            "../../zface/params/test_anony_pk.dat",
+            "../../zface/params/test_anony_vk.dat",
+        )
+        .unwrap()
+        .gen_proof(
+            amount,
+            0,
+            remaining_balance,
+            s_index,
+            t_index,
+            &spending_key,
+            MultiEncKeys::<Bls12, Anonymous>::new(enc_key_recipient, decoys),
+            &enc_balances,
+            g_epoch,
+            rng,
+            params,
+        );
 
         assert!(proofs.is_ok());
     }

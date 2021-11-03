@@ -1,15 +1,9 @@
-use crate::curve::{
-    JubjubEngine,
-    PrimeOrder,
-    edwards
-};
+use crate::curve::{edwards, JubjubEngine, PrimeOrder};
 
-use pairing::{
-    PrimeField
-};
+use pairing::PrimeField;
 
-use blake2_rfc::blake2s::Blake2s;
 use crate::constants;
+use blake2_rfc::blake2s::Blake2s;
 
 /// Produces a random point in the Jubjub curve.
 /// The point is guaranteed to be prime order
@@ -17,9 +11,8 @@ use crate::constants;
 pub fn group_hash<E: JubjubEngine>(
     tag: &[u8],
     personalization: &[u8],
-    params: &E::Params
-) -> Option<edwards::Point<E, PrimeOrder>>
-{
+    params: &E::Params,
+) -> Option<edwards::Point<E, PrimeOrder>> {
     assert_eq!(personalization.len(), 8);
 
     // Check to see that scalar field is 255 bits
@@ -40,7 +33,7 @@ pub fn group_hash<E: JubjubEngine>(
             } else {
                 None
             }
-        },
-        Err(_) => None
+        }
+        Err(_) => None,
     }
 }
