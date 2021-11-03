@@ -40,15 +40,15 @@ fn random_encoding_tests<R: PrimeFieldRepr + ::std::fmt::Debug>() {
             let mut rdecoded_be_flip = R::default();
 
             let mut v: Vec<u8> = vec![];
-            r.write_le(&mut &mut v).unwrap();            
+            r.write_le(&mut &mut v).unwrap();
 
             // This reads in little-endian, so we are done.
-            rdecoded_le.read_le(&mut &v[..]).unwrap();            
+            rdecoded_le.read_le(&mut &v[..]).unwrap();
 
             // This reads in big-endian, so we perform a swap of the
             // bytes beforehand.
             let v: Vec<u8> = v.into_iter().rev().collect();
-            rdecoded_be_flip.read_be(&mut &v[..]).unwrap();            
+            rdecoded_be_flip.read_be(&mut &v[..]).unwrap();
 
             assert_eq!(rdecoded_le, rdecoded_be_flip);
         }

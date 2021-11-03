@@ -1,16 +1,16 @@
 //! Keyfile operations such as encryption/decryotion, sign.
 
-use rand::Rng;
-use parity_crypto as crypto;
-use crypto::Keccak256;
-use smallvec::SmallVec;
-use proofs::{SpendingKey, ProofGenerationKey, DecryptionKey, PARAMS};
-use pairing::bls12_381::Bls12;
-use std::convert::TryInto;
-use std::collections::HashMap;
 use super::SerdeBytes;
+use crate::derive::{ChildIndex, Derivation, ExtendedSpendingKey};
 use crate::error::{KeystoreError, Result};
-use crate::derive::{ExtendedSpendingKey, Derivation, ChildIndex};
+use crypto::Keccak256;
+use pairing::bls12_381::Bls12;
+use parity_crypto as crypto;
+use proofs::{DecryptionKey, ProofGenerationKey, SpendingKey, PARAMS};
+use rand::Rng;
+use smallvec::SmallVec;
+use std::collections::HashMap;
+use std::convert::TryInto;
 
 #[derive(Debug, PartialEq, Eq, Serialize, Deserialize, Clone)]
 #[serde(rename_all = "camelCase")]
@@ -113,8 +113,7 @@ impl KeyCiphertext {
         password: &[u8],
         iters: u32,
         rng: &mut R,
-    ) -> Result<Self>
-    {
+    ) -> Result<Self> {
         assert!(iters != 0);
         let salt: [u8; 32] = rng.gen();
         let iv: [u8; 16] = rng.gen();
@@ -125,7 +124,8 @@ impl KeyCiphertext {
 
         let mut ciphertext: SmallVec<[u8; 32]> = SmallVec::from_vec(vec![0; xsk_bytes.len()]);
 
-        crypto::aes::encrypt_128_ctr(&derived_left, &iv, &xsk_bytes[..], &mut *ciphertext).map_err(crypto::Error::from)?;
+        crypto::aes::encrypt_128_ctr(&derived_left, &iv, &xsk_bytes[..], &mut *ciphertext)
+            .map_err(crypto::Error::from)?;
 
         let mac = crypto::derive_mac(&derived_right, &*ciphertext).keccak256();
 
@@ -139,11 +139,12 @@ impl KeyCiphertext {
     }
 
     pub fn decrypt(&self, password: &[u8]) -> Result<ExtendedSpendingKey> {
-        let (derived_left, derived_right) = crypto::derive_key_iterations(password, &self.salt.0[..], self.iters);
+        let (derived_left, derived_right) =
+            crypto::derive_key_iterations(password, &self.salt.0[..], self.iters);
         let mac = crypto::derive_mac(&derived_right, &self.ciphertext.0).keccak256();
 
         if !crypto::is_equal(&mac, &self.mac.0) {
-            return Err(KeystoreError::InvalidPassword)
+            return Err(KeystoreError::InvalidPassword);
         }
 
         let mut plain: SmallVec<[u8; 32]> = SmallVec::from_vec(vec![0; self.ciphertext.0.len()]);
@@ -178,9 +179,11 @@ impl IndexFile {
         new_index: u32,
         new_keyfile_name: &str,
         new_account_name: &str,
-    ) -> Self
-    {
-        self.map_account_keyfile.extend(Some((new_account_name.to_string(), (new_keyfile_name.to_string(), new_index))));
+    ) -> Self {
+        self.map_account_keyfile.extend(Some((
+            new_account_name.to_string(),
+            (new_keyfile_name.to_string(), new_index),
+        )));
 
         IndexFile {
             default_index: new_index,
@@ -192,7 +195,10 @@ impl IndexFile {
 
     pub fn next_index(mut self, keyfile_name: &str, account_name: &str) -> Self {
         let next_index = self.max_index + 1;
-        self.map_account_keyfile.extend(Some((account_name.to_string(), (keyfile_name.to_string(), next_index))));
+        self.map_account_keyfile.extend(Some((
+            account_name.to_string(),
+            (keyfile_name.to_string(), next_index),
+        )));
 
         IndexFile {
             default_index: next_index,
@@ -206,7 +212,7 @@ impl IndexFile {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use rand::{XorShiftRng, SeedableRng};
+    use rand::{SeedableRng, XorShiftRng};
 
     #[test]
     fn test_plain_with_correct_password() {

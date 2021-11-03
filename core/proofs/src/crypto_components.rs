@@ -1,34 +1,19 @@
+use crate::{constants::DECOY_SIZE, elgamal::Ciphertext, EncryptionKey, SpendingKey};
 use bellman::{
-        groth16::{
-            Parameters,
-            PreparedVerifyingKey,
-            Proof,
-        },
-        SynthesisError,
-};
-use rand::Rng;
-use scrypto::{
-    jubjub::{
-        JubjubEngine,
-        FixedGenerators,
-        edwards,
-        PrimeOrder,
-        Unknown,
-    },
-    redjubjub::PublicKey,
+    groth16::{Parameters, PreparedVerifyingKey, Proof},
+    SynthesisError,
 };
 use polkadot_rs::Api;
-use crate::{
-    elgamal::Ciphertext,
-    EncryptionKey,
-    SpendingKey,
-    constants::DECOY_SIZE,
+use rand::Rng;
+use scrypto::{
+    jubjub::{edwards, FixedGenerators, JubjubEngine, PrimeOrder, Unknown},
+    redjubjub::PublicKey,
 };
 use std::{
-    io::{self, BufReader, Read},
-    path::Path,
     fs::File,
+    io::{self, BufReader, Read},
     marker::PhantomData,
+    path::Path,
 };
 
 #[derive(Clone, Debug)]
@@ -36,10 +21,10 @@ pub struct Confidential;
 #[derive(Clone, Debug)]
 pub struct Anonymous;
 
-pub trait PrivacyConfing { }
+pub trait PrivacyConfing {}
 
-impl PrivacyConfing for Confidential { }
-impl PrivacyConfing for Anonymous { }
+impl PrivacyConfing for Confidential {}
+impl PrivacyConfing for Anonymous {}
 
 #[derive(Clone, Debug)]
 pub struct MultiCiphertexts<E: JubjubEngine, PC: PrivacyConfing> {
@@ -92,44 +77,19 @@ impl<E: JubjubEngine> CiphertextTrait<E> for MultiCiphertexts<E, Confidential> {
     ) -> Self {
         let p_g = FixedGenerators::NoteCommitmentRandomness;
 
-        let cipher_sender = Ciphertext::encrypt(
-            amount,
-            randomness,
-            enc_key_sender,
-            p_g,
-            params
-        );
+        let cipher_sender = Ciphertext::encrypt(amount, randomness, enc_key_sender, p_g, params);
 
-        let cipher_recipient = Ciphertext::encrypt(
-            amount,
-            randomness,
-            &enc_keys.get_recipient(),
-            p_g,
-            params
-        );
+        let cipher_recipient =
+            Ciphertext::encrypt(amount, randomness, &enc_keys.get_recipient(), p_g, params);
 
-        let cipher_fee = Ciphertext::encrypt(
-            fee,
-            randomness,
-            enc_key_sender,
-            p_g,
-            params
-        );
+        let cipher_fee = Ciphertext::encrypt(fee, randomness, enc_key_sender, p_g, params);
 
-        MultiCiphertexts::<E, Self::PC>::new(
-            cipher_sender,
-            cipher_recipient,
-            cipher_fee,
-        )
+        MultiCiphertexts::<E, Self::PC>::new(cipher_sender, cipher_recipient, cipher_fee)
     }
 }
 
 impl<E: JubjubEngine> MultiCiphertexts<E, Confidential> {
-    fn new(
-        sender: Ciphertext<E>,
-        recipient: Ciphertext<E>,
-        fee: Ciphertext<E>,
-    ) -> Self {
+    fn new(sender: Ciphertext<E>, recipient: Ciphertext<E>, fee: Ciphertext<E>) -> Self {
         MultiCiphertexts {
             sender,
             recipient,
@@ -145,11 +105,7 @@ impl<E: JubjubEngine> MultiCiphertexts<E, Confidential> {
 }
 
 impl<E: JubjubEngine> MultiCiphertexts<E, Anonymous> {
-    fn new(
-        sender: Ciphertext<E>,
-        recipient: Ciphertext<E>,
-        decoys: Vec<Ciphertext<E>>,
-    ) -> Self {
+    fn new(sender: Ciphertext<E>, recipient: Ciphertext<E>, decoys: Vec<Ciphertext<E>>) -> Self {
         MultiCiphertexts {
             sender,
             recipient,
@@ -160,8 +116,12 @@ impl<E: JubjubEngine> MultiCiphertexts<E, Anonymous> {
     }
 
     pub fn get_decoys_left(&self) -> Vec<edwards::Point<E, PrimeOrder>> {
-        self.decoys.as_ref().expect("should have decoys enckeys").iter()
-            .map(|c| c.left.clone()).collect::<Vec<edwards::Point<E, PrimeOrder>>>()
+        self.decoys
+            .as_ref()
+            .expect("should have decoys enckeys")
+            .iter()
+            .map(|c| c.left.clone())
+            .collect::<Vec<edwards::Point<E, PrimeOrder>>>()
     }
 }
 
@@ -178,41 +138,21 @@ impl<E: JubjubEngine> CiphertextTrait<E> for MultiCiphertexts<E, Anonymous> {
     ) -> Self {
         let p_g = FixedGenerators::NoteCommitmentRandomness;
 
-        let cipher_sender = Ciphertext::neg_encrypt(
-            amount,
-            randomness,
-            enc_key_sender,
-            p_g,
-            params
-        );
+        let cipher_sender =
+            Ciphertext::neg_encrypt(amount, randomness, enc_key_sender, p_g, params);
 
-        let cipher_recipient = Ciphertext::encrypt(
-            amount,
-            randomness,
-            &enc_keys.get_recipient(),
-            p_g,
-            params
-        );
+        let cipher_recipient =
+            Ciphertext::encrypt(amount, randomness, &enc_keys.get_recipient(), p_g, params);
 
         let mut acc_d = vec![];
         for d in enc_keys.get_decoys() {
-            let cipher_decoys = Ciphertext::encrypt(
-                0,
-                randomness,
-                &d,
-                p_g,
-                params
-            );
+            let cipher_decoys = Ciphertext::encrypt(0, randomness, &d, p_g, params);
             acc_d.push(cipher_decoys);
         }
 
         assert_eq!(acc_d.len(), DECOY_SIZE);
 
-        MultiCiphertexts::<E, Self::PC>::new(
-            cipher_sender,
-            cipher_recipient,
-            acc_d,
-        )
+        MultiCiphertexts::<E, Self::PC>::new(cipher_sender, cipher_recipient, acc_d)
     }
 }
 
@@ -220,7 +160,7 @@ impl<E: JubjubEngine> CiphertextTrait<E> for MultiCiphertexts<E, Anonymous> {
 pub struct MultiEncKeys<E: JubjubEngine, PC> {
     recipient: EncryptionKey<E>,
     decoys: Option<Vec<EncryptionKey<E>>>,
-    _marker: PhantomData<PC>
+    _marker: PhantomData<PC>,
 }
 
 impl<E: JubjubEngine, PC> MultiEncKeys<E, PC> {
@@ -240,10 +180,7 @@ impl<E: JubjubEngine> MultiEncKeys<E, Confidential> {
 }
 
 impl<E: JubjubEngine> MultiEncKeys<E, Anonymous> {
-    pub fn new(
-        recipient: EncryptionKey<E>,
-        decoys: Vec<EncryptionKey<E>>,
-    ) -> Self {
+    pub fn new(recipient: EncryptionKey<E>, decoys: Vec<EncryptionKey<E>>) -> Self {
         MultiEncKeys {
             recipient,
             decoys: Some(decoys),
@@ -330,10 +267,10 @@ impl<E: JubjubEngine, PC: PrivacyConfing> KeyContext<E, PC> {
 
 pub(crate) struct Unchecked;
 pub(crate) struct Checked;
-pub(crate) trait ProofChecking { }
+pub(crate) trait ProofChecking {}
 
-impl ProofChecking for Unchecked { }
-impl ProofChecking for Checked { }
+impl ProofChecking for Unchecked {}
+impl ProofChecking for Checked {}
 
 #[derive(Clone)]
 pub(crate) struct ProofContext<E: JubjubEngine, IsChecked, PC: PrivacyConfing> {

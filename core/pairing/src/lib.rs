@@ -1,5 +1,4 @@
 #![cfg_attr(not(feature = "std"), no_std)]
-
 // `clippy` is a code linting tool for improving code quality by catching
 // common mistakes or strange code patterns. If the `clippy` feature is
 // provided, it is enabled and all compiler warnings are prohibited.
@@ -24,15 +23,15 @@ extern crate alloc;
 
 #[cfg(not(feature = "std"))]
 mod std {
-	pub use core::*;
-	pub use alloc::vec;
-	pub use alloc::string;
-	pub use alloc::boxed;
-	pub use alloc::borrow;
+    pub use alloc::borrow;
+    pub use alloc::boxed;
+    pub use alloc::string;
+    pub use alloc::vec;
+    pub use core::*;
 }
 
-use std::string::String;
 use byteorder::ByteOrder;
+use std::string::String;
 
 pub mod io;
 
@@ -52,12 +51,7 @@ pub trait Engine: Sized + 'static + Clone {
     type Fr: PrimeField + SqrtField + ::std::fmt::Debug;
 
     /// The projective representation of an element in G1.
-    type G1: CurveProjective<
-            Engine = Self,
-            Base = Self::Fq,
-            Scalar = Self::Fr,
-            Affine = Self::G1Affine,
-        >
+    type G1: CurveProjective<Engine = Self, Base = Self::Fq, Scalar = Self::Fr, Affine = Self::G1Affine>
         + From<Self::G1Affine>;
 
     /// The affine representation of an element in G1.
@@ -68,16 +62,10 @@ pub trait Engine: Sized + 'static + Clone {
             Projective = Self::G1,
             Pair = Self::G2Affine,
             PairingResult = Self::Fqk,
-        >
-        + From<Self::G1>;
+        > + From<Self::G1>;
 
     /// The projective representation of an element in G2.
-    type G2: CurveProjective<
-            Engine = Self,
-            Base = Self::Fqe,
-            Scalar = Self::Fr,
-            Affine = Self::G2Affine,
-        >
+    type G2: CurveProjective<Engine = Self, Base = Self::Fqe, Scalar = Self::Fr, Affine = Self::G2Affine>
         + From<Self::G2Affine>;
 
     /// The affine representation of an element in G2.
@@ -88,8 +76,7 @@ pub trait Engine: Sized + 'static + Clone {
             Projective = Self::G2,
             Pair = Self::G1Affine,
             PairingResult = Self::Fqk,
-        >
-        + From<Self::G2>;
+        > + From<Self::G2>;
 
     /// The base field that hosts G1.
     type Fq: PrimeField + SqrtField;
@@ -121,7 +108,8 @@ pub trait Engine: Sized + 'static + Clone {
     {
         Self::final_exponentiation(&Self::miller_loop(
             [(&(p.into().prepare()), &(q.into().prepare()))].iter(),
-        )).unwrap()
+        ))
+        .unwrap()
     }
 }
 
@@ -133,15 +121,7 @@ pub trait RW: Sized {
 /// Projective representation of an elliptic curve point guaranteed to be
 /// in the correct prime order subgroup.
 pub trait CurveProjective:
-    PartialEq
-    + Eq
-    + Sized
-    + Copy
-    + Clone
-    + Send
-    + Sync
-    + rand::Rand
-    + 'static
+    PartialEq + Eq + Sized + Copy + Clone + Send + Sync + rand::Rand + 'static
 {
     type Engine: Engine<Fr = Self::Scalar>;
     type Scalar: PrimeField + SqrtField + ::std::fmt::Debug;
@@ -201,9 +181,7 @@ pub trait CurveProjective:
 
 /// Affine representation of an elliptic curve point guaranteed to be
 /// in the correct prime order subgroup.
-pub trait CurveAffine:
-    Copy + Clone + Sized + Send + Sync + PartialEq + Eq + 'static
-{
+pub trait CurveAffine: Copy + Clone + Sized + Send + Sync + PartialEq + Eq + 'static {
     type Engine: Engine<Fr = Self::Scalar>;
     type Scalar: PrimeField + SqrtField + ::std::fmt::Debug;
     type Base: SqrtField;
@@ -283,9 +261,7 @@ pub trait EncodedPoint:
 }
 
 /// This trait represents an element of a field.
-pub trait Field:
-    Sized + Eq + Copy + Clone + Send + Sync + 'static + rand::Rand
-{
+pub trait Field: Sized + Eq + Copy + Clone + Send + Sync + 'static + rand::Rand {
     /// Returns the zero element of the field, the additive identity.
     fn zero() -> Self;
 
@@ -434,23 +410,23 @@ pub trait PrimeFieldRepr:
     fn write_le<W: io::Write>(&self, writer: &mut W) -> io::Result<()> {
         use byteorder::LittleEndian;
 
- 		let mut buf = [0u8; 8];
-		for digit in self.as_ref().iter() {
-			LittleEndian::write_u64(&mut buf, *digit);
-			writer.write(&buf)?;
-		}
+        let mut buf = [0u8; 8];
+        for digit in self.as_ref().iter() {
+            LittleEndian::write_u64(&mut buf, *digit);
+            writer.write(&buf)?;
+        }
 
-         Ok(())
+        Ok(())
     }
 
-        /// Reads a little endian integer into this representation.
+    /// Reads a little endian integer into this representation.
     fn read_le<R: io::Read>(&mut self, reader: &mut R) -> io::Result<()> {
         use byteorder::LittleEndian;
 
- 		let mut buf = [0u8; 8];
+        let mut buf = [0u8; 8];
         for digit in self.as_mut().iter_mut() {
-			reader.read(&mut buf)?;
-			*digit = LittleEndian::read_u64(&buf);
+            reader.read(&mut buf)?;
+            *digit = LittleEndian::read_u64(&buf);
         }
 
         Ok(())

@@ -1,9 +1,9 @@
-use merlin::Transcript;
-use jubjub::curve::{JubjubEngine, edwards::Point, PrimeOrder};
-use jubjub::redjubjub::h_star;
-use pairing::io;
 use crate::mr_pubkey::MRPubkey;
 use crate::transcript::TranscriptProtocol;
+use jubjub::curve::{edwards::Point, JubjubEngine, PrimeOrder};
+use jubjub::redjubjub::h_star;
+use merlin::Transcript;
+use pairing::io;
 
 const COMMITMENT_SIZE: usize = 32;
 
@@ -31,9 +31,8 @@ impl Commitment {
 
 pub(super) fn sum_commitment<E: JubjubEngine>(
     reveals: &[Point<E, PrimeOrder>],
-    params: &E::Params
-) -> Point<E, PrimeOrder>
-{
+    params: &E::Params,
+) -> Point<E, PrimeOrder> {
     let mut acc = Point::zero();
     for r in reveals {
         acc = acc.add(r, params);
@@ -42,7 +41,7 @@ pub(super) fn sum_commitment<E: JubjubEngine>(
 }
 
 #[derive(Clone)]
-pub struct SignerKeys<E: JubjubEngine>{
+pub struct SignerKeys<E: JubjubEngine> {
     pub_keys: Vec<Point<E, PrimeOrder>>,
     aggregated_pub_key: Point<E, PrimeOrder>,
 }
@@ -57,7 +56,7 @@ impl<E: JubjubEngine> SignerKeys<E> {
             pk.write(&mut &mut tmp[..])?;
             L.append(&mut tmp[..].to_vec());
         }
-        assert_eq!(L.len(), 32*pub_keys.len());
+        assert_eq!(L.len(), 32 * pub_keys.len());
 
         let mut aggregated_pub_key = Point::<E, PrimeOrder>::zero();
         for pk in pub_keys.iter() {
@@ -100,7 +99,7 @@ impl<E: JubjubEngine> SignerKeys<E> {
             pk.write(&mut &mut tmp[..])?;
             L.append(&mut tmp[..].to_vec());
         }
-        assert_eq!(L.len(), 32*self.pub_keys.len());
+        assert_eq!(L.len(), 32 * self.pub_keys.len());
 
         Ok(L)
     }

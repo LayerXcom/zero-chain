@@ -1,65 +1,34 @@
-use bellman::{
-        groth16::{
-            create_random_proof,
-            verify_proof,
-            Parameters,
-            PreparedVerifyingKey,
-            Proof,
-        },
-        SynthesisError,
-};
-use pairing::Field;
-use rand::{Rand, Rng};
-use scrypto::{
-    jubjub::{
-        JubjubEngine,
-        FixedGenerators,
-        edwards,
-        PrimeOrder,
-    },
-    redjubjub::PublicKey,
-};
-use polkadot_rs::Api;
-use zerochain_runtime::{
-    UncheckedExtrinsic,
-    EncryptedBalancesCall,
-    EncryptedAssetsCall,
-    AnonymousBalancesCall,
-    Call,
-};
-use zprimitives::{
-    EncKey as zEncKey,
-    Ciphertext as zCiphertext,
-    LeftCiphertext as zLeftCiphertext,
-    RightCiphertext as zRightCiphertext,
-    Nonce as zNonce,
-    Proof as zProof
+use crate::crypto_components::{
+    convert_to_checked, Calls, Checked, CiphertextTrait, Confidential, MultiCiphertexts,
+    MultiEncKeys, ProofContext, Submitter, Unchecked,
 };
 use crate::{
-    circuit::ConfidentialTransfer,
-    elgamal::Ciphertext,
-    EncryptionKey,
-    ProofGenerationKey,
-    SpendingKey,
-    KeyContext,
-    ProofBuilder,
-    constants::*,
+    circuit::ConfidentialTransfer, constants::*, elgamal::Ciphertext, EncryptionKey, KeyContext,
+    ProofBuilder, ProofGenerationKey, SpendingKey,
 };
-use crate::crypto_components::{
-    MultiEncKeys,
-    MultiCiphertexts,
-    Confidential,
-    CiphertextTrait,
-    Submitter,
-    Calls,
-    Unchecked,Checked,
-    ProofContext, convert_to_checked,
+use bellman::{
+    groth16::{create_random_proof, verify_proof, Parameters, PreparedVerifyingKey, Proof},
+    SynthesisError,
+};
+use pairing::Field;
+use polkadot_rs::Api;
+use rand::{Rand, Rng};
+use scrypto::{
+    jubjub::{edwards, FixedGenerators, JubjubEngine, PrimeOrder},
+    redjubjub::PublicKey,
 };
 use std::{
-    io::{self, Write, BufWriter},
-    path::Path,
     fs::File,
+    io::{self, BufWriter, Write},
     marker::PhantomData,
+    path::Path,
+};
+use zerochain_runtime::{
+    AnonymousBalancesCall, Call, EncryptedAssetsCall, EncryptedBalancesCall, UncheckedExtrinsic,
+};
+use zprimitives::{
+    Ciphertext as zCiphertext, EncKey as zEncKey, LeftCiphertext as zLeftCiphertext,
+    Nonce as zNonce, Proof as zProof, RightCiphertext as zRightCiphertext,
 };
 
 impl<E: JubjubEngine> ProofBuilder<E, Confidential> for KeyContext<E, Confidential> {
@@ -92,7 +61,7 @@ impl<E: JubjubEngine> ProofBuilder<E, Confidential> for KeyContext<E, Confidenti
         Ok(())
     }
 
-    fn read_from_path<P: AsRef<Path>>(pk_path: P, vk_path: P) -> io::Result<Self>{
+    fn read_from_path<P: AsRef<Path>>(pk_path: P, vk_path: P) -> io::Result<Self> {
         let pk_buf = Self::inner_read(pk_path)?;
         let vk_buf = Self::inner_read(vk_path)?;
 
@@ -123,11 +92,10 @@ impl<E: JubjubEngine> ProofBuilder<E, Confidential> for KeyContext<E, Confidenti
         let dec_key = pgk.into_decryption_key()?;
         let enc_key_sender = pgk.into_encryption_key(params)?;
 
-        let rvk = PublicKey(pgk.0.clone().into())
-            .randomize(
-                alpha,
-                FixedGenerators::NoteCommitmentRandomness,
-                params,
+        let rvk = PublicKey(pgk.0.clone().into()).randomize(
+            alpha,
+            FixedGenerators::NoteCommitmentRandomness,
+            params,
         );
         let nonce = g_epoch.mul(dec_key.0, params);
 
@@ -153,7 +121,7 @@ impl<E: JubjubEngine> ProofBuilder<E, Confidential> for KeyContext<E, Confidenti
             &enc_key_sender,
             &enc_keys,
             &randomness,
-            params
+            params,
         );
 
         ProofContext::new(
@@ -164,7 +132,7 @@ impl<E: JubjubEngine> ProofBuilder<E, Confidential> for KeyContext<E, Confidenti
             multi_ciphertexts,
             encrypted_balance[0].clone(), // TODO
             g_epoch,
-            nonce
+            nonce,
         )
         .check_proof(&self.prepared_vk)?
         .gen_xt(&spending_key, alpha)
@@ -207,7 +175,7 @@ impl<E: JubjubEngine> ProofContext<E, Unchecked, Confidential> {
 
     fn check_proof(
         self,
-        prepared_vk: &PreparedVerifyingKey<E>
+        prepared_vk: &PreparedVerifyingKey<E>,
     ) -> Result<ProofContext<E, Checked, Confidential>, SynthesisError> {
         let mut public_input = [E::Fr::zero(); 22];
 
@@ -271,86 +239,68 @@ impl<E: JubjubEngine> ProofContext<E, Unchecked, Confidential> {
         match verify_proof(prepared_vk, &self.proof, &public_input[..]) {
             Ok(e) if !e => return Err(SynthesisError::Unsatisfiable),
             Err(e) => return Err(e),
-            _ => { },
+            _ => {}
         }
 
-        Ok(convert_to_checked::<E, Unchecked, Checked, Confidential>(self))
+        Ok(convert_to_checked::<E, Unchecked, Checked, Confidential>(
+            self,
+        ))
     }
 }
 
 impl<E: JubjubEngine> ProofContext<E, Checked, Confidential> {
     fn gen_xt(&self, spending_key: &SpendingKey<E>, alpha: E::Fs) -> io::Result<ConfidentialXt> {
         // Generate the re-randomized sign key
-		let mut rsk_bytes = [0u8; 32];
-		spending_key
-            .into_rsk(alpha)
-            .write(&mut rsk_bytes[..])?;
+        let mut rsk_bytes = [0u8; 32];
+        spending_key.into_rsk(alpha).write(&mut rsk_bytes[..])?;
 
-		let mut rvk_bytes = [0u8; 32];
-		self
-			.rvk
-			.write(&mut rvk_bytes[..])?;
+        let mut rvk_bytes = [0u8; 32];
+        self.rvk.write(&mut rvk_bytes[..])?;
 
-		let mut proof_bytes = [0u8; 192];
-		self
-			.proof
-			.write(&mut proof_bytes[..])?;
+        let mut proof_bytes = [0u8; 192];
+        self.proof.write(&mut proof_bytes[..])?;
 
-		let mut enc_key_sender = [0u8; 32];
-		self
-			.enc_key_sender
-			.write(&mut enc_key_sender[..])?;
+        let mut enc_key_sender = [0u8; 32];
+        self.enc_key_sender.write(&mut enc_key_sender[..])?;
 
-		let mut enc_key_recipient = [0u8; 32];
-		self
-			.enc_key_recipient()
-			.write(&mut enc_key_recipient[..])?;
+        let mut enc_key_recipient = [0u8; 32];
+        self.enc_key_recipient().write(&mut enc_key_recipient[..])?;
 
         let mut left_amount_sender = [0u8; 32];
-		self
-			.left_amount_sender()
-			.write(&mut left_amount_sender[..])?;
+        self.left_amount_sender()
+            .write(&mut left_amount_sender[..])?;
 
-		let mut left_amount_recipient = [0u8; 32];
-		self
-            .left_amount_recipient()
-			.write(&mut left_amount_recipient[..])?;
+        let mut left_amount_recipient = [0u8; 32];
+        self.left_amount_recipient()
+            .write(&mut left_amount_recipient[..])?;
 
-		let mut left_fee = [0u8; 32];
-		self
-			.left_fee()
-			.write(&mut left_fee[..])?;
+        let mut left_fee = [0u8; 32];
+        self.left_fee().write(&mut left_fee[..])?;
 
         let mut right_randomness = [0u8; 32];
-        self
-            .right_randomness()
-            .write(&mut right_randomness[..])?;
+        self.right_randomness().write(&mut right_randomness[..])?;
 
-		let mut enc_balance = [0u8; 64];
-		self
-            .enc_balances[0]
-			.write(&mut enc_balance[..])?;
+        let mut enc_balance = [0u8; 64];
+        self.enc_balances[0].write(&mut enc_balance[..])?;
 
-		let mut nonce = [0u8; 32];
-		self
-			.nonce
-			.write(&mut nonce[..])?;
+        let mut nonce = [0u8; 32];
+        self.nonce.write(&mut nonce[..])?;
 
-		let tx = ConfidentialXt {
-			proof: proof_bytes,
-			rvk: rvk_bytes,
-			enc_key_sender,
-			enc_key_recipient,
-			left_amount_sender,
-			left_amount_recipient,
+        let tx = ConfidentialXt {
+            proof: proof_bytes,
+            rvk: rvk_bytes,
+            enc_key_sender,
+            enc_key_recipient,
+            left_amount_sender,
+            left_amount_recipient,
             left_fee,
             right_randomness,
-			rsk: rsk_bytes,
-			enc_balance,
-			nonce,
-		};
+            rsk: rsk_bytes,
+            enc_balance,
+            nonce,
+        };
 
-		Ok(tx)
+        Ok(tx)
     }
 }
 
@@ -361,52 +311,62 @@ pub struct ConfidentialXt {
     pub enc_key_recipient: [u8; POINT_SIZE],
     pub left_amount_sender: [u8; POINT_SIZE],
     pub left_amount_recipient: [u8; POINT_SIZE],
-	pub left_fee: [u8; POINT_SIZE],
+    pub left_fee: [u8; POINT_SIZE],
     pub right_randomness: [u8; POINT_SIZE],
-	pub rsk: [u8; POINT_SIZE],
-	pub rvk: [u8; POINT_SIZE],
-	pub enc_balance: [u8; CIPHERTEXT_SIZE],
-	pub nonce: [u8; POINT_SIZE],
+    pub rsk: [u8; POINT_SIZE],
+    pub rvk: [u8; POINT_SIZE],
+    pub enc_balance: [u8; CIPHERTEXT_SIZE],
+    pub nonce: [u8; POINT_SIZE],
 }
 
 impl Submitter for ConfidentialXt {
     fn submit<R: Rng>(&self, calls: Calls, api: &Api, rng: &mut R) {
+        use parity_codec::{Compact, Encode};
+        use primitives::blake2_256;
+        use runtime_primitives::generic::Era;
+        use std::convert::TryFrom;
         use zjubjub::{
             curve::{fs::Fs as zFs, FixedGenerators as zFixedGenerators},
             redjubjub,
         };
         use zpairing::{
-            bls12_381::Bls12 as zBls12,
-            PrimeField as zPrimeField,
-            PrimeFieldRepr as zPrimeFieldRepr
+            bls12_381::Bls12 as zBls12, PrimeField as zPrimeField,
+            PrimeFieldRepr as zPrimeFieldRepr,
         };
-        use parity_codec::{Compact, Encode};
-        use primitives::blake2_256;
-        use runtime_primitives::generic::Era;
-        use zprimitives::{PARAMS as ZPARAMS, SigVerificationKey, RedjubjubSignature};
-        use std::convert::TryFrom;
+        use zprimitives::{RedjubjubSignature, SigVerificationKey, PARAMS as ZPARAMS};
 
         let p_g = zFixedGenerators::Diversifier; // 1
 
         let mut rsk_repr = zFs::default().into_repr();
-        rsk_repr.read_le(&mut &self.rsk[..])
+        rsk_repr
+            .read_le(&mut &self.rsk[..])
             .expect("should be casted to Fs's repr type.");
-        let rsk = zFs::from_repr(rsk_repr)
-            .expect("should be casted to Fs type from repr type.");
+        let rsk = zFs::from_repr(rsk_repr).expect("should be casted to Fs type from repr type.");
 
         let sig_sk = redjubjub::PrivateKey::<zBls12>(rsk);
         let sig_vk = SigVerificationKey::from_slice(&self.rvk[..]);
 
         let era = Era::Immortal;
         let index = api.get_nonce(&sig_vk).expect("Nonce must be got.");
-        let checkpoint = api.get_genesis_blockhash()
+        let checkpoint = api
+            .get_genesis_blockhash()
             .expect("should be fetched the genesis block hash from zerochain node.");
 
         let raw_payload = match calls {
             Calls::BalanceTransfer => (Compact(index), self.call_transfer(), era, checkpoint),
             Calls::AssetIssue => (Compact(index), self.call_asset_issue(), era, checkpoint),
-            Calls::AssetTransfer(asset_id) => (Compact(index), self.call_asset_transfer(asset_id), era, checkpoint),
-            Calls::AssetBurn(asset_id) => (Compact(index), self.call_asset_burn(asset_id), era, checkpoint),
+            Calls::AssetTransfer(asset_id) => (
+                Compact(index),
+                self.call_asset_transfer(asset_id),
+                era,
+                checkpoint,
+            ),
+            Calls::AssetBurn(asset_id) => (
+                Compact(index),
+                self.call_asset_burn(asset_id),
+                era,
+                checkpoint,
+            ),
             Calls::AnonymousIssue => (Compact(index), self.call_anonymous_issue(), era, checkpoint),
             _ => unreachable!(),
         };
@@ -422,10 +382,12 @@ impl Submitter for ConfidentialXt {
             sig
         });
 
-        let sig_repr = RedjubjubSignature::try_from(sig)
-            .expect("shoukd be casted from RedjubjubSignature.");
-        let uxt = UncheckedExtrinsic::new_signed(index, raw_payload.1, sig_vk.into(), sig_repr, era);
-        let _tx_hash = api.submit_extrinsic(&uxt)
+        let sig_repr =
+            RedjubjubSignature::try_from(sig).expect("shoukd be casted from RedjubjubSignature.");
+        let uxt =
+            UncheckedExtrinsic::new_signed(index, raw_payload.1, sig_vk.into(), sig_repr, era);
+        let _tx_hash = api
+            .submit_extrinsic(&uxt)
             .expect("Faild to submit a extrinsic to zerochain node.");
     }
 }
@@ -440,7 +402,7 @@ impl ConfidentialXt {
             zLeftCiphertext::from_slice(&self.left_amount_recipient[..]),
             zLeftCiphertext::from_slice(&self.left_fee[..]),
             zRightCiphertext::from_slice(&self.right_randomness[..]),
-            zNonce::from_slice(&self.nonce[..])
+            zNonce::from_slice(&self.nonce[..]),
         ))
     }
 
@@ -452,7 +414,7 @@ impl ConfidentialXt {
             zLeftCiphertext::from_slice(&self.left_fee[..]),
             zCiphertext::from_slice(&self.enc_balance[..]),
             zRightCiphertext::from_slice(&self.right_randomness[..]),
-            zNonce::from_slice(&self.nonce[..])
+            zNonce::from_slice(&self.nonce[..]),
         ))
     }
 
@@ -466,7 +428,7 @@ impl ConfidentialXt {
             zLeftCiphertext::from_slice(&self.left_amount_recipient[..]),
             zLeftCiphertext::from_slice(&self.left_fee[..]),
             zRightCiphertext::from_slice(&self.right_randomness[..]),
-            zNonce::from_slice(&self.nonce[..])
+            zNonce::from_slice(&self.nonce[..]),
         ))
     }
 
@@ -479,7 +441,7 @@ impl ConfidentialXt {
             zLeftCiphertext::from_slice(&self.left_fee[..]),
             zCiphertext::from_slice(&self.enc_balance[..]),
             zRightCiphertext::from_slice(&self.right_randomness[..]),
-            zNonce::from_slice(&self.nonce[..])
+            zNonce::from_slice(&self.nonce[..]),
         ))
     }
 
@@ -491,7 +453,7 @@ impl ConfidentialXt {
             zLeftCiphertext::from_slice(&self.left_fee[..]),
             zCiphertext::from_slice(&self.enc_balance[..]),
             zRightCiphertext::from_slice(&self.right_randomness[..]),
-            zNonce::from_slice(&self.nonce[..])
+            zNonce::from_slice(&self.nonce[..]),
         ))
     }
 }
@@ -499,13 +461,13 @@ impl ConfidentialXt {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use rand::{SeedableRng, XorShiftRng, Rng};
     use crate::EncryptionKey;
-    use scrypto::jubjub::JubjubBls12;
     use pairing::bls12_381::Bls12;
-    use std::path::Path;
+    use rand::{Rng, SeedableRng, XorShiftRng};
+    use scrypto::jubjub::JubjubBls12;
     use std::fs::File;
     use std::io::{BufReader, Read};
+    use std::path::Path;
 
     #[test]
     fn test_gen_proof() {
@@ -526,18 +488,34 @@ mod tests {
 
         let randomness = rng.gen();
         let enc_key = EncryptionKey::from_seed(&sender_seed[..], params).unwrap();
-        let enc_balance = vec![Ciphertext::encrypt(balance, &randomness, &enc_key, p_g, params)];
+        let enc_balance = vec![Ciphertext::encrypt(
+            balance,
+            &randomness,
+            &enc_key,
+            p_g,
+            params,
+        )];
 
         let g_epoch = edwards::Point::rand(rng, params).mul_by_cofactor(params);
 
-        let proofs = KeyContext::read_from_path("../../zface/params/test_conf_pk.dat", "../../zface/params/test_conf_vk.dat")
-            .unwrap()
-            .gen_proof(
-                amount, fee, remaining_balance, 0, 0, &spending_key,
-                MultiEncKeys::<Bls12, Confidential>::new(enc_key_recipient),
-                &enc_balance, g_epoch,
-                rng, params
-            );
+        let proofs = KeyContext::read_from_path(
+            "../../zface/params/test_conf_pk.dat",
+            "../../zface/params/test_conf_vk.dat",
+        )
+        .unwrap()
+        .gen_proof(
+            amount,
+            fee,
+            remaining_balance,
+            0,
+            0,
+            &spending_key,
+            MultiEncKeys::<Bls12, Confidential>::new(enc_key_recipient),
+            &enc_balance,
+            g_epoch,
+            rng,
+            params,
+        );
 
         assert!(proofs.is_ok());
     }
@@ -556,13 +534,11 @@ mod tests {
 
     #[test]
     fn nostd_to_std_read_write() {
-        use std::path::Path;
+        use bellman_verifier::PreparedVerifyingKey as zPreparedVerifyingKey;
         use std::fs::File;
         use std::io::{BufReader, Read};
-        use bellman_verifier::PreparedVerifyingKey as zPreparedVerifyingKey;
-        use zpairing::{
-            bls12_381::Bls12 as zBls12,
-        };
+        use std::path::Path;
+        use zpairing::bls12_381::Bls12 as zBls12;
 
         let vk_path = Path::new("../../core/bellman-verifier/src/tests/verification.params");
         let vk_file = File::open(&vk_path).unwrap();
@@ -588,13 +564,11 @@ mod tests {
 
     #[test]
     fn std_to_nostd_read_write() {
-        use std::path::Path;
+        use bellman_verifier::PreparedVerifyingKey as zPreparedVerifyingKey;
         use std::fs::File;
         use std::io::{BufReader, Read};
-        use bellman_verifier::PreparedVerifyingKey as zPreparedVerifyingKey;
-        use zpairing::{
-            bls12_381::Bls12 as zBls12,
-        };
+        use std::path::Path;
+        use zpairing::bls12_381::Bls12 as zBls12;
 
         let vk_path = Path::new("../../core/bellman-verifier/src/tests/verification.params");
         let vk_file = File::open(&vk_path).unwrap();

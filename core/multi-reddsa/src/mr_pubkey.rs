@@ -1,5 +1,5 @@
-use jubjub::curve::{JubjubEngine, edwards::Point, FixedGenerators, JubjubParams, Unknown};
-use jubjub::redjubjub::{Signature, h_star, read_scalar};
+use jubjub::curve::{edwards::Point, FixedGenerators, JubjubEngine, JubjubParams, Unknown};
+use jubjub::redjubjub::{h_star, read_scalar, Signature};
 
 #[derive(Clone)]
 pub struct MRPubkey<E: JubjubEngine>(Point<E, Unknown>);
@@ -17,7 +17,8 @@ impl<E: JubjubEngine> MRPubkey<E> {
         params: &E::Params,
     ) -> bool {
         let mut buf = [0u8; 64];
-        self.0.write(&mut &mut buf[..])
+        self.0
+            .write(&mut &mut buf[..])
             .expect("Should write to buf.");
         buf[32..].copy_from_slice(&sig.rbar[..]);
 
@@ -38,9 +39,14 @@ impl<E: JubjubEngine> MRPubkey<E> {
         };
 
         // 0 = h_G(-S . P_G + R + c . vk)
-        self.0.mul(c, params).add(&r, params).add(
-            &params.generator(p_g).mul(s, params).negate().into(),
-            params
-        ).mul_by_cofactor(params).eq(&Point::zero())
+        self.0
+            .mul(c, params)
+            .add(&r, params)
+            .add(
+                &params.generator(p_g).mul(s, params).negate().into(),
+                params,
+            )
+            .mul_by_cofactor(params)
+            .eq(&Point::zero())
     }
 }

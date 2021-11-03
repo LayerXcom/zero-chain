@@ -1,26 +1,17 @@
 //! (TODO) Alias module of `/core/keys` crate due to std and no_std compatibility.
 
-use pairing::{
-    PrimeField,
-    PrimeFieldRepr,
+use blake2_rfc::{
+    blake2b::{Blake2b, Blake2bResult},
+    blake2s::Blake2s,
 };
+use pairing::{PrimeField, PrimeFieldRepr};
 use scrypto::{
-        jubjub::{
-            JubjubEngine,
-            JubjubParams,
-            edwards,
-            PrimeOrder,
-            FixedGenerators,
-            ToUniform,
-            Unknown,
-        },
-        redjubjub::PrivateKey,
+    jubjub::{
+        edwards, FixedGenerators, JubjubEngine, JubjubParams, PrimeOrder, ToUniform, Unknown,
+    },
+    redjubjub::PrivateKey,
 };
 use std::io;
-use blake2_rfc::{
-    blake2s::Blake2s,
-    blake2b::{Blake2b, Blake2bResult},
-};
 
 pub const PRF_EXPAND_PERSONALIZATION: &'static [u8; 16] = b"zech_ExpandSeed_";
 pub const CRH_BDK_PERSONALIZATION: &'static [u8; 8] = b"zech_bdk";
@@ -56,11 +47,7 @@ impl<E: JubjubEngine> SpendingKey<E> {
     }
 
     /// Generate a re-randomized signature signing key
-    pub fn into_rsk(
-        &self,
-        alpha: E::Fs,
-    ) -> PrivateKey<E>
-    {
+    pub fn into_rsk(&self, alpha: E::Fs) -> PrivateKey<E> {
         PrivateKey(self.0).randomize(alpha)
     }
 
@@ -68,7 +55,8 @@ impl<E: JubjubEngine> SpendingKey<E> {
         let mut s_repr = <E::Fs as PrimeField>::Repr::default();
         s_repr.read_le(&mut reader)?;
 
-        let fs = E::Fs::from_repr(s_repr).map_err(|_| io::Error::new(io::ErrorKind::InvalidInput, "Not in field."))?;
+        let fs = E::Fs::from_repr(s_repr)
+            .map_err(|_| io::Error::new(io::ErrorKind::InvalidInput, "Not in field."))?;
 
         Ok(SpendingKey(fs))
     }
@@ -90,15 +78,11 @@ impl<E: JubjubEngine> SpendingKey<E> {
 /// user needs to pass the decryption key, not proof generation key
 /// because of the current's statement in circuit.
 #[derive(Clone, PartialEq, Debug)]
-pub struct ProofGenerationKey<E: JubjubEngine> (
-    pub edwards::Point<E, PrimeOrder>
-);
+pub struct ProofGenerationKey<E: JubjubEngine>(pub edwards::Point<E, PrimeOrder>);
 
 /// Re-randomized signature verification key
 #[derive(Clone)]
-pub struct RandomizedSigVk<E: JubjubEngine>(
-    pub edwards::Point<E, PrimeOrder>
-);
+pub struct RandomizedSigVk<E: JubjubEngine>(pub edwards::Point<E, PrimeOrder>);
 
 /// Decryption key for decrypting transferred ammounts and balances
 #[derive(Clone)]
@@ -124,39 +108,26 @@ impl<E: JubjubEngine> DecryptionKey<E> {
 
 impl<E: JubjubEngine> ProofGenerationKey<E> {
     /// Generate a proof generation key from a seed
-    pub fn from_seed(
-        seed: &[u8],
-        params: &E::Params
-    ) -> Self
-    {
-        Self::from_spending_key(
-            &SpendingKey::from_seed(seed),
-            params
-        )
+    pub fn from_seed(seed: &[u8], params: &E::Params) -> Self {
+        Self::from_spending_key(&SpendingKey::from_seed(seed), params)
     }
 
     /// Generate a proof generation key from a spending key
-    pub fn from_spending_key(
-        spending_key: &SpendingKey<E>,
-        params: &E::Params
-    ) -> Self
-    {
-        ProofGenerationKey (
+    pub fn from_spending_key(spending_key: &SpendingKey<E>, params: &E::Params) -> Self {
+        ProofGenerationKey(
             params
                 .generator(FixedGenerators::NoteCommitmentRandomness)
-                .mul(spending_key.0.into_repr(), params)
+                .mul(spending_key.0.into_repr(), params),
         )
     }
 
     /// Generate the randomized signature-verifying key
-    pub fn into_rvk(
-        &self,
-        alpha: E::Fs,
-        params: &E::Params
-    ) -> RandomizedSigVk<E> {
+    pub fn into_rvk(&self, alpha: E::Fs, params: &E::Params) -> RandomizedSigVk<E> {
         let point = self.0.add(
-            &params.generator(FixedGenerators::NoteCommitmentRandomness).mul(alpha, params),
-            params
+            &params
+                .generator(FixedGenerators::NoteCommitmentRandomness)
+                .mul(alpha, params),
+            params,
         );
 
         RandomizedSigVk(point)
@@ -185,11 +156,7 @@ impl<E: JubjubEngine> ProofGenerationKey<E> {
     }
 
     /// Generate a encryption key from a proof generation key.
-    pub fn into_encryption_key(
-        &self,
-        params: &E::Params
-    ) -> io::Result<EncryptionKey<E>>
-    {
+    pub fn into_encryption_key(&self, params: &E::Params) -> io::Result<EncryptionKey<E>> {
         let pk_d = params
             .generator(FixedGenerators::NoteCommitmentRandomness)
             .mul(self.into_decryption_key()?.0, params);
@@ -209,9 +176,10 @@ impl<E: JubjubEngine> ProofGenerationKey<E> {
 
     pub fn read<R: io::Read>(reader: &mut R, params: &E::Params) -> io::Result<Self> {
         let point = edwards::Point::<E, Unknown>::read(reader, params)?;
-        let point = point
-            .as_prime_order(params)
-            .ok_or(io::Error::new(io::ErrorKind::InvalidInput, "Not in the prime order subgroup."))?;
+        let point = point.as_prime_order(params).ok_or(io::Error::new(
+            io::ErrorKind::InvalidInput,
+            "Not in the prime order subgroup.",
+        ))?;
 
         Ok(ProofGenerationKey(point))
     }
@@ -227,33 +195,22 @@ impl<E: JubjubEngine> ProofGenerationKey<E> {
 /// Encryption key can be used for encrypting transferred amounts and balances
 /// and also alias of account id in Zerochain.
 #[derive(Clone, PartialEq, Debug)]
-pub struct EncryptionKey<E: JubjubEngine> (
-    pub edwards::Point<E, PrimeOrder>
-);
+pub struct EncryptionKey<E: JubjubEngine>(pub edwards::Point<E, PrimeOrder>);
 
 impl<E: JubjubEngine> EncryptionKey<E> {
-    pub fn from_seed(
-        seed: &[u8],
-        params: &E::Params
-    ) -> io::Result<Self>
-    {
+    pub fn from_seed(seed: &[u8], params: &E::Params) -> io::Result<Self> {
         Self::from_spending_key(&SpendingKey::from_seed(seed), params)
     }
 
     pub fn from_spending_key(
         spending_key: &SpendingKey<E>,
         params: &E::Params,
-    ) -> io::Result<Self>
-    {
+    ) -> io::Result<Self> {
         let proof_generation_key = ProofGenerationKey::from_spending_key(spending_key, params);
         proof_generation_key.into_encryption_key(params)
     }
 
-    pub fn from_decryption_key(
-        decryption_key: &DecryptionKey<E>,
-        params: &E::Params,
-    ) -> Self
-    {
+    pub fn from_decryption_key(decryption_key: &DecryptionKey<E>, params: &E::Params) -> Self {
         let pk_d = params
             .generator(FixedGenerators::NoteCommitmentRandomness)
             .mul(decryption_key.0, params);
@@ -268,9 +225,10 @@ impl<E: JubjubEngine> EncryptionKey<E> {
 
     pub fn read<R: io::Read>(reader: &mut R, params: &E::Params) -> io::Result<Self> {
         let pk_d = edwards::Point::<E, Unknown>::read(reader, params)?;
-        let pk_d = pk_d
-            .as_prime_order(params)
-            .ok_or(io::Error::new(io::ErrorKind::InvalidInput, "Not in the prime order subgroup."))?;
+        let pk_d = pk_d.as_prime_order(params).ok_or(io::Error::new(
+            io::ErrorKind::InvalidInput,
+            "Not in the prime order subgroup.",
+        ))?;
 
         Ok(EncryptionKey(pk_d))
     }
@@ -286,9 +244,9 @@ impl<E: JubjubEngine> EncryptionKey<E> {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use rand::{SeedableRng, XorShiftRng, Rand};
-    use scrypto::jubjub::{JubjubBls12, fs};
     use pairing::bls12_381::Bls12;
+    use rand::{Rand, SeedableRng, XorShiftRng};
+    use scrypto::jubjub::{fs, JubjubBls12};
 
     #[test]
     fn test_encryption_key_read_write() {
@@ -304,4 +262,3 @@ mod tests {
         assert!(addr1 == addr2);
     }
 }
-

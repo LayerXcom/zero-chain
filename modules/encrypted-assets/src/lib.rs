@@ -3,15 +3,12 @@
 // Ensure we're `no_std` when compiling for Wasm.
 #![cfg_attr(not(feature = "std"), no_std)]
 
-use support::{decl_module, decl_storage, decl_event, StorageMap, Parameter, StorageValue, ensure};
 use rstd::prelude::*;
 use rstd::result;
-use runtime_primitives::traits::{SimpleArithmetic, Zero, One};
+use runtime_primitives::traits::{One, SimpleArithmetic, Zero};
+use support::{decl_event, decl_module, decl_storage, ensure, Parameter, StorageMap, StorageValue};
 use system::ensure_signed;
-use zprimitives::{
-    EncKey, Proof,
-    Nonce, Ciphertext, LeftCiphertext, RightCiphertext,
-};
+use zprimitives::{Ciphertext, EncKey, LeftCiphertext, Nonce, Proof, RightCiphertext};
 
 /// The module configuration trait.
 pub trait Trait: system::Trait + encrypted_balances::Trait + zk_system::Trait {
@@ -27,8 +24,8 @@ decl_module! {
         fn deposit_event<T>() = default;
 
         /// Issue a new class of encrypted fungible assets. There are, and will only ever be, `total`
-		/// such assets and they'll all belong to the `issuer` initially. It will have an
-		/// identifier `AssetId` instance: this will be specified in the `Issued` event.
+        /// such assets and they'll all belong to the `issuer` initially. It will have an
+        /// identifier `AssetId` instance: this will be specified in the `Issued` event.
         fn issue(
             origin,
             zkproof: Proof,
@@ -267,12 +264,11 @@ impl<T: Trait> Module<T> {
         let current_epoch = <zk_system::Module<T>>::get_current_epoch();
         let addr_id = (asset_id, *addr);
 
-        let last_rollover = Self::last_rollover(addr_id)
-            .map_or(T::BlockNumber::zero(), |e| e);
+        let last_rollover = Self::last_rollover(addr_id).map_or(T::BlockNumber::zero(), |e| e);
 
         // Get current pending transfer
-        let enc_pending_transfer = Self::pending_transfer(addr_id)
-            .map_or(Ciphertext::zero(), |e| e);
+        let enc_pending_transfer =
+            Self::pending_transfer(addr_id).map_or(Ciphertext::zero(), |e| e);
 
         // Checks if the last roll over was in an older epoch.
         // If so, some storage changes are happend here.
@@ -309,20 +305,18 @@ impl<T: Trait> Module<T> {
         asset_id: T::AssetId,
         amount: &LeftCiphertext,
         fee: &LeftCiphertext,
-        randomness: &RightCiphertext
+        randomness: &RightCiphertext,
     ) -> result::Result<(), &'static str> {
         let enc_amount = Ciphertext::from_left_right(*amount, *randomness)
             .map_err(|_| "Faild to create amount ciphertext.")?;
         let enc_fee = Ciphertext::from_left_right(*fee, *randomness)
             .map_err(|_| "Faild to create fee ciphertext.")?;
-        let amount_plus_fee = enc_amount.add(&enc_fee)
+        let amount_plus_fee = enc_amount
+            .add(&enc_fee)
             .map_err(|_| "Failed to add fee to amount")?;
 
         <EncryptedBalance<T>>::mutate((asset_id, *address), |balance| {
-            let new_balance = balance.clone()
-                .and_then(
-                |b| b.sub(&amount_plus_fee).ok()
-            );
+            let new_balance = balance.clone().and_then(|b| b.sub(&amount_plus_fee).ok());
 
             *balance = new_balance
         });
@@ -335,7 +329,7 @@ impl<T: Trait> Module<T> {
         address: &EncKey,
         asset_id: T::AssetId,
         amount: &LeftCiphertext,
-        randomness: &RightCiphertext
+        randomness: &RightCiphertext,
     ) -> result::Result<(), &'static str> {
         let enc_amount = Ciphertext::from_left_right(*amount, *randomness)
             .map_err(|_| "Faild to create amount ciphertext.")?;
@@ -348,7 +342,7 @@ impl<T: Trait> Module<T> {
 
             match new_pending_transfer {
                 Ok(np) => *pending_transfer = Some(np),
-                Err(_) => return Err("Faild to mutate pending transfer.")
+                Err(_) => return Err("Faild to mutate pending transfer."),
             }
 
             Ok(())
@@ -356,39 +350,42 @@ impl<T: Trait> Module<T> {
 
         Ok(())
     }
-
 }
 
 #[cfg(feature = "std")]
 #[cfg(test)]
 mod tests {
     use super::*;
-    use runtime_io::with_externalities;
-    use support::{impl_outer_origin, assert_ok};
-    use primitives::{H256, Blake2Hasher};
-    use runtime_primitives::{
-        BuildStorage, traits::{BlakeTwo256, IdentityLookup},
-        testing::{Digest, DigestItem, Header}
-    };
-    use zprimitives::{Ciphertext, SigVerificationKey};
-    use keys::{ProofGenerationKey, EncryptionKey};
-    use jubjub::{curve::{JubjubBls12, FixedGenerators, fs}};
-    use pairing::{Field, bls12_381::Bls12};
-    use hex_literal::{hex, hex_impl};
-    use rand::{SeedableRng, XorShiftRng};
-    use test_pairing::{bls12_381::Bls12 as tBls12, Field as tField};
-    use test_proofs::{EncryptionKey as tEncryptionKey, SpendingKey as tSpendingKey,
-        elgamal as telgamal, PARAMS, MultiEncKeys, KeyContext, ProofBuilder, Confidential,
-    };
-    use scrypto::jubjub::{FixedGenerators as tFixedGenerators, fs::Fs as tFs, edwards as tedwards, PrimeOrder};
-    use zcrypto::elgamal;
     use bellman_verifier::PreparedVerifyingKey;
+    use hex_literal::{hex, hex_impl};
+    use jubjub::curve::{fs, FixedGenerators, JubjubBls12};
+    use keys::{EncryptionKey, ProofGenerationKey};
+    use pairing::{bls12_381::Bls12, Field};
+    use primitives::{Blake2Hasher, H256};
+    use rand::{SeedableRng, XorShiftRng};
+    use runtime_io::with_externalities;
+    use runtime_primitives::{
+        testing::{Digest, DigestItem, Header},
+        traits::{BlakeTwo256, IdentityLookup},
+        BuildStorage,
+    };
+    use scrypto::jubjub::{
+        edwards as tedwards, fs::Fs as tFs, FixedGenerators as tFixedGenerators, PrimeOrder,
+    };
     use std::{
-        path::Path,
+        convert::TryFrom,
         fs::File,
         io::{BufReader, Read},
-        convert::TryFrom,
+        path::Path,
     };
+    use support::{assert_ok, impl_outer_origin};
+    use test_pairing::{bls12_381::Bls12 as tBls12, Field as tField};
+    use test_proofs::{
+        elgamal as telgamal, Confidential, EncryptionKey as tEncryptionKey, KeyContext,
+        MultiEncKeys, ProofBuilder, SpendingKey as tSpendingKey, PARAMS,
+    };
+    use zcrypto::elgamal;
+    use zprimitives::{Ciphertext, SigVerificationKey};
 
     const PK_PATH: &str = "../../zface/params/test_conf_pk.dat";
     const VK_PATH: &str = "../../zface/params/test_conf_vk.dat";
@@ -398,10 +395,10 @@ mod tests {
     }
 
     // For testing the module, we construct most of a mock runtime. This means
-	// first constructing a configuration type (`Test`) which `impl`s each of the
-	// configuration traits of modules we want to use.
-	#[derive(Clone, Eq, PartialEq)]
-	pub struct Test;
+    // first constructing a configuration type (`Test`) which `impl`s each of the
+    // configuration traits of modules we want to use.
+    #[derive(Clone, Eq, PartialEq)]
+    pub struct Test;
 
     impl system::Trait for Test {
         type Origin = Origin;
@@ -422,7 +419,7 @@ mod tests {
         type Event = ();
     }
 
-    impl zk_system::Trait for Test { }
+    impl zk_system::Trait for Test {}
 
     impl Trait for Test {
         type Event = ();
@@ -438,20 +435,20 @@ mod tests {
         let p_g = FixedGenerators::Diversifier; // 1 same as NoteCommitmentRandomness;
 
         // The default balance is not encrypted with randomness.
-        let enc_alice_bal = elgamal::Ciphertext::encrypt(
-            alice_amount,
-            &fs::Fs::one(),
-            &enc_key,
-            p_g,
-            params
-        );
+        let enc_alice_bal =
+            elgamal::Ciphertext::encrypt(alice_amount, &fs::Fs::one(), &enc_key, p_g, params);
 
-        let decryption_key = ProofGenerationKey::<Bls12>::from_seed(&alice_seed[..], params).into_decryption_key().unwrap();
+        let decryption_key = ProofGenerationKey::<Bls12>::from_seed(&alice_seed[..], params)
+            .into_decryption_key()
+            .unwrap();
 
         let dec_alice_bal = enc_alice_bal.decrypt(&decryption_key, p_g, params).unwrap();
         assert_eq!(dec_alice_bal, alice_amount);
 
-        (EncKey::try_from(enc_key).unwrap(), Ciphertext::try_from(enc_alice_bal).unwrap())
+        (
+            EncKey::try_from(enc_key).unwrap(),
+            Ciphertext::try_from(enc_alice_bal).unwrap(),
+        )
     }
 
     fn alice_epoch_init() -> (EncKey, u64) {
@@ -464,8 +461,11 @@ mod tests {
         let params = &JubjubBls12::new();
         let alice_seed = b"Alice                           ".to_vec();
 
-        (alice_seed.clone(), EncryptionKey::<Bls12>::from_seed(&alice_seed[..], params)
-            .expect("should be generated encryption key from seed."))
+        (
+            alice_seed.clone(),
+            EncryptionKey::<Bls12>::from_seed(&alice_seed[..], params)
+                .expect("should be generated encryption key from seed."),
+        )
     }
 
     pub fn get_conf_vk() -> PreparedVerifyingKey<Bls12> {
@@ -494,32 +494,41 @@ mod tests {
         let balance_init = alice_balance_init();
         let epoch_init = alice_epoch_init();
 
-        let (mut t, mut c) = system::GenesisConfig::<Test>::default().build_storage().unwrap();
-        let _ = zk_system::GenesisConfig::<Test>{
+        let (mut t, mut c) = system::GenesisConfig::<Test>::default()
+            .build_storage()
+            .unwrap();
+        let _ = zk_system::GenesisConfig::<Test> {
             last_epoch: 1,
             epoch_length: 1,
             confidential_vk: get_conf_vk(),
             anonymous_vk: get_anony_vk(),
             nonce_pool: vec![],
-        }.assimilate_storage(&mut t, &mut c);
-        let _ = encrypted_balances::GenesisConfig::<Test>{
+        }
+        .assimilate_storage(&mut t, &mut c);
+        let _ = encrypted_balances::GenesisConfig::<Test> {
             encrypted_balance: vec![balance_init.clone()],
-			last_rollover: vec![epoch_init],
+            last_rollover: vec![epoch_init],
             transaction_base_fee: 1,
-            _genesis_phantom_data: Default::default()
-        }.assimilate_storage(&mut t, &mut c);
-        let _ = GenesisConfig::<Test>{
+            _genesis_phantom_data: Default::default(),
+        }
+        .assimilate_storage(&mut t, &mut c);
+        let _ = GenesisConfig::<Test> {
             encrypted_balance: vec![((0, balance_init.0), balance_init.1)],
-			last_rollover: vec![((0, epoch_init.0), epoch_init.1)],
-            _genesis_phantom_data: Default::default()
-        }.assimilate_storage(&mut t, &mut c);
+            last_rollover: vec![((0, epoch_init.0), epoch_init.1)],
+            _genesis_phantom_data: Default::default(),
+        }
+        .assimilate_storage(&mut t, &mut c);
 
         t.into()
     }
 
     fn get_g_epoch() -> tedwards::Point<tBls12, PrimeOrder> {
-        let g_epoch_vec: [u8; 32] = hex!("0953f47325251a2f479c25527df6d977925bebafde84423b20ae6c903411665a");
-        let g_epoch = tedwards::Point::read(&g_epoch_vec[..], &*PARAMS).unwrap().as_prime_order(&*PARAMS).unwrap();
+        let g_epoch_vec: [u8; 32] =
+            hex!("0953f47325251a2f479c25527df6d977925bebafde84423b20ae6c903411665a");
+        let g_epoch = tedwards::Point::read(&g_epoch_vec[..], &*PARAMS)
+            .unwrap()
+            .as_prime_order(&*PARAMS)
+            .unwrap();
         g_epoch
     }
 
@@ -539,7 +548,7 @@ mod tests {
                 &tFs::one(),
                 &enc_key,
                 p_g,
-                &*PARAMS
+                &*PARAMS,
             )];
 
             let tx = KeyContext::read_from_path(PK_PATH, VK_PATH)
@@ -547,14 +556,17 @@ mod tests {
                 .gen_proof(
                     amount,
                     0,
-                    0, 0, 0,
+                    0,
+                    0,
+                    0,
                     &spending_key,
                     MultiEncKeys::<tBls12, Confidential>::new(enc_key),
                     &enc_balance,
                     get_g_epoch(),
                     rng,
-                    &*PARAMS
-                ).unwrap();
+                    &*PARAMS,
+                )
+                .unwrap();
 
             // System::set_block_number(10);
 
@@ -576,8 +588,10 @@ mod tests {
         with_externalities(&mut new_test_ext(), || {
             let alice_seed = b"Alice                           ".to_vec();
             let rng = &mut XorShiftRng::from_seed([0x3dbe6259, 0x8d313d76, 0x3237db17, 0xe5bc0654]);
-            let bob_addr: [u8; 32] = hex!("45e66da531088b55dcb3b273ca825454d79d2d1d5c4fa2ba4a12c1fa1ccd6389");
-            let recipient_account_id = tEncryptionKey::<tBls12>::read(&mut &bob_addr[..], &PARAMS).unwrap();
+            let bob_addr: [u8; 32] =
+                hex!("45e66da531088b55dcb3b273ca825454d79d2d1d5c4fa2ba4a12c1fa1ccd6389");
+            let recipient_account_id =
+                tEncryptionKey::<tBls12>::read(&mut &bob_addr[..], &PARAMS).unwrap();
 
             let spending_key = tSpendingKey::<tBls12>::from_seed(&alice_seed);
 
@@ -595,7 +609,7 @@ mod tests {
                 &tFs::one(),
                 &enc_key,
                 p_g,
-                &*PARAMS
+                &*PARAMS,
             )];
 
             let tx = KeyContext::read_from_path(PK_PATH, VK_PATH)
@@ -603,14 +617,17 @@ mod tests {
                 .gen_proof(
                     amount,
                     fee,
-                    remaining_balance, 0, 0,
+                    remaining_balance,
+                    0,
+                    0,
                     &spending_key,
                     MultiEncKeys::<tBls12, Confidential>::new(recipient_account_id),
                     &enc_alice_bal,
                     get_g_epoch(),
                     rng,
-                    &*PARAMS
-                ).unwrap();
+                    &*PARAMS,
+                )
+                .unwrap();
 
             assert_ok!(EncryptedAssets::confidential_transfer(
                 Origin::signed(SigVerificationKey::from_slice(&tx.rvk[..])),
@@ -637,12 +654,12 @@ mod tests {
             let enc_key = tEncryptionKey::<tBls12>::from_seed(&alice_seed[..], &PARAMS).unwrap();
             let p_g = tFixedGenerators::NoteCommitmentRandomness;
 
-            let dummy_balance  = vec![telgamal::Ciphertext::encrypt(
+            let dummy_balance = vec![telgamal::Ciphertext::encrypt(
                 0,
                 &tFs::one(),
                 &enc_key,
                 p_g,
-                &*PARAMS
+                &*PARAMS,
             )];
 
             let tx = KeyContext::read_from_path(PK_PATH, VK_PATH)
@@ -650,14 +667,17 @@ mod tests {
                 .gen_proof(
                     0,
                     0,
-                    0, 0, 0,
+                    0,
+                    0,
+                    0,
                     &spending_key,
                     MultiEncKeys::<tBls12, Confidential>::new(enc_key),
                     &dummy_balance,
                     get_g_epoch(),
                     rng,
-                    &*PARAMS
-                ).unwrap();
+                    &*PARAMS,
+                )
+                .unwrap();
 
             assert_ok!(EncryptedAssets::destroy(
                 Origin::signed(SigVerificationKey::from_slice(&tx.rvk[..])),
@@ -670,7 +690,6 @@ mod tests {
                 RightCiphertext::from_slice(&tx.right_randomness[..]),
                 Nonce::from_slice(&tx.nonce[..])
             ));
-
         })
     }
 }

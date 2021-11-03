@@ -1,7 +1,10 @@
 use rand::{Rng, SeedableRng, XorShiftRng};
 use {Field, LegendreSymbol, PrimeField, SqrtField};
 
-pub fn random_frobenius_tests<F: Field + ::std::fmt::Debug, C: AsRef<[u64]>>(characteristic: C, maxpower: usize) {
+pub fn random_frobenius_tests<F: Field + ::std::fmt::Debug, C: AsRef<[u64]>>(
+    characteristic: C,
+    maxpower: usize,
+) {
     let mut rng = XorShiftRng::from_seed([0x5dbe6259, 0x8d313d76, 0x3237db17, 0xe5bc0654]);
 
     for _ in 0..100 {

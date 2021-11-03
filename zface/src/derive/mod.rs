@@ -1,20 +1,20 @@
 // //! Implementation of "Hierarchical Deterministic Key Derivation" for Zerochain key components.
 // //! It is respected to ZIP32 specification defined here https://github.com/zcash/zips/blob/master/zip-0032.rst.
 
-use blake2_rfc::blake2b::Blake2b;
-use proofs::{ProofGenerationKey, SpendingKey, prf_expand_vec, prf_expand};
-use scrypto::jubjub::{fs::Fs, ToUniform};
-use pairing::{bls12_381::Bls12, Field};
-use byteorder::{ByteOrder, LittleEndian, ReadBytesExt, WriteBytesExt};
-use proofs::PARAMS;
 use super::wallet::SerdeBytes;
-use std::io::{self, Read, Write};
+use blake2_rfc::blake2b::Blake2b;
+use byteorder::{ByteOrder, LittleEndian, ReadBytesExt, WriteBytesExt};
+use pairing::{bls12_381::Bls12, Field};
+use proofs::PARAMS;
+use proofs::{prf_expand, prf_expand_vec, ProofGenerationKey, SpendingKey};
+use scrypto::jubjub::{fs::Fs, ToUniform};
 use std::convert::TryFrom;
+use std::io::{self, Read, Write};
 
-mod constants;
 mod components;
-use constants::*;
+mod constants;
 pub use components::*;
+use constants::*;
 
 pub trait Derivation: Sized {
     /// Master key generation:
@@ -74,7 +74,7 @@ impl Derivation for ExtendedSpendingKey {
                     &self.chain_code.0,
                     &[&[0x11], &self.spending_key.into_bytes()?, &i_le],
                 )
-            },
+            }
             ChildIndex::NonHardened(i) => {
                 let mut i_le = [0u8; 4];
                 LittleEndian::write_u32(&mut i_le, i);
@@ -164,9 +164,11 @@ impl Derivation for ExtendedProofGenerationKey {
     fn derive_child(&self, i: ChildIndex) -> io::Result<Self> {
         let hashed = match i {
             ChildIndex::Hardened(_) => {
-                return Err(io::Error::new(io::ErrorKind::InvalidData,
-                    "Hardened key cannot be derived from `ExtendedProofGenerationKey`."))
-            },
+                return Err(io::Error::new(
+                    io::ErrorKind::InvalidData,
+                    "Hardened key cannot be derived from `ExtendedProofGenerationKey`.",
+                ))
+            }
             ChildIndex::NonHardened(i) => {
                 let mut i_le = [0u8; 4];
                 LittleEndian::write_u32(&mut i_le, i);
@@ -174,7 +176,7 @@ impl Derivation for ExtendedProofGenerationKey {
                     &self.chain_code.0,
                     &[&[0x12], &self.proof_gen_key.into_bytes()?, &i_le],
                 )
-            },
+            }
         };
 
         let left = &hashed.as_bytes()[..32];
@@ -184,8 +186,8 @@ impl Derivation for ExtendedProofGenerationKey {
         let tag = EncKeyFingerPrint::try_from(&self.proof_gen_key)?.tag();
 
         let fs = Fs::to_uniform(prf_expand(left, &[0x13]).as_bytes());
-        let proof_gen_key =
-            ProofGenerationKey::from_spending_key(&SpendingKey(fs), &*PARAMS).add(&self.proof_gen_key, &*PARAMS);
+        let proof_gen_key = ProofGenerationKey::from_spending_key(&SpendingKey(fs), &*PARAMS)
+            .add(&self.proof_gen_key, &*PARAMS);
 
         Ok(ExtendedProofGenerationKey {
             depth: self.depth + 1,
@@ -252,7 +254,7 @@ impl TryFrom<ExtendedSpendingKey> for SerdeBytes {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use rand::{SeedableRng, Rng, XorShiftRng};
+    use rand::{Rng, SeedableRng, XorShiftRng};
 
     fn gen_master_key_pairs() -> (ExtendedSpendingKey, ExtendedProofGenerationKey) {
         let rng = &mut XorShiftRng::from_seed([0x3dbe6259, 0x8d313d76, 0x3237db17, 0xe5bc0654]);

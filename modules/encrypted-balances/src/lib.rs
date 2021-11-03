@@ -1,28 +1,25 @@
 //! A module for dealing with confidential transfer
 #![cfg_attr(not(feature = "std"), no_std)]
 
-use support::{decl_module, decl_storage, decl_event, StorageMap, dispatch::Result};
-use rstd::{
-    prelude::*,
-    result,
-};
+use rstd::{prelude::*, result};
 use runtime_primitives::traits::Zero;
-use zprimitives::{EncKey, Proof, Nonce, RightCiphertext, LeftCiphertext, Ciphertext};
-use system::{IsDeadAccount, ensure_signed};
+use support::{decl_event, decl_module, decl_storage, dispatch::Result, StorageMap};
+use system::{ensure_signed, IsDeadAccount};
+use zprimitives::{Ciphertext, EncKey, LeftCiphertext, Nonce, Proof, RightCiphertext};
 
 pub trait Trait: system::Trait + zk_system::Trait {
-	/// The overarching event type.
-	type Event: From<Event<Self>> + Into<<Self as system::Trait>::Event>;
+    /// The overarching event type.
+    type Event: From<Event<Self>> + Into<<Self as system::Trait>::Event>;
 }
 
 type FeeAmount = u32;
 
 decl_module! {
-	pub struct Module<T: Trait> for enum Call where origin: T::Origin {
+    pub struct Module<T: Trait> for enum Call where origin: T::Origin {
         // Initializing events
-		fn deposit_event<T>() = default;
+        fn deposit_event<T>() = default;
 
-		pub fn confidential_transfer(
+        pub fn confidential_transfer(
             origin,
             zkproof: Proof,
             address_sender: EncKey,
@@ -33,7 +30,7 @@ decl_module! {
             randomness: RightCiphertext,
             nonce: Nonce
         ) -> Result {
-			let rvk = ensure_signed(origin)?;
+            let rvk = ensure_signed(origin)?;
 
             // This function causes a storage mutation, but it's needed before `verify_proof` function is called.
             // No problem if errors occur after this function because
@@ -93,8 +90,8 @@ decl_module! {
             );
 
             Ok(())
-		}
-	}
+        }
+    }
 }
 
 decl_storage! {
@@ -115,10 +112,10 @@ decl_storage! {
 
 decl_event! (
     /// An event in this module.
-	pub enum Event<T> where <T as system::Trait>::AccountId {
-		ConfidentialTransfer(Proof, EncKey, EncKey, LeftCiphertext, LeftCiphertext, LeftCiphertext, RightCiphertext, Ciphertext, AccountId),
+    pub enum Event<T> where <T as system::Trait>::AccountId {
+        ConfidentialTransfer(Proof, EncKey, EncKey, LeftCiphertext, LeftCiphertext, LeftCiphertext, RightCiphertext, Ciphertext, AccountId),
         InvalidZkProof(),
-	}
+    }
 );
 
 impl<T: Trait> Module<T> {
@@ -133,12 +130,10 @@ impl<T: Trait> Module<T> {
     pub fn rollover(addr: &EncKey) -> result::Result<(), &'static str> {
         let current_epoch = <zk_system::Module<T>>::get_current_epoch();
 
-        let last_rollover = Self::last_rollover(addr)
-            .map_or(T::BlockNumber::zero(), |e| e);
+        let last_rollover = Self::last_rollover(addr).map_or(T::BlockNumber::zero(), |e| e);
 
         // Get balance with the type
-        let enc_pending_transfer = Self::pending_transfer(addr)
-            .map_or(Ciphertext::zero(), |e| e);
+        let enc_pending_transfer = Self::pending_transfer(addr).map_or(Ciphertext::zero(), |e| e);
 
         // Checks if the last roll over was in an older epoch.
         // If so, some storage changes are happend here.
@@ -174,20 +169,18 @@ impl<T: Trait> Module<T> {
         address: &EncKey,
         amount: &LeftCiphertext,
         fee: &LeftCiphertext,
-        randomness: &RightCiphertext
+        randomness: &RightCiphertext,
     ) -> result::Result<(), &'static str> {
         let enc_amount = Ciphertext::from_left_right(*amount, *randomness)
             .map_err(|_| "Faild to create amount ciphertext.")?;
         let enc_fee = Ciphertext::from_left_right(*fee, *randomness)
             .map_err(|_| "Faild to create fee ciphertext.")?;
-        let amount_plus_fee = enc_amount.add(&enc_fee)
+        let amount_plus_fee = enc_amount
+            .add(&enc_fee)
             .map_err(|_| "Failed to add fee to amount")?;
 
         <EncryptedBalance<T>>::mutate(address, |balance| {
-            let new_balance = balance.clone()
-                .and_then(
-                    |b| b.sub(&amount_plus_fee).ok()
-            );
+            let new_balance = balance.clone().and_then(|b| b.sub(&amount_plus_fee).ok());
 
             *balance = new_balance
         });
@@ -199,7 +192,7 @@ impl<T: Trait> Module<T> {
     pub fn add_pending_transfer(
         address: &EncKey,
         amount: &LeftCiphertext,
-        randomness: &RightCiphertext
+        randomness: &RightCiphertext,
     ) -> result::Result<(), &'static str> {
         let enc_amount = Ciphertext::from_left_right(*amount, *randomness)
             .map_err(|_| "Faild to create amount ciphertext.")?;
@@ -212,7 +205,7 @@ impl<T: Trait> Module<T> {
 
             match new_pending_transfer {
                 Ok(np) => *pending_transfer = Some(np),
-                Err(_) => return Err("Faild to mutate pending transfer.")
+                Err(_) => return Err("Faild to mutate pending transfer."),
             }
 
             Ok(())
@@ -222,8 +215,7 @@ impl<T: Trait> Module<T> {
     }
 }
 
-impl<T: Trait> IsDeadAccount<T::AccountId> for Module<T>
-{
+impl<T: Trait> IsDeadAccount<T::AccountId> for Module<T> {
     fn is_dead_account(_who: &T::AccountId) -> bool {
         unimplemented!();
     }
@@ -233,26 +225,27 @@ impl<T: Trait> IsDeadAccount<T::AccountId> for Module<T>
 #[cfg(test)]
 pub mod tests {
     use super::*;
-    use runtime_io::with_externalities;
-    use support::{impl_outer_origin, assert_ok};
-    use primitives::{H256, Blake2Hasher};
-    use runtime_primitives::{
-        BuildStorage, traits::{BlakeTwo256, IdentityLookup},
-        testing::{Digest, DigestItem, Header}
-    };
-    use zprimitives::{Ciphertext, SigVerificationKey};
-    use keys::{ProofGenerationKey, EncryptionKey};
-    use jubjub::{curve::{JubjubBls12, FixedGenerators, fs}};
-    use pairing::{Field, bls12_381::Bls12};
-    use zcrypto::elgamal;
-    use hex_literal::{hex, hex_impl};
     use bellman_verifier::PreparedVerifyingKey;
+    use hex_literal::{hex, hex_impl};
+    use jubjub::curve::{fs, FixedGenerators, JubjubBls12};
+    use keys::{EncryptionKey, ProofGenerationKey};
+    use pairing::{bls12_381::Bls12, Field};
+    use primitives::{Blake2Hasher, H256};
+    use runtime_io::with_externalities;
+    use runtime_primitives::{
+        testing::{Digest, DigestItem, Header},
+        traits::{BlakeTwo256, IdentityLookup},
+        BuildStorage,
+    };
     use std::{
-        path::Path,
+        convert::TryFrom,
         fs::File,
         io::{BufReader, Read},
-        convert::TryFrom,
+        path::Path,
     };
+    use support::{assert_ok, impl_outer_origin};
+    use zcrypto::elgamal;
+    use zprimitives::{Ciphertext, SigVerificationKey};
 
     const PK_PATH: &str = "../../zface/params/test_conf_pk.dat";
     const VK_PATH: &str = "../../zface/params/test_conf_vk.dat";
@@ -262,8 +255,8 @@ pub mod tests {
     }
 
     // For testing the module, we construct most of a mock runtime. This means
-	// first constructing a configuration type (`Test`) which `impl`s each of the
-	// configuration traits of modules we want to use.
+    // first constructing a configuration type (`Test`) which `impl`s each of the
+    // configuration traits of modules we want to use.
     #[derive(Clone, Eq, PartialEq)]
     pub struct Test;
 
@@ -286,7 +279,7 @@ pub mod tests {
         type Event = ();
     }
 
-    impl zk_system::Trait for Test { }
+    impl zk_system::Trait for Test {}
 
     type EncryptedBalances = Module<Test>;
 
@@ -297,20 +290,20 @@ pub mod tests {
         let p_g = FixedGenerators::Diversifier; // 1 same as NoteCommitmentRandomness;
 
         // The default balance is not encrypted with randomness.
-        let enc_alice_bal = elgamal::Ciphertext::encrypt(
-            alice_amount,
-            &fs::Fs::one(),
-            &enc_key,
-            p_g,
-            params
-        );
+        let enc_alice_bal =
+            elgamal::Ciphertext::encrypt(alice_amount, &fs::Fs::one(), &enc_key, p_g, params);
 
-        let decryption_key = ProofGenerationKey::<Bls12>::from_seed(&alice_seed[..], params).into_decryption_key().unwrap();
+        let decryption_key = ProofGenerationKey::<Bls12>::from_seed(&alice_seed[..], params)
+            .into_decryption_key()
+            .unwrap();
 
         let dec_alice_bal = enc_alice_bal.decrypt(&decryption_key, p_g, params).unwrap();
         assert_eq!(dec_alice_bal, alice_amount);
 
-        (EncKey::try_from(enc_key).unwrap(), Ciphertext::try_from(enc_alice_bal).unwrap())
+        (
+            EncKey::try_from(enc_key).unwrap(),
+            Ciphertext::try_from(enc_alice_bal).unwrap(),
+        )
     }
 
     fn alice_epoch_init() -> (EncKey, u64) {
@@ -323,8 +316,11 @@ pub mod tests {
         let params = &JubjubBls12::new();
         let alice_seed = b"Alice                           ".to_vec();
 
-        (alice_seed.clone(), EncryptionKey::<Bls12>::from_seed(&alice_seed[..], params)
-            .expect("should be generated encryption key from seed."))
+        (
+            alice_seed.clone(),
+            EncryptionKey::<Bls12>::from_seed(&alice_seed[..], params)
+                .expect("should be generated encryption key from seed."),
+        )
     }
 
     pub fn get_conf_vk() -> PreparedVerifyingKey<Bls12> {
@@ -350,21 +346,25 @@ pub mod tests {
     }
 
     fn new_test_ext() -> runtime_io::TestExternalities<Blake2Hasher> {
-        let (mut t, mut c) = system::GenesisConfig::<Test>::default().build_storage().unwrap();
-        let _ = zk_system::GenesisConfig::<Test>{
+        let (mut t, mut c) = system::GenesisConfig::<Test>::default()
+            .build_storage()
+            .unwrap();
+        let _ = zk_system::GenesisConfig::<Test> {
             last_epoch: 1,
             epoch_length: 1,
             confidential_vk: get_conf_vk(),
             anonymous_vk: get_anony_vk(),
             nonce_pool: vec![],
-        }.assimilate_storage(&mut t, &mut c);
+        }
+        .assimilate_storage(&mut t, &mut c);
 
-        let _ = GenesisConfig::<Test>{
+        let _ = GenesisConfig::<Test> {
             encrypted_balance: vec![alice_balance_init()],
-			last_rollover: vec![alice_epoch_init()],
+            last_rollover: vec![alice_epoch_init()],
             transaction_base_fee: 1,
-            _genesis_phantom_data: Default::default()
-        }.assimilate_storage(&mut t, &mut c);
+            _genesis_phantom_data: Default::default(),
+        }
+        .assimilate_storage(&mut t, &mut c);
 
         t.into()
     }
@@ -372,17 +372,22 @@ pub mod tests {
     #[test]
     fn test_call_from_zface() {
         use rand::{SeedableRng, XorShiftRng};
-        use test_pairing::{bls12_381::Bls12 as tBls12, Field as tField};
-        use test_proofs::{EncryptionKey as tEncryptionKey, SpendingKey as tSpendingKey,
-            elgamal as telgamal, PARAMS, MultiEncKeys, KeyContext, ProofBuilder, Confidential,
+        use scrypto::jubjub::{
+            edwards as tedwards, fs::Fs as tFs, FixedGenerators as tFixedGenerators,
         };
-        use scrypto::jubjub::{FixedGenerators as tFixedGenerators, fs::Fs as tFs, edwards as tedwards};
+        use test_pairing::{bls12_381::Bls12 as tBls12, Field as tField};
+        use test_proofs::{
+            elgamal as telgamal, Confidential, EncryptionKey as tEncryptionKey, KeyContext,
+            MultiEncKeys, ProofBuilder, SpendingKey as tSpendingKey, PARAMS,
+        };
 
         with_externalities(&mut new_test_ext(), || {
             let alice_seed = b"Alice                           ".to_vec();
             let rng = &mut XorShiftRng::from_seed([0x3dbe6259, 0x8d313d76, 0x3237db17, 0xe5bc0654]);
-            let bob_addr: [u8; 32] = hex!("45e66da531088b55dcb3b273ca825454d79d2d1d5c4fa2ba4a12c1fa1ccd6389");
-            let recipient_account_id = tEncryptionKey::<tBls12>::read(&mut &bob_addr[..], &PARAMS).unwrap();
+            let bob_addr: [u8; 32] =
+                hex!("45e66da531088b55dcb3b273ca825454d79d2d1d5c4fa2ba4a12c1fa1ccd6389");
+            let recipient_account_id =
+                tEncryptionKey::<tBls12>::read(&mut &bob_addr[..], &PARAMS).unwrap();
 
             let spending_key = tSpendingKey::<tBls12>::from_seed(&alice_seed);
 
@@ -400,26 +405,33 @@ pub mod tests {
                 &tFs::one(),
                 &enc_key,
                 p_g,
-                &*PARAMS
+                &*PARAMS,
             )];
 
             // G_epoch of block height one.
-            let g_epoch_vec: [u8; 32] = hex!("0953f47325251a2f479c25527df6d977925bebafde84423b20ae6c903411665a");
-            let g_epoch = tedwards::Point::read(&g_epoch_vec[..], &*PARAMS).unwrap().as_prime_order(&*PARAMS).unwrap();
+            let g_epoch_vec: [u8; 32] =
+                hex!("0953f47325251a2f479c25527df6d977925bebafde84423b20ae6c903411665a");
+            let g_epoch = tedwards::Point::read(&g_epoch_vec[..], &*PARAMS)
+                .unwrap()
+                .as_prime_order(&*PARAMS)
+                .unwrap();
 
             let tx = KeyContext::read_from_path(PK_PATH, VK_PATH)
                 .unwrap()
                 .gen_proof(
                     amount,
                     fee,
-                    remaining_balance, 0, 0,
+                    remaining_balance,
+                    0,
+                    0,
                     &spending_key,
                     MultiEncKeys::<tBls12, Confidential>::new(recipient_account_id),
                     &enc_alice_bal,
                     g_epoch,
                     rng,
-                    &*PARAMS
-                ).unwrap();
+                    &*PARAMS,
+                )
+                .unwrap();
 
             assert_ok!(EncryptedBalances::confidential_transfer(
                 Origin::signed(SigVerificationKey::from_slice(&tx.rvk[..])),
@@ -440,14 +452,22 @@ pub mod tests {
     fn test_call_with_worng_proof() {
         with_externalities(&mut new_test_ext(), || {
             let proof: [u8; 192] = hex!("c8a16f1610fccca19fc5264d337aa699473e2786e8fa47c3b63e7417885d2ad52f9a3d0999e09d25ef49164dd46f23f7b5cbfb28f0924d60fc29e855609a4d2400f9a2945de73d42d4c15e8e1eef7b81283144b947c20df217efd9aec230571307d92007b6dbfe3656ddae3fdd49cda3f5e31493085ea00ef845329e893efaaa8734f91adc38a8324e5dd52143b954ac93129a629592e681dea7399e48543594a3e94f7ea9dbaa88ed62dcd7b56d0916a396daa9ee2756dae581066ed9074521");
-            let pkd_addr_alice: [u8; 32] = hex!("fd0c0c0183770c99559bf64df4fe23f77ced9b8b4d02826a282bcd125117dcc2");
-            let pkd_addr_bob: [u8; 32] = hex!("45e66da531088b55dcb3b273ca825454d79d2d1d5c4fa2ba4a12c1fa1ccd6389");
-            let enc10_by_alice: [u8; 32] = hex!("7a161216ec4a4102a09c81c69a09641c4fbd5e5907307dd59550eb1a636a2dcb");
-            let enc10_by_bob: [u8; 32] = hex!("4b45499ed39b8e26fc3b41a6d2c0a0fd63a596844d9dc9312dd7f86d0499ae14");
-            let enc1_by_alice: [u8; 32] = hex!("01570bd52d375bb97984bd92ffd3f18685d022f11f4e9b85ff815940f37ad637");
-            let randomness: [u8; 32] = hex!("5f5261b09d5faf1775052226d539a18045592ccf711c0292e104a4ea5bd5c4eb");
-            let rvk: [u8; 32] = hex!("fa8e6fbf6d2116ef083670d6859da118c662b97c4fabe6eacf7c6dc0b2953346");
-            let nonce: [u8; 32] = hex!("c3427a3e3e9f19ff730d45c7c7daa1ee3c96b10a86085d11647fe27d923d654e");
+            let pkd_addr_alice: [u8; 32] =
+                hex!("fd0c0c0183770c99559bf64df4fe23f77ced9b8b4d02826a282bcd125117dcc2");
+            let pkd_addr_bob: [u8; 32] =
+                hex!("45e66da531088b55dcb3b273ca825454d79d2d1d5c4fa2ba4a12c1fa1ccd6389");
+            let enc10_by_alice: [u8; 32] =
+                hex!("7a161216ec4a4102a09c81c69a09641c4fbd5e5907307dd59550eb1a636a2dcb");
+            let enc10_by_bob: [u8; 32] =
+                hex!("4b45499ed39b8e26fc3b41a6d2c0a0fd63a596844d9dc9312dd7f86d0499ae14");
+            let enc1_by_alice: [u8; 32] =
+                hex!("01570bd52d375bb97984bd92ffd3f18685d022f11f4e9b85ff815940f37ad637");
+            let randomness: [u8; 32] =
+                hex!("5f5261b09d5faf1775052226d539a18045592ccf711c0292e104a4ea5bd5c4eb");
+            let rvk: [u8; 32] =
+                hex!("fa8e6fbf6d2116ef083670d6859da118c662b97c4fabe6eacf7c6dc0b2953346");
+            let nonce: [u8; 32] =
+                hex!("c3427a3e3e9f19ff730d45c7c7daa1ee3c96b10a86085d11647fe27d923d654e");
 
             assert_ok!(EncryptedBalances::confidential_transfer(
                 Origin::signed(SigVerificationKey::from_slice(&rvk[..])),

@@ -6,15 +6,15 @@ extern crate alloc;
 
 #[cfg(not(feature = "std"))]
 mod std {
-    pub use ::core::*;
-    pub use crate::alloc::vec;
-    pub use crate::alloc::string;
-    pub use crate::alloc::boxed;
     pub use crate::alloc::borrow;
+    pub use crate::alloc::boxed;
+    pub use crate::alloc::string;
+    pub use crate::alloc::vec;
+    pub use ::core::*;
 }
 
+pub mod constants;
 pub mod curve;
 pub mod group_hash;
-pub mod constants;
 pub mod redjubjub;
 pub mod util;

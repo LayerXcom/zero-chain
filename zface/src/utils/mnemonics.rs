@@ -1,9 +1,8 @@
-use dialoguer::{Confirmation, Input};
+use bip39::{Language, Mnemonic, MnemonicType};
 use console::style;
-use bip39::{Mnemonic, Language, MnemonicType};
+use dialoguer::{Confirmation, Input};
 
 pub fn input_mnemonic_phrase(mnemonic_type: MnemonicType, lang: Language) -> Mnemonic {
-
     let count = mnemonic_type.word_count();
 
     loop {
@@ -18,7 +17,7 @@ pub fn input_mnemonic_phrase(mnemonic_type: MnemonicType, lang: Language) -> Mne
         match Mnemonic::validate(phrase_str.as_str(), lang) {
             Ok(_) => {
                 return Mnemonic::from_phrase(phrase_str, lang).unwrap();
-            },
+            }
             Err(prompt) => {
                 while !Confirmation::new()
                     .with_text(&prompt.to_string())

@@ -1,12 +1,9 @@
-use pairing::bls12_381::Bls12;
-use bellman::groth16::{
-    generate_random_parameters,
-    prepare_verifying_key,
-};
-use rand::Rng;
-use crate::circuit::{ConfidentialTransfer, AnonymousTransfer};
+use crate::circuit::{AnonymousTransfer, ConfidentialTransfer};
+use crate::crypto_components::{Anonymous, Confidential, KeyContext};
 use crate::PARAMS;
-use crate::crypto_components::{KeyContext, Confidential, Anonymous};
+use bellman::groth16::{generate_random_parameters, prepare_verifying_key};
+use pairing::bls12_381::Bls12;
+use rand::Rng;
 
 pub fn confidential_setup<R: Rng>(rng: &mut R) -> KeyContext<Bls12, Confidential> {
     // Create parameters for the confidential transfer circuit
@@ -67,12 +64,11 @@ pub fn anonymous_setup<R: Rng>(rng: &mut R) -> KeyContext<Bls12, Anonymous> {
     KeyContext::new(proving_key, prepared_vk)
 }
 
-
 #[cfg(test)]
 mod tests {
     use super::*;
-    use rand::{SeedableRng, XorShiftRng};
     use bellman::groth16::PreparedVerifyingKey;
+    use rand::{SeedableRng, XorShiftRng};
 
     #[test]
     fn test_prepared_confidential_vk_rw() {

@@ -1,5 +1,5 @@
-use blake2_rfc::blake2b::Blake2b;
 use super::constants::*;
+use blake2_rfc::blake2b::Blake2b;
 use proofs::ProofGenerationKey;
 use scrypto::jubjub::JubjubEngine;
 use std::convert::TryFrom;
@@ -57,7 +57,7 @@ pub enum ChildIndex {
 impl ChildIndex {
     pub fn from_index(i: u32) -> Self {
         match i {
-            n if n >= (1 << 31) => ChildIndex::Hardened(n - ( 1 << 31)),
+            n if n >= (1 << 31) => ChildIndex::Hardened(n - (1 << 31)),
             n => ChildIndex::NonHardened(n),
         }
     }
@@ -68,7 +68,7 @@ impl ChildIndex {
 
     pub(super) fn to_index(&self) -> u32 {
         match self {
-            &ChildIndex::Hardened(i) => i + ( 1 << 31 ),
+            &ChildIndex::Hardened(i) => i + (1 << 31),
             &ChildIndex::NonHardened(i) => i,
         }
     }

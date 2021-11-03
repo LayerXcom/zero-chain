@@ -1,11 +1,8 @@
-use parity_codec::{Encode, Decode};
-use primitives::crypto::{Ss58Codec, Derive, DeriveJunction};
-use proofs::{EncryptionKey, PARAMS};
-use std::{
-    convert::TryFrom,
-    io,
-};
 use crate::derive::ExtendedSpendingKey;
+use parity_codec::{Decode, Encode};
+use primitives::crypto::{Derive, DeriveJunction, Ss58Codec};
+use proofs::{EncryptionKey, PARAMS};
+use std::{convert::TryFrom, io};
 
 /// Byte format of encryption key to implement SS58 trait.
 #[derive(PartialEq, Eq, PartialOrd, Ord, Clone, Encode, Decode, Default)]
@@ -31,9 +28,12 @@ impl AsMut<[u8]> for EncryptionKeyBytes {
 
 impl Derive for EncryptionKeyBytes {
     /// Derive a child key from a series of given junctions.
-	///
-	/// `None` if there are any hard junctions in there.
-    fn derive<Iter: Iterator<Item=DeriveJunction>>(&self, _path: Iter) -> Option<EncryptionKeyBytes> {
+    ///
+    /// `None` if there are any hard junctions in there.
+    fn derive<Iter: Iterator<Item = DeriveJunction>>(
+        &self,
+        _path: Iter,
+    ) -> Option<EncryptionKeyBytes> {
         unimplemented!();
     }
 }

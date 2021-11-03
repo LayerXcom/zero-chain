@@ -1,23 +1,16 @@
 //! A module for dealing with zk-system
 #![cfg_attr(not(feature = "std"), no_std)]
 
-use support::{decl_module, decl_storage, StorageValue, ensure};
-use rstd::{
-    prelude::*,
-    result,
-    convert::TryFrom,
-};
+use self::input_builder::PublicInputBuilder;
 use bellman_verifier::{verify_proof, PreparedVerifyingKey};
 use pairing::bls12_381::Bls12;
+use rstd::{convert::TryFrom, prelude::*, result};
 use runtime_primitives::traits::{As, Zero};
-use zprimitives::{
-    Nonce, GEpoch, Proof, Ciphertext,
-    LeftCiphertext, RightCiphertext, EncKey,
-};
-use self::input_builder::PublicInputBuilder;
+use support::{decl_module, decl_storage, ensure, StorageValue};
+use zprimitives::{Ciphertext, EncKey, GEpoch, LeftCiphertext, Nonce, Proof, RightCiphertext};
 mod input_builder;
 
-pub trait Trait: system::Trait { }
+pub trait Trait: system::Trait {}
 
 const CONFIDENTIAL_INPUT_SIZE: usize = 22;
 const ANONIMOUS_INPUT_SIZE: usize = 104;
@@ -53,7 +46,7 @@ decl_storage! {
 
 impl<T: Trait> Module<T> {
     /// Verify zk proofs of confidential transfers
-	pub fn verify_confidential_proof (
+    pub fn verify_confidential_proof(
         zkproof: &Proof,
         address_sender: &EncKey,
         address_recipient: &EncKey,
@@ -63,105 +56,122 @@ impl<T: Trait> Module<T> {
         rvk: &T::AccountId,
         fee_sender: &LeftCiphertext,
         randomness: &RightCiphertext,
-        nonce: &Nonce
+        nonce: &Nonce,
     ) -> result::Result<bool, &'static str> {
         // Construct public input for circuit
         let mut public_input = PublicInputBuilder::<Bls12>::new(CONFIDENTIAL_INPUT_SIZE);
-        public_input.push(Some(address_sender))
+        public_input
+            .push(Some(address_sender))
             .map_err(|_| "Faild to get address_sender into xy.")?;
 
-        public_input.push(Some(address_recipient))
+        public_input
+            .push(Some(address_recipient))
             .map_err(|_| "Faild to get address_recipient into xy.")?;
 
-        public_input.push(Some(amount_sender))
+        public_input
+            .push(Some(amount_sender))
             .map_err(|_| "Faild to get amount_sender into xy.")?;
 
-        public_input.push(Some(amount_recipient))
+        public_input
+            .push(Some(amount_recipient))
             .map_err(|_| "Faild to get amount_recipient into xy.")?;
 
-        public_input.push(Some(randomness))
+        public_input
+            .push(Some(randomness))
             .map_err(|_| "Faild to get randomness into xy.")?;
 
-        public_input.push(Some(fee_sender))
+        public_input
+            .push(Some(fee_sender))
             .map_err(|_| "Faild to get fee_sender into xy.")?;
 
-        public_input.push(balance_sender.left().ok())
+        public_input
+            .push(balance_sender.left().ok())
             .map_err(|_| "Faild to get balance_sender's left into xy.")?;
 
-        public_input.push(balance_sender.right().ok())
+        public_input
+            .push(balance_sender.right().ok())
             .map_err(|_| "Faild to get balance_sender's right into xy.")?;
 
-        public_input.push(Some(rvk.clone()))
+        public_input
+            .push(Some(rvk.clone()))
             .map_err(|_| "Faild to get rvk into xy.")?;
 
-        public_input.push(Some(Self::g_epoch()))
+        public_input
+            .push(Some(Self::g_epoch()))
             .map_err(|_| "Faild to get g_epoch into xy.")?;
 
-        public_input.push(Some(nonce))
+        public_input
+            .push(Some(nonce))
             .map_err(|_| "Faild to get nonce into xy.")?;
 
-        ensure!(public_input.len() == CONFIDENTIAL_INPUT_SIZE, "Mismatch the length of public input.");
+        ensure!(
+            public_input.len() == CONFIDENTIAL_INPUT_SIZE,
+            "Mismatch the length of public input."
+        );
 
         let proof = bellman_verifier::Proof::<Bls12>::try_from(zkproof)
             .map_err(|_| "Faild to read zkproof.")?;
 
         // Verify the provided proof
-        verify_proof(
-            &Self::confidential_vk(),
-            &proof,
-            public_input.as_slice()
-        )
-        .map_err(|_| "Invalid proof.")
+        verify_proof(&Self::confidential_vk(), &proof, public_input.as_slice())
+            .map_err(|_| "Invalid proof.")
     }
 
     /// Verify zk proofs of anonymous transfers
-	pub fn verify_anonymous_proof (
+    pub fn verify_anonymous_proof(
         zkproof: &Proof,
         enc_keys: &[EncKey],
         left_ciphertexts: &[LeftCiphertext],
         right_ciphertext: &RightCiphertext,
         enc_balances: &[Ciphertext],
         rvk: &T::AccountId,
-        nonce: &Nonce
+        nonce: &Nonce,
     ) -> result::Result<bool, &'static str> {
         // Construct public input for circuit
         let mut public_input = PublicInputBuilder::<Bls12>::new(ANONIMOUS_INPUT_SIZE);
-        public_input.push(enc_keys)
+        public_input
+            .push(enc_keys)
             .map_err(|_| "Faild to get enc keys into xy.")?;
 
-        public_input.push(left_ciphertexts)
+        public_input
+            .push(left_ciphertexts)
             .map_err(|_| "Faild to get left ciphertexts into xy.")?;
 
-        public_input.push(enc_balances.iter().map(|e| e.left().unwrap())) // TODO
+        public_input
+            .push(enc_balances.iter().map(|e| e.left().unwrap())) // TODO
             .map_err(|_| "Faild to get left ciphertexts into xy.")?;
 
-        public_input.push(enc_balances.iter().map(|e| e.right().unwrap())) // TODO
+        public_input
+            .push(enc_balances.iter().map(|e| e.right().unwrap())) // TODO
             .map_err(|_| "Faild to get right ciphertexts into xy.")?;
 
-        public_input.push(Some(right_ciphertext))
+        public_input
+            .push(Some(right_ciphertext))
             .map_err(|_| "Faild to get right ciphertexts into xy.")?;
 
-        public_input.push(Some(rvk.clone()))
+        public_input
+            .push(Some(rvk.clone()))
             .map_err(|_| "Faild to get rvk into xy.")?;
 
-        public_input.push(Some(Self::g_epoch()))
+        public_input
+            .push(Some(Self::g_epoch()))
             .map_err(|_| "Faild to get g_epoch into xy.")?;
 
-        public_input.push(Some(nonce))
+        public_input
+            .push(Some(nonce))
             .map_err(|_| "Faild to get nonce into xy.")?;
 
-        ensure!(public_input.len() == ANONIMOUS_INPUT_SIZE, "Mismatch the length of public input.");
+        ensure!(
+            public_input.len() == ANONIMOUS_INPUT_SIZE,
+            "Mismatch the length of public input."
+        );
 
         let proof = bellman_verifier::Proof::<Bls12>::try_from(zkproof)
             .map_err(|_| "Faild to read zkproof.")?;
 
         // Verify the provided proof
-        verify_proof(
-            &Self::anonymous_vk(),
-            &proof,
-            public_input.as_slice()
-        )
-        .map_err(|_| "Error occurred when valifying zkproof.")
+        verify_proof(&Self::anonymous_vk(), &proof, public_input.as_slice())
+            .map_err(|_| "Error occurred when valifying zkproof.")
     }
 
     /// Get current epoch based on current block height.

@@ -1,25 +1,25 @@
-use std::path::PathBuf;
-use rand::{Rng, Rand};
-use proofs::{
-    SpendingKey, ProofGenerationKey, EncryptionKey, PARAMS, elgamal,
-    crypto_components::{MultiEncKeys, Confidential, Anonymous},
-    crypto_components::{ProofBuilder, KeyContext, Calls, Submitter},
-    constants::{ANONIMITY_SIZE, DECOY_SIZE},
-};
-use pairing::bls12_381::Bls12;
-use parity_codec::Decode;
-use polkadot_rs::{Api, Url, hexstr_to_vec};
-use scrypto::jubjub::{fs::Fs, FixedGenerators};
 use super::constants::*;
 use crate::{
     error::Result,
+    getter,
     term::Term,
     wallet::{
+        commands::{get_default_keyfile_name, wallet_keystore_dirs},
         DirOperations,
-        commands::{wallet_keystore_dirs, get_default_keyfile_name}
     },
-    getter,
 };
+use pairing::bls12_381::Bls12;
+use parity_codec::Decode;
+use polkadot_rs::{hexstr_to_vec, Api, Url};
+use proofs::{
+    constants::{ANONIMITY_SIZE, DECOY_SIZE},
+    crypto_components::{Anonymous, Confidential, MultiEncKeys},
+    crypto_components::{Calls, KeyContext, ProofBuilder, Submitter},
+    elgamal, EncryptionKey, ProofGenerationKey, SpendingKey, PARAMS,
+};
+use rand::{Rand, Rng};
+use scrypto::jubjub::{fs::Fs, FixedGenerators};
+use std::path::PathBuf;
 
 pub fn asset_issue_tx<R: Rng>(
     term: &mut Term,
@@ -38,7 +38,13 @@ pub fn asset_issue_tx<R: Rng>(
     let spending_key = spending_key_from_keystore(root_dir, &password[..])?;
     let issuer_address = EncryptionKey::<Bls12>::from_spending_key(&spending_key, &PARAMS)?;
 
-    let enc_amount = vec![elgamal::Ciphertext::encrypt(amount, &Fs::rand(rng), &issuer_address, p_g, &PARAMS)];
+    let enc_amount = vec![elgamal::Ciphertext::encrypt(
+        amount,
+        &Fs::rand(rng),
+        &issuer_address,
+        p_g,
+        &PARAMS,
+    )];
     let multi_keys = MultiEncKeys::<Bls12, Confidential>::new(issuer_address.clone());
 
     println!("Computing zk proof...");
@@ -48,19 +54,18 @@ pub fn asset_issue_tx<R: Rng>(
     KeyContext::read_from_path(CONF_PK_PATH, CONF_VK_PATH)?
         .gen_proof(
             amount,
-            0,0,0,0,
+            0,
+            0,
+            0,
+            0,
             &spending_key,
             multi_keys,
             &enc_amount,
             getter::g_epoch(&api)?,
             rng,
-            &PARAMS
+            &PARAMS,
         )?
-        .submit(
-            Calls::AssetIssue,
-            &api,
-            rng
-        );
+        .submit(Calls::AssetIssue, &api, rng);
 
     Ok(())
 }
@@ -87,10 +92,16 @@ pub fn asset_transfer_tx<R: Rng>(
 
     let balance_query = getter::BalanceQuery::get_encrypted_asset(asset_id, &dec_key, api.clone())?;
     let remaining_balance = balance_query.decrypted_balance - amount - fee;
-    assert!(balance_query.decrypted_balance >= amount + fee, "Not enough balance you have");
+    assert!(
+        balance_query.decrypted_balance >= amount + fee,
+        "Not enough balance you have"
+    );
 
     let recipient_account_id = EncryptionKey::<Bls12>::read(&mut &recipient_enc_key[..], &PARAMS)?;
-    let enc_balance = vec![elgamal::Ciphertext::read(&mut &balance_query.encrypted_balance[..], &*PARAMS)?];
+    let enc_balance = vec![elgamal::Ciphertext::read(
+        &mut &balance_query.encrypted_balance[..],
+        &*PARAMS,
+    )?];
     let multi_keys = MultiEncKeys::<Bls12, Confidential>::new(recipient_account_id.clone());
 
     println!("Computing zk proof...");
@@ -113,13 +124,9 @@ pub fn asset_transfer_tx<R: Rng>(
             &enc_balance,
             getter::g_epoch(&api)?,
             rng,
-            &PARAMS
+            &PARAMS,
         )?
-        .submit(
-            Calls::AssetTransfer(asset_id),
-            &api,
-            rng
-        );
+        .submit(Calls::AssetTransfer(asset_id), &api, rng);
 
     Ok(())
 }
@@ -143,11 +150,20 @@ pub fn asset_burn_tx<R: Rng>(
     let dec_key = ProofGenerationKey::<Bls12>::from_spending_key(&spending_key, &PARAMS)
         .into_decryption_key()?;
     let balance_query = getter::BalanceQuery::get_encrypted_asset(asset_id, &dec_key, api.clone())?;
-    assert!(balance_query.decrypted_balance != 0, "You don't have the asset. Asset id may be incorrect.");
+    assert!(
+        balance_query.decrypted_balance != 0,
+        "You don't have the asset. Asset id may be incorrect."
+    );
 
     let amount = 0;
     let issuer_address = EncryptionKey::<Bls12>::from_spending_key(&spending_key, &PARAMS)?;
-    let enc_amount =  vec![elgamal::Ciphertext::encrypt(amount, &Fs::rand(rng), &issuer_address, p_g, &PARAMS)];
+    let enc_amount = vec![elgamal::Ciphertext::encrypt(
+        amount,
+        &Fs::rand(rng),
+        &issuer_address,
+        p_g,
+        &PARAMS,
+    )];
     let multi_keys = MultiEncKeys::<Bls12, Confidential>::new(issuer_address);
 
     println!("Computing zk proof...");
@@ -157,19 +173,18 @@ pub fn asset_burn_tx<R: Rng>(
     KeyContext::read_from_path(CONF_PK_PATH, CONF_VK_PATH)?
         .gen_proof(
             amount,
-            0, 0, 0, 0,
+            0,
+            0,
+            0,
+            0,
             &spending_key,
             multi_keys,
             &enc_amount,
             getter::g_epoch(&api)?,
             rng,
-            &PARAMS
+            &PARAMS,
         )?
-        .submit(
-            Calls::AssetBurn(asset_id),
-            &api,
-            rng
-        );
+        .submit(Calls::AssetBurn(asset_id), &api, rng);
 
     Ok(())
 }
@@ -208,7 +223,13 @@ pub fn annonymous_issue_tx<R: Rng>(
     let spending_key = spending_key_from_keystore(root_dir, &password[..])?;
     let issuer_address = EncryptionKey::<Bls12>::from_spending_key(&spending_key, &PARAMS)?;
 
-    let enc_amount = vec![elgamal::Ciphertext::encrypt(amount, &Fs::rand(rng), &issuer_address, p_g, &PARAMS)];
+    let enc_amount = vec![elgamal::Ciphertext::encrypt(
+        amount,
+        &Fs::rand(rng),
+        &issuer_address,
+        p_g,
+        &PARAMS,
+    )];
     let multi_keys = MultiEncKeys::<Bls12, Confidential>::new(issuer_address.clone());
 
     println!("Computing zk proof...");
@@ -218,19 +239,18 @@ pub fn annonymous_issue_tx<R: Rng>(
     KeyContext::read_from_path(CONF_PK_PATH, CONF_VK_PATH)?
         .gen_proof(
             amount,
-            0,0,0,0,
+            0,
+            0,
+            0,
+            0,
             &spending_key,
             multi_keys,
             &enc_amount,
             getter::g_epoch(&api)?,
             rng,
-            &PARAMS
+            &PARAMS,
         )?
-        .submit(
-            Calls::AnonymousIssue,
-            &api,
-            rng
-        );
+        .submit(Calls::AnonymousIssue, &api, rng);
 
     Ok(())
 }
@@ -279,11 +299,11 @@ pub fn anonymous_transfer_tx_for_debug<R: Rng>(
 }
 
 fn inner_confidential_transfer_tx<R: Rng>(
-    spending_key: SpendingKey::<Bls12>,
+    spending_key: SpendingKey<Bls12>,
     recipient_enc_key: &[u8],
     amount: u32,
     url: Url,
-    rng: &mut R
+    rng: &mut R,
 ) -> Result<()> {
     println!("Preparing paramters...");
 
@@ -294,11 +314,17 @@ fn inner_confidential_transfer_tx<R: Rng>(
 
     let balance_query = getter::BalanceQuery::get_encrypted_balance(&dec_key, api.clone())?;
     let remaining_balance = balance_query.decrypted_balance - amount - fee;
-    assert!(balance_query.decrypted_balance >= amount + fee, "Not enough balance you have");
+    assert!(
+        balance_query.decrypted_balance >= amount + fee,
+        "Not enough balance you have"
+    );
 
     let recipient_account_id = EncryptionKey::<Bls12>::read(&mut &recipient_enc_key[..], &PARAMS)?;
     let multi_keys = MultiEncKeys::<Bls12, Confidential>::new(recipient_account_id.clone());
-    let enc_balance = vec![elgamal::Ciphertext::read(&mut &balance_query.encrypted_balance[..], &*PARAMS)?];
+    let enc_balance = vec![elgamal::Ciphertext::read(
+        &mut &balance_query.encrypted_balance[..],
+        &*PARAMS,
+    )?];
 
     println!("Computing zk proof...");
     if recipient_account_id == EncryptionKey::from_decryption_key(&dec_key, &*PARAMS) {
@@ -320,23 +346,19 @@ fn inner_confidential_transfer_tx<R: Rng>(
             &enc_balance,
             getter::g_epoch(&api)?,
             rng,
-            &PARAMS
+            &PARAMS,
         )?
-        .submit(
-            Calls::BalanceTransfer,
-            &api,
-            rng
-        );
+        .submit(Calls::BalanceTransfer, &api, rng);
 
     Ok(())
 }
 
 fn inner_anonymous_transfer_tx<R: Rng>(
-    spending_key: SpendingKey::<Bls12>,
+    spending_key: SpendingKey<Bls12>,
     recipient_enc_key: &[u8],
     amount: u32,
     url: Url,
-    rng: &mut R
+    rng: &mut R,
 ) -> Result<()> {
     println!("Preparing paramters...");
 
@@ -347,9 +369,12 @@ fn inner_anonymous_transfer_tx<R: Rng>(
 
     let balance_query = getter::BalanceQuery::get_anonymous_balance(&dec_key, api.clone())?;
     let remaining_balance = balance_query.decrypted_balance - amount;
-    assert!(balance_query.decrypted_balance >= amount, "Not enough balance you have");
+    assert!(
+        balance_query.decrypted_balance >= amount,
+        "Not enough balance you have"
+    );
 
-    let s_index: usize = rng.gen_range(0, DECOY_SIZE-1);
+    let s_index: usize = rng.gen_range(0, DECOY_SIZE - 1);
     let mut t_index: usize;
     loop {
         t_index = rng.gen_range(0, DECOY_SIZE);
@@ -361,7 +386,8 @@ fn inner_anonymous_transfer_tx<R: Rng>(
     let recipient_account_id = EncryptionKey::<Bls12>::read(&mut &recipient_enc_key[..], &PARAMS)?;
     let decoys = getter::get_enc_keys(&api, rng)?;
     assert_eq!(decoys.len(), DECOY_SIZE);
-    let multi_keys = MultiEncKeys::<Bls12, Anonymous>::new(recipient_account_id.clone(), decoys.clone());
+    let multi_keys =
+        MultiEncKeys::<Bls12, Anonymous>::new(recipient_account_id.clone(), decoys.clone());
 
     let mut enc_keys = vec![];
     let mut j = 0;
@@ -397,13 +423,9 @@ fn inner_anonymous_transfer_tx<R: Rng>(
             &enc_balances[..],
             getter::g_epoch(&api)?,
             rng,
-            &PARAMS
+            &PARAMS,
         )?
-        .submit(
-            Calls::AnonymousTransfer,
-            &api,
-            rng
-        );
+        .submit(Calls::AnonymousTransfer, &api, rng);
 
     Ok(())
 }
@@ -411,8 +433,7 @@ fn inner_anonymous_transfer_tx<R: Rng>(
 pub fn spending_key_from_keystore(
     root_dir: PathBuf,
     password: &[u8],
-) -> Result<SpendingKey<Bls12>>
-{
+) -> Result<SpendingKey<Bls12>> {
     let (wallet_dir, keystore_dir) = wallet_keystore_dirs(&root_dir)?;
 
     let default_keyfile_name = get_default_keyfile_name(&wallet_dir)?;
@@ -440,7 +461,7 @@ pub fn subscribe_event(api: Api, remaining_balance: u32) {
         .name("eventsubscriber".to_string())
         .spawn(move || {
             api.subscribe_events(tx.clone());
-    });
+        });
 
     let _ = thread::Builder::new()
         .name("eventlistner".to_string())

@@ -6,29 +6,23 @@ extern crate alloc;
 
 #[cfg(not(feature = "std"))]
 mod std {
-    pub use ::core::*;
-    pub use crate::alloc::vec;
-    pub use crate::alloc::string;
-    pub use crate::alloc::boxed;
     pub use crate::alloc::borrow;
+    pub use crate::alloc::boxed;
+    pub use crate::alloc::string;
+    pub use crate::alloc::vec;
+    pub use ::core::*;
 }
 
-#[cfg(feature = "std")]
-use ::std::vec::Vec;
 #[cfg(not(feature = "std"))]
 use crate::std::vec::Vec;
 #[cfg(feature = "std")]
-use serde::{Serialize, Serializer, Deserialize, Deserializer};
+use ::std::vec::Vec;
+use pairing::{io, CurveAffine, EncodedPoint, Engine, RW};
+use parity_codec::{Decode, Encode, Input};
+#[cfg(feature = "std")]
+use serde::{Deserialize, Deserializer, Serialize, Serializer};
 #[cfg(feature = "std")]
 use substrate_primitives::bytes;
-use parity_codec::{Encode, Decode, Input};
-use pairing::{
-    Engine,
-    CurveAffine,
-    EncodedPoint,
-    io,
-    RW,
-};
 
 #[cfg(test)]
 pub mod tests;
@@ -40,23 +34,17 @@ pub use self::verifier::*;
 pub struct Proof<E: Engine> {
     pub a: E::G1Affine,
     pub b: E::G2Affine,
-    pub c: E::G1Affine
+    pub c: E::G1Affine,
 }
 
 impl<E: Engine> PartialEq for Proof<E> {
     fn eq(&self, other: &Self) -> bool {
-        self.a == other.a &&
-        self.b == other.b &&
-        self.c == other.c
+        self.a == other.a && self.b == other.b && self.c == other.c
     }
 }
 
 impl<E: Engine> Proof<E> {
-    pub fn write<W: io::Write>(
-        &self,
-        writer: &mut W
-    ) -> io::Result<()>
-    {
+    pub fn write<W: io::Write>(&self, writer: &mut W) -> io::Result<()> {
         writer.write(self.a.into_compressed().as_ref())?;
         writer.write(self.b.into_compressed().as_ref())?;
         writer.write(self.c.into_compressed().as_ref())?;
@@ -64,48 +52,47 @@ impl<E: Engine> Proof<E> {
         Ok(())
     }
 
-    pub fn read<R: io::Read>(
-        mut reader: R
-    ) -> io::Result<Self>
-    {
+    pub fn read<R: io::Read>(mut reader: R) -> io::Result<Self> {
         let mut g1_repr = <E::G1Affine as CurveAffine>::Compressed::empty();
         let mut g2_repr = <E::G2Affine as CurveAffine>::Compressed::empty();
 
         reader.read(g1_repr.as_mut())?;
         let a = g1_repr
-                .into_affine()
-                .map_err(|_| io::Error::InvalidData)
-                .and_then(|e| if e.is_zero() {
+            .into_affine()
+            .map_err(|_| io::Error::InvalidData)
+            .and_then(|e| {
+                if e.is_zero() {
                     Err(io::Error::PointInfinity)
                 } else {
                     Ok(e)
-                })?;
+                }
+            })?;
 
         reader.read(g2_repr.as_mut())?;
         let b = g2_repr
-                .into_affine()
-                .map_err(|_| io::Error::InvalidData)
-                .and_then(|e| if e.is_zero() {
+            .into_affine()
+            .map_err(|_| io::Error::InvalidData)
+            .and_then(|e| {
+                if e.is_zero() {
                     Err(io::Error::PointInfinity)
                 } else {
                     Ok(e)
-                })?;
+                }
+            })?;
 
         reader.read(g1_repr.as_mut())?;
         let c = g1_repr
-                .into_affine()
-                .map_err(|_| io::Error::InvalidData)
-                .and_then(|e| if e.is_zero() {
+            .into_affine()
+            .map_err(|_| io::Error::InvalidData)
+            .and_then(|e| {
+                if e.is_zero() {
                     Err(io::Error::PointInfinity)
                 } else {
                     Ok(e)
-                })?;
+                }
+            })?;
 
-        Ok(Proof {
-            a: a,
-            b: b,
-            c: c
-        })
+        Ok(Proof { a: a, b: b, c: c })
     }
 }
 
@@ -119,16 +106,18 @@ pub struct PreparedVerifyingKey<E: Engine> {
     /// -delta in G2
     neg_delta_g2: <E::G2Affine as CurveAffine>::Prepared,
     /// Copy of IC from `VerifiyingKey`.
-    ic: Vec<E::G1Affine>
+    ic: Vec<E::G1Affine>,
 }
 
 #[cfg(feature = "std")]
 impl<E: Engine> Serialize for PreparedVerifyingKey<E> {
     fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
-        where S: Serializer
+    where
+        S: Serializer,
     {
         let mut writer = vec![];
-        self.write(&mut &mut writer[..]).expect("Faild to serialize PreparedVerifyingKey.");
+        self.write(&mut &mut writer[..])
+            .expect("Faild to serialize PreparedVerifyingKey.");
         bytes::serialize(&writer[..], serializer)
     }
 }
@@ -136,7 +125,8 @@ impl<E: Engine> Serialize for PreparedVerifyingKey<E> {
 #[cfg(feature = "std")]
 impl<'de, E: Engine> Deserialize<'de> for PreparedVerifyingKey<E> {
     fn deserialize<D>(_deserializer: D) -> Result<Self, D::Error>
-        where D: Deserializer<'de>
+    where
+        D: Deserializer<'de>,
     {
         // Never called
         unimplemented!();
@@ -148,9 +138,11 @@ impl<E: Engine> Encode for PreparedVerifyingKey<E> {
         let mut writer = vec![];
 
         #[cfg(feature = "std")]
-        self.write(&mut &mut writer).expect("Faild to write PreparedVerifyingKey");
+        self.write(&mut &mut writer)
+            .expect("Faild to write PreparedVerifyingKey");
         #[cfg(not(feature = "std"))]
-        self.write(&mut &mut writer[..]).expect("Faild to write PreparedVerifyingKey");
+        self.write(&mut &mut writer[..])
+            .expect("Faild to write PreparedVerifyingKey");
 
         writer.using_encoded(f)
     }
@@ -158,9 +150,10 @@ impl<E: Engine> Encode for PreparedVerifyingKey<E> {
 
 impl<E: Engine> Decode for PreparedVerifyingKey<E> {
     fn decode<I: Input>(input: &mut I) -> Option<Self> {
-        <Vec<u8> as Decode>::decode(input)
-            .map(|b| PreparedVerifyingKey::<E>::read(&mut &b[..])
-                .expect("Faild to read PreparedVerifyingKey"))
+        <Vec<u8> as Decode>::decode(input).map(|b| {
+            PreparedVerifyingKey::<E>::read(&mut &b[..])
+                .expect("Faild to read PreparedVerifyingKey")
+        })
     }
 }
 
@@ -172,12 +165,8 @@ impl<E: Engine> Default for PreparedVerifyingKey<E> {
 }
 
 impl<E: Engine> PreparedVerifyingKey<E> {
-    pub fn write<W: io::Write> (
-        &self,
-        writer: &mut W
-    ) -> io::Result<()>
-    {
-        use byteorder::{ByteOrder, BigEndian};
+    pub fn write<W: io::Write>(&self, writer: &mut W) -> io::Result<()> {
+        use byteorder::{BigEndian, ByteOrder};
 
         self.alpha_g1_beta_g2.write(writer)?;
         self.neg_gamma_g2.write(writer)?;
@@ -195,11 +184,8 @@ impl<E: Engine> PreparedVerifyingKey<E> {
         Ok(())
     }
 
-    pub fn read<R: io::Read> (
-        reader: &mut R
-    ) -> io::Result<Self>
-    {
-        use byteorder::{ByteOrder, BigEndian};
+    pub fn read<R: io::Read>(reader: &mut R) -> io::Result<Self> {
+        use byteorder::{BigEndian, ByteOrder};
 
         let mut g1_repr = <E::G1Affine as CurveAffine>::Uncompressed::empty();
         let alpha_g1_beta_g2 = E::Fqk::read(reader)?;
@@ -217,13 +203,15 @@ impl<E: Engine> PreparedVerifyingKey<E> {
         for _ in 0..ic_len {
             reader.read(g1_repr.as_mut())?;
             let g1 = g1_repr
-                        .into_affine()
-                        .map_err(|_| io::Error::InvalidData)
-                        .and_then(|e| if e.is_zero() {
-                            Err(io::Error::PointInfinity)
-                        } else {
-                            Ok(e)
-                        })?;
+                .into_affine()
+                .map_err(|_| io::Error::InvalidData)
+                .and_then(|e| {
+                    if e.is_zero() {
+                        Err(io::Error::PointInfinity)
+                    } else {
+                        Ok(e)
+                    }
+                })?;
             ic.push(g1);
         }
 
@@ -235,7 +223,6 @@ impl<E: Engine> PreparedVerifyingKey<E> {
         })
     }
 }
-
 
 #[derive(Clone)]
 pub struct VerifyingKey<E: Engine> {
@@ -262,18 +249,18 @@ pub struct VerifyingKey<E: Engine> {
     // for all public inputs. Because all public inputs have a dummy constraint,
     // this is the same size as the number of inputs, and never contains points
     // at infinity.
-    pub ic: Vec<E::G1Affine>
+    pub ic: Vec<E::G1Affine>,
 }
 
 impl<E: Engine> PartialEq for VerifyingKey<E> {
     fn eq(&self, other: &Self) -> bool {
-        self.alpha_g1 == other.alpha_g1 &&
-        self.beta_g1 == other.beta_g1 &&
-        self.beta_g2 == other.beta_g2 &&
-        self.gamma_g2 == other.gamma_g2 &&
-        self.delta_g1 == other.delta_g1 &&
-        self.delta_g2 == other.delta_g2 &&
-        self.ic == other.ic
+        self.alpha_g1 == other.alpha_g1
+            && self.beta_g1 == other.beta_g1
+            && self.beta_g2 == other.beta_g2
+            && self.gamma_g2 == other.gamma_g2
+            && self.delta_g1 == other.delta_g1
+            && self.delta_g2 == other.delta_g2
+            && self.ic == other.ic
     }
 }
 
@@ -373,7 +360,7 @@ pub enum SynthesisError {
     /// During verification, our verifying key was malformed.
     MalformedVerifyingKey,
     /// During CRS generation, we observed an unconstrained auxillary variable
-    UnconstrainedVariable
+    UnconstrainedVariable,
 }
 
 impl From<io::Error> for SynthesisError {
@@ -385,32 +372,88 @@ impl From<io::Error> for SynthesisError {
 #[cfg(test)]
 mod test_proof_write_read {
     use super::*;
-    use pairing::bls12_381::{G1Affine, G2Affine, Fq, FqRepr, Fq2, Bls12};
+    use pairing::bls12_381::{Bls12, Fq, Fq2, FqRepr, G1Affine, G2Affine};
 
     #[test]
     fn byte_cast() {
         let proof = Proof::<Bls12> {
             a: G1Affine {
-                x: Fq(FqRepr([16739797345307447054, 8770073581945912782, 2136235734558249053, 15708693206467346864, 8490922573673252286, 1579948179538746271])),
-                y: Fq(FqRepr([6020268861830312380, 12879642226817054130, 17904268384441769431, 15221266273771162992, 5384025118770475327, 1217424206270675696])),
-                infinity: false
+                x: Fq(FqRepr([
+                    16739797345307447054,
+                    8770073581945912782,
+                    2136235734558249053,
+                    15708693206467346864,
+                    8490922573673252286,
+                    1579948179538746271,
+                ])),
+                y: Fq(FqRepr([
+                    6020268861830312380,
+                    12879642226817054130,
+                    17904268384441769431,
+                    15221266273771162992,
+                    5384025118770475327,
+                    1217424206270675696,
+                ])),
+                infinity: false,
             },
             b: G2Affine {
                 x: Fq2 {
-                    c0: Fq(FqRepr([1955900693533848923, 1207270260807916624, 10030599496790334806, 13310839817113796132, 7335494448760471336, 1520001478562200471])),
-                    c1: Fq(FqRepr([10867545881237734656, 11292327308906943064, 4286427264655280722, 5033346395315998832, 9316987264960049565, 1093242448245841130]))
+                    c0: Fq(FqRepr([
+                        1955900693533848923,
+                        1207270260807916624,
+                        10030599496790334806,
+                        13310839817113796132,
+                        7335494448760471336,
+                        1520001478562200471,
+                    ])),
+                    c1: Fq(FqRepr([
+                        10867545881237734656,
+                        11292327308906943064,
+                        4286427264655280722,
+                        5033346395315998832,
+                        9316987264960049565,
+                        1093242448245841130,
+                    ])),
                 },
                 y: Fq2 {
-                    c0: Fq(FqRepr([6242954237310667968, 4585560269108097072, 5517602464819718440, 11574556308726901230, 9576729709326690239, 433440758793164942])),
-                    c1: Fq(FqRepr([11180820212476238720, 13504112200989036594, 2176986271111729977, 4481942420924131750, 16599268505710547724, 922146901424495142]))
+                    c0: Fq(FqRepr([
+                        6242954237310667968,
+                        4585560269108097072,
+                        5517602464819718440,
+                        11574556308726901230,
+                        9576729709326690239,
+                        433440758793164942,
+                    ])),
+                    c1: Fq(FqRepr([
+                        11180820212476238720,
+                        13504112200989036594,
+                        2176986271111729977,
+                        4481942420924131750,
+                        16599268505710547724,
+                        922146901424495142,
+                    ])),
                 },
-                infinity: false
+                infinity: false,
             },
             c: G1Affine {
-                x: Fq(FqRepr([16362720867114782945, 14827736289902972547, 7987695302896742039, 14289613131851611182, 7162884718192410854, 605698044002088945])),
-                y: Fq(FqRepr([3093450141616622888, 7767002491037351418, 5972324121568597438, 2377138492074911281, 701452421528324862, 1373508511228186748])),
-                infinity: false
-            }
+                x: Fq(FqRepr([
+                    16362720867114782945,
+                    14827736289902972547,
+                    7987695302896742039,
+                    14289613131851611182,
+                    7162884718192410854,
+                    605698044002088945,
+                ])),
+                y: Fq(FqRepr([
+                    3093450141616622888,
+                    7767002491037351418,
+                    5972324121568597438,
+                    2377138492074911281,
+                    701452421528324862,
+                    1373508511228186748,
+                ])),
+                infinity: false,
+            },
         };
 
         let mut v = vec![];
@@ -424,9 +467,9 @@ mod test_proof_write_read {
 
     #[test]
     fn prepared_vk_read_write() {
-        use std::path::Path;
         use std::fs::File;
         use std::io::{BufReader, Read};
+        use std::path::Path;
 
         let vk_path = Path::new("./src/tests/verification.params");
         let vk_file = File::open(&vk_path).unwrap();

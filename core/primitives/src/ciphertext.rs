@@ -1,15 +1,12 @@
-#[cfg(feature = "std")]
-use ::std::vec::Vec;
 #[cfg(not(feature = "std"))]
 use crate::std::vec::Vec;
-use crate::{PARAMS, LeftCiphertext, RightCiphertext};
+use crate::{LeftCiphertext, RightCiphertext, PARAMS};
+#[cfg(feature = "std")]
+use ::std::vec::Vec;
+use core::convert::{TryFrom, TryInto};
+use pairing::{bls12_381::Bls12, io};
+use parity_codec::{Decode, Encode};
 use zcrypto::elgamal;
-use pairing::{
-    bls12_381::Bls12,
-    io
-};
-use parity_codec::{Encode, Decode};
-use core::convert::{TryInto, TryFrom};
 
 #[derive(Eq, PartialEq, Clone, Default, Encode, Decode)]
 #[cfg_attr(feature = "std", derive(Debug, Serialize, Deserialize))]
@@ -57,9 +54,7 @@ impl TryFrom<Ciphertext> for LeftCiphertext {
     type Error = io::Error;
 
     fn try_from(ct: Ciphertext) -> Result<LeftCiphertext, io::Error> {
-        elgamal::Ciphertext::<Bls12>::try_from(ct)?
-            .left
-            .try_into()
+        elgamal::Ciphertext::<Bls12>::try_from(ct)?.left.try_into()
     }
 }
 
@@ -67,9 +62,7 @@ impl TryFrom<Ciphertext> for RightCiphertext {
     type Error = io::Error;
 
     fn try_from(ct: Ciphertext) -> Result<RightCiphertext, io::Error> {
-        elgamal::Ciphertext::<Bls12>::try_from(ct)?
-            .right
-            .try_into()
+        elgamal::Ciphertext::<Bls12>::try_from(ct)?.right.try_into()
     }
 }
 
@@ -78,13 +71,13 @@ impl Ciphertext {
         Ciphertext(slice.to_vec())
     }
 
-    pub fn from_left_right(left: LeftCiphertext, right: RightCiphertext) -> Result<Self, io::Error> {
-        elgamal::Ciphertext::new(
-            left.try_into()?,
-            right.try_into()?
-        )
-        .try_into()
-        .map_err(|_| io::Error::InvalidData)
+    pub fn from_left_right(
+        left: LeftCiphertext,
+        right: RightCiphertext,
+    ) -> Result<Self, io::Error> {
+        elgamal::Ciphertext::new(left.try_into()?, right.try_into()?)
+            .try_into()
+            .map_err(|_| io::Error::InvalidData)
     }
 
     pub fn add(&self, other: &Self) -> Result<Self, io::Error> {
@@ -103,17 +96,20 @@ impl Ciphertext {
 impl Ciphertext {
     pub fn left(&self) -> Result<LeftCiphertext, io::Error> {
         elgamal::Ciphertext::<Bls12>::try_from(self)?
-            .left.try_into()
+            .left
+            .try_into()
     }
 
     pub fn right(&self) -> Result<RightCiphertext, io::Error> {
         elgamal::Ciphertext::<Bls12>::try_from(self)?
-            .right.try_into()
+            .right
+            .try_into()
     }
 
     // TODO: Make constant
-    pub fn zero() ->Self {
-        elgamal::Ciphertext::zero().try_into()
+    pub fn zero() -> Self {
+        elgamal::Ciphertext::zero()
+            .try_into()
             .expect("Should valid point.")
     }
 
@@ -125,13 +121,14 @@ impl Ciphertext {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use rand::{Rng, SeedableRng, XorShiftRng};
     use jubjub::curve::{FixedGenerators, JubjubBls12};
-    use parity_codec::{Encode, Decode};
     use keys::EncryptionKey;
+    use parity_codec::{Decode, Encode};
+    use rand::{Rng, SeedableRng, XorShiftRng};
 
-    fn gen_ciphertext() -> elgamal::Ciphertext::<Bls12> {
-        let rng_seed = &mut XorShiftRng::from_seed([0x3dbe6259, 0x8d313d76, 0x3237db17, 0xe5bc0654]);
+    fn gen_ciphertext() -> elgamal::Ciphertext<Bls12> {
+        let rng_seed =
+            &mut XorShiftRng::from_seed([0x3dbe6259, 0x8d313d76, 0x3237db17, 0xe5bc0654]);
         let rng_r = &mut XorShiftRng::from_seed([0xbc4f6d47, 0xd62f276d, 0xb963afd3, 0x54558639]);
 
         let params = &JubjubBls12::new();

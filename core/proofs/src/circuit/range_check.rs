@@ -1,32 +1,26 @@
-use bellman::{
-    SynthesisError,
-    ConstraintSystem,
-    Variable,
-    LinearCombination
-};
-use scrypto::circuit::boolean::{Boolean, AllocatedBit};
+use bellman::{ConstraintSystem, LinearCombination, SynthesisError, Variable};
+use pairing::{BitIterator, Field, PrimeField, PrimeFieldRepr};
+use scrypto::circuit::boolean::{AllocatedBit, Boolean};
 use scrypto::jubjub::JubjubEngine;
-use pairing::{PrimeField, Field, BitIterator, PrimeFieldRepr};
 
 pub fn u32_into_bit_vec_le<E, CS>(
     mut cs: CS,
-    amount: Option<u32>
+    amount: Option<u32>,
 ) -> Result<Vec<Boolean>, SynthesisError>
-    where E: JubjubEngine, CS: ConstraintSystem<E>
+where
+    E: JubjubEngine,
+    CS: ConstraintSystem<E>,
 {
-    let alloc_num = AllocRangedNum::alloc(
-        cs.namespace(|| "allocated num to check range."),
-        || {
+    let alloc_num =
+        AllocRangedNum::alloc(cs.namespace(|| "allocated num to check range."), || {
             match amount {
                 Some(a) => E::Fr::from_str(&a.to_string()),
-                None => E::Fr::from_str("0")
-            }.ok_or(SynthesisError::AssignmentMissing)
-        }
-    )?;
+                None => E::Fr::from_str("0"),
+            }
+            .ok_or(SynthesisError::AssignmentMissing)
+        })?;
 
-    alloc_num.into_bits_le_strict(cs.namespace(
-        || "range check within u32"
-    ))
+    alloc_num.into_bits_le_strict(cs.namespace(|| "range check within u32"))
 }
 
 struct AllocRangedNum<E: JubjubEngine> {
@@ -35,26 +29,26 @@ struct AllocRangedNum<E: JubjubEngine> {
 }
 
 impl<E: JubjubEngine> AllocRangedNum<E> {
-    fn alloc<CS, F>(
-        mut cs: CS,
-        value: F,
-    ) -> Result<Self, SynthesisError>
+    fn alloc<CS, F>(mut cs: CS, value: F) -> Result<Self, SynthesisError>
     where
         CS: ConstraintSystem<E>,
-        F: FnOnce() -> Result<E::Fr, SynthesisError>
+        F: FnOnce() -> Result<E::Fr, SynthesisError>,
     {
         let mut new_value = None;
-        let var = cs.alloc(|| "num", || {
-            let tmp = value()?;
+        let var = cs.alloc(
+            || "num",
+            || {
+                let tmp = value()?;
 
-            new_value = Some(tmp);
+                new_value = Some(tmp);
 
-            Ok(tmp)
-        })?;
+                Ok(tmp)
+            },
+        )?;
 
         Ok(AllocRangedNum {
             value: new_value,
-            variable: var
+            variable: var,
         })
     }
 
@@ -63,18 +57,17 @@ impl<E: JubjubEngine> AllocRangedNum<E> {
     /// order, requiring that the representation
     /// strictly exists "in the field" (i.e., a
     /// congruency is not allowed.)
-    fn into_bits_le_strict<CS>(
-        &self,
-        mut cs: CS
-    ) -> Result<Vec<Boolean>, SynthesisError>
-        where CS: ConstraintSystem<E>
+    fn into_bits_le_strict<CS>(&self, mut cs: CS) -> Result<Vec<Boolean>, SynthesisError>
+    where
+        CS: ConstraintSystem<E>,
     {
         pub fn kary_and<E, CS>(
             mut cs: CS,
-            v: &[AllocatedBit]
+            v: &[AllocatedBit],
         ) -> Result<AllocatedBit, SynthesisError>
-            where E: JubjubEngine,
-                  CS: ConstraintSystem<E>
+        where
+            E: JubjubEngine,
+            CS: ConstraintSystem<E>,
         {
             assert!(v.len() > 0);
 
@@ -89,7 +82,7 @@ impl<E: JubjubEngine> AllocRangedNum<E> {
                     cur = Some(AllocatedBit::and(
                         cs.namespace(|| format!("and {}", i)),
                         cur.as_ref().unwrap(),
-                        v
+                        v,
                     )?);
                 }
             }
@@ -127,10 +120,7 @@ impl<E: JubjubEngine> AllocRangedNum<E> {
             if b {
                 // This is part of a run of ones. Let's just
                 // allocate the boolean with the expected value.
-                let a_bit = AllocatedBit::alloc(
-                    cs.namespace(|| format!("bit {}", i)),
-                    a_bit
-                )?;
+                let a_bit = AllocatedBit::alloc(cs.namespace(|| format!("bit {}", i)), a_bit)?;
                 // ... and add it to the current run of ones.
                 current_run.push(a_bit.clone());
                 result.push(a_bit);
@@ -144,7 +134,7 @@ impl<E: JubjubEngine> AllocRangedNum<E> {
                     }
                     last_run = Some(kary_and(
                         cs.namespace(|| format!("run ending at {}", i)),
-                        &current_run
+                        &current_run,
                     )?);
                     current_run.truncate(0);
                 }
@@ -157,7 +147,9 @@ impl<E: JubjubEngine> AllocRangedNum<E> {
                 let a_bit = AllocatedBit::alloc_conditionally(
                     cs.namespace(|| format!("bit {}", i)),
                     a_bit,
-                    &last_run.as_ref().expect("u32::MAX always starts with a one")
+                    &last_run
+                        .as_ref()
+                        .expect("u32::MAX always starts with a one"),
                 )?;
                 result.push(a_bit);
             }
@@ -183,12 +175,7 @@ impl<E: JubjubEngine> AllocRangedNum<E> {
 
         lc = lc - self.variable;
 
-        cs.enforce(
-            || "unpacking constraint",
-            |lc| lc,
-            |lc| lc,
-            |_| lc
-        );
+        cs.enforce(|| "unpacking constraint", |lc| lc, |lc| lc, |_| lc);
 
         // Convert into booleans, and reverse for little-endian bit order
         Ok(result.into_iter().map(|b| Boolean::from(b)).rev().collect())
@@ -198,8 +185,8 @@ impl<E: JubjubEngine> AllocRangedNum<E> {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use pairing::bls12_381::{Bls12, Fr};
     use crate::circuit::TestConstraintSystem;
+    use pairing::bls12_381::{Bls12, Fr};
 
     fn valid_range_check(num_str: &str) -> bool {
         let num = Fr::from_str(num_str).unwrap();
