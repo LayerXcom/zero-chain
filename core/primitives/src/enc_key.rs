@@ -1,55 +1,17 @@
-#[cfg(feature = "std")]
-use serde::{Serialize, Serializer, Deserialize, Deserializer};
-#[cfg(feature = "std")]
-use substrate_primitives::hexdisplay::AsBytesRef;
-#[cfg(feature = "std")]
-use substrate_primitives::bytes;
 use keys::EncryptionKey;
 use fixed_hash::construct_fixed_hash;
 use pairing::bls12_381::{Bls12, Fr};
 use pairing::io;
-use parity_codec::{Encode, Decode, Input};
 use crate::{PARAMS, IntoXY};
 use core::convert::TryFrom;
 
 const SIZE: usize = 32;
 
 construct_fixed_hash! {
-    pub struct H256(SIZE);
+    pub struct EncKey(SIZE);
 }
 
-pub type EncKey = H256;
-
-#[cfg(feature = "std")]
-impl Serialize for EncKey {
-    fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
-        where S: Serializer
-    {
-        bytes::serialize(&self.0, serializer)
-    }
-}
-
-#[cfg(feature = "std")]
-impl<'de> Deserialize<'de> for EncKey {
-    fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
-        where D: Deserializer<'de>
-    {
-        bytes::deserialize_check_len(deserializer, bytes::ExpectedLen::Exact(SIZE))
-            .map(|x| EncKey::from_slice(&x))
-    }
-}
-
-impl Encode for EncKey {
-    fn using_encoded<R, F: FnOnce(&[u8]) -> R>(&self, f: F) -> R {
-        self.0.using_encoded(f)
-    }
-}
-
-impl Decode for EncKey {
-    fn decode<I: Input>(input: &mut I) -> Option<Self> {
-        <[u8; SIZE] as Decode>::decode(input).map(H256)
-    }
-}
+impl_fixed_hash_codec!(EncKey, SIZE);
 
 impl TryFrom<EncryptionKey<Bls12>> for EncKey {
     type Error = io::Error;
@@ -58,7 +20,7 @@ impl TryFrom<EncryptionKey<Bls12>> for EncKey {
         let mut writer = [0u8; 32];
         enc_key.write(&mut writer[..])?;
 
-        Ok(H256::from_slice(&writer))
+        Ok(EncKey::from_slice(&writer))
     }
 }
 
@@ -75,13 +37,6 @@ impl TryFrom<&EncKey> for EncryptionKey<Bls12> {
 
     fn try_from(enc_key: &EncKey) -> Result<Self, io::Error> {
         EncryptionKey::<Bls12>::read(&mut &enc_key.0[..], &PARAMS)
-    }
-}
-
-#[cfg(feature = "std")]
-impl AsBytesRef for EncKey {
-    fn as_bytes_ref(&self) -> &[u8] {
-        self.as_ref()
     }
 }
 

@@ -1,11 +1,4 @@
-#[cfg(feature = "std")]
-use serde::{Serialize, Serializer, Deserialize, Deserializer};
-#[cfg(feature = "std")]
-use substrate_primitives::bytes;
-#[cfg(feature = "std")]
-use substrate_primitives::hexdisplay::AsBytesRef;
 use fixed_hash::construct_fixed_hash;
-use parity_codec::{Encode, Decode, Input};
 use jubjub::redjubjub;
 use pairing::{
     bls12_381::{Bls12, Fr},
@@ -17,41 +10,10 @@ use core::convert::TryFrom;
 const SIZE: usize = 32;
 
 construct_fixed_hash! {
-    pub struct H256(SIZE);
+    pub struct SigVerificationKey(SIZE);
 }
 
-pub type SigVerificationKey = H256;
-
-#[cfg(feature = "std")]
-impl Serialize for SigVerificationKey {
-    fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
-        where S: Serializer
-    {
-        bytes::serialize(&self.0, serializer)
-    }
-}
-
-#[cfg(feature = "std")]
-impl<'de> Deserialize<'de> for SigVerificationKey {
-    fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
-        where D: Deserializer<'de>
-    {
-        bytes::deserialize_check_len(deserializer, bytes::ExpectedLen::Exact(SIZE))
-            .map(|x| SigVerificationKey::from_slice(&x))
-    }
-}
-
-impl Encode for SigVerificationKey {
-    fn using_encoded<R, F: FnOnce(&[u8]) -> R>(&self, f: F) -> R {
-        self.0.using_encoded(f)
-    }
-}
-
-impl Decode for SigVerificationKey {
-    fn decode<I: Input>(input: &mut I) -> Option<Self> {
-        <[u8; SIZE] as Decode>::decode(input).map(H256)
-    }
-}
+impl_fixed_hash_codec!(SigVerificationKey, SIZE);
 
 impl TryFrom<redjubjub::PublicKey<Bls12>> for SigVerificationKey {
     type Error = io::Error;
@@ -60,7 +22,7 @@ impl TryFrom<redjubjub::PublicKey<Bls12>> for SigVerificationKey {
         let mut writer = [0u8; 32];
         vk.write(&mut &mut writer[..]).unwrap();
 
-        Ok(H256::from_slice(&writer))
+        Ok(SigVerificationKey::from_slice(&writer))
     }
 }
 
@@ -101,13 +63,6 @@ impl IntoXY<Bls12> for &SigVerificationKey {
             .into_xy();
 
         Ok(point)
-    }
-}
-
-#[cfg(feature = "std")]
-impl AsBytesRef for SigVerificationKey {
-    fn as_bytes_ref(&self) -> &[u8] {
-        self.as_ref()
     }
 }
 

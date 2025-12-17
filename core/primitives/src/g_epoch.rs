@@ -1,16 +1,13 @@
-#[cfg(feature = "std")]
-use serde::{Serialize, Serializer, Deserialize, Deserializer};
-#[cfg(feature = "std")]
-use substrate_primitives::bytes;
-use crate::{PARAMS, IntoXY};
+use crate::PARAMS;
 use fixed_hash::construct_fixed_hash;
-use jubjub::curve::{JubjubBls12, edwards, PrimeOrder, Unknown};
+use jubjub::curve::{JubjubBls12, edwards, PrimeOrder};
+#[cfg(test)]
+use jubjub::curve::Unknown;
 use jubjub::group_hash::group_hash;
 use pairing::{
-    bls12_381::{Bls12, Fr},
+    bls12_381::Bls12,
     io
 };
-use parity_codec::{Encode, Decode, Input};
 use byteorder::{ByteOrder, LittleEndian};
 use core::convert::TryFrom;
 
@@ -18,76 +15,11 @@ const SIZE: usize = 32;
 const GEPOCH_PERSONALIZATION: &[u8; 8] = b"zcgepoch";
 
 construct_fixed_hash! {
-    pub struct H256(SIZE);
+    pub struct GEpoch(SIZE);
 }
 
-pub type GEpoch = H256;
-
-#[cfg(feature = "std")]
-impl Serialize for GEpoch {
-    fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
-        where S: Serializer
-    {
-        bytes::serialize(&self.0, serializer)
-    }
-}
-
-#[cfg(feature = "std")]
-impl<'de> Deserialize<'de> for GEpoch {
-    fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
-        where D: Deserializer<'de>
-    {
-        bytes::deserialize_check_len(deserializer, bytes::ExpectedLen::Exact(SIZE))
-            .map(|x| GEpoch::from_slice(&x))
-    }
-}
-
-impl Encode for GEpoch {
-    fn using_encoded<R, F: FnOnce(&[u8]) -> R>(&self, f: F) -> R {
-        self.0.using_encoded(f)
-    }
-}
-
-impl Decode for GEpoch {
-    fn decode<I: Input>(input: &mut I) -> Option<Self> {
-        <[u8; SIZE] as Decode>::decode(input).map(H256)
-    }
-}
-
-impl TryFrom<edwards::Point<Bls12, PrimeOrder>> for GEpoch {
-    type Error = io::Error;
-
-    fn try_from(point: edwards::Point<Bls12, PrimeOrder>) -> Result<Self, io::Error> {
-        let mut writer = [0u8; 32];
-        point.write(&mut &mut writer[..])?;
-
-        Ok(H256::from_slice(&writer[..]))
-    }
-}
-
-impl TryFrom<GEpoch> for edwards::Point<Bls12, PrimeOrder> {
-    type Error = io::Error;
-
-    fn try_from(g_epoch: GEpoch) -> Result<Self, io::Error> {
-        let mut bytes = g_epoch.as_bytes();
-
-        edwards::Point::<Bls12, Unknown>::read(&mut bytes, &PARAMS)?
-            .as_prime_order(&PARAMS)
-            .ok_or(io::Error::NotInField)
-    }
-}
-
-impl TryFrom<&GEpoch> for edwards::Point<Bls12, PrimeOrder> {
-    type Error = io::Error;
-
-    fn try_from(g_epoch: &GEpoch) -> Result<Self, io::Error> {
-        let mut bytes = g_epoch.as_bytes();
-
-        edwards::Point::<Bls12, Unknown>::read(&mut bytes, &PARAMS)?
-            .as_prime_order(&PARAMS)
-            .ok_or(io::Error::NotInField)
-    }
-}
+impl_fixed_hash_codec!(GEpoch, SIZE);
+impl_edwards_point_conversions!(GEpoch, SIZE);
 
 impl GEpoch {
     pub fn try_new() -> Result<Self, io::Error> {
@@ -106,15 +38,6 @@ impl GEpoch {
         // Hash_to_curve(GEPOCH_PERSONALIZATION || current_epoch)
         let g_epoch = find_group_hash(&epoch, GEPOCH_PERSONALIZATION, &PARAMS);
         GEpoch::try_from(g_epoch)
-    }
-}
-
-impl IntoXY<Bls12> for GEpoch {
-    fn into_xy(&self) -> Result<(Fr, Fr), io::Error> {
-        let point = edwards::Point::<Bls12, PrimeOrder>::try_from(self)?
-            .into_xy();
-
-        Ok(point)
     }
 }
 
