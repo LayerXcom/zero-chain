@@ -1,127 +1,20 @@
-#[cfg(feature = "std")]
-use serde::{Serialize, Serializer, Deserialize, Deserializer};
-#[cfg(feature = "std")]
-use substrate_primitives::bytes;
-#[cfg(feature = "std")]
-use substrate_primitives::hexdisplay::AsBytesRef;
-use crate::{PARAMS, IntoXY};
 use fixed_hash::construct_fixed_hash;
-use pairing::bls12_381::{Bls12, Fr};
+#[cfg(test)]
+use pairing::bls12_381::Bls12;
+#[cfg(test)]
 use jubjub::curve::{edwards, PrimeOrder, Unknown};
+#[cfg(test)]
 use zcrypto::elgamal;
-use pairing::io;
-use parity_codec::{Encode, Decode, Input};
-use core::convert::TryFrom;
 
 const SIZE: usize = 32;
 
 construct_fixed_hash! {
-    pub struct H256(SIZE);
+    pub struct RightCiphertext(SIZE);
 }
 
-pub type RightCiphertext = H256;
-
-#[cfg(feature = "std")]
-impl Serialize for RightCiphertext {
-    fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
-        where S: Serializer
-    {
-        bytes::serialize(&self.0, serializer)
-    }
-}
-
-#[cfg(feature = "std")]
-impl<'de> Deserialize<'de> for RightCiphertext {
-    fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
-        where D: Deserializer<'de>
-    {
-        bytes::deserialize_check_len(deserializer, bytes::ExpectedLen::Exact(SIZE))
-            .map(|x| RightCiphertext::from_slice(&x))
-    }
-}
-
-impl Encode for RightCiphertext {
-    fn using_encoded<R, F: FnOnce(&[u8]) -> R>(&self, f: F) -> R {
-        self.0.using_encoded(f)
-    }
-}
-
-impl Decode for RightCiphertext {
-    fn decode<I: Input>(input: &mut I) -> Option<Self> {
-        <[u8; SIZE] as Decode>::decode(input).map(H256)
-    }
-}
-
-impl TryFrom<elgamal::Ciphertext<Bls12>> for RightCiphertext {
-    type Error = io::Error;
-
-    fn try_from(ciphertext: elgamal::Ciphertext<Bls12>) -> Result<Self, io::Error> {
-        let mut writer = [0u8; 32];
-        ciphertext.right.write(&mut &mut writer[..])?;
-
-        Ok(H256::from_slice(&writer[..]))
-    }
-}
-
-impl TryFrom<RightCiphertext> for edwards::Point<Bls12, PrimeOrder> {
-    type Error = io::Error;
-
-    fn try_from(right_ciphertext: RightCiphertext) -> Result<Self, io::Error> {
-        let mut bytes = right_ciphertext.as_bytes();
-
-        edwards::Point::<Bls12, Unknown>::read(&mut bytes, &PARAMS)?
-            .as_prime_order(&PARAMS)
-            .ok_or(io::Error::NotInField)
-    }
-}
-
-impl TryFrom<&RightCiphertext> for edwards::Point<Bls12, PrimeOrder> {
-    type Error = io::Error;
-
-    fn try_from(right_ciphertext: &RightCiphertext) -> Result<Self, io::Error> {
-        let mut bytes = right_ciphertext.as_bytes();
-
-        edwards::Point::<Bls12, Unknown>::read(&mut bytes, &PARAMS)?
-            .as_prime_order(&PARAMS)
-            .ok_or(io::Error::NotInField)
-    }
-}
-
-impl TryFrom<edwards::Point<Bls12, PrimeOrder>> for RightCiphertext {
-    type Error = io::Error;
-
-    fn try_from(point: edwards::Point<Bls12, PrimeOrder>) -> Result<Self, io::Error> {
-        let mut writer = [0u8; 32];
-        point.write(&mut &mut writer[..])?;
-
-        Ok(H256::from_slice(&writer[..]))
-    }
-}
-
-#[cfg(feature = "std")]
-impl AsBytesRef for RightCiphertext {
-    fn as_bytes_ref(&self) -> &[u8] {
-        self.as_ref()
-    }
-}
-
-impl IntoXY<Bls12> for RightCiphertext {
-    fn into_xy(&self) -> Result<(Fr, Fr), io::Error> {
-        let point = edwards::Point::<Bls12, PrimeOrder>::try_from(self)?
-            .into_xy();
-
-        Ok(point)
-    }
-}
-
-impl IntoXY<Bls12> for &RightCiphertext {
-    fn into_xy(&self) -> Result<(Fr, Fr), io::Error> {
-        let point = edwards::Point::<Bls12, PrimeOrder>::try_from(**self)?
-            .into_xy();
-
-        Ok(point)
-    }
-}
+impl_fixed_hash_codec!(RightCiphertext, SIZE);
+impl_edwards_point_conversions!(RightCiphertext, SIZE);
+impl_ciphertext_component_conversion!(RightCiphertext, right, SIZE);
 
 #[cfg(test)]
 mod tests {

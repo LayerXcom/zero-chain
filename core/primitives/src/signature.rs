@@ -1,9 +1,3 @@
-#[cfg(feature = "std")]
-use serde::{Serialize, Serializer, Deserialize, Deserializer};
-#[cfg(feature = "std")]
-use substrate_primitives::hexdisplay::AsBytesRef;
-#[cfg(feature = "std")]
-use substrate_primitives::bytes;
 use jubjub::{
     redjubjub,
     curve::FixedGenerators
@@ -14,53 +8,13 @@ use pairing::{bls12_381::Bls12, io};
 use crate::{SigVerificationKey, PARAMS};
 use core::convert::TryFrom;
 
-use parity_codec::{Encode, Decode, Input};
-
 const SIZE: usize = 64;
 
 construct_fixed_hash! {
-    pub struct H512(SIZE);
+    pub struct RedjubjubSignature(SIZE);
 }
 
-pub type RedjubjubSignature = H512;
-
-#[cfg(feature = "std")]
-impl Serialize for H512 {
-    fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
-        where S: Serializer
-    {
-        bytes::serialize(&self.0, serializer)
-    }
-}
-
-#[cfg(feature = "std")]
-impl<'de> Deserialize<'de> for RedjubjubSignature {
-    fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
-        where D: Deserializer<'de>
-    {
-        bytes::deserialize_check_len(deserializer, bytes::ExpectedLen::Exact(SIZE))
-            .map(|x| H512::from_slice(&x))
-    }
-}
-
-impl Encode for RedjubjubSignature {
-    fn using_encoded<R, F: FnOnce(&[u8]) -> R>(&self, f: F) -> R {
-        self.0.using_encoded(f)
-    }
-}
-
-impl Decode for RedjubjubSignature {
-    fn decode<I: Input>(input: &mut I) -> Option<Self> {
-        <[u8; SIZE] as Decode>::decode(input).map(H512)
-    }
-}
-
-#[cfg(feature = "std")]
-impl AsBytesRef for RedjubjubSignature {
-    fn as_bytes_ref(&self) -> &[u8] {
-        self.as_ref()
-    }
-}
+impl_fixed_hash_codec!(RedjubjubSignature, SIZE);
 
 impl Verify for RedjubjubSignature {
     type Signer = SigVerificationKey;
@@ -88,7 +42,7 @@ impl TryFrom<redjubjub::Signature> for RedjubjubSignature {
         let mut writer = [0u8; 64];
         sig.write(&mut writer[..]).unwrap();
 
-        Ok(H512::from_slice(&writer))
+        Ok(RedjubjubSignature::from_slice(&writer))
     }
 }
 
